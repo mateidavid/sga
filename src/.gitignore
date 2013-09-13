@@ -12,3 +12,8 @@ build*
 *.o
 *.a
 Makefile
+.deps/
+/config.h
+/config.log
+/config.status
+/stamp-h1
