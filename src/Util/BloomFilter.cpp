@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "MurmurHash3.h"
+#include "Util.h"
 
 //#define TRACK_OCCUPANCY 1
 
@@ -98,4 +99,39 @@ void BloomFilter::printMemory() const
     size_t bytes = m_bitvector.capacity();
     double mb = (double)bytes / (1 << 20);
     printf("BloomFilter using %.1lf MB\n", mb);
+}
+
+// version 1:
+//   version, m_width, m_occupancy, m_test_counter, shallow_vector m_hashes, m_bitvector
+void BloomFilter::save(std::ostream& os, int version)
+{
+    if (version != 1)
+    {
+        std::cerr << "version not implemented!\n";
+        exit(EXIT_FAILURE);
+    }
+
+    save_basic_type<uint64_t>(os, version, 1);
+    save_basic_type<uint64_t>(os, m_width, 1);
+    save_basic_type<uint64_t>(os, m_occupancy, 1);
+    save_basic_type<uint64_t>(os, m_test_counter, 1);
+    save_shallow_vector(os, m_hashes, version);
+    m_bitvector.save(os, version);
+}
+
+void BloomFilter::load(std::istream& is)
+{
+    int version;
+    load_basic_type(is, version);
+    if (version != 1)
+    {
+        std::cerr << "version not implemented!\n";
+        exit(EXIT_FAILURE);
+    }
+
+    load_basic_type(is, m_width);
+    load_basic_type(is, m_occupancy);
+    load_basic_type(is, m_test_counter);
+    load_shallow_vector(is, m_hashes);
+    m_bitvector.load(is);
 }

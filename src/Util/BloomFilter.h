@@ -6,6 +6,7 @@
 #ifndef BLOOM_FILTER_H
 #define BLOOM_FILTER_H
 
+#include <iostream>
 #include <vector>
 #include <stdint.h>
 #include <stddef.h>
@@ -57,6 +58,21 @@ class BloomFilter
         * @brief Count how many bits are set and print to stdout
         */
         void printOccupancy() const;
+
+        /**
+         * @brief Save object to stream
+         *
+         * @param os         destination stream
+         * @param version    save format version
+         */
+	void save(std::ostream& os, int version = 1);
+
+        /**
+         * @brief Load object from stream
+         *
+         * @param is         source stream
+         */
+	void load(std::istream& is);
 
     private:
         BitVector m_bitvector;
