@@ -136,7 +136,11 @@ std::ostream* createWriter(const std::string& filename,
 
 void assertFileOpen(std::ifstream& fh, const std::string& fn);
 void assertFileOpen(std::ofstream& fh, const std::string& fn);
+#ifdef GZSTREAM_NAMESPACE
+void assertGZOpen(GZSTREAM_NAMESPACE::gzstreambase& gh, const std::string& fn);
+#else
 void assertGZOpen(gzstreambase& gh, const std::string& fn);
+#endif
 
 char randomBase();
 

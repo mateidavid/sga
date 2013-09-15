@@ -270,7 +270,11 @@ std::istream* createReader(const std::string& filename, std::ios_base::openmode 
 {
     if(isGzip(filename))
     {
+#ifdef GZSTREAM_NAMESPACE
+        GZSTREAM_NAMESPACE::igzstream* pGZ = new GZSTREAM_NAMESPACE::igzstream(filename.c_str(), mode);
+#else
         igzstream* pGZ = new igzstream(filename.c_str(), mode);
+#endif
         assertGZOpen(*pGZ, filename);
         return pGZ;
     }
@@ -289,7 +293,11 @@ std::ostream* createWriter(const std::string& filename,
 {
     if(isGzip(filename))
     {
+#ifdef GZSTREAM_NAMESPACE
+        GZSTREAM_NAMESPACE::ogzstream* pGZ = new GZSTREAM_NAMESPACE::ogzstream(filename.c_str(), mode);
+#else
         ogzstream* pGZ = new ogzstream(filename.c_str(), mode);
+#endif
         assertGZOpen(*pGZ, filename);
         return pGZ;
     }
@@ -322,7 +330,11 @@ void assertFileOpen(std::ofstream& fh, const std::string& fn)
 }
 
 //
+#ifdef GZSTREAM_NAMESPACE
+void assertGZOpen(GZSTREAM_NAMESPACE::gzstreambase& gh, const std::string& fn)
+#else
 void assertGZOpen(gzstreambase& gh, const std::string& fn)
+#endif
 {
     if(!gh.good())
     {
