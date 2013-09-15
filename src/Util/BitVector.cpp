@@ -9,6 +9,7 @@
 #include "BitVector.h"
 #include <assert.h>
 #include <cstdlib>
+#include "Util.h"
 
 //
 BitVector::BitVector()
@@ -90,3 +91,21 @@ bool BitVector::test(size_t i) const
     return m_data[byte].test(offset);
 }
 
+// version 1:
+//   shallow vector
+void BitVector::save(std::ostream& os, int version)
+{
+    if (version != 1)
+    {
+        std::cerr << "version not implemented!\n";
+        exit(EXIT_FAILURE);
+    }
+
+    save_shallow_vector(os, m_data, version);
+}
+
+void BitVector::load(std::istream& is)
+{
+    load_shallow_vector(is, m_data);
+    initializeMutex();
+}

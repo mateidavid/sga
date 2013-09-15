@@ -11,6 +11,7 @@
 #define BITVECTOR_H
 
 #include "BitChar.h"
+#include <iostream>
 #include <vector>
 
 class BitVector
@@ -37,6 +38,10 @@ class BitVector
         bool test(size_t i) const;
 
         size_t capacity() const { return m_data.size() * 8; }
+
+        // Save&Load object
+	void save(std::ostream& os, int version = 1);
+	void load(std::istream& is);
 
     private:
 
