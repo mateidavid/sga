@@ -343,7 +343,7 @@ void load_shallow_vector(std::istream& is, std::vector<T>& v)
     }
     size_t n;
     load_basic_type(is, n);
-    v = std::vector<T>(n);
+    v.resize(n);
     is.read((char*)&v[0], v.size() * sizeof(T));
     if (not is.good())
     {
