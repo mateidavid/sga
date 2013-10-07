@@ -51,6 +51,7 @@ sga_SOURCES = sga.cpp \
               graph-diff.h graph-diff.cpp \
               gapfill.h gapfill.cpp \
               preqc.h preqc.cpp \
+              overlap-long.h overlap-long.cpp \
               variant-detectability.h variant-detectability.cpp \
               rewrite-evidence-bam.h rewrite-evidence-bam.cpp \
               haplotype-filter.h haplotype-filter.cpp \
