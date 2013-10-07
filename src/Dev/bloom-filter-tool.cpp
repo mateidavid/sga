@@ -131,6 +131,7 @@ void build_rf_graph(istream& is)
     pfor<SimpleRead,TLS_pfor>(NULL,
                               [&is] (TLS_pfor& tls, SimpleRead& r)
                               {
+                                  (void)tls;
                                   return r.get_from(is, global::fasta_input);
                               },
                               &add_to_rf_graph,
@@ -251,6 +252,7 @@ void process_qr_reads(istream& is)
     pfor<SimpleRead,TLS_pfor>(NULL,
                               [&is] (TLS_pfor& tls, SimpleRead& r)
                               {
+                                  (void)tls;
                                   return r.get_from(is);
                               },
                               &process_qr_read,
