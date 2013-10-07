@@ -607,7 +607,7 @@ bool Bigraph::checkColors(GraphColor c)
     {
         if(iter->second->getColor() != c)
         {
-            std::cerr << "Warning vertex " << iter->second->getID() << " is color " << iter->second->getColor() << " expected " << c << "\n";
+            std::cerr << "Warning vertex " << iter->second->getID() << " is color " << (int)iter->second->getColor() << " expected " << (int)c << "\n";
             return false;
         }
     }
