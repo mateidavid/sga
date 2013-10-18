@@ -95,11 +95,22 @@ Edge* SGAlgorithms::createEdgesFromOverlap(StringGraph* pGraph, const Overlap& o
         }
         
         // Twin the edges and add them to the graph
-        pEdges[0]->setTwin(pEdges[1]);
-        pEdges[1]->setTwin(pEdges[0]);
+        if (comp == EC_REVERSE)
+        {
+            pEdges[0]->setTwin(pEdges[1]);
+            pEdges[1]->setTwin(pEdges[0]);
 
-        pEdges[2]->setTwin(pEdges[3]);
-        pEdges[3]->setTwin(pEdges[2]);
+            pEdges[2]->setTwin(pEdges[3]);
+            pEdges[3]->setTwin(pEdges[2]);
+        }
+        else
+        {
+            pEdges[0]->setTwin(pEdges[3]);
+            pEdges[3]->setTwin(pEdges[0]);
+
+            pEdges[2]->setTwin(pEdges[1]);
+            pEdges[1]->setTwin(pEdges[2]);
+        }
     
         pGraph->addEdge(pVerts[0], pEdges[0]);
         pGraph->addEdge(pVerts[0], pEdges[2]);
