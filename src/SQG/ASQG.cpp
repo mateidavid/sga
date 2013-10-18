@@ -295,6 +295,21 @@ void EdgeRecord::parse(const std::string& record)
     // Parse the overlap
     std::stringstream ssparser(tokens[1]);
     ssparser >> m_overlap;
+
+    for(size_t i = 2; i < tokens.size(); ++i)
+    {
+        if(tokens[i].compare(0, FIELD_TAG_SIZE, CIGAR_TAG) == 0)
+            m_cigarTag.fromString(tokens[i]);
+
+        else if(tokens[i].compare(0, FIELD_TAG_SIZE, PERCENT_IDENTITY_TAG) == 0)
+            m_percentIdentityTag.fromString(tokens[i]);
+
+        else
+        {
+            std::cerr << "Error parsing edge record:\n" << record << "\n";
+            exit(EXIT_FAILURE);
+        }
+    }
 }
 
 //
