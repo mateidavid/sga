@@ -114,10 +114,10 @@ StringGraph* SGUtil::loadASQG(const std::string& filename, const unsigned int mi
         ++line;
     }
     
-    pGraph->sweepVertices(GC_RED);
+    //pGraph->sweepVertices(GC_RED);
 
-    SGGraphStatsVisitor statsVisit;
-    pGraph->visit(statsVisit);
+    //SGGraphStatsVisitor statsVisit;
+    //pGraph->visit(statsVisit);
 
 /*
     // Completely delete the edges for all nodes that were marked as super-repetitive in the graph
@@ -125,8 +125,8 @@ StringGraph* SGUtil::loadASQG(const std::string& filename, const unsigned int mi
     pGraph->visit(superRepeatVisitor);
 */    
     // Remove any duplicate edges
-    SGDuplicateVisitor dupVisit;
-    pGraph->visit(dupVisit);
+    //SGDuplicateVisitor dupVisit;
+    //pGraph->visit(dupVisit);
 
 //    SGGraphStatsVisitor statsVisit;
 //    pGraph->visit(statsVisit);
