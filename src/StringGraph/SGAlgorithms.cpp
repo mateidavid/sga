@@ -43,7 +43,7 @@ Edge* SGAlgorithms::createEdgesFromOverlap(StringGraph* pGraph, const Overlap& o
             assert(o.match.coord[containedIdx].isExtreme());
             pVerts[containedIdx]->setColor(GC_RED);
             pGraph->setContainmentFlag(true);
-            return NULL;
+            if (not allowContained) return NULL;
         }
     }
 
