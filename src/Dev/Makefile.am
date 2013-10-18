@@ -8,9 +8,8 @@ bloom_filter_tool_CPPFLAGS = -std=c++0x -fopenmp \
 bloom_filter_tool_LDADD = \
         $(top_builddir)/Util/libutil.a \
         $(top_builddir)/Thirdparty/libthirdparty.a \
-        libdev.a
-
-bloom_filter_tool_LDFLAGS = -lboost_iostreams
+        libdev.a \
+        -lboost_iostreams
 
 bloom_filter_tool_SOURCES = bloom-filter-tool.cpp
 
