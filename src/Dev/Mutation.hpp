@@ -7,8 +7,6 @@
 #ifndef __MUTATION_HPP
 #define __MUTATION_HPP
 
-#include <string>
-#include <iostream>
 #include "MAC_forward.hpp"
 
 
