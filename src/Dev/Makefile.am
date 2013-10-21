@@ -1,5 +1,5 @@
-noinst_PROGRAMS = bloom-filter-tool test
-noinst_LIBRARIES = libdev.a
+noinst_PROGRAMS = bloom-filter-tool test test_mac
+noinst_LIBRARIES = libmac.a libdev.a
 
 bloom_filter_tool_CPPFLAGS = -std=c++0x -fopenmp \
         -I$(top_srcdir)/Util \
@@ -43,3 +43,17 @@ test_SOURCES = \
 libdev_a_CPPFLAGS = -std=c++0x -fopenmp
 
 libdev_a_SOURCES = kmer_gen.cpp
+
+libmac_a_CPPFLAGS = -std=c++0x
+
+libmac_a_SOURCES = \
+        Read_Chunk.cpp \
+        Read_Entry.cpp \
+        Contig_Entry.cpp \
+        MAC.cpp
+
+test_mac_CPPFLAGS = -std=c++0x
+
+test_mac_SOURCES = test_mac.cpp
+
+test_mac_LDADD = libmac.a
