@@ -7,7 +7,11 @@
 #ifndef __READ_ENTRY_HPP
 #define __READ_ENTRY_HPP
 
+#include <string>
+#include <iostream>
+
 #include "MAC_forward.hpp"
+#include "Read_Chunk.hpp"
 
 
 namespace MAC
@@ -19,13 +23,13 @@ namespace MAC
 
         const std::string& get_name() const { return name; }
 
-        friend void add_read(const std::string&, const Seq_Type&, Read_Entry_Desc, Contig_Entry_Desc);
+        friend void add_read(const std::string&, const Seq_Type&, Read_Entry*, Contig_Entry*);
 
         friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);
 
     private:
         std::string name;
-        std::list<Read_Chunk> chunk_list;
+        Read_Chunk_Cont chunk_cont;
     };
 }
 

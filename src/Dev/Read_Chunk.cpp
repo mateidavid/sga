@@ -5,19 +5,20 @@
 //-----------------------------------------------
 
 #include "Read_Chunk.hpp"
+
 #include "Mutation.hpp"
+#include "print_seq.hpp"
+
+using namespace std;
 
 
 namespace MAC
 {
-    std::ostream& operator << (std::ostream& os, const Read_Chunk& rhs)
+    ostream& operator << (ostream& os, const Read_Chunk& rhs)
     {
         os << "(r_start=" << rhs.r_start << ",r_len=" << rhs.r_len
         << ",c_start=" << rhs.c_start << ",c_len=" << rhs.c_len << ",rc=" << (int)rhs.rc << ",mut_list=(";
-        std::for_each(rhs.mut_dlist.begin(), rhs.mut_dlist.end(), [&] (const Mutation_Desc& m) {
-            if (m != *rhs.mut_dlist.begin()) os << ",";
-                      os << *m;
-        });
+        print_ptr_seq(os, rhs.mut_ptr_cont);
         os << "))";
         return os;
     }

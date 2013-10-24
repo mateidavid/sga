@@ -7,6 +7,10 @@
 #ifndef __MUTATION_HPP
 #define __MUTATION_HPP
 
+#include <iostream>
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+
 #include "MAC_forward.hpp"
 
 
@@ -49,12 +53,15 @@ namespace MAC
         Size_Type get_len() const { return len; }
         const Seq_Type& get_seq() const { return seq; }
 
+        typedef Size_Type key_type;
+        key_type get_key() const { return start; }
+
         bool is_ins() const { return len == 0 and seq.size() == 1; }
         bool is_snp() const { return len == 1 and seq.size() == 1; }
         bool is_del() const { return len == 1 and seq.size() == 0; }
         bool is_empty() const { return len == 0 and seq.size() == 0; }
 
-        friend std::ostream& operator <<(std::ostream& os, const Mutation& rhs)
+        friend std::ostream& operator << (std::ostream& os, const Mutation& rhs)
         {
             os << "(start=" << (size_t)rhs.start << ",len=" << (size_t)rhs.len << ",seq=" << rhs.seq << ")";
             return os;
@@ -65,6 +72,21 @@ namespace MAC
         Size_Type start;
         Size_Type len;
     };
+
+    struct Mutation_Key
+    {
+        typedef Mutation::key_type result_type;
+        result_type operator() (const Mutation& m) const { return m.get_key(); }
+    };
+
+    typedef boost::multi_index_container<
+      Mutation,
+      boost::multi_index::indexed_by<
+        boost::multi_index::ordered_non_unique<
+          Mutation_Key
+        >
+      >
+    > Mutation_Cont;
 }
 
 #endif

@@ -5,18 +5,19 @@
 //-----------------------------------------------
 
 #include "Read_Entry.hpp"
-#include "Read_Chunk.hpp"
+
+#include "print_seq.hpp"
+
+using namespace std;
 
 
 namespace MAC
 {
-    std::ostream& operator << (std::ostream& os, const Read_Entry& rhs)
+    ostream& operator << (ostream& os, const Read_Entry& rhs)
     {
-        os << "(name=" << rhs.name << ",\nchunk_list=\n";
-        std::for_each(rhs.chunk_list.begin(), rhs.chunk_list.end(), [&] (const Read_Chunk& c) {
-            os << "  " << c << "\n";
-        });
-        os << ")\n";
+        os << "(name=" << rhs.name << ",\nchunk_list=\n  ";
+        print_seq(os, rhs.chunk_cont, "\n  ");
+        os << "\n)\n";
         return os;
     }
 }
