@@ -1,27 +1,26 @@
 #include "MAC.hpp"
 
 using namespace std;
+using boost::tie;
 
 
 namespace MAC
 {
-    void add_read(const string& name, const Seq_Type& seq, Read_Entry* re_ptr, Contig_Entry* ce_ptr)
+    void add_read(const string* name_ptr, const Seq_Type* seq_ptr, Read_Entry_Cont& re_cont, Contig_Entry_Cont& ce_cont)
     {
-        // first, reset the read entry
-        re_ptr->name = name;
-        re_ptr->chunk_cont.clear();
+        // first, create read entry & contig entry
+        Read_Entry re(name_ptr, seq_ptr);
+        Contig_Entry ce(seq_ptr);
+        ce.add_chunk(re.get_ptr_first_chunk());
 
-        // reset contig entry
-        ce_ptr->seq = seq;
-        ce_ptr->mut_cont.clear();
-        ce_ptr->chunk_ptr_cont.clear();
+        // insert them in their containers
+        Read_Entry_Cont::iterator re_it;
+        bool success;
+        tie(re_it, success) = re_cont.insert(re);
+        ce_cont.push_back(ce);
 
-        // create new read chunk
-        Read_Chunk c(re_ptr, ce_ptr, seq.size());
-        re_ptr->chunk_cont.insert(c);
-
-        // place read chunk into contig entry list
-        const Read_Chunk* c_p = &(*re_ptr->chunk_cont.begin());
-        ce_ptr->chunk_ptr_cont.insert(c_p);
+        // set the contig entry pointer inside the single read chunk
+        auto f = bind(&Read_Entry::set_ce_ptr, placeholders::_1, re_it->get_ptr_first_chunk(), &ce_cont.back());
+        re_cont.modify(re_it, f);
     }
 }

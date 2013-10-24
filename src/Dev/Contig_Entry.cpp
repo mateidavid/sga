@@ -15,10 +15,10 @@ namespace MAC
 {
     std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs)
     {
-        os << "(seq=" << rhs.seq << ",\nmut_list=\n  ";
+        os << "(seq=" << rhs.get_seq() << ",\nmut_list=\n  ";
         print_seq(os, rhs.mut_cont, "\n  ");
         os << "\nchunk_list=\n  ";
-        print_ptr_seq(os, rhs.chunk_ptr_cont, "\n  ");
+        print_ptr_seq(os, rhs.chunk_cptr_cont, "\n  ");
         os << "\n)\n";
         return os;
     }

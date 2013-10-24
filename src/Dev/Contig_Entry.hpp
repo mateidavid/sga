@@ -9,6 +9,7 @@
 
 #include <string>
 #include <iostream>
+#include <memory>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
 
@@ -22,16 +23,18 @@ namespace MAC
     class Contig_Entry
     {
     public:
-        Contig_Entry() {}
+        Contig_Entry(const Seq_Type* _seq_ptr) : seq_ptr(_seq_ptr) {}
 
-        friend void add_read(const std::string&, const Seq_Type&, Read_Entry*, Contig_Entry*);
+        const Seq_Type& get_seq() const { return *seq_ptr; }
+
+        void add_chunk(Read_Chunk_CPtr chunk_cptr) { chunk_cptr_cont.insert(chunk_cptr); }
 
         friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
 
     private:
-        Seq_Type seq;
+        std::shared_ptr<const Seq_Type> seq_ptr;
         Mutation_Cont mut_cont;
-        Read_Chunk_Ptr_Cont chunk_ptr_cont;
+        Read_Chunk_CPtr_Cont chunk_cptr_cont;
     };
 
     typedef boost::multi_index_container<

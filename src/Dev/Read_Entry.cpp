@@ -15,7 +15,7 @@ namespace MAC
 {
     ostream& operator << (ostream& os, const Read_Entry& rhs)
     {
-        os << "(name=" << rhs.name << ",\nchunk_list=\n  ";
+        os << "(name=" << rhs.get_name() << ",\nchunk_list=\n  ";
         print_seq(os, rhs.chunk_cont, "\n  ");
         os << "\n)\n";
         return os;

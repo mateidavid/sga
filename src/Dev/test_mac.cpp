@@ -10,17 +10,13 @@ using namespace MAC;
 
 int main()
 {
-    vector<Read_Entry> re_cont;
+    Read_Entry_Cont re_cont;
     Contig_Entry_Cont ce_cont;
-    Contig_Entry* tmp;
 
-    re_cont.push_back(Read_Entry());
-    ce_cont.push_back(Contig_Entry());
-    tmp = const_cast<Contig_Entry*>(&(*ce_cont.begin()));
-    add_read(string("001"), Seq_Type("ACGT"), &re_cont[0], tmp);
+    add_read(new string("001"), new Seq_Type("ACGT"), re_cont, ce_cont);
 
     cout << *(ce_cont.begin());
-    cout << re_cont[0];
+    cout << *(re_cont.begin());
 
     return EXIT_SUCCESS;
 }

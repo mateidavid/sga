@@ -9,6 +9,11 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
+#include <memory>
+#include <functional>
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/hashed_index.hpp>
 
 #include "MAC_forward.hpp"
 #include "Read_Chunk.hpp"
@@ -19,18 +24,49 @@ namespace MAC
     class Read_Entry
     {
     public:
-        Read_Entry() {}
+        Read_Entry(const std::string* _name_ptr, const Seq_Type* seq_ptr) : name_ptr(_name_ptr)
+        {
+            assert(_name_ptr != NULL);
+            assert(seq_ptr != NULL);
+            Read_Chunk chunk(this, NULL, seq_ptr->size());
+            chunk_cont.insert(chunk);
+        }
 
-        const std::string& get_name() const { return name; }
+        const std::string& get_name() const { return *name_ptr; }
+        Read_Chunk_CPtr get_ptr_first_chunk() const { return &(*chunk_cont.begin()); }
 
-        friend void add_read(const std::string&, const Seq_Type&, Read_Entry*, Contig_Entry*);
+        typedef const Seq_Type& key_type;
+        key_type get_key() const { return *name_ptr; }
+
+        void set_ce_ptr(Read_Chunk_CPtr chunk_cptr, const Contig_Entry* ce_cptr)
+        {
+            Read_Chunk_Cont::iterator it = chunk_cont.iterator_to(*chunk_cptr);
+            auto f = std::bind(&Read_Chunk::set_ce_ptr, std::placeholders::_1, ce_cptr);
+            chunk_cont.modify(it, f);
+        }
 
         friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);
 
     private:
-        std::string name;
+        std::shared_ptr<const std::string> name_ptr;
         Read_Chunk_Cont chunk_cont;
     };
+
+    struct Read_Entry_Key
+    {
+        typedef Read_Entry::key_type result_type;
+        result_type operator () (const Read_Entry& c) const { return c.get_key(); }
+    };
+
+    //typedef std::vector<Read_Entry> Read_Entry_Cont;
+    typedef boost::multi_index_container<
+      Read_Entry,
+      boost::multi_index::indexed_by<
+        boost::multi_index::hashed_unique<
+          Read_Entry_Key
+        >
+      >
+    > Read_Entry_Cont;
 }
 
 

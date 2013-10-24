@@ -23,20 +23,28 @@ namespace MAC
         Read_Chunk()
         : r_start(0), r_len(0), c_start(0), c_len(0) {}
 
-        Read_Chunk(Read_Entry* _re_ptr, Contig_Entry* _ce_ptr, Size_Type len)
+        Read_Chunk(const Read_Entry* _re_ptr, const Contig_Entry* _ce_ptr, Size_Type len)
         : re_ptr(_re_ptr), ce_ptr(_ce_ptr), r_start(0), r_len(len), c_start(0), c_len(len), rc(false) {}
 
-        Read_Entry* get_re_ptr() const { return re_ptr;}
-        Contig_Entry* get_ce_ptr_desc() const { return ce_ptr; }
+        const Read_Entry* get_re_ptr() const { return re_ptr;}
+        const Contig_Entry* get_ce_ptr_desc() const { return ce_ptr; }
+        Size_Type get_r_start() const { return r_start; }
+        Size_Type get_r_len() const { return r_len; }
+        Size_Type get_r_end() const { return r_start + r_len; }
+        Size_Type get_c_start() const { return c_start; }
+        Size_Type get_c_len() const { return c_len; }
+        Size_Type get_c_end() const { return c_start + c_len; }
 
         typedef Size_Type key_type;
         key_type get_key() const { return r_start; }
 
+        void set_ce_ptr(const Contig_Entry* _ce_ptr) { ce_ptr = _ce_ptr; }
+
         friend std::ostream& operator << (std::ostream& os, const Read_Chunk& rhs);
 
     private:
-        Read_Entry* re_ptr;
-        Contig_Entry* ce_ptr;
+        const Read_Entry* re_ptr;
+        const Contig_Entry* ce_ptr;
         Size_Type r_start;
         Size_Type r_len;
         Size_Type c_start;
@@ -70,7 +78,7 @@ namespace MAC
           Read_Chunk_Key
         >
       >
-    > Read_Chunk_Ptr_Cont;
+    > Read_Chunk_CPtr_Cont;
 }
 
 

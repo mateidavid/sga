@@ -19,7 +19,7 @@ namespace MAC
     /**
      * @brief Process a read: create Read_Entry and Contig_Entry objects.
      * */
-    void add_read(const std::string& name, const Seq_Type& seq, Read_Entry* re_ptr, Contig_Entry* ce_ptr);
+    void add_read(const std::string* name_ptr, const Seq_Type* seq_ptr, Read_Entry_Cont& re_cont, Contig_Entry_Cont& ce_cont);
 }
 
 
