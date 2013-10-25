@@ -38,7 +38,7 @@ namespace MAC
         const Seq_Type& get_seq() const { return *_seq_ptr; }
         /**@}*/
 
-        /** Add to the list of read chunks
+        /** Add to the list of read chunks.
          * @param chunk_cptr Pointer to read chunk object.
          */
         void add_chunk(Read_Chunk_CPtr chunk_cptr) { _chunk_cptr_cont.insert(chunk_cptr); }
