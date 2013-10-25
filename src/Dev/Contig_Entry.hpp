@@ -20,23 +20,38 @@
 
 namespace MAC
 {
+    /** Holds information about a contig.
+     *
+     * Each object holds a base sequence, a list of observed mutations, and a list of pointers
+     * to read chunks which are mapped to this contig.
+     */
     class Contig_Entry
     {
     public:
-        Contig_Entry(const Seq_Type* _seq_ptr) : seq_ptr(_seq_ptr) {}
+        /** Constructor.
+         * @param seq_ptr Pointer to read sequence.
+         */
+        Contig_Entry(const Seq_Type* seq_ptr) : _seq_ptr(seq_ptr) {}
 
-        const Seq_Type& get_seq() const { return *seq_ptr; }
+        /** @name Getters */
+        /**@{*/
+        const Seq_Type& get_seq() const { return *_seq_ptr; }
+        /**@}*/
 
-        void add_chunk(Read_Chunk_CPtr chunk_cptr) { chunk_cptr_cont.insert(chunk_cptr); }
+        /** Add to the list of read chunks
+         * @param chunk_cptr Pointer to read chunk object.
+         */
+        void add_chunk(Read_Chunk_CPtr chunk_cptr) { _chunk_cptr_cont.insert(chunk_cptr); }
 
         friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
 
     private:
-        std::shared_ptr<const Seq_Type> seq_ptr;
-        Mutation_Cont mut_cont;
-        Read_Chunk_CPtr_Cont chunk_cptr_cont;
+        std::shared_ptr<const Seq_Type> _seq_ptr;
+        Mutation_Cont _mut_cont;
+        Read_Chunk_CPtr_Cont _chunk_cptr_cont;
     };
 
+    /** Container for Contig_Entry objects. */
     typedef boost::multi_index_container<
       Contig_Entry,
       boost::multi_index::indexed_by<
