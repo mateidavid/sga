@@ -57,8 +57,6 @@ namespace MAC
         key_type get_key() const { return _r_start; }
         /**@}*/
 
-        void set_ce_ptr(const Contig_Entry* ce_ptr) { _ce_ptr = ce_ptr; }
-
         /** Assign read chunk to contig.
          * @param ce_ptr Pointer to contig entry object.
          * @param c_start Start of contig base sequence this chunk is mapped to.
