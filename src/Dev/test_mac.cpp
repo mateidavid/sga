@@ -13,7 +13,7 @@ int main()
     Read_Entry_Cont re_cont;
     Contig_Entry_Cont ce_cont;
 
-    add_read(new string("001"), new Seq_Type("ACGT"), re_cont, ce_cont);
+    add_read(re_cont, ce_cont, new string("001"), new Seq_Type("ACGT"));
 
     cout << *(ce_cont.begin());
     cout << *(re_cont.begin());
