@@ -16,9 +16,16 @@
 
 namespace MAC
 {
-    /**
-     * @brief Process a read: create Read_Entry and Contig_Entry objects.
-     * */
+    /** Add a read.
+     *
+     * Create basic Read_Entry, Read_Chunk, and Contig_Entry objects,
+     * initialize them, and place them in their respective containers.
+     *
+     * @param name_ptr Pointer to string with read name. (Read container takes ownership.)
+     * @param seq_ptr Pointer to container with read sequence. (Contig container takes ownership.)
+     * @param re_cont Container for read entry objects.
+     * @param ce_cont Container for contig entry objects.
+     */
     void add_read(const std::string* name_ptr, const Seq_Type* seq_ptr, Read_Entry_Cont& re_cont, Contig_Entry_Cont& ce_cont);
 }
 

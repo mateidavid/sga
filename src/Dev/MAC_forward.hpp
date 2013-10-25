@@ -10,10 +10,14 @@
 #include <string>
 
 
+/** Multi-Allelic Contig namespace */
 namespace MAC
 {
+    /** Type for absolute and relative offsets in read and contig sequences. */
     typedef size_t Size_Type;
+    /** Type holding a read sequence */
     typedef typename std::string Seq_Type;
+    /** Type holding a single base pair */
     typedef typename Seq_Type::value_type Symb_Type;
 
     class Mutation;
