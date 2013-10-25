@@ -16,9 +16,9 @@ namespace MAC
 {
     ostream& operator << (ostream& os, const Read_Chunk& rhs)
     {
-        os << "(r_start=" << rhs.r_start << ",r_len=" << rhs.r_len
-        << ",c_start=" << rhs.c_start << ",c_len=" << rhs.c_len << ",rc=" << (int)rhs.rc << ",mut_list=(";
-        print_ptr_seq(os, rhs.mut_ptr_cont);
+        os << "(r_start=" << rhs.get_r_start() << ",r_len=" << rhs.get_r_len()
+        << ",c_start=" << rhs.get_c_start() << ",c_len=" << rhs.get_c_len() << ",rc=" << (int)rhs.get_rc() << ",mut_list=(";
+        print_ptr_seq(os, rhs._mut_ptr_cont);
         os << "))";
         return os;
     }

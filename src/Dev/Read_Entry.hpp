@@ -28,7 +28,7 @@ namespace MAC
         {
             assert(_name_ptr != NULL);
             assert(seq_ptr != NULL);
-            Read_Chunk chunk(this, NULL, seq_ptr->size());
+            Read_Chunk chunk(this, seq_ptr->size());
             chunk_cont.insert(chunk);
         }
 
