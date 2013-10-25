@@ -47,6 +47,7 @@ libdev_a_SOURCES = kmer_gen.cpp
 libmac_a_CPPFLAGS = -std=c++0x
 
 libmac_a_SOURCES = \
+        Mutation.cpp \
         Read_Chunk.cpp \
         Read_Entry.cpp \
         Contig_Entry.cpp \

@@ -8,82 +8,111 @@
 #define __MUTATION_HPP
 
 #include <iostream>
+#include <cassert>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 
 #include "MAC_forward.hpp"
 
 
-/**
- * @brief Holds information about a mutation from a base sequence.
- *
- * @tparam Seq_Type Base sequence type.
- * @tparam Size_Type Integral type used for offsets and lengths.
- */
 namespace MAC
 {
+    /** Holds information about a mutation from a base sequence.
+     *
+     * The class holds the start and span of the base sequence region affected by a mutation,
+     * as well as the alternate sequence.
+     */
     class Mutation
     {
     public:
+        /** Type of key used to store Mutation objects. */
+        typedef Size_Type key_type;
+
+        /** Default constructor. */
         Mutation()
-        : start(0), len(0) {}
+        : _start(0), _len(0) {}
 
-        Mutation(Size_Type _start, Size_Type _len, const Seq_Type& _seq = Seq_Type())
-        : seq(_seq), start(_start), len(_len) {}
+        /** Constructor.
+         * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
+         * @param len Length of the base sequence affected by the mutation.
+         * @param seq Alternate sequence.
+         */
+        Mutation(Size_Type start, Size_Type len, const Seq_Type& seq = Seq_Type())
+        : _seq(seq), _start(start), _len(len) {}
 
+        /** Copy constructor. */
         Mutation(const Mutation& rhs)
-        : seq(rhs.seq), start(rhs.start), len(rhs.len) {}
+        : _seq(rhs._seq), _start(rhs._start), _len(rhs._len) {}
 
-        static Mutation ins(Size_Type start, Symb_Type symbol)
+        /** Static insertion constructor.
+         * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
+         * @param seq Inserted sequence.
+         */
+        static Mutation make_ins(Size_Type start, const Seq_Type& seq)
         {
-            return Mutation(start, 0, Seq_Type(1, symbol));
+            assert(seq.size() > 0);
+            return Mutation(start, 0, seq);
         }
 
-        static Mutation snp(Size_Type start, Symb_Type symbol)
+        /** Static snp constructor.
+         * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
+         * @param symbol Alternate symbol.
+         */
+        static Mutation make_snp(Size_Type start, const Seq_Type& seq)
         {
-            return Mutation(start, 1, Seq_Type(1, symbol));
+            assert(seq.size() == 1);
+            return Mutation(start, 1, seq);
         }
 
-        static Mutation del(Size_Type start)
+        /** Static deletion constructor.
+         * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
+         */
+        static Mutation make_del(Size_Type start)
         {
             return Mutation(start, 1);
         }
 
-        Size_Type get_start() const { return start; }
-        Size_Type get_len() const { return len; }
-        const Seq_Type& get_seq() const { return seq; }
+        /** @name Getters */
+        /**@{*/
+        Size_Type get_start() const { return _start; }
+        Size_Type get_len() const { return _len; }
+        Size_Type get_end() const { return _start+_len; }
+        const Seq_Type& get_seq() const { return _seq; }
+        key_type get_key() const { return _start; }
+        /**@}*/
 
-        typedef Size_Type key_type;
-        key_type get_key() const { return start; }
+        /** @name Basic queries */
+        /**@{*/
+        bool is_ins() const { return _len == 0 and _seq.size() == 1; }
+        bool is_snp() const { return _len == 1 and _seq.size() == 1; }
+        bool is_del() const { return _len == 1 and _seq.size() == 0; }
+        bool is_empty() const { return _len == 0 and _seq.size() == 0; }
+        /**@}*/
 
-        bool is_ins() const { return len == 0 and seq.size() == 1; }
-        bool is_snp() const { return len == 1 and seq.size() == 1; }
-        bool is_del() const { return len == 1 and seq.size() == 0; }
-        bool is_empty() const { return len == 0 and seq.size() == 0; }
-
-        friend std::ostream& operator << (std::ostream& os, const Mutation& rhs)
-        {
-            os << "(start=" << (size_t)rhs.start << ",len=" << (size_t)rhs.len << ",seq=" << rhs.seq << ")";
-            return os;
-        }
+        friend std::ostream& operator << (std::ostream&, const Mutation&);
 
     private:
-        Seq_Type seq;
-        Size_Type start;
-        Size_Type len;
+        Seq_Type _seq;
+        Size_Type _start;
+        Size_Type _len;
     };
 
-    struct Mutation_Key
+    namespace detail
     {
-        typedef Mutation::key_type result_type;
-        result_type operator() (const Mutation& m) const { return m.get_key(); }
-    };
+        /** Key extractor struct for boost::multi_index_container. */
+        struct Mutation_Key
+        {
+            typedef Mutation::key_type result_type;
+            result_type operator() (const Mutation& m) const { return m.get_key(); }
+        };
+    }
 
+    /** Container for Mutation objects. */
     typedef boost::multi_index_container<
       Mutation,
       boost::multi_index::indexed_by<
         boost::multi_index::ordered_non_unique<
-          Mutation_Key
+          detail::Mutation_Key
         >
       >
     > Mutation_Cont;
