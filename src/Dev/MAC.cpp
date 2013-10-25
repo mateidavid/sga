@@ -11,7 +11,7 @@ namespace MAC
         // first, create read entry & contig entry
         Read_Entry re(name_ptr, seq_ptr);
         Contig_Entry ce(seq_ptr);
-        ce.add_chunk(re.get_ptr_first_chunk());
+        ce.add_chunk(re.get_cptr_first_chunk());
 
         // insert them in their containers
         Read_Entry_Cont::iterator re_it;
@@ -20,7 +20,8 @@ namespace MAC
         ce_cont.push_back(ce);
 
         // set the contig entry pointer inside the single read chunk
-        auto f = bind(&Read_Entry::set_ce_ptr, placeholders::_1, re_it->get_ptr_first_chunk(), &ce_cont.back());
-        re_cont.modify(re_it, f);
+        auto rc_modifier = [&] (Read_Chunk& rc) { rc.assign_to_contig(&ce_cont.back(), 0, seq_ptr->size(), false, vector<const Mutation*>()); };
+        auto re_modifier = [&] (Read_Entry& re) { re.modify_read_chunk(re_it->get_cptr_first_chunk(), rc_modifier); };
+        re_cont.modify(re_it, re_modifier);
     }
 }

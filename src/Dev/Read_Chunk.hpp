@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <vector>
+#include <functional>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 
@@ -28,6 +29,9 @@ namespace MAC
     public:
         /** Type of key use to store Read_Chunk objects. */
         typedef Size_Type key_type;
+
+        /** Type for an external unary modifier. */
+        typedef std::function<void(Read_Chunk&)> modifier_type;
 
         //Read_Chunk()
         //: r_start(0), r_len(0), c_start(0), c_len(0) {}

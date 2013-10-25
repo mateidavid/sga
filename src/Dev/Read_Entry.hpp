@@ -33,15 +33,14 @@ namespace MAC
         }
 
         const std::string& get_name() const { return *name_ptr; }
-        Read_Chunk_CPtr get_ptr_first_chunk() const { return &(*chunk_cont.begin()); }
+        Read_Chunk_CPtr get_cptr_first_chunk() const { return &(*chunk_cont.begin()); }
 
         typedef const Seq_Type& key_type;
         key_type get_key() const { return *name_ptr; }
 
-        void set_ce_ptr(Read_Chunk_CPtr chunk_cptr, const Contig_Entry* ce_cptr)
+        void modify_read_chunk(Read_Chunk_CPtr chunk_cptr, Read_Chunk::modifier_type f)
         {
             Read_Chunk_Cont::iterator it = chunk_cont.iterator_to(*chunk_cptr);
-            auto f = std::bind(&Read_Chunk::set_ce_ptr, std::placeholders::_1, ce_cptr);
             chunk_cont.modify(it, f);
         }
 
