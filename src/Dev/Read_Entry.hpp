@@ -21,48 +21,68 @@
 
 namespace MAC
 {
+    /** Holds information about a read.
+     *
+     * The read sequence gets assigned to various contigs. The Read_Entry object holds the read name,
+     * as well as the (order) sequence of read chunks which are mapped to contigs.
+     */
     class Read_Entry
     {
     public:
-        Read_Entry(const std::string* _name_ptr, const Seq_Type* seq_ptr) : name_ptr(_name_ptr)
+        /** Type of key use to store Read_Entry objects. */
+        typedef const Seq_Type& key_type;
+
+        /** Constructor.
+         * @param name_ptr Pointer to string containing read name.
+         * @param len Length of the read.
+         */
+        Read_Entry(const std::string* name_ptr, Size_Type len) : _name_ptr(name_ptr)
         {
-            assert(_name_ptr != NULL);
-            assert(seq_ptr != NULL);
-            Read_Chunk chunk(this, seq_ptr->size());
-            chunk_cont.insert(chunk);
+            assert(name_ptr != NULL);
+            Read_Chunk chunk(this, len);
+            _chunk_cont.insert(chunk);
         }
 
-        const std::string& get_name() const { return *name_ptr; }
-        Read_Chunk_CPtr get_cptr_first_chunk() const { return &(*chunk_cont.begin()); }
+        /** @name Getters */
+        /**@{*/
+        const std::string& get_name() const { return *_name_ptr; }
+        key_type get_key() const { return *_name_ptr; }
+        Read_Chunk_CPtr get_cptr_first_chunk() const { return &(*_chunk_cont.begin()); }
+        /**@}*/
 
-        typedef const Seq_Type& key_type;
-        key_type get_key() const { return *name_ptr; }
-
+        /** Member read chunk modifier.
+         * @param chunk_cptr Pointer to read chunk to modify.
+         * @param f Unary modifier function to apply.
+         */
         void modify_read_chunk(Read_Chunk_CPtr chunk_cptr, Read_Chunk::modifier_type f)
         {
-            Read_Chunk_Cont::iterator it = chunk_cont.iterator_to(*chunk_cptr);
-            chunk_cont.modify(it, f);
+            Read_Chunk_Cont::iterator it = _chunk_cont.iterator_to(*chunk_cptr);
+            _chunk_cont.modify(it, f);
         }
 
         friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);
 
     private:
-        std::shared_ptr<const std::string> name_ptr;
-        Read_Chunk_Cont chunk_cont;
+        std::shared_ptr<const std::string> _name_ptr;
+        Read_Chunk_Cont _chunk_cont;
     };
 
-    struct Read_Entry_Key
+    namespace detail
     {
-        typedef Read_Entry::key_type result_type;
-        result_type operator () (const Read_Entry& c) const { return c.get_key(); }
-    };
+        /** Key extractor struct for boost::multi_index_container. */
+        struct Read_Entry_Key
+        {
+            typedef Read_Entry::key_type result_type;
+            result_type operator () (const Read_Entry& c) const { return c.get_key(); }
+        };
+    }
 
-    //typedef std::vector<Read_Entry> Read_Entry_Cont;
+    /** Container for Read_Entry objects. */
     typedef boost::multi_index_container<
       Read_Entry,
       boost::multi_index::indexed_by<
         boost::multi_index::hashed_unique<
-          Read_Entry_Key
+          detail::Read_Entry_Key
         >
       >
     > Read_Entry_Cont;

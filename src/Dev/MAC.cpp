@@ -9,7 +9,7 @@ namespace MAC
     void add_read(const string* name_ptr, const Seq_Type* seq_ptr, Read_Entry_Cont& re_cont, Contig_Entry_Cont& ce_cont)
     {
         // first, create read entry & contig entry
-        Read_Entry re(name_ptr, seq_ptr);
+        Read_Entry re(name_ptr, seq_ptr->size());
         Contig_Entry ce(seq_ptr);
         ce.add_chunk(re.get_cptr_first_chunk());
 
