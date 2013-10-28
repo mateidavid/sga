@@ -114,9 +114,9 @@ namespace MAC
 
         /** @name Basic queries */
         /**@{*/
-        bool is_ins() const { return _len == 0 and _seq_len == 1; }
-        bool is_snp() const { return _len == 1 and _seq_len == 1; }
-        bool is_del() const { return _len == 1 and _seq_len == 0; }
+        bool is_ins() const { return _len == 0 and _seq_len > 0; }
+        bool is_mnp() const { return _len > 0 and _len == _seq_len; }
+        bool is_del() const { return _len > 0 and _seq_len == 0; }
         bool is_empty() const { return _len == 0 and _seq_len == 0; }
         /**@}*/
 
