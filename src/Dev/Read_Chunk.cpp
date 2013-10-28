@@ -71,6 +71,50 @@ namespace MAC
         return res;
     }
 
+    boost::tuple< size_t, Size_Type, Size_Type > Read_Chunk::count_mutations_left_of_bp(Size_Type pos)
+    {
+        assert(_r_start < pos and pos < _r_start + _r_len);
+        size_t i;
+        Size_Type r_span = 0;
+        Size_Type c_span = 0;
+        // invariant:
+        //  - [r_start,r_start+r_span) is matched to [c_start,c_start+c_span) or [c_start+c_len-c_span,c_start+c_len) if rc
+        //  - the remaining mutations no longer affect the matched portions
+        for (i = 0; i < _mut_ptr_cont.size(); ++i)
+        {
+            // i-th mutation in read == j-th mutation in reference
+            size_t j = _rc ? _mut_ptr_cont.size() - 1 - i : i;
+
+            // before we consider i-th read mutation,
+            // we must account for the matched (non-mutated) region preceding it
+            // read may not observe overlapping mutations in the reference
+            assert(not _rc == true or _c_start + c_span <= _mut_ptr_cont[j]->get_start());
+            assert(not _rc == false or _mut_ptr_cont[j]->get_start() + _mut_ptr_cont[j]->get_len() <= _c_start + _c_len - c_span);
+            Size_Type c_match = _rc?
+                               (_c_start + _c_len - c_span) - (_mut_ptr_cont[j]->get_start() + _mut_ptr_cont[j]->get_len())
+                               : _mut_ptr_cont[j]->get_start() - (_c_start + c_span);
+            if (_r_start + r_span + c_match >= pos)
+                break;
+            r_span += c_match;
+            c_span += c_match;
+
+            if (_mut_ptr_cont[j]->is_del())
+            {
+                // does not affect r_span
+                c_span += _mut_ptr_cont[j]->get_len();
+            }
+            else
+            {
+                // insertion or mnp
+                if (_r_start + r_span + _mut_ptr_cont[j]->get_seq_len() >= pos)
+                    break;
+                r_span += _mut_ptr_cont[j]->get_seq_len();
+                c_span += _mut_ptr_cont[j]->get_len();
+            }
+        }
+        return boost::make_tuple(i, c_span, r_span);
+    }
+
     ostream& operator << (ostream& os, const Read_Chunk& rhs)
     {
         os << "(r_start=" << rhs.get_r_start() << ",r_len=" << rhs.get_r_len()

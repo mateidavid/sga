@@ -12,6 +12,7 @@
 #include <functional>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
+#include <boost/tuple/tuple.hpp>
 
 #include "MAC_forward.hpp"
 #include "Mutation.hpp"
@@ -79,10 +80,17 @@ namespace MAC
             _mut_ptr_cont = mut_ptr_cont;
         }
 
+        /** Given a breakpoint position in the read, compute the number of mutations
+         * that fall strictly to the left of the corresponding breakpoint in the contig reference.
+         * @param pos Breakpoint position in the read, 0-based; equivalently, length of read before breakpoint.
+         * @return Number of mutations strictly left of the corresponding breakpoint in the reference,
+         * reference length, and read length spanned by those mutations.
+         */
+         boost::tuple< size_t, Size_Type, Size_Type > count_mutations_left_of_bp(Size_Type pos);
+
         /** Create 2 Read_Chunk objects (and corresponding Mutation containers) from a cigar string.
          * @param r1_start Overlap start in r1, 0-based. Equivalently, length of r1 before the overlap.
          * @param r2_start Overlap start in r2, 0-based. Equivalently, length of r2 before the overlap.
-         * @param r2_rc True iff r2 is reverse complemented.
          * @param cigar Cigar string (r1:reference, r2:query).
          * @return A vector of size 2; index 0 corresponds to (base r1, query r2),
          * index 1 corresponds to (base r2, query r1).
