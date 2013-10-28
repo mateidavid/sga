@@ -1,4 +1,5 @@
 #include "MAC.hpp"
+#include "Cigar.hpp"
 
 using namespace std;
 using boost::tie;
@@ -33,19 +34,19 @@ namespace MAC
                      const string& r1_name, const string& r2_name,
                      Size_Type r1_start, Size_Type r1_len,
                      Size_Type r2_start, Size_Type r2_len, bool r2_rc,
-                     const string& cigar)
+                     const string& cigar_string)
     {
         (void)ce_cont;
-        (void)r1_start;
-        (void)r1_len;
-        (void)r2_start;
-        (void)r2_len;
-        (void)r2_rc;
-        (void)cigar;
 
         Read_Entry_Cont::iterator re1_it = re_cont.find(r1_name);
         assert(re1_it != re_cont.end());
         Read_Entry_Cont::iterator re2_it = re_cont.find(r2_name);
         assert(re2_it != re_cont.end());
+
+        // construct 2 read chunk objects corresponding to the alignment
+        Cigar cigar(cigar_string, r2_rc);
+        assert(r1_len == cigar.get_rf_len());
+        assert(r2_len == cigar.get_qr_len());
+        vector< pair< Read_Chunk, Mutation_Cont > > v = Read_Chunk::make_chunks_from_cigar(r1_start, r2_start, cigar);
     }
 }

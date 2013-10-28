@@ -14,6 +14,8 @@
 #include <boost/multi_index/ordered_index.hpp>
 
 #include "MAC_forward.hpp"
+#include "Mutation.hpp"
+#include "Cigar.hpp"
 
 
 namespace MAC
@@ -33,8 +35,11 @@ namespace MAC
         /** Type for an external unary modifier. */
         typedef std::function<void(Read_Chunk&)> modifier_type;
 
-        //Read_Chunk()
-        //: r_start(0), r_len(0), c_start(0), c_len(0) {}
+        /** @name Getters */
+        /**@{*/
+        /** Empty constructor. */
+        Read_Chunk()
+        : _re_ptr(NULL), _ce_ptr(NULL), _r_start(0), _r_len(0), _c_start(0), _c_len(0), _rc(false) {}
 
         /** Constructs a single read chunk from a read, and maps it to a new contig.
          * @param re_ptr Pointer to read entry where this chunk comes from.
@@ -42,6 +47,7 @@ namespace MAC
          */
         Read_Chunk(const Read_Entry* re_ptr, Size_Type len)
         : _re_ptr(re_ptr), _ce_ptr(NULL), _r_start(0), _r_len(len), _c_start(0), _c_len(len), _rc(false) {}
+        /**@}*/
 
         /** @name Getters */
         /**@{*/
@@ -72,6 +78,17 @@ namespace MAC
             _rc = rc;
             _mut_ptr_cont = mut_ptr_cont;
         }
+
+        /** Create 2 Read_Chunk objects (and corresponding Mutation containers) from a cigar string.
+         * @param r1_start Overlap start in r1, 0-based. Equivalently, length of r1 before the overlap.
+         * @param r2_start Overlap start in r2, 0-based. Equivalently, length of r2 before the overlap.
+         * @param r2_rc True iff r2 is reverse complemented.
+         * @param cigar Cigar string (r1:reference, r2:query).
+         * @return A vector of size 2; index 0 corresponds to (base r1, query r2),
+         * index 1 corresponds to (base r2, query r1).
+         */
+        static std::vector<std::pair<Read_Chunk,Mutation_Cont>> make_chunks_from_cigar(
+            Size_Type r1_start, Size_Type r2_start, const Cigar& cigar);
 
         friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
 

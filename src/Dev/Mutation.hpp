@@ -30,7 +30,7 @@ namespace MAC
 
         /** Default constructor. */
         Mutation()
-        : _start(0), _len(0) {}
+        : _start(0), _len(0), _seq_len(0) {}
 
         /** Constructor.
          * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
@@ -38,11 +38,19 @@ namespace MAC
          * @param seq Alternate sequence.
          */
         Mutation(Size_Type start, Size_Type len, const Seq_Type& seq = Seq_Type())
-        : _seq(seq), _start(start), _len(len) {}
+        : _seq(seq), _start(start), _len(len), _seq_len(seq.size()) {}
+
+        /** Constructor.
+         * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
+         * @param len Length of the base sequence affected by the mutation.
+         * @param seq_len Length of alternate sequence.
+         */
+        Mutation(Size_Type start, Size_Type len, Size_Type seq_len)
+        : _start(start), _len(len), _seq_len(seq_len) {}
 
         /** Copy constructor. */
         Mutation(const Mutation& rhs)
-        : _seq(rhs._seq), _start(rhs._start), _len(rhs._len) {}
+        : _seq(rhs._seq), _start(rhs._start), _len(rhs._len), _seq_len(rhs._seq_len) {}
 
         /** Static insertion constructor.
          * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
@@ -54,22 +62,43 @@ namespace MAC
             return Mutation(start, 0, seq);
         }
 
-        /** Static snp constructor.
+        /** Static insertion constructor.
          * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
-         * @param symbol Alternate symbol.
+         * @param seq_len Length of the inserted sequence.
          */
-        static Mutation make_snp(Size_Type start, const Seq_Type& seq)
+        static Mutation make_ins(Size_Type start, Size_Type seq_len)
         {
-            assert(seq.size() == 1);
-            return Mutation(start, 1, seq);
+            assert(seq_len > 0);
+            return Mutation(start, 0, seq_len);
+        }
+
+        /** Static mnp (multi-nucleotide polymorphism) constructor.
+         * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
+         * @param seq Alternate sequence.
+         */
+        static Mutation make_mnp(Size_Type start, const Seq_Type& seq)
+        {
+            assert(seq.size() > 0);
+            return Mutation(start, seq.size(), seq);
+        }
+
+        /** Static mnp constructor.
+         * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
+         * @param seq_len Length of the alternate sequence.
+         */
+        static Mutation make_mnp(Size_Type start, Size_Type seq_len)
+        {
+            assert(seq_len > 0);
+            return Mutation(start, seq_len, seq_len);
         }
 
         /** Static deletion constructor.
          * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
+         * @param len Length of the deletion.
          */
-        static Mutation make_del(Size_Type start)
+        static Mutation make_del(Size_Type start, Size_Type len)
         {
-            return Mutation(start, 1);
+            return Mutation(start, len);
         }
 
         /** @name Getters */
@@ -77,16 +106,18 @@ namespace MAC
         Size_Type get_start() const { return _start; }
         Size_Type get_len() const { return _len; }
         Size_Type get_end() const { return _start+_len; }
+        Size_Type get_seq_len() const { return _seq_len; }
+        bool have_seq() const { return _seq.size() == _seq_len; }
         const Seq_Type& get_seq() const { return _seq; }
         key_type get_key() const { return _start; }
         /**@}*/
 
         /** @name Basic queries */
         /**@{*/
-        bool is_ins() const { return _len == 0 and _seq.size() == 1; }
-        bool is_snp() const { return _len == 1 and _seq.size() == 1; }
-        bool is_del() const { return _len == 1 and _seq.size() == 0; }
-        bool is_empty() const { return _len == 0 and _seq.size() == 0; }
+        bool is_ins() const { return _len == 0 and _seq_len == 1; }
+        bool is_snp() const { return _len == 1 and _seq_len == 1; }
+        bool is_del() const { return _len == 1 and _seq_len == 0; }
+        bool is_empty() const { return _len == 0 and _seq_len == 0; }
         /**@}*/
 
         friend std::ostream& operator << (std::ostream&, const Mutation&);
@@ -95,6 +126,7 @@ namespace MAC
         Seq_Type _seq;
         Size_Type _start;
         Size_Type _len;
+        Size_Type _seq_len;
     };
 
     namespace detail

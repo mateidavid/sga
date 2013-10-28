@@ -51,6 +51,7 @@ libmac_a_SOURCES = \
         Read_Chunk.cpp \
         Read_Entry.cpp \
         Contig_Entry.cpp \
+        Cigar.cpp \
         MAC.cpp
 
 test_mac_CPPFLAGS = -std=c++0x

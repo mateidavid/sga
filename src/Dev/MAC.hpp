@@ -29,6 +29,11 @@ namespace MAC
     void add_read(Read_Entry_Cont& re_cont, Contig_Entry_Cont& ce_cont,
                   const std::string* name_ptr, const Seq_Type* seq_ptr);
 
+    std::vector<std::pair< Read_Chunk, Mutation_Cont >> make_chunks_from_cigar(
+        Size_Type r1_start, Size_Type r1_len,
+        Size_Type r2_start, Size_Type r2_len, bool r2_rc,
+        const std::string& cigar);
+
     /** Add an overlap between 2 reads.
      *
      * The contigs holding overlapping chunks of each read are collapsed into one.
