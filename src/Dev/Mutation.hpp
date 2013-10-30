@@ -11,6 +11,7 @@
 #include <cassert>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
+#include <boost/tuple/tuple.hpp>
 
 #include "MAC_forward.hpp"
 
@@ -105,7 +106,7 @@ namespace MAC
         /**@{*/
         Size_Type get_start() const { return _start; }
         Size_Type get_len() const { return _len; }
-        Size_Type get_end() const { return _start+_len; }
+        Size_Type get_end() const { return _start + _len; }
         Size_Type get_seq_len() const { return _seq_len; }
         bool have_seq() const { return _seq.size() == _seq_len; }
         const Seq_Type& get_seq() const { return _seq; }
@@ -119,6 +120,13 @@ namespace MAC
         bool is_del() const { return _len > 0 and _seq_len == 0; }
         bool is_empty() const { return _len == 0 and _seq_len == 0; }
         /**@}*/
+
+        /** Cut mutation at given offsets.
+         * @param base_offset Base offset, 0-based.
+         * @param alt_offset Alternate sequence offset, 0-based.
+         * @return The part of the original mutation that was cut from this object.
+         */
+        Mutation cut(Size_Type base_offset, Size_Type alt_offset);
 
         friend std::ostream& operator << (std::ostream&, const Mutation&);
 
