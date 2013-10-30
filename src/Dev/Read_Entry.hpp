@@ -48,8 +48,14 @@ namespace MAC
         const std::string& get_name() const { return *_name_ptr; }
         Size_Type get_len() const { return _chunk_cont.rend()->get_r_end(); }
         key_type get_key() const { return *_name_ptr; }
-        Read_Chunk_CPtr get_cptr_first_chunk() const { return &(*_chunk_cont.begin()); }
+        const Read_Chunk_Cont& get_chunk_cont() const { return _chunk_cont; }
         /**@}*/
+
+        /** Find chunk which contains given read position.
+         * @param r_pos Read position, 0-based.
+         * @return Pointer to Read Chunk object, or NULL if no chunk contains r_pos.
+         */
+        const Read_Chunk* get_chunk_with_pos(Size_Type r_pos) const;
 
         /** Member read chunk modifier.
          * @param chunk_cptr Pointer to read chunk to modify.
