@@ -10,6 +10,8 @@
 #include <iostream>
 #include <vector>
 #include <set>
+#include <map>
+#include <memory>
 #include <functional>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
@@ -93,24 +95,35 @@ namespace MAC
             _mut_ptr_cont = mut_ptr_cont;
         }
 
-        /** Compute data necessary to perform a split a the given read position.
-         * @param r_brk Breakpoint position in the read, 0-based; equivalently, length of read before breakpoint.
-         * @return A triple (r_pos, c_pos, idx).
+        /** Prepare data necessary to perform a split at the given position.
+         * @param brk Breakpoint position, 0-based; equivalently, length before breakpoint.
+         * @param is_contig_brk True if position is on contig, false if it is on read.
+         * @return A triple (c_pos, r_pos, idx).
          * Guarantees:
-         * - r_pos <= r_brk.
-         * - read [r_start, r_pos) is matched to contig [c_start, c_pos) if rc==0, and [c_pos, c_end) if rc==1.
-         * - if r_pos < r_brk: idx is the index of a mutation containing both read positions r_brk-1 and r_brk
-         * - if r_pos == r_brk: idx is the index of the first (smallest m_c_start) mutation with m_c_start >= c_pos.
+         * - if is_contig_brk: c_pos <= brk
+         * - else: if not _rc: r_pos <= brk; else brk <= r_pos
+         * - [c_start,c_pos) matched to [r_start,r_pos) / [r_pos,r_end)
+         * - if X_pos == brk: idx is the index of the first (smallest m_c_start) mutation with m_c_start >= c_pos.
+         * - if X_pos != brk: idx is the index of a mutation spanning both positions brk-1 and brk
          */
-         boost::tuple< Size_Type, Size_Type, size_t > get_read_split_data(Size_Type r_brk) const;
+         boost::tuple< Size_Type, Size_Type, size_t > get_cut_data(Size_Type r_brk, bool is_contig_brk) const;
 
-         /** If a mutation that includes the given read breakpoint, return it along with cut coordinates.
-          * @param r_pos Read position where to cut, 0-based. Alternatively, number of read bases before the cut.
-          * @param c_brk_cont Set of preferred contig breakpoints. (Optional)
+         /** If given breakpoint is spanned by a mutation, return it along with cut coordinates.
+          * @param brk Position where to cut, 0-based. Alternatively, length before the cut.
+          * @param is_contig_brk True if position is on contig; false if it is on read.
+          * @param c_brk_cont Set of preferred breakpoints. (Optional)
           * @return Pointer to mutation to cut (NULL if none), base and alternate offsets where to cut.
           */
-         boost::tuple< const Mutation*, Size_Type, Size_Type > find_mutation_to_cut(
-             Size_Type r_pos, const std::set< Size_Type >& c_brk_cont = std::set< Size_Type >()) const;
+         boost::tuple< const Mutation*, Size_Type, Size_Type > get_mutation_to_cut(
+             Size_Type brk, bool is_contig_brk, const std::set< Size_Type >& c_brk_cont = std::set< Size_Type >()) const;
+
+         /** Split read chunk based on contig position and mutation map.
+          * @param c_brk Contig breakpoint.
+          * @param mut_cptr_map Map of mutations which go to the right side.
+          * @param ce_cptr Pointer to new contig entry object.
+          * @return If the chunk gets split, return additional Read_Chunk object.
+          */
+         std::shared_ptr< Read_Chunk > apply_contig_split(Size_Type c_brk, const std::map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr);
 
          /** Given a read chunk breakpoint, compute the range of possible contig breakpoints.
           * @param pos Breakpoint position in the read, 0-based; equivalently, length of read before breakpoint.

@@ -63,21 +63,42 @@ namespace MAC
     }
 
     void cut_contig_entry(Read_Entry_Cont& re_cont, Contig_Entry_Cont& ce_cont,
-                          const Contig_Entry* ce_cptr, Size_Type c_pos,
-                          Read_Chunk_CPtr rc_cptr, Size_Type r_pos)
+                          const Contig_Entry* ce_cptr, Size_Type c_pos, const Mutation* mut_left_cptr)
     {
-        (void)rc_cptr;
-        (void)r_pos;
-
         // first, split any mutations that span c_pos
         vector< const Mutation* > v = ce_cptr->get_mutations_spanning_pos(c_pos);
         for (size_t i = 0; i < v.size(); ++i)
         {
+            assert(v[i] != mut_left_cptr);
             cut_mutation(re_cont, ce_cont, ce_cptr, v[i], c_pos - v[i]->get_start(), 0);
         }
 
-        //
-        
+        // create new contig entry object; set string; add it to container
+        Contig_Entry_Cont::iterator ce_new_it;
+        bool success;
+        boost::tie(ce_new_it, success) = ce_cont.insert(ce_cont.end(), Contig_Entry(new string(ce_cptr->get_seq().substr(c_pos))));
+        assert(success);
+
+        // aquire second-half mutations from original contig entry object into the new one; also compute mutation pointer map
+        map< const Mutation*, const Mutation* > mut_cptr_map;
+        auto ce_modifier = [&] (Contig_Entry& ce) { mut_cptr_map = ce.acquire_second_half_mutations(ce_cptr, c_pos, mut_left_cptr); };
+        success = ce_cont.modify(ce_new_it, ce_modifier);
+        assert(success);
+
+        // save the list of read chunk objects that must be modified
+        Read_Chunk_CPtr_Cont chunk_cptr_cont = ce_cptr->get_chunk_cptr_cont();
+
+        for (auto rc_cptr_it = chunk_cptr_cont.begin(); rc_cptr_it != chunk_cptr_cont.end(); ++rc_cptr_it)
+        {
+            if ((*rc_cptr_it)->get_c_end() < c_pos)
+            {
+                // nothing changes in these
+                continue;
+            }
+            
+        }
+
+        //TODO
     }
 
     void cut_read_chunk(Read_Entry_Cont& re_cont, Contig_Entry_Cont& ce_cont, Read_Chunk_CPtr rc_cptr, Size_Type r_brk)
@@ -85,7 +106,7 @@ namespace MAC
         const Mutation* mut_cptr;
         Size_Type c_offset;
         Size_Type r_offset;
-        boost::tie(mut_cptr, c_offset, r_offset) = rc_cptr->find_mutation_to_cut(r_brk);
+        boost::tie(mut_cptr, c_offset, r_offset) = rc_cptr->get_mutation_to_cut(r_brk, false);
         if (mut_cptr != NULL)
         {
             cut_mutation(re_cont, ce_cont, rc_cptr->get_ce_ptr(), mut_cptr, c_offset, r_offset);
@@ -95,13 +116,18 @@ namespace MAC
         Size_Type r_pos;
         Size_Type c_pos;
         size_t i;
-        boost::tie(r_pos, c_pos, i) = rc_cptr->get_read_split_data(r_brk);
+        boost::tie(c_pos, r_pos, i) = rc_cptr->get_cut_data(r_brk, false);
         assert(r_pos == r_brk);
 
-        // cut contig at given c_offset & remeber to cut current chunk at r_offset
-        cut_contig_entry(re_cont, ce_cont,
-                         rc_cptr->get_ce_ptr(), c_pos,
-                         rc_cptr, r_brk);
+        // check if an insertion at c_pos has to remain on the left of the cut
+        const Mutation* mut_left_cptr = NULL;
+        if (i > 0
+            and rc_cptr->get_mut_ptr_cont()[i-1]->get_start() == c_pos
+            and rc_cptr->get_mut_ptr_cont()[i-1]->is_ins())
+            mut_left_cptr = rc_cptr->get_mut_ptr_cont()[i-1];
+
+        // cut contig at given c_offset; all insertions at c_pos go to the right except for at most one, passed as argument
+        cut_contig_entry(re_cont, ce_cont, rc_cptr->get_ce_ptr(), c_pos, mut_left_cptr);
     }
 
     void cut_read_entry(Read_Entry_Cont& re_cont, Contig_Entry_Cont& ce_cont, const Read_Entry* re_cptr, Size_Type r_pos)

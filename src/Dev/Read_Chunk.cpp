@@ -94,159 +94,162 @@ namespace MAC
         return res;
     }
 
-    boost::tuple< Size_Type, Size_Type, size_t > Read_Chunk::get_read_split_data(Size_Type r_brk) const
+    boost::tuple< Size_Type, Size_Type, size_t > Read_Chunk::get_cut_data(Size_Type brk, bool is_contig_brk) const
     {
-        size_t r_idx;
-        size_t c_idx;
-        size_t n = _mut_ptr_cont.size();
-        Size_Type r_pos = get_r_start();
-        Size_Type c_pos = (not _rc? get_c_start() : get_c_end());
+        assert(not is_contig_brk or (get_c_start() <= brk and brk <= get_c_end()));
+        assert(is_contig_brk or (get_r_start() <= brk and brk <= get_r_end()));
 
-        assert(get_r_start() <= r_brk and r_brk <= get_r_end());
+        Size_Type c_pos = get_c_start();
+        Size_Type r_pos = (not _rc? get_r_start() : get_r_end());
+        size_t i;
 
-        // invariant:
-        //  - [_r_start,r_pos) is matched to [_c_start,c_pos) or [c_pos,_c_end) if rc
-        //  - for remaining mutations, r_start >= r_pos
-        //
-        // Hack:
-        //   To deal with the last matched portion consistently, we "imagine" an (n+1) empty read mutation.
-        //   If not rc, this has (start = end = _c_end; len = 0; seq_len = 0).
-        //   If rc, this has (start = end = _c_start; len = 0; seq_len = 0).
-        Mutation fake_mut((not _rc? get_c_end() : get_c_start()), 0, 0);
+        // we use a fake Mutation to deal with end matching region smoothly
+        Mutation fake_mut(get_c_end(), 0, 0);
         const Mutation* mut_cptr;
-        for (r_idx = 0; r_idx <= n; ++r_idx)
+        for (i = 0; i <= _mut_ptr_cont.size(); ++i)
         {
-            // r_idx-th mutation in read == c_idx-th mutation in contig
-            // Note: this is invalid when r_idx == n; must protect access
-            c_idx = (not _rc ? r_idx : n - 1 - r_idx);
-            mut_cptr = (r_idx < n? _mut_ptr_cont[c_idx] : &fake_mut);
+            mut_cptr = (i < _mut_ptr_cont.size()? _mut_ptr_cont[i] : &fake_mut);
 
-            // before we consider r_idx-th read mutation,
-            // we must account for the matched (non-mutated) region preceding it
-            // read may not observe overlapping or out-of-range mutations in the reference
-            Size_Type match_len;
-            if (not _rc)
-            {
-                assert(c_pos <= mut_cptr->get_start());
-                match_len = mut_cptr->get_start() - c_pos;
-            }
-            else
-            {
-                assert(mut_cptr->get_end() <= c_pos);
-                match_len = c_pos - mut_cptr->get_end();
-            }
+            // mutations are expected in contig order
+            assert(c_pos <= mut_cptr->get_start());
 
-            // compute read start&end of next mutation
-            Size_Type m_r_start = r_pos + match_len;
-            Size_Type m_r_end = m_r_start + mut_cptr->get_seq_len();
+            // progress
+            assert(not is_contig_brk or c_pos <= brk);
+            assert(is_contig_brk or _rc or r_pos <= brk);
+            assert(is_contig_brk or not _rc or brk <= r_pos);
 
-            if (m_r_start >= r_brk)
+            Size_Type match_len = mut_cptr->get_start() - c_pos;
+            // stop if breakpoint is inside the next matched region, or right after it
+            if (is_contig_brk and brk <= c_pos + match_len)
             {
-                // break occurs inside matched portion, or immediately after it
-                Size_Type r_leftover = r_brk - r_pos;
-                r_pos += r_leftover;
-                c_pos = (not _rc? c_pos + r_leftover : c_pos - r_leftover);
+                match_len = brk - c_pos;
+                c_pos = brk;
+                r_pos = (not _rc? r_pos + match_len : r_pos - match_len);
                 break;
             }
-            else // m_r_start < r_brk
+            else if (not is_contig_brk
+                     and ((not _rc and brk <= r_pos + match_len)
+                          or (_rc and r_pos - match_len <= brk)))
             {
-                // definitely go past matched portion
-                r_pos += match_len;
-                c_pos = (not _rc? c_pos + match_len : c_pos - match_len);
-
-                // now consider advancing past r_idx-th read mutation
-                if (m_r_end > r_brk)
-                {
-                    // we found a mutation with m_r_start < r_brk < m_r_end
-                    break;
-                }
-                else // m_r_end <= r_brk
-                {
-                    // go past it as well
-                    r_pos += mut_cptr->get_seq_len();
-                    c_pos = (not _rc? c_pos + mut_cptr->get_len() : c_pos - mut_cptr->get_len());
-                }
+                r_pos = brk;
+                c_pos += (not _rc? brk - r_pos : r_pos - brk);
+                break;
             }
+
+            // advance past matched region
+            c_pos += match_len;
+            r_pos = (not _rc? r_pos + match_len : r_pos - match_len);
+
+            // we do not get here if breakpoint is now on the edge of the last matching region
+            assert(not is_contig_brk or c_pos < brk);
+            assert(is_contig_brk or _rc or r_pos < brk);
+            assert(is_contig_brk or not _rc or brk < r_pos);
+
+            // stop if next mutation completely spans read breakpoint
+            if ((is_contig_brk and brk < c_pos + mut_cptr->get_len())
+                or (not is_contig_brk and ((not _rc and brk < r_pos + mut_cptr->get_seq_len())
+                                           or (_rc and r_pos - mut_cptr->get_seq_len() < brk))))
+            {
+                break;
+            }
+
+            // otherwise, advance past next mutation
+            c_pos += mut_cptr->get_len();
+            r_pos = (not _rc? r_pos + mut_cptr->get_seq_len() : r_pos - mut_cptr->get_seq_len());
         }
 
-        // loop should exit with m_r_start >= r_brk before the last increment
-        assert(r_idx < n + 1);
-
-        // basic bounds
-        assert(get_r_start() <= r_pos and r_pos <= get_r_end());
         assert(get_c_start() <= c_pos and c_pos <= get_c_end());
+        assert(get_r_start() <= r_pos and r_pos <= get_r_end());
+        assert(not is_contig_brk or c_pos <= brk);
+        assert(is_contig_brk or _rc or r_pos <= brk);
+        assert(is_contig_brk or not _rc or brk <= r_pos);
 
-        // either r_pos < r_brk or r_pos == r_brk
-        assert(r_pos <= r_brk);
-
-        // final adjustment: we found the first mutation in read order after the break;
-        // if break is not inside mutation, we must return the first mutation after the break in contig order
-        if (_rc and r_pos == r_brk)
-        {
-            if (r_idx == n or _mut_ptr_cont[c_idx]->get_end() < c_pos)
-            {
-                --r_idx;
-                c_idx = n - 1 - r_idx;
-            }
-            else
-            {
-                while (c_idx > 0 and _mut_ptr_cont[c_idx]->get_end() == c_pos)
-                {
-                    ++r_idx;
-                    --c_idx;
-                }
-            }
-        }
-
-        // if r_pos < r_brk:
-        //   r_idx < n, and
-        //   r_brk < r_pos + m_seq_len, and
-        //   c_pos == m_start (no _rc)
-        //   c_pos == m_end (rc)
-        assert(not (r_pos < r_brk) or r_idx < n);
-        assert(not (r_pos < r_brk) or r_brk < r_pos + _mut_ptr_cont[c_idx]->get_seq_len());
-        assert(not (r_pos < r_brk) or _rc or c_pos == _mut_ptr_cont[c_idx]->get_start());
-        assert(not (r_pos < r_brk) or not _rc or _mut_ptr_cont[c_idx]->get_end() == c_pos);
-
-        // if r_pos == r_brk:
-        //   if r_idx < n:
-        //     c_pos <= m_start (no _rc)
-        //     m_end <= c_pos (rc)
-        assert(not (r_pos == r_brk) or not (r_idx < n) or _rc or c_pos <= _mut_ptr_cont[c_idx]->get_start());
-        assert(not (r_pos == r_brk) or not (r_idx < n) or not _rc or _mut_ptr_cont[c_idx]->get_end() <= c_pos);
-
-        return boost::make_tuple(r_pos, c_pos, c_idx);
+        return boost::make_tuple< Size_Type, Size_Type, size_t >(c_pos, r_pos, i);
     }
 
-    boost::tuple< const Mutation*, Size_Type, Size_Type > Read_Chunk::find_mutation_to_cut(Size_Type r_brk, const set< Size_Type >& c_brk_cont) const
+    boost::tuple< const Mutation*, Size_Type, Size_Type > Read_Chunk::get_mutation_to_cut(
+        Size_Type brk, bool is_contig_brk, const set< Size_Type >& brk_cont) const
     {
-        Size_Type r_pos;
         Size_Type c_pos;
+        Size_Type r_pos;
         size_t i;
-        boost::tie(r_pos, c_pos, i) = get_read_split_data(r_brk);
+        tie(c_pos, r_pos, i) = get_cut_data(brk, is_contig_brk);
 
-        // if we reached r_pos, there is no mutation to be cut
-        if (r_pos == r_brk)
+        // if we reached brk, there is no mutation to be cut
+        if ((is_contig_brk and c_pos == brk)
+            or (not is_contig_brk and r_pos == brk))
             return boost::make_tuple< const Mutation*, Size_Type, Size_Type >(NULL, 0, 0);
 
         // if not, we must cut i-th mutation
         assert(i < _mut_ptr_cont.size());
-        assert(r_pos < r_brk and r_brk < r_pos + _mut_ptr_cont[i]->get_seq_len());
-        assert(_rc or c_pos == _mut_ptr_cont[i]->get_start());
-        assert(not _rc or c_pos == _mut_ptr_cont[i]->get_end());
+        assert(c_pos == _mut_ptr_cont[i]->get_start());
 
-        Size_Type c_brk;
-        // range for possible contig cuts is [m_c_start...m_c_end]
-        // look for preferred contig breakpoint
-        set< Size_Type >::iterator it = c_brk_cont.lower_bound(_mut_ptr_cont[i]->get_start());
-        if (it != c_brk_cont.end() and *it <= _mut_ptr_cont[i]->get_end())
-            c_brk = *it;
+        assert(not is_contig_brk or (c_pos < brk and brk < _mut_ptr_cont[i]->get_end()));
+        assert(is_contig_brk or _rc or (r_pos < brk and brk < r_pos + _mut_ptr_cont[i]->get_seq_len()));
+        assert(is_contig_brk or not _rc or (r_pos > brk and brk > r_pos - _mut_ptr_cont[i]->get_seq_len()));
+
+        // range for possible contig cuts
+        Size_Type range_start = (is_contig_brk?
+                                 (not _rc? r_pos : r_pos - _mut_ptr_cont[i]->get_seq_len())
+                                 : c_pos);
+        Size_Type range_end = (is_contig_brk?
+                               (not _rc? r_pos + _mut_ptr_cont[i]->get_seq_len() : r_pos)
+                               : _mut_ptr_cont[i]->get_end());
+        Size_Type sel_brk;
+
+        // look for preferred breakpoint
+        set< Size_Type >::iterator it = brk_cont.lower_bound(range_start);
+        if (it != brk_cont.end() and *it <= range_end)
+            sel_brk = *it;
         else
-            c_brk = c_pos;
+            sel_brk = range_start;
 
-        Size_Type r_offset = (not _rc? r_brk - r_pos : r_pos + _mut_ptr_cont[i]->get_seq_len() - r_brk);
-        return boost::make_tuple< const Mutation*, Size_Type, Size_Type >(_mut_ptr_cont[i], c_brk - _mut_ptr_cont[i]->get_start(), r_offset);
+        if (is_contig_brk)
+            return boost::make_tuple< const Mutation*, Size_Type, Size_Type >(_mut_ptr_cont[i], brk - c_pos,
+                                                                       (not _rc? sel_brk - r_pos : r_pos - sel_brk));
+        else
+            return boost::make_tuple< const Mutation*, Size_Type, Size_Type >(_mut_ptr_cont[i], sel_brk - c_pos,
+                                                                       (not _rc? brk - r_pos : r_pos - brk));
     }
+
+    /*
+    shared_ptr< Read_Chunk > Read_Chunk::apply_contig_split(Size_Type c_brk, const map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr)
+    {
+        Size_Type r_brk;
+        size_t i;
+        tie(r_brk, i) = get_read_brk(c_brk, mut_cptr_map);
+        if (r_brk == get_r_start() or r_brk == get_r_end())
+        {
+            // the chunk stays in one piece, but ce_ptr & mutation pointers might change
+            assert(i == 0 or i == _mut_ptr_cont.size());
+            if (i == 0)
+            {
+                // fix contig start coordinate
+                assert(c_brk <= _c_start);
+                _c_start -= c_brk;
+                // fix mutation pointers
+                vector< const Mutation* > tmp = _mut_ptr_cont;
+                _mut_ptr_cont.clear();
+                for (size_t j = 0; j < tmp.size(); ++j)
+                {
+                    assert(mut_cptr_map.count(tmp[j]) > 0);
+                    _mut_ptr_cont.push_back(mut_cptr_map[tmp[j]]);
+                }
+                // fix ce_ptr
+                _ce_ptr = ce_cptr;
+            }
+            return NULL;
+        }
+        else
+        {
+            // read chunk gets split in 2
+            assert(get_r_start() < r_brk and r_brk < get_r_end());
+
+            //TODO
+            return NULL;
+        }
+    }
+    */
 
     /*
     pair< Size_Type, Size_Type > Read_Chunk::get_contig_brk_range(Size_Type pos)
