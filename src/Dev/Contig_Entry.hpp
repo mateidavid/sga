@@ -10,6 +10,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <map>
 #include <memory>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
@@ -38,6 +39,7 @@ namespace MAC
         /**@{*/
         const Seq_Type& get_seq() const { return *_seq_ptr; }
         const Mutation_Cont& get_mutation_cont() const { return _mut_cont; }
+        const Read_Chunk_CPtr_Cont& get_chunk_cptr_cont() const { return _chunk_cptr_cont; }
         /**@}*/
 
         /** Add to the list of read chunks.
@@ -64,6 +66,15 @@ namespace MAC
          * @return Vector of pointers to Mutation objects completely spanning c_pos.
          */
         std::vector< const Mutation* > get_mutations_spanning_pos(Size_Type c_pos) const;
+
+        /** Get mutations from the second half of a given Contig Entry object that is being cut in 2.
+         * @param ce_cptr Contig_Entry being cut.
+         * @param c_pos Position of the cut.
+         * @param mut_left_cptr Pointer to insertion at c_pos that must appear on the left of the cut.
+         * @return Map with (key=old mutation; value=new mutation).
+         */
+        std::map< const Mutation*, const Mutation* > acquire_second_half_mutations(
+            const Contig_Entry* ce_cptr, Size_Type c_pos, const Mutation* mut_left_cptr);
 
         friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
 

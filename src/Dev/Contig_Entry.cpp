@@ -58,6 +58,34 @@ namespace MAC
         return res;
     }
 
+    map< const Mutation*, const Mutation* > Contig_Entry::acquire_second_half_mutations(
+        const Contig_Entry* ce_cptr, Size_Type c_pos, const Mutation* mut_left_cptr)
+    {
+        map< const Mutation*, const Mutation* > res;
+
+        assert(mut_left_cptr == NULL or (mut_left_cptr->get_start() == c_pos and mut_left_cptr->is_ins()));
+
+        Mutation_Cont::iterator mut_old_it = ce_cptr->_mut_cont.lower_bound(c_pos);
+        while (mut_old_it != ce_cptr->_mut_cont.end())
+        {
+            if (&(*mut_old_it) != mut_left_cptr)
+            {
+                Mutation_Cont::iterator mut_new_it;
+                bool success;
+                if (mut_old_it->have_seq())
+                    tie(mut_new_it, success) = _mut_cont.insert(
+                        Mutation(mut_old_it->get_start() - c_pos, mut_old_it->get_len(), mut_old_it->get_seq()));
+                else
+                    tie(mut_new_it, success) = _mut_cont.insert(
+                        Mutation(mut_old_it->get_start() - c_pos, mut_old_it->get_len(), mut_old_it->get_seq_len()));
+                assert(success);
+                res[&(*mut_old_it)] = &(*mut_new_it);
+            }
+            ++mut_old_it;
+        }
+        return res;
+    }
+
     std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs)
     {
         os << "(seq=" << rhs.get_seq() << ",\nmut_list=\n  ";
