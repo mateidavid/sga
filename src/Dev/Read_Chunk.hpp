@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <vector>
+#include <set>
 #include <functional>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
@@ -53,7 +54,7 @@ namespace MAC
         /** @name Getters */
         /**@{*/
         const Read_Entry* get_re_ptr() const { return _re_ptr;}
-        const Contig_Entry* get_ce_ptr_desc() const { return _ce_ptr; }
+        const Contig_Entry* get_ce_ptr() const { return _ce_ptr; }
         Size_Type get_r_start() const { return _r_start; }
         Size_Type get_r_len() const { return _r_len; }
         Size_Type get_r_end() const { return _r_start + _r_len; }
@@ -61,8 +62,20 @@ namespace MAC
         Size_Type get_c_len() const { return _c_len; }
         Size_Type get_c_end() const { return _c_start + _c_len; }
         bool get_rc() const { return _rc; }
+        const std::vector< const Mutation* > get_mut_ptr_cont() const { return _mut_ptr_cont; }
         key_type get_key() const { return _r_start; }
         /**@}*/
+
+        /** Check if read chunk has given mutation.
+         * @param mut_cptr Pointer to mutation to look for.
+         */
+        bool have_mutation(const Mutation* mut_cptr) const;
+
+        /** If read chunk has old mutation, add new mutation right after it.
+         * @param m_old_cptr Old mutation to look for.
+         * @param m_new_cptr New mutation to add if old one exists.
+         */
+        void cond_add_mutation(const Mutation* m_old_cptr, const Mutation* m_new_cptr);
 
         /** Assign read chunk to contig.
          * @param ce_ptr Pointer to contig entry object.
@@ -80,15 +93,32 @@ namespace MAC
             _mut_ptr_cont = mut_ptr_cont;
         }
 
-        /** Given a breakpoint position in the read, compute the number of mutations
-         * that fall strictly to the left of the corresponding breakpoint in the contig reference.
-         * @param pos Breakpoint position in the read, 0-based; equivalently, length of read before breakpoint.
-         * @return Number of mutations strictly left of the corresponding breakpoint in the reference,
-         * reference length, and read length spanned by those mutations.
+        /** Compute data necessary to perform a split a the given read position.
+         * @param r_brk Breakpoint position in the read, 0-based; equivalently, length of read before breakpoint.
+         * @return A triple (r_pos, c_pos, idx).
+         * Guarantees:
+         * - r_pos <= r_brk.
+         * - read [r_start, r_pos) is matched to contig [c_start, c_pos) if rc==0, and [c_pos, c_end) if rc==1.
+         * - if r_pos < r_brk: idx is the index of a mutation containing both read positions r_brk-1 and r_brk
+         * - if r_pos == r_brk: idx is the index of the first (smallest m_c_start) mutation with m_c_start >= c_pos.
          */
-         boost::tuple< size_t, Size_Type, Size_Type > count_mutations_left_of_bp(Size_Type pos);
+         boost::tuple< Size_Type, Size_Type, size_t > get_read_split_data(Size_Type r_brk) const;
 
-        /** Create 2 Read_Chunk objects (and corresponding Mutation containers) from a cigar string.
+         /** If a mutation that includes the given read breakpoint, return it along with cut coordinates.
+          * @param r_pos Read position where to cut, 0-based. Alternatively, number of read bases before the cut.
+          * @param c_brk_cont Set of preferred contig breakpoints. (Optional)
+          * @return Pointer to mutation to cut (NULL if none), base and alternate offsets where to cut.
+          */
+         boost::tuple< const Mutation*, Size_Type, Size_Type > find_mutation_to_cut(
+             Size_Type r_pos, const std::set< Size_Type >& c_brk_cont = std::set< Size_Type >()) const;
+
+         /** Given a read chunk breakpoint, compute the range of possible contig breakpoints.
+          * @param pos Breakpoint position in the read, 0-based; equivalently, length of read before breakpoint.
+          * @return Leftmost and rightmost breakpoint positions in contig.
+          */
+         std::pair< Size_Type, Size_Type > get_contig_brk_range(Size_Type pos);
+
+         /** Create 2 Read_Chunk objects (and corresponding Mutation containers) from a cigar string.
          * @param r1_start Overlap start in r1, 0-based. Equivalently, length of r1 before the overlap.
          * @param r2_start Overlap start in r2, 0-based. Equivalently, length of r2 before the overlap.
          * @param cigar Cigar string (r1:reference, r2:query).
