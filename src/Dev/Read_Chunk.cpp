@@ -212,13 +212,39 @@ namespace MAC
                                                                        (not _rc? brk - r_pos : r_pos - brk));
     }
 
-    /*
-    shared_ptr< Read_Chunk > Read_Chunk::apply_contig_split(Size_Type c_brk, const map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr)
+    shared_ptr< Read_Chunk > Read_Chunk::apply_contig_split(
+        Size_Type c_brk, const map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr)
     {
-        Size_Type r_brk;
+        Size_Type c_pos = c_brk;
+        Size_Type r_pos;
         size_t i;
-        tie(r_brk, i) = get_read_brk(c_brk, mut_cptr_map);
-        if (r_brk == get_r_start() or r_brk == get_r_end())
+        if (c_brk < get_c_start())
+        {
+            r_pos = (not _rc? get_r_start() : get_r_end());
+            i = 0;
+        }
+        else if (get_c_end() < c_brk)
+        {
+            r_pos = (not _rc? get_r_end() : get_r_start());
+            i = _mut_ptr_cont.size();
+        }
+        else
+        {
+            tie(c_pos, r_pos, i) = get_cut_data(c_brk, true);
+            assert(c_pos == c_brk);
+            // if there exists an insertion at c_brk that is not in the map, it will stay on the left side of the break
+            if (i < _mut_ptr_cont.size()
+                and _mut_ptr_cont[i]->get_start() == c_brk
+                and _mut_ptr_cont[i]->is_ins()
+                and mut_cptr_map.count(_mut_ptr_cont[i]) == 0)
+            {
+                r_pos = (not _rc? r_pos + _mut_ptr_cont[i]->get_seq_len() : r_pos - _mut_ptr_cont[i]->get_seq_len());
+                ++i;
+            }
+            assert(i == _mut_ptr_cont.size() or mut_cptr_map.count(_mut_ptr_cont[i]) > 0);
+        }
+
+        if (r_pos == get_r_start() or r_pos == get_r_end())
         {
             // the chunk stays in one piece, but ce_ptr & mutation pointers might change
             assert(i == 0 or i == _mut_ptr_cont.size());
@@ -233,7 +259,7 @@ namespace MAC
                 for (size_t j = 0; j < tmp.size(); ++j)
                 {
                     assert(mut_cptr_map.count(tmp[j]) > 0);
-                    _mut_ptr_cont.push_back(mut_cptr_map[tmp[j]]);
+                    _mut_ptr_cont.push_back(mut_cptr_map.find(tmp[j])->second);
                 }
                 // fix ce_ptr
                 _ce_ptr = ce_cptr;
@@ -243,13 +269,47 @@ namespace MAC
         else
         {
             // read chunk gets split in 2
-            assert(get_r_start() < r_brk and r_brk < get_r_end());
+            assert(get_r_start() < r_pos and r_pos < get_r_end());
 
-            //TODO
-            return NULL;
+            // new read chunk is mapped to the new contig entry (second part of the mapping)
+            Read_Chunk* rc_ptr = new Read_Chunk();
+            rc_ptr->_re_ptr = _re_ptr;
+            rc_ptr->_ce_ptr = ce_cptr;
+            rc_ptr->_rc = _rc;
+
+            // fix contig coordinates
+            rc_ptr->_c_start = c_brk;
+            rc_ptr->_c_len = _c_len - (c_brk - _c_start);
+            _c_len = c_brk - _c_start;
+
+            // fix read coordinates
+            if (not _rc)
+            {
+                rc_ptr->_r_start = r_pos;
+                rc_ptr->_r_len = _r_len - (r_pos - _r_start);
+                _r_len = r_pos - _r_start;
+            }
+            else
+            {
+                rc_ptr->_r_start = _r_start;
+                rc_ptr->_r_len = r_pos - _r_start;
+                _r_start = r_pos;
+                _r_len -= rc_ptr->_r_len;
+            }
+
+            // transfer all mutations starting at i to values under mapping
+            for (size_t j = i; j < _mut_ptr_cont.size(); ++j)
+            {
+                assert(mut_cptr_map.count(_mut_ptr_cont[j]) > 0);
+                rc_ptr->_mut_ptr_cont.push_back(mut_cptr_map.find(_mut_ptr_cont[j])->second);
+            }
+
+            // drop transfered mutations from this chunk
+            _mut_ptr_cont.resize(i);
+
+            return shared_ptr< Read_Chunk >(rc_ptr);
         }
     }
-    */
 
     /*
     pair< Size_Type, Size_Type > Read_Chunk::get_contig_brk_range(Size_Type pos)

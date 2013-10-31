@@ -123,7 +123,8 @@ namespace MAC
           * @param ce_cptr Pointer to new contig entry object.
           * @return If the chunk gets split, return additional Read_Chunk object.
           */
-         std::shared_ptr< Read_Chunk > apply_contig_split(Size_Type c_brk, const std::map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr);
+         std::shared_ptr< Read_Chunk > apply_contig_split(
+             Size_Type c_brk, const std::map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr);
 
          /** Given a read chunk breakpoint, compute the range of possible contig breakpoints.
           * @param pos Breakpoint position in the read, 0-based; equivalently, length of read before breakpoint.
