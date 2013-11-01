@@ -10,6 +10,7 @@
 
 #include "Mutation.hpp"
 #include "print_seq.hpp"
+#include "indent.hpp"
 
 using namespace std;
 using boost::tie;
@@ -212,7 +213,7 @@ namespace MAC
                                                                        (not _rc? brk - r_pos : r_pos - brk));
     }
 
-    shared_ptr< Read_Chunk > Read_Chunk::apply_contig_split(
+    boost::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::apply_contig_split(
         Size_Type c_brk, const map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr)
     {
         Size_Type c_pos = c_brk;
@@ -247,9 +248,11 @@ namespace MAC
         if (r_pos == get_r_start() or r_pos == get_r_end())
         {
             // the chunk stays in one piece, but ce_ptr & mutation pointers might change
+            bool move_to_rhs = false;
             assert(i == 0 or i == _mut_ptr_cont.size());
             if (i == 0)
             {
+                move_to_rhs = true;
                 // fix contig start coordinate
                 assert(c_brk <= _c_start);
                 _c_start -= c_brk;
@@ -264,30 +267,28 @@ namespace MAC
                 // fix ce_ptr
                 _ce_ptr = ce_cptr;
             }
-            return NULL;
+            return boost::make_tuple< bool, shared_ptr< Read_Chunk > >(move_to_rhs, NULL);
         }
         else
         {
             // read chunk gets split in 2
             assert(get_r_start() < r_pos and r_pos < get_r_end());
 
-            // new read chunk is mapped to the new contig entry (second part of the mapping)
+            // create new read chunk for second part of the contig
             Read_Chunk* rc_ptr = new Read_Chunk();
-            rc_ptr->_re_ptr = _re_ptr;
-            rc_ptr->_ce_ptr = ce_cptr;
             rc_ptr->_rc = _rc;
+            rc_ptr->_re_ptr = _re_ptr;
 
-            // fix contig coordinates
+            rc_ptr->_ce_ptr = ce_cptr;
             rc_ptr->_c_start = c_brk;
-            rc_ptr->_c_len = _c_len - (c_brk - _c_start);
-            _c_len = c_brk - _c_start;
+            rc_ptr->_c_len = _c_start + _c_len - c_brk;
+            _c_len -= rc_ptr->_c_len;
 
-            // fix read coordinates
             if (not _rc)
             {
                 rc_ptr->_r_start = r_pos;
-                rc_ptr->_r_len = _r_len - (r_pos - _r_start);
-                _r_len = r_pos - _r_start;
+                rc_ptr->_r_len = _r_start + _r_len - r_pos;
+                _r_len -= rc_ptr->_r_len;
             }
             else
             {
@@ -297,7 +298,7 @@ namespace MAC
                 _r_len -= rc_ptr->_r_len;
             }
 
-            // transfer all mutations starting at i to values under mapping
+            // transfer mutations starting at i (to values under mapping) to read chunk for contig rhs
             for (size_t j = i; j < _mut_ptr_cont.size(); ++j)
             {
                 assert(mut_cptr_map.count(_mut_ptr_cont[j]) > 0);
@@ -307,7 +308,7 @@ namespace MAC
             // drop transfered mutations from this chunk
             _mut_ptr_cont.resize(i);
 
-            return shared_ptr< Read_Chunk >(rc_ptr);
+            return boost::make_tuple< bool, shared_ptr< Read_Chunk > >(false, shared_ptr< Read_Chunk >(rc_ptr));
         }
     }
 
@@ -407,10 +408,18 @@ namespace MAC
 
     ostream& operator << (ostream& os, const Read_Chunk& rhs)
     {
-        os << "(r_start=" << rhs.get_r_start() << ",r_len=" << rhs.get_r_len()
-        << ",c_start=" << rhs.get_c_start() << ",c_len=" << rhs.get_c_len() << ",rc=" << (int)rhs.get_rc() << ",mut_list=(";
-        print_ptr_seq(os, rhs._mut_ptr_cont);
-        os << "))";
+        os << "(Read_Chunk &=" << (void*)&rhs
+           << indent::inc << indent::nl << "re_cptr=" << (void*)rhs._re_ptr
+           << ",ce_cptr=" << (void*)rhs._ce_ptr
+           << indent::nl << "r_start=" << rhs.get_r_start()
+           << ",r_len=" << rhs.get_r_len()
+           << ",c_start=" << rhs.get_c_start()
+           << ",c_len=" << rhs.get_c_len()
+           << ",rc=" << (int)rhs.get_rc()
+           << indent::nl << "mut_cptr_cont="
+           << indent::inc;
+        print_seq(os, rhs._mut_ptr_cont, indent::nl, indent::nl);
+        os << indent::dec << indent::dec << indent::nl << ")";
         return os;
     }
 }

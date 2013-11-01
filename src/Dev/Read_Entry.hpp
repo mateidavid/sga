@@ -32,6 +32,9 @@ namespace MAC
         /** Type of key use to store Read_Entry objects. */
         typedef const Seq_Type& key_type;
 
+        /** Type for an external unary modifier. */
+        typedef std::function<void(Read_Entry&)> modifier_type;
+
         /** Constructor.
          * @param name_ptr Pointer to string containing read name.
          * @param len Length of the read.
@@ -41,6 +44,14 @@ namespace MAC
             assert(name_ptr != NULL);
             Read_Chunk chunk(this, len);
             _chunk_cont.insert(chunk);
+        }
+
+        /** Copy contructor. */
+        Read_Entry(const Read_Entry& rhs) : _name_ptr(rhs._name_ptr), _chunk_cont(rhs._chunk_cont)
+        {
+            // maintain back pointers
+            for (auto it = _chunk_cont.begin(); it != _chunk_cont.end(); ++it)
+                modify_read_chunk(&(*it), [&] (Read_Chunk& rc) { rc.set_re_ptr(this); });
         }
 
         /** @name Getters */
@@ -61,10 +72,21 @@ namespace MAC
          * @param chunk_cptr Pointer to read chunk to modify.
          * @param f Unary modifier function to apply.
          */
-        void modify_read_chunk(Read_Chunk_CPtr chunk_cptr, Read_Chunk::modifier_type f)
+        void modify_read_chunk(Read_Chunk_CPtr rc_cptr, Read_Chunk::modifier_type modifier)
         {
-            Read_Chunk_Cont::iterator it = _chunk_cont.iterator_to(*chunk_cptr);
-            _chunk_cont.modify(it, f);
+            modify_element<Read_Chunk_Cont>(_chunk_cont, rc_cptr, modifier);
+        }
+
+        /** Add read chunk object.
+         * @param rc_cptr Read_Chunk object to add.
+         */
+        Read_Chunk_CPtr add_read_chunk(Read_Chunk_CPtr rc_cptr)
+        {
+            Read_Chunk_Cont::iterator it;
+            bool success;
+            tie(it, success) = _chunk_cont.insert(*rc_cptr);
+            assert(success);
+            return &(*it);
         }
 
         friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);

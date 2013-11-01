@@ -15,23 +15,34 @@ using namespace std;
 
 namespace MAC
 {
+    void Contig_Entry::remove_chunk(Read_Chunk_CPtr rc_cptr)
+    {
+        Read_Chunk_CPtr_Cont::iterator it, it_end;
+        for (tie(it, it_end) = _chunk_cptr_cont.equal_range(rc_cptr->get_key()); it != it_end; ++it)
+        {
+            if (*it == rc_cptr)
+            {
+                _chunk_cptr_cont.erase(it);
+                return;
+            }
+        }
+        assert(false);
+    }
+
     const Mutation* Contig_Entry::cut_mutation(const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset)
     {
-        // find mutation in container
-        Mutation_Cont::iterator it;
-        it = _mut_cont.iterator_to(*mut_cptr);
-        assert(it != _mut_cont.end());
-
-        // cut existing mutation, saving remaining part
+        // construct modifier that cuts existing mutation, saving remaining part
         Mutation m_new;
         auto mut_modifier = [&] (Mutation& m) { m_new = m.cut(c_offset, r_offset); };
-        bool success;
-        success = _mut_cont.modify(it, mut_modifier);
-        assert(success);
+
+        // apply it
+        modify_element<Mutation_Cont>(_mut_cont, mut_cptr, mut_modifier);
 
         // insert remaining part
         Mutation_Cont::iterator it_new;
+        bool success;
         boost::tie(it_new, success) = _mut_cont.insert(m_new);
+        assert(success);
 
         return &(*it_new);
     }
@@ -88,11 +99,15 @@ namespace MAC
 
     std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs)
     {
-        os << "(seq=" << rhs.get_seq() << ",\nmut_list=\n  ";
-        print_seq(os, rhs._mut_cont, "\n  ");
-        os << "\nchunk_list=\n  ";
-        print_ptr_seq(os, rhs._chunk_cptr_cont, "\n  ");
-        os << "\n)\n";
+        os << "(Contig_Entry &=" << (void*)&rhs
+           << indent::inc << indent::nl << "seq=" << rhs.get_seq()
+           << indent::nl << "mut_cont="
+           << indent::inc;
+        print_seq(os, rhs._mut_cont, indent::nl, indent::nl);
+        os << indent::dec << indent::nl << "chunk_cptr_cont="
+           << indent::inc;
+        print_seq(os, rhs._chunk_cptr_cont, indent::nl, indent::nl);
+        os << indent::dec << indent::dec << indent::nl << ")";
         return os;
     }
 }

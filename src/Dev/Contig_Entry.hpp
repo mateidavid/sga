@@ -12,6 +12,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <functional>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
 
@@ -30,6 +31,9 @@ namespace MAC
     class Contig_Entry
     {
     public:
+        /** Type for an external unary modifier. */
+        typedef std::function<void(Contig_Entry&)> modifier_type;
+
         /** Constructor.
          * @param seq_ptr Pointer to read sequence.
          */
@@ -43,9 +47,14 @@ namespace MAC
         /**@}*/
 
         /** Add to the list of read chunks.
-         * @param chunk_cptr Pointer to read chunk object.
+         * @param rc_cptr Pointer to read chunk to add.
          */
-        void add_chunk(Read_Chunk_CPtr chunk_cptr) { _chunk_cptr_cont.insert(chunk_cptr); }
+        void add_chunk(Read_Chunk_CPtr rc_cptr) { _chunk_cptr_cont.insert(rc_cptr); }
+
+        /** Remove read chunk.
+         * @param rc_cptr Pointer to read chunk to remove.
+         */
+        void remove_chunk(Read_Chunk_CPtr rc_cptr);
 
         /** Cut mutation at given offsets.
          * @param mut_cptr Pointer to mutation to cut.

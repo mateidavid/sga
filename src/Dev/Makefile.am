@@ -52,7 +52,8 @@ libmac_a_SOURCES = \
         Read_Entry.cpp \
         Contig_Entry.cpp \
         Cigar.cpp \
-        MAC.cpp
+        indent.cpp \
+        Graph.cpp
 
 test_mac_CPPFLAGS = -std=c++0x
 

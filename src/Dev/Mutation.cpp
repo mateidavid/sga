@@ -7,6 +7,7 @@
 #include "Mutation.hpp"
 
 #include <iostream>
+#include "indent.hpp"
 
 using namespace std;
 
@@ -38,7 +39,12 @@ namespace MAC
 
     ostream& operator << (ostream& os, const Mutation& rhs)
     {
-        os << "(start=" << (size_t)rhs.get_start() << ",len=" << (size_t)rhs.get_len() << ",seq_len=" << rhs.get_seq_len() << ",seq=" << rhs.get_seq() << ")";
+        os << "(Mutation &=" << (void*)&rhs
+           << indent::inc << indent::nl << "start=" << (size_t)rhs.get_start()
+           << ",len=" << (size_t)rhs.get_len()
+           << ",seq_len=" << rhs.get_seq_len()
+           << ",seq=" << rhs.get_seq()
+           << indent::dec << indent::nl << ")";
         return os;
     }
 }

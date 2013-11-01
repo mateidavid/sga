@@ -7,6 +7,7 @@
 #include "Read_Entry.hpp"
 
 #include "print_seq.hpp"
+#include "indent.hpp"
 
 using namespace std;
 
@@ -26,9 +27,13 @@ namespace MAC
 
     ostream& operator << (ostream& os, const Read_Entry& rhs)
     {
-        os << "(name=" << rhs.get_name() << ",\nchunk_list=\n  ";
-        print_seq(os, rhs._chunk_cont, "\n  ");
-        os << "\n)\n";
+        os << "(Read_Entry &=" << (void*)&rhs
+           << indent::inc << indent::nl
+           << "name=" << rhs.get_name()
+           << indent::nl << "chunk_cont="
+           << indent::inc;
+        print_seq(os, rhs._chunk_cont, indent::nl, indent::nl);
+        os << indent::dec << indent::dec << indent::nl << ")";
         return os;
     }
 }

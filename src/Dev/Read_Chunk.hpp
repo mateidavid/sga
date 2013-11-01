@@ -68,6 +68,12 @@ namespace MAC
         key_type get_key() const { return _r_start; }
         /**@}*/
 
+        /** Set read entry pointer. */
+        void set_re_ptr(const Read_Entry* re_ptr) { _re_ptr = re_ptr; }
+
+        /** Set contig entry pointer. */
+        void set_ce_ptr(const Contig_Entry* ce_ptr) { _ce_ptr = ce_ptr; }
+
         /** Check if read chunk has given mutation.
          * @param mut_cptr Pointer to mutation to look for.
          */
@@ -80,15 +86,15 @@ namespace MAC
         void cond_add_mutation(const Mutation* m_old_cptr, const Mutation* m_new_cptr);
 
         /** Assign read chunk to contig.
-         * @param ce_ptr Pointer to contig entry object.
+         * @param ce_cptr Pointer to contig entry object.
          * @param c_start Start of contig base sequence this chunk is mapped to.
          * @param c_len Length of contig base sequence this chunk is mapped to.
          * @param rc Orientation of the mapping.
          * @param mut_ptr_cont List of contig mutations observed by this chunk.
          */
-        void assign_to_contig(const Contig_Entry* ce_ptr, Size_Type c_start, Size_Type c_len, bool rc, const std::vector<const Mutation*> mut_ptr_cont)
+        void assign_to_contig(const Contig_Entry* ce_cptr, Size_Type c_start, Size_Type c_len, bool rc, const std::vector< const Mutation* > mut_ptr_cont)
         {
-            _ce_ptr = ce_ptr;
+            _ce_ptr = ce_cptr;
             _c_start = c_start;
             _c_len = c_len;
             _rc = rc;
@@ -121,9 +127,9 @@ namespace MAC
           * @param c_brk Contig breakpoint.
           * @param mut_cptr_map Map of mutations which go to the right side.
           * @param ce_cptr Pointer to new contig entry object.
-          * @return If the chunk gets split, return additional Read_Chunk object.
+          * @return Flag whether to move read chunk to the right contig side; additional Read_Chunk object mapped to right side, if the chunk gets split
           */
-         std::shared_ptr< Read_Chunk > apply_contig_split(
+         boost::tuple< bool, std::shared_ptr< Read_Chunk > > apply_contig_split(
              Size_Type c_brk, const std::map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr);
 
          /** Given a read chunk breakpoint, compute the range of possible contig breakpoints.

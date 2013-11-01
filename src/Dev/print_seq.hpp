@@ -9,23 +9,31 @@
 
 #include <iostream>
 
+#include "indent.hpp"
 
-template <class T>
-void print_seq(std::ostream& os, const T& t, const char *delim = ",")
+
+template <class T, class U, class V>
+void print_seq(std::ostream& os, const T& t, U delim_start, V delim)
 {
     for (auto it = t.begin(); it != t.end(); ++it)
     {
-        if (it != t.begin()) os << delim;
+        if (it == t.begin())
+            os << delim_start;
+        else
+            os << delim;
         os << *it;
     }
 }
 
-template <class T>
-void print_ptr_seq(std::ostream& os, const T& t, const char *delim = ",")
+template <class T, class U, class V>
+void print_ptr_seq(std::ostream& os, const T& t, U delim_start, V delim)
 {
     for (auto it = t.begin(); it != t.end(); ++it)
     {
-        if (it != t.begin()) os << delim;
+        if (it == t.begin())
+            os << delim_start;
+        else
+            os << delim;
         os << *(*it);
     }
 }

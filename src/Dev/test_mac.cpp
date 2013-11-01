@@ -2,7 +2,8 @@
 #include <vector>
 #include <list>
 
-#include "MAC.hpp"
+#include "Graph.hpp"
+#include "indent.hpp"
 
 using namespace std;
 using namespace MAC;
@@ -10,13 +11,10 @@ using namespace MAC;
 
 int main()
 {
-    Read_Entry_Cont re_cont;
-    Contig_Entry_Cont ce_cont;
+    Graph g;
 
-    add_read(re_cont, ce_cont, new string("001"), new Seq_Type("ACGT"));
-
-    cout << *(ce_cont.begin());
-    cout << *(re_cont.begin());
+    g.add_read(new string("001"), new Seq_Type("ACGT"));
+    cerr << "g after add_read:" << indent::inc << indent::nl << g << indent::dec << indent::nl;
 
     return EXIT_SUCCESS;
 }
