@@ -50,6 +50,8 @@ namespace MAC
         {
             // re_ptr
             assert(rc_it->get_re_ptr() == this);
+            // no empty chunks
+            assert(rc_it->get_r_len() > 0);
             // read start&end bounds
             if (rc_it == _chunk_cont.begin())
             {
