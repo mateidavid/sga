@@ -97,6 +97,14 @@ namespace MAC
         return res;
     }
 
+    void Contig_Entry::drop_mutations(const map< const Mutation*, const Mutation* >& mut_cptr_map)
+    {
+        for (auto it = mut_cptr_map.begin(); it != mut_cptr_map.end(); ++it)
+        {
+            _mut_cont.erase(_mut_cont.iterator_to(*(it->first)));
+        }
+    }
+
     std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs)
     {
         os << "(Contig_Entry &=" << (void*)&rhs
