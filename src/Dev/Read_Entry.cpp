@@ -5,6 +5,7 @@
 //-----------------------------------------------
 
 #include "Read_Entry.hpp"
+#include "Contig_Entry.hpp"
 
 #include "print_seq.hpp"
 #include "indent.hpp"
@@ -28,6 +29,15 @@ namespace MAC
             assert(it != _chunk_cont.begin());
             return &(*(--it));
         }
+    }
+
+    bool Read_Entry::is_terminal(bool check_start) const
+    {
+        Read_Chunk_CPtr rc_cptr = (check_start? &*_chunk_cont.begin() : &*_chunk_cont.rbegin());
+        return ((check_start and not rc_cptr->get_rc() and rc_cptr->get_c_start() == 0)
+                or (check_start and rc_cptr->get_rc() and rc_cptr->get_c_end() == rc_cptr->get_ce_ptr()->get_len())
+                or (not check_start and not rc_cptr->get_rc() and rc_cptr->get_c_end() == rc_cptr->get_ce_ptr()->get_len())
+                or (not check_start and rc_cptr->get_rc() and rc_cptr->get_c_start() == 0));
     }
 
     void Read_Entry::check() const

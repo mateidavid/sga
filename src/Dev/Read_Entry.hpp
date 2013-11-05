@@ -89,6 +89,12 @@ namespace MAC
             return &(*it);
         }
 
+        /** Check if this read ends the last contig where it is mapped. 
+         * @param check_start True to check read start, false to check read end.
+         * @return True if there are no more bases in the contig past the read end.
+         */
+        bool is_terminal(bool check_start) const;
+
         /** Integrity check. */
         void check() const;
 
