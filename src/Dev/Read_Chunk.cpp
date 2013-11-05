@@ -66,7 +66,7 @@ namespace MAC
         Size_Type r1_start, Size_Type r2_start, const Cigar& cigar)
     {
         // create objects with default constructor
-        vector< pair< Read_Chunk, Mutation_Cont > > res;
+        vector< pair< Read_Chunk, Mutation_Cont > > res(2);
 
         // fix lengths and rc flags
         Size_Type r1_len = cigar.get_rf_len();
