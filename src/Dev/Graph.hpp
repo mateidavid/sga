@@ -19,8 +19,18 @@ namespace MAC
     class Graph
     {
     public:
-        const Read_Entry_Cont& re_cont() { return _re_cont; }
-        const Contig_Entry_Cont& ce_cont() { return _ce_cont; }
+        const Read_Entry_Cont& re_cont() const { return _re_cont; }
+        const Contig_Entry_Cont& ce_cont() const { return _ce_cont; }
+
+        /** Retrieve Read_Entry corresponding to a given read.
+         * @param name Read name.
+         * @return CPtr to Read_Entry object, or NULL if not found.
+         */
+        const Read_Entry* get_read_entry(const std::string& name) const
+        {
+            Read_Entry_Cont::iterator it = _re_cont.find(name);
+            return (it != _re_cont.end()? &(*it) : NULL);
+        }
 
         /** Add a read.
          *
@@ -57,9 +67,6 @@ namespace MAC
         Read_Entry_Cont _re_cont;
         Contig_Entry_Cont _ce_cont;
 
-        const Read_Entry* insert_read_entry(const Read_Entry& re);
-        const Contig_Entry* insert_contig_entry(const Contig_Entry& ce);
-
         void modify_read_entry(const Read_Entry* re_cptr, Read_Entry::modifier_type modifier)
         {
             modify_element<Read_Entry_Cont>(_re_cont, re_cptr, modifier);
@@ -74,6 +81,13 @@ namespace MAC
         {
             modify_read_entry(rc_cptr->get_re_ptr(), [&] (Read_Entry& re) { re.modify_read_chunk(rc_cptr, modifier); });
         }
+
+        const Read_Entry* insert_read_entry(const Read_Entry& re);
+        const Contig_Entry* insert_contig_entry(const Contig_Entry& ce);
+        void cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk);
+        void cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk);
+        void cut_mutation(const Contig_Entry* ce_cptr, const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset);
+        void cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr);
     };
 
     std::vector<std::pair< Read_Chunk, Mutation_Cont >> make_chunks_from_cigar(
