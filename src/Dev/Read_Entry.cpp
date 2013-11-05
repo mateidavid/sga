@@ -20,9 +20,14 @@ namespace MAC
             return NULL;
         Read_Chunk_Cont::const_iterator it = _chunk_cont.lower_bound(r_pos);
         if (it != _chunk_cont.end() and it->get_r_start() == r_pos)
+        {
             return &(*it);
+        }
         else
+        {
+            assert(it != _chunk_cont.begin());
             return &(*(--it));
+        }
     }
 
     ostream& operator << (ostream& os, const Read_Entry& rhs)
