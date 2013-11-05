@@ -27,24 +27,19 @@ namespace MAC
         return &(*ce_it);
     }
 
-    void Graph::add_read(const string* name_ptr, const Seq_Type* seq_ptr)
+    void Graph::add_read(const string* name_ptr, Seq_Type* seq_ptr)
     {
-        // first, create read entry & contig entry
+        // first, create read entry and place it in container
         Read_Entry re(name_ptr, seq_ptr->size());
         cerr << "re:" << indent::inc << indent::nl << re << indent::dec << indent::nl;
+        const Read_Entry* re_cptr = insert_read_entry(re);
 
+        // create contig entry and place it in container
         Contig_Entry ce(seq_ptr);
         cerr << "ce:" << indent::inc << indent::nl << ce << indent::dec << indent::nl;
-
-        ce.add_chunk(&(*re.get_chunk_cont().begin()));
+        ce.add_chunk(&(*re_cptr->get_chunk_cont().begin()));
         cerr << "ce with chunk:" << indent::inc << indent::nl << ce << indent::dec << indent::nl;
-
-        // insert them in their containers
-        const Read_Entry* re_cptr = insert_read_entry(re);
         const Contig_Entry* ce_cptr = insert_contig_entry(ce);
-        (void)re_cptr;
-        (void)ce_cptr;
-        cerr << "g:" << indent::inc << indent::nl << *this << indent::dec << indent::nl;
 
         // fix initial rc: assing it to contig entry
         modify_read_chunk(&(*re_cptr->get_chunk_cont().begin()),
@@ -73,6 +68,11 @@ namespace MAC
 
     void Graph::cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr)
     {
+        if (c_brk == 0 or c_brk == ce_cptr->get_len())
+        {
+            return;
+        }
+
         // first, split any mutations that span c_pos
         vector< const Mutation* > v = ce_cptr->get_mutations_spanning_pos(c_brk);
         for (size_t i = 0; i < v.size(); ++i)
@@ -125,6 +125,9 @@ namespace MAC
                 modify_contig_entry(ce_new_cptr, [&] (Contig_Entry& ce) { ce.add_chunk(rc_rhs_cptr); });
             }
         }
+
+        // finally, drop the second part of the base sequence from the first part
+        modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.drop_base_seq(c_brk); });
     }
 
     void Graph::cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk)
@@ -154,21 +157,50 @@ namespace MAC
             mut_left_cptr = rc_cptr->get_mut_ptr_cont()[i-1];
         }
 
-        // cut contig at given c_offset; all insertions at c_pos go to the right except for at most one, passed as argument
+        // cut contig at given c_offset
+        // all insertions at c_pos go to the right except for at most one, passed as argument
         cut_contig_entry(rc_cptr->get_ce_ptr(), c_pos, mut_left_cptr);
     }
 
-    void Graph::cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk)
+    void Graph::cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk, bool force)
     {
-        // find read chunk that must be cut
-        Read_Chunk_CPtr rc_cptr = re_cptr->get_chunk_with_pos(r_brk);
+        // if cut is at the very start or end, and the force flag is on, cut the underlying contig directly
+        if (r_brk == 0 or r_brk == re_cptr->get_len())
+        {
+             if (not force)
+             {
+                 return;
+             }
 
-        // if cut is at the start of the chunk, there is nothing to do
-        if (rc_cptr == NULL or rc_cptr->get_r_start() == r_brk)
-            return;
-        assert(rc_cptr->get_r_start() < r_brk and r_brk < rc_cptr->get_r_end());
+             // compute contig cut coordinates: ce_cptr & c_brk
+             Read_Chunk_CPtr rc_cptr = (r_brk == 0?
+                                        &*re_cptr->get_chunk_cont().begin()
+                                        : &*re_cptr->get_chunk_cont().rbegin());
+             Size_Type c_brk = ((r_brk == 0) == (not rc_cptr->get_rc())?
+                                rc_cptr->get_c_start()
+                                : rc_cptr->get_c_end());
+             // if read chunk ends in insertion, that must remain on the left of the cut
+             const Mutation* mut_left_cptr = NULL;
+             if (c_brk == rc_cptr->get_c_end()
+                 and rc_cptr->get_mut_ptr_cont().size() > 0
+                 and (*rc_cptr->get_mut_ptr_cont().rbegin())->is_ins())
+             {
+                 mut_left_cptr = *(rc_cptr->get_mut_ptr_cont().rbegin());
+             }
+             cut_contig_entry(rc_cptr->get_ce_ptr(), c_brk, mut_left_cptr);
+        }
+        else
+        {
+            // find read chunk that must be cut
+            Read_Chunk_CPtr rc_cptr = re_cptr->get_chunk_with_pos(r_brk);
 
-        cut_read_chunk(rc_cptr, r_brk);
+            // if cut is at the start of the chunk, there is nothing to do
+            if (rc_cptr == NULL or rc_cptr->get_r_start() == r_brk)
+                return;
+            assert(rc_cptr->get_r_start() < r_brk and r_brk < rc_cptr->get_r_end());
+
+            cut_read_chunk(rc_cptr, r_brk);
+        }
     }
 
     void Graph::add_overlap(const string& r1_name, const string& r2_name,
@@ -188,10 +220,29 @@ namespace MAC
         vector< pair< Read_Chunk, Mutation_Cont > > v = Read_Chunk::make_chunks_from_cigar(r1_start, r2_start, cigar);
 
         // cut r1 & r2 at the ends of the match region
-        cut_read_entry(re1_cptr, r1_start);
-        cut_read_entry(re1_cptr, r1_start + r1_len);
-        cut_read_entry(re2_cptr, r2_start);
-        cut_read_entry(re2_cptr, r2_start + r2_len);
+        cut_read_entry(re1_cptr, r1_start, true);
+        cut_read_entry(re1_cptr, r1_start + r1_len, true);
+        cut_read_entry(re2_cptr, r2_start, true);
+        cut_read_entry(re2_cptr, r2_start + r2_len, true);
+    }
+
+    void Graph::check() const
+    {
+        size_t chunks_count_1 = 0;
+        size_t chunks_count_2 = 0;
+        // check read entry objects
+        for (auto re_it = _re_cont.begin(); re_it != _re_cont.end(); ++re_it)
+        {
+            re_it->check();
+            chunks_count_1 += re_it->get_chunk_cont().size();
+        }
+        // check contig entry objects
+        for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
+        {
+            ce_it->check();
+            chunks_count_2 += ce_it->get_chunk_cptr_cont().size();
+        }
+        assert(chunks_count_1 == chunks_count_2);
     }
 
     ostream& operator << (ostream& os, const Graph& g)

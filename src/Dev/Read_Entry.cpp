@@ -30,6 +30,34 @@ namespace MAC
         }
     }
 
+    void Read_Entry::check() const
+    {
+        // name is set
+        assert(_name_ptr);
+        // name not empty
+        assert(_name_ptr->size() > 0);
+        for (auto rc_it = _chunk_cont.begin(); rc_it != _chunk_cont.end(); ++rc_it)
+        {
+            // re_ptr
+            assert(rc_it->get_re_ptr() == this);
+            // read start&end bounds
+            if (rc_it == _chunk_cont.begin())
+            {
+                assert(rc_it->get_r_start() == 0);
+            }
+            auto rc_next_it = rc_it;
+            rc_next_it++;
+            if (rc_next_it == _chunk_cont.end())
+            {
+                assert(rc_it->get_r_end() == _len);
+            }
+            if (rc_next_it != _chunk_cont.end())
+            {
+                assert(rc_it->get_r_end() == rc_next_it->get_r_start());
+            }
+        }
+    }
+
     ostream& operator << (ostream& os, const Read_Entry& rhs)
     {
         os << "(Read_Entry &=" << (void*)&rhs

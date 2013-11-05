@@ -37,11 +37,12 @@ namespace MAC
         /** Constructor.
          * @param seq_ptr Pointer to read sequence.
          */
-        Contig_Entry(const Seq_Type* seq_ptr) : _seq_ptr(seq_ptr) {}
+        Contig_Entry( Seq_Type* seq_ptr) : _seq_ptr(seq_ptr) {}
 
         /** @name Getters */
         /**@{*/
         const Seq_Type& get_seq() const { return *_seq_ptr; }
+        Size_Type get_len() const { return _seq_ptr->size(); }
         const Mutation_Cont& get_mutation_cont() const { return _mut_cont; }
         const Read_Chunk_CPtr_Cont& get_chunk_cptr_cont() const { return _chunk_cptr_cont; }
         /**@}*/
@@ -90,10 +91,18 @@ namespace MAC
          */
         void drop_mutations(const std::map< const Mutation*, const Mutation* >& mut_cptr_map);
 
+        /** Drop base sequence suffix.
+         * @param c_brk Prefix length to keep.
+         */
+        void drop_base_seq(Size_Type c_brk) { _seq_ptr->resize(c_brk); }
+
+        /** Integrity check. */
+        void check() const;
+
         friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
 
     private:
-        std::shared_ptr<const Seq_Type> _seq_ptr;
+        std::shared_ptr< Seq_Type> _seq_ptr;
         Mutation_Cont _mut_cont;
         Read_Chunk_CPtr_Cont _chunk_cptr_cont;
     };

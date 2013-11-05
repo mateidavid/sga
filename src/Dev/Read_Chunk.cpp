@@ -132,8 +132,8 @@ namespace MAC
                      and ((not _rc and brk <= r_pos + match_len)
                           or (_rc and r_pos - match_len <= brk)))
             {
-                r_pos = brk;
                 c_pos += (not _rc? brk - r_pos : r_pos - brk);
+                r_pos = brk;
                 break;
             }
 
@@ -250,11 +250,10 @@ namespace MAC
             // the chunk stays in one piece, but ce_ptr & mutation pointers might change
             bool move_to_rhs = false;
             assert(i == 0 or i == _mut_ptr_cont.size());
-            if (i == 0)
+            if (c_brk <= _c_start)
             {
                 move_to_rhs = true;
                 // fix contig start coordinate
-                assert(c_brk <= _c_start);
                 _c_start -= c_brk;
                 // fix mutation pointers
                 vector< const Mutation* > tmp = _mut_ptr_cont;
@@ -280,7 +279,7 @@ namespace MAC
             rc_ptr->_re_ptr = _re_ptr;
 
             rc_ptr->_ce_ptr = ce_cptr;
-            rc_ptr->_c_start = c_brk;
+            rc_ptr->_c_start = 0;
             rc_ptr->_c_len = _c_start + _c_len - c_brk;
             _c_len -= rc_ptr->_c_len;
 

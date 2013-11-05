@@ -40,7 +40,7 @@ namespace MAC
          * @param name_ptr Pointer to string with read name. (Read container takes ownership.)
          * @param seq_ptr Pointer to container with read sequence. (Contig container takes ownership.)
          */
-        void add_read(const std::string* name_ptr, const Seq_Type* seq_ptr);
+        void add_read(const std::string* name_ptr, Seq_Type* seq_ptr);
 
         /** Add an overlap between 2 reads.
          *
@@ -60,6 +60,9 @@ namespace MAC
                          Size_Type r1_start, Size_Type r1_len,
                          Size_Type r2_start, Size_Type r2_len, bool r2_rc,
                          const std::string& cigar);
+
+        /** Integrity check. */
+        void check() const;
 
         friend std::ostream& operator << (std::ostream&, const Graph&);
 
@@ -84,7 +87,7 @@ namespace MAC
 
         const Read_Entry* insert_read_entry(const Read_Entry& re);
         const Contig_Entry* insert_contig_entry(const Contig_Entry& ce);
-        void cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk);
+        void cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk, bool force = false);
         void cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk);
         void cut_mutation(const Contig_Entry* ce_cptr, const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset);
         void cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr);

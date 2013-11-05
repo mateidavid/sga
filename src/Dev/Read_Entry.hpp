@@ -39,7 +39,7 @@ namespace MAC
          * @param name_ptr Pointer to string containing read name.
          * @param len Length of the read.
          */
-        Read_Entry(const std::string* name_ptr, Size_Type len) : _name_ptr(name_ptr)
+        Read_Entry(const std::string* name_ptr, Size_Type len) : _name_ptr(name_ptr), _len(len)
         {
             assert(name_ptr != NULL);
             Read_Chunk chunk(this, len);
@@ -47,7 +47,7 @@ namespace MAC
         }
 
         /** Copy contructor. */
-        Read_Entry(const Read_Entry& rhs) : _name_ptr(rhs._name_ptr), _chunk_cont(rhs._chunk_cont)
+        Read_Entry(const Read_Entry& rhs) : _name_ptr(rhs._name_ptr), _chunk_cont(rhs._chunk_cont), _len(rhs._len)
         {
             // maintain back pointers
             for (auto it = _chunk_cont.begin(); it != _chunk_cont.end(); ++it)
@@ -57,7 +57,7 @@ namespace MAC
         /** @name Getters */
         /**@{*/
         const std::string& get_name() const { return *_name_ptr; }
-        Size_Type get_len() const { return _chunk_cont.rend()->get_r_end(); }
+        Size_Type get_len() const { return _len; }
         key_type get_key() const { return *_name_ptr; }
         const Read_Chunk_Cont& get_chunk_cont() const { return _chunk_cont; }
         /**@}*/
@@ -89,11 +89,15 @@ namespace MAC
             return &(*it);
         }
 
+        /** Integrity check. */
+        void check() const;
+
         friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);
 
     private:
         std::shared_ptr<const std::string> _name_ptr;
         Read_Chunk_Cont _chunk_cont;
+        Size_Type _len;
     };
 
     namespace detail

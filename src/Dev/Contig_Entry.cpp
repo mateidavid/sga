@@ -105,6 +105,37 @@ namespace MAC
         }
     }
 
+    void Contig_Entry::check() const
+    {
+        // check base sequence exists
+        assert(_seq_ptr);
+        // mutations:
+        for (auto mut_it = _mut_cont.begin(); mut_it != _mut_cont.end(); ++mut_it)
+        {
+            // check base coordinates
+            assert(mut_it->get_start() <= _seq_ptr->size() and mut_it->get_end() <= _seq_ptr->size());
+        }
+        // read chunks:
+        for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
+        {
+            // check contig pointers
+            assert((*rc_cptr_it)->get_ce_ptr() == this);
+            // check contig coordinates
+            assert((*rc_cptr_it)->get_c_end() <= _seq_ptr->size());
+            // mutation pointers:
+            for (auto mut_cptr_it = (*rc_cptr_it)->get_mut_ptr_cont().begin(); mut_cptr_it != (*rc_cptr_it)->get_mut_ptr_cont().end(); ++mut_cptr_it)
+            {
+                // check they point inside mutation container
+                auto mut_it = _mut_cont.begin();
+                while (mut_it != _mut_cont.end() and *mut_cptr_it != &(*mut_it))
+                {
+                    ++mut_it;
+                }
+                assert(mut_it != _mut_cont.end());
+            }
+        }
+    }
+
     std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs)
     {
         os << "(Contig_Entry &=" << (void*)&rhs
