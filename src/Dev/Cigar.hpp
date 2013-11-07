@@ -63,9 +63,9 @@ namespace MAC
         void set_rf_start(Size_Type rf_start) { _rf_start = rf_start; }
         void set_qr_start(Size_Type qr_start) { _qr_start = qr_start; }
 
-        bool is_match(size_t i) { return Cigar::is_match_op(_op_vect[i].op); }
-        bool is_deletion(size_t i) { return Cigar::is_deletion_op(_op_vect[i].op); }
-        bool is_insertion(size_t i) { return Cigar::is_insertion_op(_op_vect[i].op); }
+        bool is_match(size_t i) const { return Cigar::is_match_op(_op_vect[i].op); }
+        bool is_deletion(size_t i) const { return Cigar::is_deletion_op(_op_vect[i].op); }
+        bool is_insertion(size_t i) const { return Cigar::is_insertion_op(_op_vect[i].op); }
 
         /** Get complementary cigar (qr->rf). */
         Cigar complement() const;
@@ -74,11 +74,11 @@ namespace MAC
          * @param start Start op.
          * @param len Number of ops.
          */
-        Cigar substring(size_t start, size_t len = get_n_ops());
+        Cigar substring(size_t start, size_t len);
 
         /** Cut op.
          * @param idx Index of the op to cut.
-         * @param len Length before the cut.
+         * @param len Op length before the cut.
          */
         void cut_op(size_t idx, Size_Type len);
 
@@ -87,6 +87,8 @@ namespace MAC
 
         /** Equality comparison. */
         bool operator == (const Cigar& rhs);
+
+        friend std::ostream& operator << (std::ostream& os, const Cigar& rhs);
 
     private:
         std::vector< Cigar_Op > _op_vect;
