@@ -9,38 +9,38 @@ using namespace std;
 
 namespace MAC
 {
-    Cigar::Cigar(const string& cigar, bool reversed)
-    : _reversed(reversed)
+    Cigar::Cigar(const string& cigar, bool reversed, Size_Type rf_start, Size_Type qr_start)
+    : _rf_start(rf_start), _qr_start(qr_start), _rf_len(0), _qr_len(0), _reversed(reversed)
     {
         istringstream is(cigar);
-        char op;
-        size_t op_len;
-        Size_Type rf_len = 0;
-        Size_Type qr_len = 0;
-        while (is >> op_len >> op)
+        Cigar_Op tmp;
+        while (is >> (size_t)tmp.len >> tmp.op)
         {
-            assert(is_match_op(op) or is_deletion_op(op) or is_insertion_op(op));
-            _op_vect.push_back(op);
-            _op_len_vect.push_back(op_len);
-            if (is_match_op(op) or is_deletion_op(op))
-                rf_len += (Size_Type)op_len;
-            if (is_match_op(op) or is_insertion_op(op))
-                qr_len += (Size_Type)op_len;
-        }
+            assert(Cigar::is_match_op(tmp.op) or Cigar::is_deletion_op(tmp.op) or Cigar::is_insertion_op(tmp.op));
+            tmp.rf_offset = _rf_len;
+            _op_vect.push_back(tmp);
 
-        Size_Type r1_pos = 0;
-        Size_Type r2_pos = (reversed? qr_len : 0);
+            if (Cigar::is_match_op(tmp.op) or Cigar::is_deletion_op(tmp.op))
+            {
+                _rf_len += tmp.len;
+            }
+            if (Cigar::is_match_op(tmp.op) or Cigar::is_insertion_op(tmp.op))
+            {
+                _qr_len += tmp.len;
+            }
+        }
+        set_qr_offsets();
+    }
+
+    void Cigar::set_qr_offsets()
+    {
+        Size_Type r2_pos = (_reversed? _qr_len : 0);
         for (size_t i = 0; i < _op_vect.size(); ++i)
         {
-            Size_Type r1_pos_next = (is_match_op(_op_vect[i]) or is_deletion_op(_op_vect[i])?
-                                     r1_pos + _op_len_vect[i] :
-                                     r1_pos);
-            _rf_offset.push_back(r1_pos);
-            Size_Type r2_pos_next = (is_match_op(_op_vect[i]) or is_insertion_op(_op_vect[i])?
-                                     (reversed? r2_pos - _op_len_vect[i] : r2_pos + _op_len_vect[i]) :
+            Size_Type r2_pos_next = (is_match(i) or is_insertion(i)?
+                                     (not _reversed? r2_pos + _op_vect[i].len : r2_pos - _op_vect[i].len) :
                                      r2_pos);
-            _qr_offset.push_back(min(r2_pos, r2_pos_next));
-            r1_pos = r1_pos_next;
+            _op_vect[i].qr_offset = r2_pos;
             r2_pos = r2_pos_next;
         }
     }
@@ -49,13 +49,19 @@ namespace MAC
     {
         Cigar res;
         res._reversed = _reversed;
+        res._rf_start = _qr_start;
+        res._rf_len = _qr_len;
+        res._qr_start = _rf_start;
+        res._qr_len = _rf_len;
         for (size_t i = 0; i < _op_vect.size(); ++i)
         {
             size_t j = _reversed? _op_vect.size() - 1 - i : i;
-            res._op_vect.push_back(complement_op(_op_vect[j]));
-            res._op_len_vect.push_back(_op_len_vect[j]);
-            res._rf_offset.push_back(_qr_offset[j]);
-            res._qr_offset.push_back(_rf_offset[j]);
+            Cigar_Op tmp;
+            tmp.op = complement_op(_op_vect[j].op);
+            tmp.len = _op_vect[j].len;
+            tmp.rf_offset = (not _reversed? _op_vect[j].qr_offset : _op_vect[j].qr_offset - tmp.len);
+            tmp.qr_offset = (not _reversed? _op_vect[j].rf_offset : _op_vect[j].rf_offset + tmp.len);
+            res._op_vect.push_back(tmp);
         }
         return res;
     }
@@ -64,7 +70,7 @@ namespace MAC
     {
         ostringstream os;
         for (size_t i = 0; i < _op_vect.size(); ++i)
-            os << (size_t)_op_len_vect[i] << _op_vect[i];
+            os << (size_t)_op_vect[i].len << _op_vect[i];
         return os.str();
     }
 
@@ -72,12 +78,16 @@ namespace MAC
     {
         if (_op_vect.size() != rhs._op_vect.size()) return false;
         if (_reversed != rhs._reversed) return false;
+        if (_rf_start != rhs._rf_start) return false;
+        if (_rf_len != rhs._rf_len) return false;
+        if (_qr_start != rhs._qr_start) return false;
+        if (_qr_len != rhs._qr_len) return false;
         for (size_t i = 0; i < _op_vect.size(); ++i)
         {
-            if (_op_vect[i] != rhs._op_vect[i]
-                or _op_len_vect[i] != rhs._op_len_vect[i]
-                or _rf_offset[i] != rhs._rf_offset[i]
-                or _qr_offset[i] != rhs._qr_offset[i])
+            if (_op_vect[i].op != rhs._op_vect[i].op
+                or _op_vect[i].len != rhs._op_vect[i].len
+                or _op_vect[i].rf_offset != rhs._op_vect[i].rf_offset
+                or _op_vect[i].qr_offset != rhs._op_vect[i].qr_offset)
                 return false;
         }
         return true;
@@ -90,6 +100,36 @@ namespace MAC
         size_t i = from_op.find_first_of(op);
         assert(i != string::npos);
         return to_op[i];
+    }
+
+    Cigar Cigar::substring(size_t start, size_t len)
+    {
+        Cigar res;
+        res._reversed = _reversed;
+
+        Size_Type qr_len = 0;
+        for (size_t i = 0; i < len and start + i < get_n_ops(); i++)
+        {
+            res._op_vect.push_back(_op_vect[start + i]);
+            res._op_len_vect.push_back(_op_len_vect[start + i]);
+            qr_len += get_qr_op_len(start + i);
+        }
+
+        res.set_qr_offsets();
+        return res;
+    }
+
+    void Cigar::cut_op(size_t idx, Size_Type len)
+    {
+        assert(idx < get_n_ops());
+        assert(0 < len and len < _op_len_vect[idx]);
+        _op_vect.insert(_op_vect.begin() + idx + 1, _op_vect[idx]);
+        _op_len_vect.insert(_op_len_vect.begin() + idx + 1, _op_len_vect[idx] - len);
+        _rf_offset.insert(_rf_offset.begin() + idx + 1, _rf_offset[idx] + (not is_insertion_op(_op_vect[idx])? len : 0));
+        _qr_offset.insert(_qr_offset.begin() + idx + 1,
+                          (not _reversed?
+                          _qr_offset[idx] + (not is_deletion_op(_op_vect[idx])? len : 0)
+                          : ( )));
     }
 
     string const Cigar::match_ops = "M=X";
