@@ -45,7 +45,7 @@ namespace MAC
      * @param rf_start Index in reference of the start of the match (0-based).
      * @param cigar Cigar object describing the match.
      * @return Container of Mutation objects.
-     */
+     *
     Mutation_Cont make_mutations_from_cigar(Size_Type rf_start, const Cigar& cigar)
     {
         Mutation_Cont res;
@@ -94,6 +94,7 @@ namespace MAC
 
         return res;
     }
+    */
 
     boost::tuple< Size_Type, Size_Type, size_t > Read_Chunk::get_cut_data(Size_Type brk, bool is_contig_brk) const
     {

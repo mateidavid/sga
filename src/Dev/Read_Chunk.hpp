@@ -144,9 +144,10 @@ namespace MAC
          * @param cigar Cigar string (r1:reference, r2:query).
          * @return A vector of size 2; index 0 corresponds to (base r1, query r2),
          * index 1 corresponds to (base r2, query r1).
-         */
+         *
         static std::vector<std::pair<Read_Chunk,Mutation_Cont>> make_chunks_from_cigar(
             Size_Type r1_start, Size_Type r2_start, const Cigar& cigar);
+        */
 
         friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
 
