@@ -107,26 +107,26 @@ namespace MAC
         return to_op[i];
     }
 
-    Cigar Cigar::substring(size_t start, size_t len)
+    Cigar Cigar::substring(size_t start, size_t end)
     {
-        assert(start + len <= get_n_ops());
+        assert(start <= end and end <= get_n_ops());
         Cigar res;
         res._reversed = _reversed;
         Size_Type rf_start_offset = (start < get_n_ops()? _op_vect[start].rf_offset : 0);
-        Size_Type rf_end_offset = (start + len < get_n_ops()? _op_vect[start + len].rf_offset : _rf_len);
+        Size_Type rf_end_offset = (end < get_n_ops()? _op_vect[end].rf_offset : _rf_len);
         Size_Type qr_start_offset = (start < get_n_ops()? _op_vect[start].qr_offset : (not _reversed? 0 : _qr_len));
-        Size_Type qr_end_offset = (start + len < get_n_ops()? _op_vect[start + len].qr_offset : (not _reversed? _qr_len : 0));
+        Size_Type qr_end_offset = (end < get_n_ops()? _op_vect[end].qr_offset : (not _reversed? _qr_len : 0));
         res._rf_start = _rf_start + rf_start_offset;
         res._rf_len = rf_end_offset - rf_start_offset;
         res._qr_start = _qr_start + (not _reversed? qr_start_offset : qr_end_offset);
         res._qr_len = (not _reversed? qr_end_offset - qr_start_offset : qr_start_offset - qr_end_offset);
 
         Size_Type rf_offset = 0;
-        for (size_t i = 0; i < len and start + i < get_n_ops(); i++)
+        for (size_t i = start; i < end; i++)
         {
-            Cigar_Op tmp = _op_vect[start + i];
+            Cigar_Op tmp = _op_vect[i];
             tmp.rf_offset = rf_offset;
-            if (is_match(start + i) or is_deletion(start + i))
+            if (is_match(i) or is_deletion(i))
             {
                 rf_offset += tmp.len;
             }

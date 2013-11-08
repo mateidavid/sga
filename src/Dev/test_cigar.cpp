@@ -26,7 +26,7 @@ int main()
 
     cout << "substring(c,0,0):" << c.substring(0, 0) << "\n";
     cout << "substring(c,0,len):" << c.substring(0, c.get_n_ops()) << "\n";
-    cout << "substring(c,1,2):" << c.substring(1, 2) << "\n";
+    cout << "substring(c,1,2):" << c.substring(1, 3) << "\n";
 
     c.cut_op(1,1);
     cout << "cut_op(1,1):" << c << "\n";
