@@ -142,9 +142,11 @@ namespace MAC
         assert(idx <= get_n_ops());
         if (idx == get_n_ops())
             return;
+
         assert(len <= _op_vect[idx].len);
         if (len == 0 or len == _op_vect[idx].len)
             return;
+
         Cigar_Op& old_op = _op_vect[idx];
         Cigar_Op new_op;
         new_op.op = old_op.op;
@@ -174,5 +176,6 @@ namespace MAC
            << indent::nl << "ops=" << indent::inc;
         print_seq(os, rhs._op_vect, indent::nl, indent::nl);
         os << indent::dec << indent::dec << indent::nl << ")";
+        return os;
     }
 }
