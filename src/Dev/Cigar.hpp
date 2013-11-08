@@ -43,29 +43,29 @@ namespace MAC
         const Cigar_Op& get_op_struct(size_t i) const { return _op_vect[i]; }
 
         /** Get operation. */
-        char get_op(size_t i) const { return _op_vect[i].op; }
+        char get_op(size_t i) const { assert(i < get_n_ops()); return _op_vect[i].op; }
 
         /** Get operation length, by index. */
-        Size_Type get_op_len(size_t i) const { return _op_vect[i].len; }
+        Size_Type get_op_len(size_t i) const { assert(i < get_n_ops()); return _op_vect[i].len; }
 
         /** Get reference length of operation, by index. */
-        Size_Type get_rf_op_len(size_t i) const { return is_match(i) or is_deletion(i)? _op_vect[i].len : 0; }
+        Size_Type get_rf_op_len(size_t i) const { assert(i < get_n_ops()); return is_match(i) or is_deletion(i)? _op_vect[i].len : 0; }
 
         /** Get query length of operation, by index. */
-        Size_Type get_qr_op_len(size_t i) const { return is_match(i) or is_insertion(i)? _op_vect[i].len : 0; }
+        Size_Type get_qr_op_len(size_t i) const { assert(i < get_n_ops()); return is_match(i) or is_insertion(i)? _op_vect[i].len : 0; }
 
         /** Get reference offset of operation, by index. */
-        Size_Type get_rf_offset(size_t i) const { return _rf_start + _op_vect[i].rf_offset; }
+        Size_Type get_rf_offset(size_t i) const { assert(i <= get_n_ops()); return _rf_start + (i < get_n_ops()? _op_vect[i].rf_offset : _rf_len); }
 
         /** Get query offset of operation, by index. */
-        Size_Type get_qr_offset(size_t i) const { return _qr_start + _op_vect[i].qr_offset; }
+        Size_Type get_qr_offset(size_t i) const { assert(i <= get_n_ops()); return _qr_start + (i < get_n_ops()? _op_vect[i].qr_offset : (not _reversed? _qr_len : 0)); }
 
         void set_rf_start(Size_Type rf_start) { _rf_start = rf_start; }
         void set_qr_start(Size_Type qr_start) { _qr_start = qr_start; }
 
-        bool is_match(size_t i) const { return Cigar::is_match_op(_op_vect[i].op); }
-        bool is_deletion(size_t i) const { return Cigar::is_deletion_op(_op_vect[i].op); }
-        bool is_insertion(size_t i) const { return Cigar::is_insertion_op(_op_vect[i].op); }
+        bool is_match(size_t i) const { assert(i < get_n_ops()); return Cigar::is_match_op(_op_vect[i].op); }
+        bool is_deletion(size_t i) const { assert(i < get_n_ops()); return Cigar::is_deletion_op(_op_vect[i].op); }
+        bool is_insertion(size_t i) const { assert(i < get_n_ops()); return Cigar::is_insertion_op(_op_vect[i].op); }
 
         /** Get complementary cigar (qr->rf). */
         Cigar complement() const;
