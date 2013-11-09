@@ -312,99 +312,18 @@ namespace MAC
         }
     }
 
-    /*
-    pair< Size_Type, Size_Type > Read_Chunk::get_contig_brk_range(Size_Type pos)
+    Mutation Read_Chunk::lift(const Mutation& mut, size_t i, Size_Type r_pos)
     {
-        pair< Size_Type, Size_Type > res;
-
-        assert(_r_start <= pos and pos <= _r_start + _r_len);
-
-        boost::tuple< size_t, Size_Type, Size_Type > t = count_mutations_left_of_brk(pos);
-
-        size_t j = (not _rc? t.get<0>() : _mut_ptr_cont.size() - 1 - t.get<0>());
-        Size_Type r_pos = _r_start + t.get<2>();
-        Size_Type c_pos;
-        if (not _rc)
+        assert (i <= _mut_ptr_cont.size());
+        if (i == 0)
         {
-            c_pos = _c_start + t.get<1>();
+            r_pos = (not _rc? _r_start : _r_start + _r_len);
         }
-        else
-        {
-            c_pos = _c_start + _c_len - t.get<1>();
-        }
-
-        if (r_pos < pos)
-        {
-            // read breakpoint is strictly inside of a mutation with non-empty alternate sequence (insertion/multisnp)
-            assert(pos < r_pos + _mut_ptr_cont[j]->get_seq_len());
-            assert(rc or c_pos == _mut_ptr_cont[j]->get_start());
-            assert(not _rc or _mut_ptr_cont->get_end() == c_pos);
-            res.first = c_pos;
-            res.second = _mut_ptr_cont[j]->get_end();
-        }
-        else
-        {
-            assert(r_pos == pos);
-            //TODO:
-        }
+        assert((not _rc and mut.get_start() >= r_pos)
+               or (_rc and mut.get_end() <= r_pos));
+        Size_Type c_pos = (i == 0? _c_start : _mut_ptr_cont[i - 1]->get_end());
         
-        assert(_r_start + t.get<2>() <= pos);
-        if (t.get<0>() == _mut_ptr_cont.size())
-        {
-            // all mutations are left of breakpoint
-            Size_Type r_leftover = pos - (_r_start + t.get<2>());
-            if (not _rc)
-            {
-                res.first = _c_start + t.get<1>() + r_leftover;
-                res.second = res.first;
-            }
-            else
-            {
-                res.first = _c_start + _c_len - t.get<1>() - r_leftover;
-                res.second = res.first;
-            }
-        }
-        else
-        {
-            // there are mutations at or right of read breakpoint
-            size_t j = (not _rc? t.get<0>() : _mut_ptr_cont.size() - 1 - t.get<0>());
-            Size_Type c_match;
-            if (not _rc)
-            {
-                assert(_c_start + t.get<1>() <= _mut_ptr_cont[j]->get_start());
-                c_match = _mut_ptr_cont[j]->get_start() - (_c_start + t.get<1>());
-            }
-            else
-            {
-                assert(_mut_ptr_cont[j]->get_end() <= _c_start + _c_len - t.get<1>());
-                c_match = (_c_start + _c_len - t.get<1>()) - _mut_ptr_cont[j]->get_end();
-            }
-
-            // does the breakpoint occur in the matched portion before the mutation?
-            if (_r_start + t.get<2>() + c_match < pos)
-            {
-                // yes
-                Size_Type r_leftover = pos - (_r_start + t.get<2>() + c_match);
-                if (not _rc)
-                {
-                    res.first = _c_start + t.get<1>() + r_leftover;
-                    res.second = res.first;
-                }
-                else
-                {
-                    res.first = _c_start + _c_len - t.get<1>() - r_leftover;
-                    res.second = res.first;
-                }
-            }
-            else
-            {
-                // no; breakpoint exactly after matched portion
-                assert(_r_start + t.get<2>() + c_match == pos);
-                
-            }
-        }
     }
-    */
 
     ostream& operator << (ostream& os, const Read_Chunk& rhs)
     {

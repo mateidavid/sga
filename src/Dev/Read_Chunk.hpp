@@ -149,7 +149,20 @@ namespace MAC
             Size_Type r1_start, Size_Type r2_start, const Cigar& cigar);
         */
 
-        friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
+         /** Lift mutation.
+          * A Read_Chunk object holds the _contig_ mutations this read observes.
+          * Given a _read_ mutation (observed by another read during mapping), this
+          * function transforms it into a corresponding contig mutation.
+          * @param mut Read mutation to be translated.
+          * @param i Progress index that iterates over contig mutations.
+          * @param r_pos Read position reached after incorporating contig mutations 0..i-1;
+          * when i=0 this is initialized internally;
+          * precondition: mut_start >= r_pos (not _rc), and mut_end <= r_pos (_rc).
+          * @return Translated mutation of the contig.
+          */
+         Mutation lift(const Mutation& mut, size_t i = 0, Size_Type r_pos = 0);
+
+         friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
 
     private:
         const Read_Entry* _re_ptr;
