@@ -47,4 +47,13 @@ namespace MAC
            << indent::dec << indent::nl << ")";
         return os;
     }
+
+    ostream& operator << (ostream& os, const Mutation_Extra& rhs)
+    {
+        os << "(Mutation_Extra &=" << (void*)&rhs
+           << indent::inc << indent::nl << "mut_cptr=" << (void*)rhs.mut_cptr
+           << ",alt_start=" << (size_t)rhs.alt_start
+           << indent::dec << indent::nl << ")";
+        return os;
+    }
 }

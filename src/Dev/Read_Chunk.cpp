@@ -312,17 +312,155 @@ namespace MAC
         }
     }
 
-    Mutation Read_Chunk::lift(const Mutation& mut, size_t i, Size_Type r_pos)
+    vector< boost::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > Read_Chunk::collapse_mutations(
+        const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2)
     {
-        assert (i <= _mut_ptr_cont.size());
-        if (i == 0)
+        assert(rc1.get_r_start() == rc2.get_c_start() and rc1.get_r_len() == rc2.get_c_len());
+
+        vector< boost::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > res;
+
+        Size_Type c_pos = rc1.get_c_start();
+        Size_Type r1_pos = (not rc1.get_rc()? rc1.get_r_start() : rc1.get_r_end());
+        Size_Type r2_pos = (rc1.get_rc() == rc2.get_rc()? rc2.get_r_start() : rc2.get_r_end());
+        size_t i1 = 0; // number of mutations completely passed on r1
+        size_t k1 = 0; // length of prefix of mutation i1 that was already considered
+        size_t i2 = 0; // number of mutations passed on r2 (counting from the end if rc1._rc)
+
+        while (i1 < rc1._mut_ptr_cont.size() or i2 < rc2._mut_ptr_cont.size())
         {
-            r_pos = (not _rc? _r_start : _r_start + _r_len);
+            // iteration may not stop in the middle of a read mutation
+            assert(not rc1.get_rc()? r1_pos <= rc1.get_r_end() : rc1.get_r_start() <= r1_pos);
+            // i2 < n2 and r1 not reversed => before i2 mutation
+            assert(not (i2 < rc2._mut_ptr_cont.size() and not rc1.get_rc()) or r1_pos <= rc2._mut_ptr_cont[i2]->get_start());
+            // 0 <= i2 - 1 < n2 and r1 not reversed => after i2 - 1 mutation
+            assert(not (0 < i2 and i2 < rc2._mut_ptr_cont.size() + 1 and not rc1.get_rc()) or rc2._mut_ptr_cont[i2 - 1]->get_end());
+            // i2 < n2 and r1 reversed => after i2 mutation
+            assert(not (i2 < rc2._mut_ptr_cont.size() and rc1.get_rc()) or rc2._mut_ptr_cont[i2]->get_end() <= r1_pos);
+            // 0 <= i2 - 1 < n2 and r1 reversed => before i2 - 1 mutation
+            assert(not (0 < i2 and i2 < rc2._mut_ptr_cont.size() + 1 and rc1.get_rc()) or r1_pos <= rc2._mut_ptr_cont[i2 - 1]->get_start());
+
+            assert(c_pos <= rc1.get_c_end());
+            // if k1 != 0, we must be in the middle of a contig mutation
+            assert(not k1 != 0 or (i1 < rc1._mut_ptr_cont.size() and c_pos == rc1._mut_ptr_cont[i1]->get_start() + k1));
+            // if k1 == 0 and i1 not at the end, the next contig mutation is at the right
+            assert(not (k1 == 0 and i1 < rc1._mut_ptr_cont.size()) or c_pos <= rc1._mut_ptr_cont[i1]->get_start());
+
+            // if we are not on the boundary of either a contig mutation or a read mutation, advance until next boundary
+            if (k1 == 0
+                and (i1 == rc1._mut_ptr_cont.size()
+                     or c_pos == rc1._mut_ptr_cont[i1]->get_start())
+                and (i2 == rc2._mut_ptr_cont.size()
+                     or r1_pos == (not rc1.get_rc()? rc2._mut_ptr_cont[i2]->get_start() : rc2._mut_ptr_cont[i2]->get_end())))
+            {
+                Size_Type c_match_len = (i1 < rc1._mut_ptr_cont.size()? rc1._mut_ptr_cont[i1]->get_start() : rc1.get_c_end()) - c_pos;
+                Size_Type r1_match_len = (not rc1.get_rc()?
+                                          (i2 < rc2._mut_ptr_cont.size()? rc2._mut_ptr_cont[i2]->get_start() : rc1.get_r_end()) - r1_pos
+                                          : r1_pos - (i2 < rc2._mut_ptr_cont.size()? rc2._mut_ptr_cont[i2]->get_end() : rc1.get_r_start()));
+                Size_Type skip_len = min(c_match_len, r1_match_len);
+                c_pos += skip_len;
+                r1_pos = (not rc1.get_rc()? r1_pos + skip_len : r1_pos - skip_len);
+                r2_pos = (rc1.get_rc() == rc2.get_rc()? r2_pos + skip_len : r2_pos - skip_len);
+                continue;
+            }
+
+            // if we are on the boundary of a read mutation, consume all contig mutations that span it
+            if (i2 < rc2._mut_ptr_cont.size()
+                and r1_pos == (not rc1.get_rc()? rc2._mut_ptr_cont[i2]->get_start() : rc2._mut_ptr_cont[i2]->get_end()))
+            {
+                // advance past contig mutations until they cover the current read mutation
+                Size_Type c_span = 0;
+                Size_Type r1_span = 0;
+                while (r1_span < rc2._mut_ptr_cont[i2]->get_len())
+                {
+                    if (c_pos + c_span < (i1 < rc1._mut_ptr_cont.size()? rc1._mut_ptr_cont[i1]->get_start() + k1 : rc1.get_c_end()))
+                    {
+                        // in the middle of a matched region
+                        assert(k1 == 0);
+                        Size_Type match_len = (i1 < rc1._mut_ptr_cont.size()? rc1._mut_ptr_cont[i1]->get_start() : rc1.get_c_end()) - (c_pos + c_span);
+                        Size_Type skip_len = min(match_len, rc2._mut_ptr_cont[i2]->get_len() - r1_span);
+                        c_span += skip_len;
+                        r1_span += skip_len;
+                    }
+                    else
+                    {
+                        // on the border or inside a contig mutation
+                        // could not have finished the contig mutations at this point
+                        // because there are read bases to be consumed
+                        assert(i1 < rc1._mut_ptr_cont.size());
+                        assert(c_pos + c_span == rc1._mut_ptr_cont[i1]->get_start() + k1);
+
+                        Size_Type r1_leftover = (rc1._mut_ptr_cont[i1]->get_seq_len() >= k1? rc1._mut_ptr_cont[i1]->get_seq_len() - k1 : 0);
+                        Size_Type c_leftover = (rc1._mut_ptr_cont[i1]->get_len() >= k1? rc1._mut_ptr_cont[i1]->get_len() - k1 : 0);
+                        Size_Type r1_skip_len = min(r1_leftover, rc2._mut_ptr_cont[i2]->get_len() - r1_span);
+                        c_span += min(r1_skip_len, c_leftover);
+                        r1_span += r1_skip_len;
+                        k1 += r1_skip_len;
+                        if (rc1._mut_ptr_cont[i1]->get_seq_len() <= k1)
+                        {
+                            // consumed entire read span of this mutation; advance past it
+                            c_span += (k1 < rc1._mut_ptr_cont[i1]->get_len()? rc1._mut_ptr_cont[i1]->get_len() - k1 : 0);
+                            k1 = 0;
+                            ++i1;
+                        }
+                        else
+                        {
+                            // still in the middle of the same mutation
+                            assert(r1_span == rc2._mut_ptr_cont[i2]->get_len());
+                        }
+                    }
+                }
+                // construct new mutation to replace this read mutation
+                Mutation new_mut(c_pos, c_span, rc2._mut_ptr_cont[i2]->get_seq());
+                c_pos += c_span;
+                r1_pos = (not rc1.get_rc()? r1_pos + r1_span : r1_pos - r1_span);
+                r2_pos = (rc1.get_rc() == rc2.get_rc()? r2_pos + rc2._mut_ptr_cont[i2]->get_seq_len() : r2_pos - rc2._mut_ptr_cont[i2]->get_seq_len());
+                ++i2;
+            }
+
+            //TODO
+
+            // consume deleted contig bases; if any
+            if (i1 < rc1._mut_ptr_cont.size()
+                and c_pos == rc1._mut_ptr_cont[i1]->get_start() + k1
+                and rc1._mut_ptr_cont[i1]->get_seq_len() <= k1)
+            {
+                assert(rc1._mut_ptr_cont[i1]->get_len() > k1);
+                res.push_back(true, _mut_ptr_cont[i1], k1, _mut_ptr_cont[i1]->get_len());
+                c_pos += _mut_ptr_cont[i1]->get_len();
+                k1 = 0;
+                ++i1;
+                continue;
+            }
+
+            
+
+            // consider the mapped strech preceding the next contig mutation
+            Size_Type match_len = (i1 < rc1._mut_ptr_cont.size()? rc1._mut_ptr_cont[i1]->get_start() : rc1.get_c_end()) - c_pos;
+            // find the first read1 mutation
+            
         }
-        assert((not _rc and mut.get_start() >= r_pos)
-               or (_rc and mut.get_end() <= r_pos));
-        Size_Type c_pos = (i == 0? _c_start : _mut_ptr_cont[i - 1]->get_end());
-        
+
+        return res;
+    }
+
+    Mutation_Extra_Cont Read_Chunk::get_me_cont() const
+    {
+        Mutation_Extra_Cont res;
+
+        Size_Type c_pos = _c_start;
+        Size_Type r_pos = (not _rc? _r_start : _r_start + _r_len);
+        for (size_t i = 0; i < _mut_ptr_cont.size(); ++i)
+        {
+            assert(c_pos <= _mut_ptr_cont[i]->get_start());
+            Size_Type match_len = _mut_ptr_cont[i]->get_start() - c_pos;
+            c_pos += match_len;
+            r_pos = (not _rc? r_pos + match_len : r_pos - match_len);
+            Mutation_Extra tmp;
+            tmp.mut_cptr = _mut_ptr_cont[i];
+            tmp.alt_start = r_pos;
+            res.insert(tmp);
+        }
+        return res;
     }
 
     ostream& operator << (ostream& os, const Read_Chunk& rhs)

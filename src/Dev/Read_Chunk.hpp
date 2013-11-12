@@ -149,18 +149,17 @@ namespace MAC
             Size_Type r1_start, Size_Type r2_start, const Cigar& cigar);
         */
 
-         /** Lift mutation.
-          * A Read_Chunk object holds the _contig_ mutations this read observes.
-          * Given a _read_ mutation (observed by another read during mapping), this
-          * function transforms it into a corresponding contig mutation.
-          * @param mut Read mutation to be translated.
-          * @param i Progress index that iterates over contig mutations.
-          * @param r_pos Read position reached after incorporating contig mutations 0..i-1;
-          * when i=0 this is initialized internally;
-          * precondition: mut_start >= r_pos (not _rc), and mut_end <= r_pos (_rc).
-          * @return Translated mutation of the contig.
+         /** Collapse mutations corresponding to 2 mappings.
+          * @param lhs Read_Chunk object corresponding to contig->read1 mapping.
+          * @param lhs_me Container of Mutation_Extra objects from lhs.
+          * @param rhs Read_Chunk object corresponding to read1->read2 mapping.
+          * @return vector of contig->read2 mutations; for each:
+          * a bool specifying if it is a contig mutation (true) or a read1 mutation (false);
+          * pointer to the mutation object;
+          * and a mutation start&length.
           */
-         Mutation lift(const Mutation& mut, size_t i = 0, Size_Type r_pos = 0);
+         static std::vector< boost::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > collapse_mutations(
+             const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2);
 
          friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
 
@@ -173,6 +172,9 @@ namespace MAC
         Size_Type _c_len;
         bool _rc;
         std::vector<const Mutation*> _mut_ptr_cont;
+
+        /** Construct mutation ptr container with read positions. */
+        Mutation_Extra_Cont get_me_cont() const;
     };
 
     /** Pointer to constant Read_Chunk. */
