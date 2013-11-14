@@ -24,6 +24,31 @@
 
 namespace MAC
 {
+    /** Set of coordinates used to traverse a Read_Chunk mapping. */
+    struct Read_Chunk_Pos
+    {
+        /** Contig position. */
+        Size_Type c_pos;
+        /** Read position. */
+        Size_Type r_pos;
+        /** Number of mutations passed. */
+        size_t mut_idx;
+        /** If non-zero, offset into mutation mut_idx. */
+        size_t mut_offset;
+
+        /** Constructor. */
+        Read_Chunk_Pos(Size_Type _c_pos = 0, Size_Type _r_pos = 0, size_t _mut_idx = 0, size_t _mut_offset = 0)
+        : c_pos(_c_pos), r_pos(_r_pos), mut_idx(_mut_idx), mut_offset(_mut_offset) {}
+
+        /** Comparison operator. */
+        bool operator == (const Read_Chunk_Pos& rhs)
+        {
+            return c_pos == rhs.c_pos and r_pos == rhs.r_pos and mut_idx == rhs.mut_idx and mut_offset == rhs.mut_offset;
+        }
+    };
+
+    std::ostream& operator << (std::ostream&, const Read_Chunk_Pos&);
+
     /** Holds information about a read chunk.
      *
      * Reads will be partitioned into chunks of non-zero size as they are mapped to contigs.
@@ -66,6 +91,39 @@ namespace MAC
         bool get_rc() const { return _rc; }
         const std::vector< const Mutation* > get_mut_ptr_cont() const { return _mut_ptr_cont; }
         key_type get_key() const { return _r_start; }
+        /**@}*/
+
+        /** @name Traversal using Read_Chunk_Pos objects */
+        /**@{*/
+        /** Asserts that Read_Chunk_Pos object is valid. */
+        inline bool check_pos(const Read_Chunk_Pos& pos) const;
+
+        /** Get mapping start position. */
+        Read_Chunk_Pos get_start_pos() const { return Read_Chunk_Pos(get_c_start(), (not _rc? get_r_start() : get_r_end()), 0, 0); }
+
+        /** Get mapping end position. */
+        Read_Chunk_Pos get_end_pos() const { return Read_Chunk_Pos(get_c_end(), (not _rc? get_r_end() : get_r_start()), _mut_ptr_cont.size(), 0); }
+
+        /** Get length of unmutated mapped stretch starting at given position.
+         * @param pos Read_Chunk_Pos object.
+         * @param forward Bool; true if looking for match stretch forward, false if backward.
+         * @return The length of the next stretch of unmutated bases; 0 if on the breakpoint of a mutation.
+         */
+        inline Size_Type get_match_len_from_pos(const Read_Chunk_Pos& pos, bool forward = true) const;
+
+        /** Increment position object past the next mapping stretch, stopping at the given breakpoint.
+         * @param pos Read_Chunk_Pos position object.
+         * @param brk Breakpoint position.
+         * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
+         */
+        void increment_pos(Read_Chunk_Pos& pos, Size_Type brk = 0, bool on_contig = true) const;
+
+        /** Decrement position object past the next mapping stretch, stopping at the given breakpoint.
+         * @param pos Read_Chunk_Pos position object.
+         * @param brk Breakpoint position.
+         * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
+         */
+        void decrement_pos(Read_Chunk_Pos& pos, Size_Type brk = 0, bool on_contig = true) const;
         /**@}*/
 
         /** Set read entry pointer. */
@@ -138,18 +196,20 @@ namespace MAC
           */
          std::pair< Size_Type, Size_Type > get_contig_brk_range(Size_Type pos);
 
-         /** Create 2 Read_Chunk objects (and corresponding Mutation containers) from a cigar string.
-         * @param r1_start Overlap start in r1, 0-based. Equivalently, length of r1 before the overlap.
-         * @param r2_start Overlap start in r2, 0-based. Equivalently, length of r2 before the overlap.
-         * @param cigar Cigar string (r1:reference, r2:query).
-         * @return A vector of size 2; index 0 corresponds to (base r1, query r2),
-         * index 1 corresponds to (base r2, query r1).
-         *
-        static std::vector<std::pair<Read_Chunk,Mutation_Cont>> make_chunks_from_cigar(
-            Size_Type r1_start, Size_Type r2_start, const Cigar& cigar);
-        */
+         /** Create Read_Chunk object and corresponding Mutation container from a cigar string.
+         * @param cigar Cigar string.
+         * @param qr Query string, optional;
+         * if not given (empty), Mutation objects hold alternate sequence _lengths_ only;
+         * if given, it can be either the entire query string, or just the part mapped by cigar.
+         * @return A read chunk corresponding to the query in the cigar object, and a container for Mutation objects.
+         */
+         static boost::tuple< Read_Chunk, std::shared_ptr< Mutation_Cont > > make_chunk_from_cigar(
+             const Cigar& cigar, const std::string& qr = std::string());
 
-         /** Collapse mutations corresponding to 2 mappings.
+         /*
+         std::vector< boost::tuple< Mutation_CPtr, Mutation > > lift_mutations(const std::vector< Mutation_CPtr >& mut_cptr_vect);
+
+         ** Collapse mutations corresponding to 2 mappings.
           * @param lhs Read_Chunk object corresponding to contig->read1 mapping.
           * @param lhs_me Container of Mutation_Extra objects from lhs.
           * @param rhs Read_Chunk object corresponding to read1->read2 mapping.
@@ -157,9 +217,10 @@ namespace MAC
           * a bool specifying if it is a contig mutation (true) or a read1 mutation (false);
           * pointer to the mutation object;
           * and a mutation start&length.
-          */
+          *
          static std::vector< boost::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > collapse_mutations(
              const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2);
+         */
 
          friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
 
@@ -173,8 +234,8 @@ namespace MAC
         bool _rc;
         std::vector<const Mutation*> _mut_ptr_cont;
 
-        /** Construct mutation ptr container with read positions. */
-        Mutation_Extra_Cont get_me_cont() const;
+        /** Compute read positions of the contig mutations in this object. */
+        std::vector< Size_Type > get_mut_pos() const;
     };
 
     /** Pointer to constant Read_Chunk. */

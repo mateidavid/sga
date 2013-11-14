@@ -137,14 +137,6 @@ namespace MAC
         Size_Type _seq_len;
     };
 
-    struct Mutation_Extra
-    {
-        const Mutation* mut_cptr;
-        Size_Type alt_start;
-
-        friend std::ostream& operator << (std::ostream&, const Mutation_Extra&);
-    };
-
     typedef const Mutation* Mutation_CPtr;
 
     namespace detail
@@ -155,17 +147,6 @@ namespace MAC
             typedef Mutation::key_type result_type;
             result_type operator() (const Mutation& m) const { return m.get_key(); }
             result_type operator() (const Mutation_CPtr& m_cptr) const { return m_cptr->get_key(); }
-        };
-
-        struct Mutation_Extra_Key
-        {
-            typedef Mutation::key_type result_type;
-            result_type operator() (const Mutation_Extra& me) const { return me.mut_cptr->get_key(); }
-        };
-        struct Mutation_Extra_Alt_Key
-        {
-            typedef Mutation::key_type result_type;
-            result_type operator() (const Mutation_Extra& me) const { return me.alt_start; }
         };
     }
 
@@ -178,20 +159,6 @@ namespace MAC
         >
       >
     > Mutation_Cont;
-
-    /** Container for Mutation_With_Alt_Pos objects. */
-    typedef boost::multi_index_container<
-      Mutation_Extra,
-      boost::multi_index::indexed_by<
-        boost::multi_index::ordered_non_unique<
-          detail::Mutation_Extra_Key
-        >,
-        boost::multi_index::ordered_non_unique<
-          detail::Mutation_Extra_Alt_Key
-        >
-      >
-    > Mutation_Extra_Cont;
-
 }
 
 #endif

@@ -11,6 +11,7 @@
 #include "Mutation.hpp"
 #include "print_seq.hpp"
 #include "indent.hpp"
+#include "../Util/Util.h"
 
 using namespace std;
 using boost::tie;
@@ -18,6 +19,170 @@ using boost::tie;
 
 namespace MAC
 {
+    ostream& operator << (ostream& os, const Read_Chunk_Pos& pos)
+    {
+        os << "(c_pos=" << (size_t)pos.c_pos << ",r_pos=" << (size_t)pos.r_pos << ",mut_idx=" << pos.mut_idx << ",mut_offset=" << pos.mut_offset << ")";
+        return os;
+    }
+
+    inline bool Read_Chunk::check_pos(const Read_Chunk_Pos& pos) const
+    {
+        assert(get_c_start() <= pos.c_pos and pos.c_pos <= get_c_end());
+        assert(get_r_start() <= pos.r_pos and pos.r_pos <= get_r_end());
+        assert(pos.mut_idx <= _mut_ptr_cont.size());
+        assert(not pos.mut_offset == 0
+               or pos.c_pos <= (pos.mut_idx < _mut_ptr_cont.size()? _mut_ptr_cont[pos.mut_idx]->get_start() : get_c_end()));
+        assert(not pos.mut_offset != 0
+               or (pos.mut_idx < _mut_ptr_cont.size()
+                   and pos.c_pos == _mut_ptr_cont[pos.mut_idx]->get_start() + min(pos.mut_offset, _mut_ptr_cont[pos.mut_idx]->get_len())));
+        return true;
+    }
+
+    inline Size_Type Read_Chunk::get_match_len_from_pos(const Read_Chunk_Pos& pos, bool forward) const
+    {
+        assert(check_pos(pos));
+        if (pos.mut_offset != 0)
+        {
+            return 0;
+        }
+        if (forward)
+        {
+            return (pos.mut_idx < _mut_ptr_cont.size()? _mut_ptr_cont[pos.mut_idx]->get_start() : get_c_end()) - pos.c_pos;
+        }
+        else
+        {
+            return pos.c_pos - (pos.mut_idx > 0? _mut_ptr_cont[pos.mut_idx - 1]->get_end() : get_c_start());
+        }
+    }
+
+    void Read_Chunk::increment_pos(Read_Chunk_Pos& pos, Size_Type brk, bool on_contig) const
+    {
+        assert(check_pos(pos));
+        if (brk == 0)
+        {
+            // by default, use an unreachable breakpoint
+            on_contig = true;
+            brk = get_c_end() + 1;
+        }
+        assert(on_contig? pos.c_pos < brk : (not _rc? pos.r_pos < brk : brk < pos.r_pos));
+        if (pos.mut_idx < _mut_ptr_cont.size()
+            and pos.c_pos == _mut_ptr_cont[pos.mut_idx]->get_start() + min(pos.mut_offset, _mut_ptr_cont[pos.mut_idx]->get_len()))
+        {
+            // at the start or inside a mutation
+            Size_Type c_leftover = (_mut_ptr_cont[pos.mut_idx]->get_len() > pos.mut_offset? _mut_ptr_cont[pos.mut_idx]->get_len() - pos.mut_offset : 0);
+            Size_Type r_leftover = (_mut_ptr_cont[pos.mut_idx]->get_seq_len() > pos.mut_offset? _mut_ptr_cont[pos.mut_idx]->get_seq_len() - pos.mut_offset : 0);
+            Size_Type skip_len = 0;
+            if (on_contig and brk < pos.c_pos + c_leftover)
+            {
+                skip_len = brk - pos.c_pos;
+            }
+            else if (not on_contig and (not _rc? brk < pos.r_pos + r_leftover : pos.r_pos - r_leftover < brk))
+            {
+                skip_len = (not _rc? brk - pos.r_pos : pos.r_pos - brk);
+            }
+            else
+            {
+                // breakpoint does not occur later in this mutation: we advance past it entirely
+                skip_len = max(c_leftover, r_leftover);
+            }
+            pos.c_pos += min(c_leftover, skip_len);
+            pos.r_pos = (not _rc? pos.r_pos + min(r_leftover, skip_len) : pos.r_pos - min(r_leftover, skip_len));
+            pos.mut_offset += skip_len;
+            if (pos.mut_offset >= _mut_ptr_cont[pos.mut_idx]->get_len() and pos.mut_offset >= _mut_ptr_cont[pos.mut_idx]->get_seq_len())
+            {
+                pos.mut_offset = 0;
+                ++pos.mut_idx;
+            }
+        }
+        else
+        {
+            // a match stretch follows
+            Size_Type match_len = get_match_len_from_pos(pos, true);
+            assert(match_len > 0);
+            Size_Type skip_len = 0;
+            if (on_contig and brk < pos.c_pos + match_len)
+            {
+                skip_len = brk - pos.c_pos;
+            }
+            else if (not on_contig and (not _rc? brk < pos.r_pos + match_len : pos.r_pos - match_len < brk))
+            {
+                skip_len = (not _rc? brk - pos.r_pos : pos.r_pos - brk);
+            }
+            else
+            {
+                skip_len = match_len;
+            }
+            pos.c_pos += skip_len;
+            pos.r_pos = (not _rc? pos.r_pos + skip_len : pos.r_pos - skip_len);
+        }
+    }
+
+    void Read_Chunk::decrement_pos(Read_Chunk_Pos& pos, Size_Type brk, bool on_contig) const
+    {
+        assert(check_pos(pos));
+        if (brk == 0)
+        {
+            on_contig = true;
+        }
+        assert(on_contig? brk <= pos.c_pos : (not _rc? brk < pos.r_pos : pos.r_pos < brk));
+        if (pos.mut_offset != 0
+            or (pos.mut_offset == 0 and pos.mut_idx > 0
+                and pos.c_pos == _mut_ptr_cont[pos.mut_idx - 1]->get_end()))
+        {
+            // at the end or inside a mutation
+            if (pos.mut_offset == 0)
+            {
+                --pos.mut_idx;
+                pos.mut_offset = max(_mut_ptr_cont[pos.mut_idx]->get_len(), _mut_ptr_cont[pos.mut_idx]->get_seq_len());
+            }
+            assert(pos.mut_offset > 0);
+            Size_Type c_leftover = min(_mut_ptr_cont[pos.mut_idx]->get_len(), pos.mut_offset);
+            Size_Type r_leftover = min(_mut_ptr_cont[pos.mut_idx]->get_seq_len(), pos.mut_offset);
+            Size_Type c_skip_len = 0;
+            Size_Type r_skip_len = 0;
+            if (on_contig and pos.c_pos - c_leftover < brk)
+            {
+                c_skip_len = pos.c_pos - brk;
+                r_skip_len = (r_leftover > c_leftover - c_skip_len? r_leftover - (c_leftover - c_skip_len) : 0);
+            }
+            else if (not on_contig and (not _rc? pos.r_pos - r_leftover < brk : brk < pos.r_pos + r_leftover))
+            {
+                r_skip_len = (not _rc? pos.r_pos - brk : brk - pos.r_pos);
+                c_skip_len = (c_leftover > r_leftover - r_skip_len? c_leftover - (r_leftover - r_skip_len) : 0);
+            }
+            else
+            {
+                // breakpoint does not occur earlier in this mutation: we advance past it entirely
+                c_skip_len = c_leftover;
+                r_skip_len = r_leftover;
+            }
+            pos.c_pos -= c_skip_len;
+            pos.r_pos = (not _rc? pos.r_pos - r_skip_len : pos.r_pos + r_skip_len);
+            pos.mut_offset = max(c_leftover - c_skip_len, r_leftover - r_skip_len);
+        }
+        else
+        {
+            // a match stretch follows
+            Size_Type match_len = get_match_len_from_pos(pos, false);
+            assert(match_len > 0);
+            Size_Type skip_len = 0;
+            if (on_contig and pos.c_pos - match_len < brk)
+            {
+                skip_len = pos.c_pos - brk;
+            }
+            else if (not on_contig and (not _rc? pos.r_pos - match_len < brk : brk < pos.r_pos + match_len))
+            {
+                skip_len = (not _rc? pos.r_pos - brk : brk - pos.r_pos);
+            }
+            else
+            {
+                skip_len = match_len;
+            }
+            pos.c_pos -= skip_len;
+            pos.r_pos = (not _rc? pos.r_pos - skip_len : pos.r_pos + skip_len);
+        }
+    }
+
     bool Read_Chunk::have_mutation(const Mutation* mut_cptr) const
     {
         for (size_t i = 0; i < _mut_ptr_cont.size(); ++i)
@@ -42,59 +207,72 @@ namespace MAC
     }
 
     /** Create a set of mutations to a reference string based on a cigar object.
-     * @param rf_start Index in reference of the start of the match (0-based).
      * @param cigar Cigar object describing the match.
+     * @param qr Query string; optional: if not given, Mutation objects contain alternate string lengths only.
      * @return Container of Mutation objects.
-     *
-    Mutation_Cont make_mutations_from_cigar(Size_Type rf_start, const Cigar& cigar)
+     */
+    shared_ptr< Mutation_Cont > make_mutations_from_cigar(const Cigar& cigar, const string& qr)
     {
-        Mutation_Cont res;
+        shared_ptr< Mutation_Cont > res(new Mutation_Cont());
         for (size_t i = 0; i < cigar.get_n_ops(); ++i)
         {
-            if (not Cigar::is_match_op(cigar.get_op(i)))
+            // disallow ambigous 'M' operation
+            assert(cigar.get_op(i) != 'M');
+            if (cigar.get_op(i) != '=')
             {
+                Mutation mut;
                 Mutation_Cont::iterator it;
                 bool success;
-                tie(it, success) = res.insert(Mutation(rf_start + cigar.get_rf_offset(i), cigar.get_rf_op_len(i), cigar.get_qr_op_len(i)));
+                if (qr.size() > 0)
+                {
+                    // accept either the matched part of the query (length = cigar.qr_len)
+                    // or entire query (length > cigar.qr_len)
+                    assert(qr.size() >= cigar.get_qr_len());
+                    Size_Type qr_offset = (not cigar.is_reversed()? cigar.get_qr_offset(i) : cigar.get_qr_offset(i) - cigar.get_qr_op_len(i));
+                    if (qr.size() == cigar.get_qr_len())
+                    {
+                        // assume the query sequence before qr_start is missing
+                        qr_offset -= cigar.get_qr_start();
+                    }
+                    mut = Mutation(cigar.get_rf_offset(i), cigar.get_rf_op_len(i),
+                                   (not cigar.is_reversed()?
+                                    qr.substr(qr_offset, cigar.get_qr_op_len(i))
+                                    : reverseComplement(qr.substr(qr_offset, cigar.get_qr_op_len(i)))));
+                }
+                else
+                {
+                    mut = Mutation(cigar.get_rf_offset(i), cigar.get_rf_op_len(i), cigar.get_qr_op_len(i));
+                }
+                tie(it, success) = res->insert(mut);
                 assert(success);
             }
         }
         return res;
     }
 
-    vector< pair< Read_Chunk, Mutation_Cont > > Read_Chunk::make_chunks_from_cigar(
-        Size_Type r1_start, Size_Type r2_start, const Cigar& cigar)
+    boost::tuple< Read_Chunk, shared_ptr< Mutation_Cont > > Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, const string& qr)
     {
         // create objects with default constructor
-        vector< pair< Read_Chunk, Mutation_Cont > > res(2);
+        boost::tuple< Read_Chunk, shared_ptr< Mutation_Cont > > res;
 
         // fix lengths and rc flags
-        Size_Type r1_len = cigar.get_rf_len();
-        Size_Type r2_len = cigar.get_qr_len();
-        res[0].first._r_start = r2_start;
-        res[0].first._r_len = r2_len;
-        res[0].first._c_start = r1_start;
-        res[0].first._c_len = r1_len;
-        res[0].first._rc = cigar.is_reversed();
-        res[1].first._r_start = r1_start;
-        res[1].first._r_len = r1_len;
-        res[1].first._c_start = r2_start;
-        res[1].first._c_len = r2_len;
-        res[1].first._rc = cigar.is_reversed();
+        res.get<0>()._c_start = cigar.get_rf_start();
+        res.get<0>()._c_len = cigar.get_rf_len();
+        res.get<0>()._r_start = cigar.get_qr_start();
+        res.get<0>()._r_len = cigar.get_qr_len();
+        res.get<0>()._rc = cigar.is_reversed();
 
-        // construct r1->r2 mutations
-        res[0].second = make_mutations_from_cigar(r1_start, cigar);
-        for (auto it = res[0].second.begin(); it != res[0].second.end(); ++it)
-            res[0].first._mut_ptr_cont.push_back(&(*it));
+        // construct mutations
+        res.get<1>() = make_mutations_from_cigar(cigar, qr);
 
-        // construct r2->r1 mutations
-        res[1].second = make_mutations_from_cigar(r2_start, cigar.complement());
-        for (auto it = res[1].second.begin(); it != res[1].second.end(); ++it)
-            res[1].first._mut_ptr_cont.push_back(&(*it));
+        // store pointers in the Read_Chunk object
+        for (auto it = res.get<1>()->begin(); it != res.get<1>()->end(); ++it)
+        {
+            res.get<0>()._mut_ptr_cont.push_back(&*it);
+        }
 
         return res;
     }
-    */
 
     boost::tuple< Size_Type, Size_Type, size_t > Read_Chunk::get_cut_data(Size_Type brk, bool is_contig_brk) const
     {
@@ -312,6 +490,7 @@ namespace MAC
         }
     }
 
+    /*
     vector< boost::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > Read_Chunk::collapse_mutations(
         const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2)
     {
@@ -442,24 +621,22 @@ namespace MAC
 
         return res;
     }
+    */
 
-    Mutation_Extra_Cont Read_Chunk::get_me_cont() const
+    vector< Size_Type > Read_Chunk::get_mut_pos() const
     {
-        Mutation_Extra_Cont res;
-
-        Size_Type c_pos = _c_start;
-        Size_Type r_pos = (not _rc? _r_start : _r_start + _r_len);
-        for (size_t i = 0; i < _mut_ptr_cont.size(); ++i)
+        vector< Size_Type > res;
+        for (Read_Chunk_Pos pos = get_start_pos(); not (pos == get_end_pos()); increment_pos(pos))
         {
-            assert(c_pos <= _mut_ptr_cont[i]->get_start());
-            Size_Type match_len = _mut_ptr_cont[i]->get_start() - c_pos;
-            c_pos += match_len;
-            r_pos = (not _rc? r_pos + match_len : r_pos - match_len);
-            Mutation_Extra tmp;
-            tmp.mut_cptr = _mut_ptr_cont[i];
-            tmp.alt_start = r_pos;
-            res.insert(tmp);
+            // if no breakpoints are used, we should never stop in the middle of a mutation
+            assert(pos.mut_offset == 0);
+            if (get_match_len_from_pos(pos) == 0)
+            {
+                // at the start of a mutation
+                res.push_back(pos.r_pos);
+            }
         }
+        assert(res.size() == _mut_ptr_cont.size());
         return res;
     }
 
