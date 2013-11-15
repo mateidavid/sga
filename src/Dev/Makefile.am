@@ -1,5 +1,7 @@
+AM_CXXFLAGS = $(BOOST_CPPFLAGS)
+
 noinst_PROGRAMS = bloom-filter-tool test test_mac test_read_chunk_traversal
-noinst_LIBRARIES = libmac.a libdev.a
+noinst_LTLIBRARIES = libmac.la libdev.la
 
 bloom_filter_tool_CPPFLAGS = -std=c++0x -fopenmp \
         -I$(top_srcdir)/Util \
@@ -8,7 +10,7 @@ bloom_filter_tool_CPPFLAGS = -std=c++0x -fopenmp \
 bloom_filter_tool_LDADD = \
         $(top_builddir)/Util/libutil.a \
         $(top_builddir)/Thirdparty/libthirdparty.a \
-        libdev.a \
+        libdev.la \
         -lboost_iostreams
 
 bloom_filter_tool_SOURCES = bloom-filter-tool.cpp
@@ -40,16 +42,16 @@ test_LDADD = \
 test_SOURCES = \
         test.cpp
 
-libdev_a_CPPFLAGS = -std=c++0x -fopenmp
+libdev_la_CPPFLAGS = -std=c++0x -fopenmp
 
-libdev_a_SOURCES = kmer_gen.cpp
+libdev_la_SOURCES = kmer_gen.cpp
 
-libmac_a_CPPFLAGS = -std=c++0x \
+libmac_la_CPPFLAGS = -std=c++0x \
         -I$(top_srcdir)/Bigraph \
         -I$(top_srcdir)/Thirdparty \
         -I$(top_srcdir)/Util
 
-libmac_a_SOURCES = \
+libmac_la_SOURCES = \
         Mutation.cpp \
         Read_Chunk.cpp \
         Read_Entry.cpp \
@@ -62,7 +64,7 @@ test_mac_CPPFLAGS = -std=c++0x
 
 test_mac_SOURCES = test_mac.cpp
 
-test_mac_LDADD = libmac.a \
+test_mac_LDADD = libmac.la \
         $(top_builddir)/Util/libutil.a \
         $(top_builddir)/Thirdparty/libthirdparty.a
 
@@ -70,6 +72,6 @@ test_read_chunk_traversal_CPPFLAGS = -std=c++0x
 
 test_read_chunk_traversal_SOURCES = test_read_chunk_traversal.cpp
 
-test_read_chunk_traversal_LDADD = libmac.a \
+test_read_chunk_traversal_LDADD = libmac.la \
         $(top_builddir)/Util/libutil.a \
         $(top_builddir)/Thirdparty/libthirdparty.a

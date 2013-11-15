@@ -5,12 +5,16 @@ AC_INIT(sga, 0.10.10, js18@sanger.ac.uk)
 AM_INIT_AUTOMAKE(foreign)
 AC_CONFIG_SRCDIR([SGA/sga.cpp])
 AC_CONFIG_HEADER([config.h])
-m4_include([m4/m4_ax_openmp.m4])
+#m4_include([m4/m4_ax_openmp.m4])
+AC_CONFIG_MACRO_DIR([m4])
 
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_CC
-AC_PROG_RANLIB
+#AC_PROG_RANLIB
+
+# check for libtool
+AC_PROG_LIBTOOL
 
 # Check for headers
 AC_LANG([C++])
@@ -82,6 +86,10 @@ if test "$host" = Darwin;then
 else
   AC_MSG_RESULT(you are not using osx so multi-threading should work.);
 fi
+
+# check for boost libs
+BOOST_REQUIRE([1.46])
+BOOST_IOSTREAMS
 
 # Set compiler flags.
 AC_SUBST(AM_CXXFLAGS, "-Wall -Wextra -Werror -Wno-unknown-pragmas")
