@@ -7,7 +7,7 @@ using namespace std;
 
 int main()
 {
-    typename MAC::Mutation m1;
+    MAC::Mutation m1;
     MAC::Mutation m2(3, 1);
     MAC::Mutation m3(5, 1, string("C"));
 
