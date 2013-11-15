@@ -9,9 +9,9 @@
 
 #include <iostream>
 #include <cassert>
+#include <boost/tuple/tuple.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
-#include <boost/tuple/tuple.hpp>
 
 #include "MAC_forward.hpp"
 
@@ -159,6 +159,10 @@ namespace MAC
         >
       >
     > Mutation_Cont;
+
+    /** Mutation range with erased container. */
+    typedef boost::any_range< Mutation, boost::forward_traversal_tag, Mutation&, std::ptrdiff_t > Mutation_Range;
 }
+
 
 #endif

@@ -490,6 +490,101 @@ namespace MAC
         }
     }
 
+    boost::tuple< shared_ptr< map< Mutation_CPtr, Mutation_CPtr > >, shared_ptr< Mutation_Cont > >
+    Read_Chunk::lift_read_mutations(const Mutation_Cont& mut_cont) const
+    {
+        shared_ptr< map< Mutation_CPtr, Mutation_CPtr > > mut_map_sptr(new map< Mutation_CPtr, Mutation_CPtr >());
+        shared_ptr< Mutation_Cont > new_mut_cont_sptr(new Mutation_Cont());
+
+        Read_Chunk_Pos pos = (not _rc? get_start_pos() : get_end_pos());
+        Read_Chunk_Pos pos_end = (not _rc? get_end_pos() : get_start_pos());
+        for (auto old_mut_it = mut_cont.begin(); old_mut_it != mut_cont.end(); ++old_mut_it)
+        {
+            const Mutation& old_mut = *old_mut_it;
+            Mutation m;
+            Size_Type c_start;
+            Size_Type c_end;
+
+            // look for the start of read mutation
+            while (pos != pos_end and pos.r_pos != old_mut.get_start())
+            {
+                advance_pos(pos, not _rc, old_mut.get_start(), false);
+            }
+            assert(pos.r_pos == old_mut.get_start());
+            // NOTE: Here we could detect a contig deletion perfectly matched with a read insertion
+            // in order to enforce a certain order.
+            // By not doing anything special, the order is: if not _rc, DI; if _rc, ID.
+
+            // Continue advancing past any deletions.
+            Read_Chunk_Pos next_pos = pos;
+            while (next_pos.r_pos == old_mut.get_start())
+            {
+                pos = next_pos;
+                if (next_pos == pos_end)
+                    break;
+                advance_pos(next_pos, not _rc);
+            }
+            assert(pos.r_pos == old_mut.get_start());
+
+            if (not _rc)
+                c_start = pos.c_pos;
+            else
+                c_end = pos.c_pos;
+
+            // look for end of read mutation
+            next_pos = pos;
+            while (next_pos != pos_end and next_pos.r_pos != old_mut.get_end())
+            {
+                advance_pos(next_pos, not _rc, old_mut.get_end(), false);
+            }
+            assert(pos.r_pos == old_mut.get_end());
+
+            if (not _rc)
+                c_end = next_pos.c_pos;
+            else
+                c_start = next_pos.c_pos;
+
+            if (old_mut.have_seq())
+                m = Mutation(c_start, c_end, not _rc? old_mut.get_seq() : reverseComplement(old_mut.get_seq()));
+            else
+                m = Mutation(c_start, c_end, old_mut.get_seq_len());
+
+            Mutation_Cont::iterator new_mut_it;
+            bool success;
+            tie(new_mut_it, success) = new_mut_cont_sptr->insert(m);
+            assert(success);
+            auto it = mut_map_sptr->begin();
+            tie(it, success) = mut_map_sptr->insert(pair< Mutation_CPtr, Mutation_CPtr >(&*old_mut_it, &*new_mut_it));
+            assert(success);
+        }
+
+        return boost::make_tuple(mut_map_sptr, new_mut_cont_sptr);
+    }
+
+    /*
+    shared_ptr< vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type > > >
+    Read_Chunk::get_old_mutations_in_mapping(const vector< Mutation_CPtr >& new_mut_cptr_cont, const map< Mutation_CPtr, Mutation_CPtr >& mut_map) const
+    {
+        shared_ptr< vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type > > > res(new vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type > >());
+
+        Read_Chunk_Pos pos = get_start_pos();
+        size_t old_idx = 0; // next old mutation to look for
+        size_t new_idx = 0; // next new mutation to look for
+        while (old_idx < _mut_ptr_cont.size())
+        {
+            const Mutation& old_mut = *_mut_ptr_cont[old_idx];
+            Size_Type brk = old_mut.get_start();
+            if (new_idx < new_mut_cptr_cont.size())
+            {
+                brk = min(brk, new_mut_cptr_cont[new_idx]->get_start());
+            }
+            
+        }
+
+        return res;
+    }
+    */
+
     /*
     vector< boost::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > Read_Chunk::collapse_mutations(
         const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2)

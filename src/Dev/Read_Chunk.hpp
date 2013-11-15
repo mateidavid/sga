@@ -45,6 +45,7 @@ namespace MAC
         {
             return c_pos == rhs.c_pos and r_pos == rhs.r_pos and mut_idx == rhs.mut_idx and mut_offset == rhs.mut_offset;
         }
+        bool operator != (const Read_Chunk_Pos& rhs) { return not (*this == rhs); }
     };
 
     std::ostream& operator << (std::ostream&, const Read_Chunk_Pos&);
@@ -124,6 +125,15 @@ namespace MAC
          * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
          */
         void decrement_pos(Read_Chunk_Pos& pos, Size_Type brk = 0, bool on_contig = true) const;
+
+        /** Advance position object: wrapper for increment and decrement.
+         * @param pos Read_Chunk_Pos position object.
+         * @param forward Direction; true: increment; false: decrement.
+         * @param brk Breakpoint position.
+         * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
+         */
+        void advance_pos(Read_Chunk_Pos& pos, bool forward, Size_Type brk = 0, bool on_contig = true) const
+        { if (forward) increment_pos(pos, brk, on_contig); else decrement_pos(pos, brk, on_contig); }
         /**@}*/
 
         /** Set read entry pointer. */
@@ -150,7 +160,7 @@ namespace MAC
          * @param rc Orientation of the mapping.
          * @param mut_ptr_cont List of contig mutations observed by this chunk.
          */
-        void assign_to_contig(const Contig_Entry* ce_cptr, Size_Type c_start, Size_Type c_len, bool rc, const std::vector< const Mutation* > mut_ptr_cont)
+        void assign_to_contig(const Contig_Entry* ce_cptr, Size_Type c_start, Size_Type c_len, bool rc, const std::vector< const Mutation* >& mut_ptr_cont)
         {
             _ce_ptr = ce_cptr;
             _c_start = c_start;
@@ -206,10 +216,24 @@ namespace MAC
          static boost::tuple< Read_Chunk, std::shared_ptr< Mutation_Cont > > make_chunk_from_cigar(
              const Cigar& cigar, const std::string& qr = std::string());
 
-         /*
-         std::vector< boost::tuple< Mutation_CPtr, Mutation > > lift_mutations(const std::vector< Mutation_CPtr >& mut_cptr_vect);
+         /** Translate read mutations into contig mutations.
+          * @param mut_cont Container with read mutations.
+          * @return A map of (old mutation ptr, new mutation ptr); and a new Mutation container.
+          */
+         boost::tuple< std::shared_ptr< std::map< Mutation_CPtr, Mutation_CPtr > >, std::shared_ptr< Mutation_Cont > >
+         lift_read_mutations(const Mutation_Cont& mut_cont) const;
 
-         ** Collapse mutations corresponding to 2 mappings.
+         /** Compute old contig mutations observed by a read mapping.
+          * @param new_mut_cptr_cont
+          * @param mut_map Map of read mutations to new contig mutations.
+          * @return A vector of: (old mutation ptr, start, end).
+          *
+         std::shared_ptr< std::vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type > > >
+         get_old_mutations_in_mapping(const std::vector< Mutation_CPtr >& new_mut_cptr_cont,
+                                      const std::map< Mutation_CPtr, Mutation_CPtr >& mut_map) const;
+          */
+
+         /** Collapse mutations corresponding to 2 mappings.
           * @param lhs Read_Chunk object corresponding to contig->read1 mapping.
           * @param lhs_me Container of Mutation_Extra objects from lhs.
           * @param rhs Read_Chunk object corresponding to read1->read2 mapping.
