@@ -10,11 +10,14 @@ install-sh
 missing
 build*
 *.o
+*.lo
 *.a
+*.la
 Makefile
 .deps/
 /config.h
 /config.log
+/configure.log
 /config.status
 /stamp-h1
 /config.guess
