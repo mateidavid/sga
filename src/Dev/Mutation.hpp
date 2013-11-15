@@ -159,9 +159,6 @@ namespace MAC
         >
       >
     > Mutation_Cont;
-
-    /** Mutation range with erased container. */
-    typedef boost::any_range< Mutation, boost::forward_traversal_tag, Mutation&, std::ptrdiff_t > Mutation_Range;
 }
 
 

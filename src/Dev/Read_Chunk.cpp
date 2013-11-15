@@ -183,6 +183,53 @@ namespace MAC
         }
     }
 
+    bool Read_Chunk::advance_pos_til_mut(Read_Chunk_Pos& pos, const Mutation& mut, bool forward) const
+    {
+        Size_Type mut_first;
+        Size_Type mut_second;
+        if (forward == not _rc)
+        {
+            mut_first = mut.get_start();
+            mut_second = mut.get_end();
+            assert(pos.r_pos <= mut_first);
+        }
+        else
+        {
+            mut_first = mut.get_end();
+            mut_second = mut.get_start();
+            assert(mut_first <= pos.r_pos);
+        }
+        if (pos.r_pos != mut_first)
+        {
+            // there are still mapping stretches before the read Mutation
+            // advance using mut_first as read breakpoint
+            advance_pos(pos, forward, mut_first, false);
+            return false;
+        }
+        else // pos.r_pos == mut_first
+        {
+            // we produce any remaining contig deletions at current read position,
+            // except for the case when a contig deletion matches a read insertion;
+            // in that case we produce the deletion first only when moving forward
+            if (forward or not mut.is_ins())
+            {
+                Read_Chunk_Pos pos_next = pos;
+                advance_pos(pos_next, forward);
+                if (pos_next.r_pos == pos.r_pos)
+                {
+                    pos = pos_next;
+                    return false;
+                }
+            }
+            // at this point, we produce the stretch corresponding to the read Mutation
+            while (pos.r_pos != mut_second)
+            {
+                advance_pos(pos, forward, mut_second, false);
+            }
+            return true;
+        }
+    }
+
     bool Read_Chunk::have_mutation(const Mutation* mut_cptr) const
     {
         for (size_t i = 0; i < _mut_ptr_cont.size(); ++i)
@@ -496,68 +543,41 @@ namespace MAC
         shared_ptr< map< Mutation_CPtr, Mutation_CPtr > > mut_map_sptr(new map< Mutation_CPtr, Mutation_CPtr >());
         shared_ptr< Mutation_Cont > new_mut_cont_sptr(new Mutation_Cont());
 
-        Read_Chunk_Pos pos = (not _rc? get_start_pos() : get_end_pos());
-        Read_Chunk_Pos pos_end = (not _rc? get_end_pos() : get_start_pos());
-        for (auto old_mut_it = mut_cont.begin(); old_mut_it != mut_cont.end(); ++old_mut_it)
+        Read_Chunk_Pos pos = get_start_pos();
+        Mutation_Cont::iterator old_mut_it = mut_cont.begin();
+        Mutation_Cont::reverse_iterator old_mut_rit = mut_cont.rbegin();
+        while (not _rc? old_mut_it != mut_cont.end() : old_mut_rit != mut_cont.rend())
         {
-            const Mutation& old_mut = *old_mut_it;
+            const Mutation& old_mut = (not _rc? *old_mut_it : *old_mut_rit);
+
+            // find stretch corresponding to read Mutation old_mut
+            Read_Chunk_Pos pos_next;
+            for (pos_next = pos; not advance_pos_til_mut(pos_next, old_mut); pos = pos_next);
+
+            assert(_rc or (pos.r_pos == old_mut.get_start() and pos_next.r_pos == old_mut.get_end()));
+            assert(not _rc or (pos_next.r_pos == old_mut.get_start() and pos.r_pos == old_mut.get_end()));
+
             Mutation m;
-            Size_Type c_start;
-            Size_Type c_end;
-
-            // look for the start of read mutation
-            while (pos != pos_end and pos.r_pos != old_mut.get_start())
-            {
-                advance_pos(pos, not _rc, old_mut.get_start(), false);
-            }
-            assert(pos.r_pos == old_mut.get_start());
-            // NOTE: Here we could detect a contig deletion perfectly matched with a read insertion
-            // in order to enforce a certain order.
-            // By not doing anything special, the order is: if not _rc, DI; if _rc, ID.
-
-            // Continue advancing past any deletions.
-            Read_Chunk_Pos next_pos = pos;
-            while (next_pos.r_pos == old_mut.get_start())
-            {
-                pos = next_pos;
-                if (next_pos == pos_end)
-                    break;
-                advance_pos(next_pos, not _rc);
-            }
-            assert(pos.r_pos == old_mut.get_start());
-
-            if (not _rc)
-                c_start = pos.c_pos;
-            else
-                c_end = pos.c_pos;
-
-            // look for end of read mutation
-            next_pos = pos;
-            while (next_pos != pos_end and next_pos.r_pos != old_mut.get_end())
-            {
-                advance_pos(next_pos, not _rc, old_mut.get_end(), false);
-            }
-            assert(pos.r_pos == old_mut.get_end());
-
-            if (not _rc)
-                c_end = next_pos.c_pos;
-            else
-                c_start = next_pos.c_pos;
-
             if (old_mut.have_seq())
-                m = Mutation(c_start, c_end, not _rc? old_mut.get_seq() : reverseComplement(old_mut.get_seq()));
+                m = Mutation(pos.c_pos, pos_next.c_pos, not _rc? old_mut.get_seq() : reverseComplement(old_mut.get_seq()));
             else
-                m = Mutation(c_start, c_end, old_mut.get_seq_len());
+                m = Mutation(pos.c_pos, pos_next.c_pos, old_mut.get_seq_len());
 
             Mutation_Cont::iterator new_mut_it;
             bool success;
             tie(new_mut_it, success) = new_mut_cont_sptr->insert(m);
             assert(success);
             auto it = mut_map_sptr->begin();
-            tie(it, success) = mut_map_sptr->insert(pair< Mutation_CPtr, Mutation_CPtr >(&*old_mut_it, &*new_mut_it));
+            tie(it, success) = mut_map_sptr->insert(pair< Mutation_CPtr, Mutation_CPtr >(&old_mut, &*new_mut_it));
             assert(success);
-        }
 
+            // we do not advance pos to pos_next, because read Mutations can be overlapping
+            // next iteration starts again at pos, looking for the next read Mutation
+            if (not _rc)
+                ++old_mut_it;
+            else
+                ++old_mut_rit;
+        }
         return boost::make_tuple(mut_map_sptr, new_mut_cont_sptr);
     }
 

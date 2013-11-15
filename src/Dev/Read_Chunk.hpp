@@ -134,6 +134,16 @@ namespace MAC
          */
         void advance_pos(Read_Chunk_Pos& pos, bool forward, Size_Type brk = 0, bool on_contig = true) const
         { if (forward) increment_pos(pos, brk, on_contig); else decrement_pos(pos, brk, on_contig); }
+
+        /** Advance position, but using a read Mutation breakpoint.
+         * Repeated calls to this function will produce mapping stretches prior to the read Mutation,
+         * including sliced contig mutations, followed by the stretch corresponding to the read Mutation.
+         * @param pos Position to advance.
+         * @param mut Read Mutation to use as breakpoint.
+         * @param forward Direction; true: increment; false: decrement.
+         * @return Bool; true if breakpoint reached (i.e., mapping stretch corresponds to read Mutation), false ow.
+         */
+        bool advance_pos_til_mut(Read_Chunk_Pos& pos, const Mutation& mut, bool forward = true) const;
         /**@}*/
 
         /** Set read entry pointer. */
