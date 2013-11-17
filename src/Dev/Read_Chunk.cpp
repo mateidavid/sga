@@ -538,72 +538,88 @@ namespace MAC
     }
 
     boost::tuple< shared_ptr< map< Mutation_CPtr, Mutation_CPtr > >, shared_ptr< Mutation_Cont > >
-    Read_Chunk::lift_read_mutations(const Mutation_Cont& mut_cont) const
+    Read_Chunk::lift_read_mutations(const Mutation_Cont& r_mut_cont) const
     {
         shared_ptr< map< Mutation_CPtr, Mutation_CPtr > > mut_map_sptr(new map< Mutation_CPtr, Mutation_CPtr >());
         shared_ptr< Mutation_Cont > new_mut_cont_sptr(new Mutation_Cont());
 
         Read_Chunk_Pos pos = get_start_pos();
-        Mutation_Cont::iterator old_mut_it = mut_cont.begin();
-        Mutation_Cont::reverse_iterator old_mut_rit = mut_cont.rbegin();
-        while (not _rc? old_mut_it != mut_cont.end() : old_mut_rit != mut_cont.rend())
+        Mutation_Cont::iterator r_mut_it = r_mut_cont.begin();
+        Mutation_Cont::reverse_iterator r_mut_rit = r_mut_cont.rbegin();
+        while (not _rc? r_mut_it != r_mut_cont.end() : r_mut_rit != r_mut_cont.rend())
         {
-            const Mutation& old_mut = (not _rc? *old_mut_it : *old_mut_rit);
+            const Mutation& r_mut = (not _rc? *r_mut_it : *r_mut_rit);
 
             // find stretch corresponding to read Mutation old_mut
             Read_Chunk_Pos pos_next;
-            for (pos_next = pos; not advance_pos_til_mut(pos_next, old_mut); pos = pos_next);
+            for (pos_next = pos; not advance_pos_til_mut(pos_next, r_mut); pos = pos_next);
 
-            assert(_rc or (pos.r_pos == old_mut.get_start() and pos_next.r_pos == old_mut.get_end()));
-            assert(not _rc or (pos_next.r_pos == old_mut.get_start() and pos.r_pos == old_mut.get_end()));
+            assert(_rc or (pos.r_pos == r_mut.get_start() and pos_next.r_pos == r_mut.get_end()));
+            assert(not _rc or (pos_next.r_pos == r_mut.get_start() and pos.r_pos == r_mut.get_end()));
 
             Mutation m;
-            if (old_mut.have_seq())
-                m = Mutation(pos.c_pos, pos_next.c_pos, not _rc? old_mut.get_seq() : reverseComplement(old_mut.get_seq()));
+            if (r_mut.have_seq())
+                m = Mutation(pos.c_pos, pos_next.c_pos, not _rc? r_mut.get_seq() : reverseComplement(r_mut.get_seq()));
             else
-                m = Mutation(pos.c_pos, pos_next.c_pos, old_mut.get_seq_len());
+                m = Mutation(pos.c_pos, pos_next.c_pos, r_mut.get_seq_len());
 
             Mutation_Cont::iterator new_mut_it;
             bool success;
             tie(new_mut_it, success) = new_mut_cont_sptr->insert(m);
             assert(success);
             auto it = mut_map_sptr->begin();
-            tie(it, success) = mut_map_sptr->insert(pair< Mutation_CPtr, Mutation_CPtr >(&old_mut, &*new_mut_it));
+            tie(it, success) = mut_map_sptr->insert(pair< Mutation_CPtr, Mutation_CPtr >(&r_mut, &*new_mut_it));
             assert(success);
 
             // we do not advance pos to pos_next, because read Mutations can be overlapping
             // next iteration starts again at pos, looking for the next read Mutation
             if (not _rc)
-                ++old_mut_it;
+                ++r_mut_it;
             else
-                ++old_mut_rit;
+                ++r_mut_rit;
         }
         return boost::make_tuple(mut_map_sptr, new_mut_cont_sptr);
     }
 
-    /*
-    shared_ptr< vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type > > >
-    Read_Chunk::get_old_mutations_in_mapping(const vector< Mutation_CPtr >& new_mut_cptr_cont, const map< Mutation_CPtr, Mutation_CPtr >& mut_map) const
+    shared_ptr< vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > >
+    Read_Chunk::get_mutations_under_mapping(const vector< Mutation_CPtr >& r_mut_cptr_cont, const map< Mutation_CPtr, Mutation_CPtr >& mut_map) const
     {
-        shared_ptr< vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type > > > res(new vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type > >());
+        shared_ptr< vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > > res(
+            new vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > >());
 
         Read_Chunk_Pos pos = get_start_pos();
-        size_t old_idx = 0; // next old mutation to look for
-        size_t new_idx = 0; // next new mutation to look for
-        while (old_idx < _mut_ptr_cont.size())
+        size_t r_mut_cnt = 0;
+        Mutation fake_mut((not _rc? get_r_end() : get_r_start()), (not _rc? get_r_end() : get_r_start()), 0);
+        while (true)
         {
-            const Mutation& old_mut = *_mut_ptr_cont[old_idx];
-            Size_Type brk = old_mut.get_start();
-            if (new_idx < new_mut_cptr_cont.size())
+            size_t r_mut_idx = (not _rc? r_mut_cnt : r_mut_cptr_cont.size() - 1 - r_mut_cnt); // next new mutation to look for
+            const Mutation& r_mut = (r_mut_cnt < r_mut_cptr_cont.size()? *r_mut_cptr_cont[r_mut_idx] : fake_mut);
+
+            Read_Chunk_Pos pos_next;
+            bool got_r_mut = advance_pos_til_mut(pos_next, r_mut);
+
+            if (got_r_mut and r_mut_cnt == r_mut_cptr_cont.size())
+                break;
+
+            if (got_r_mut)
             {
-                brk = min(brk, new_mut_cptr_cont[new_idx]->get_start());
+                assert(mut_map.count(&r_mut) == 1);
+                auto it = mut_map.find(&r_mut);
+                assert(it->second->get_start() == pos.c_pos and it->second->get_end() == pos_next.c_pos);
+                res->push_back(boost::make_tuple( it->second, 0, 0, true ));
+                ++r_mut_cnt;
             }
-            
+            else
+            {
+                res->push_back(boost::make_tuple(
+                    _mut_ptr_cont[pos.mut_idx], pos.mut_offset, (pos_next.mut_idx == pos.mut_idx? pos_next.mut_offset : 0), false));
+            }
+            pos = pos_next;
         }
+        assert(pos == get_end_pos());
 
         return res;
     }
-    */
 
     /*
     vector< boost::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > Read_Chunk::collapse_mutations(

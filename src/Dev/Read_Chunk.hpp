@@ -227,21 +227,23 @@ namespace MAC
              const Cigar& cigar, const std::string& qr = std::string());
 
          /** Translate read mutations into contig mutations.
-          * @param mut_cont Container with read mutations.
+          * @param r_mut_cont Container with read mutations.
           * @return A map of (old mutation ptr, new mutation ptr); and a new Mutation container.
           */
          boost::tuple< std::shared_ptr< std::map< Mutation_CPtr, Mutation_CPtr > >, std::shared_ptr< Mutation_Cont > >
-         lift_read_mutations(const Mutation_Cont& mut_cont) const;
+         lift_read_mutations(const Mutation_Cont& r_mut_cont) const;
 
          /** Compute old contig mutations observed by a read mapping.
-          * @param new_mut_cptr_cont
+          * @param r_mut_cptr_cont
           * @param mut_map Map of read mutations to new contig mutations.
-          * @return A vector of: (old mutation ptr, start, end).
-          *
-         std::shared_ptr< std::vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type > > >
-         get_old_mutations_in_mapping(const std::vector< Mutation_CPtr >& new_mut_cptr_cont,
-                                      const std::map< Mutation_CPtr, Mutation_CPtr >& mut_map) const;
+          * @return A vector of: (mutation ptr, start, end, bool);
+          * bool: true iff this is a translated read mutation;
+          * start: the start of the slice (=0 for read mutations);
+          * end: end of the slice, 0 if slice goes to the end of the mutation (=0 for read mutations).
           */
+         std::shared_ptr< std::vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > >
+         get_mutations_under_mapping(const std::vector< Mutation_CPtr >& r_mut_cptr_cont,
+                                     const std::map< Mutation_CPtr, Mutation_CPtr >& mut_map) const;
 
          /** Collapse mutations corresponding to 2 mappings.
           * @param lhs Read_Chunk object corresponding to contig->read1 mapping.
