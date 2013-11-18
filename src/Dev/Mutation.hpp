@@ -9,7 +9,6 @@
 
 #include <iostream>
 #include <cassert>
-#include <boost/tuple/tuple.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/hashed_index.hpp>
@@ -165,7 +164,7 @@ namespace MAC
     {
         Mutation_CPtr old_mut_cptr;
         Mutation_CPtr new_mut_cptr;
-        std::vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type > > new_mut_rev_list;
+        std::vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type > > new_mut_rev_list;
     };
 
     typedef boost::multi_index_container<

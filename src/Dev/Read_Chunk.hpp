@@ -15,7 +15,6 @@
 #include <functional>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
-#include <boost/tuple/tuple.hpp>
 
 #include "MAC_forward.hpp"
 #include "Mutation.hpp"
@@ -192,7 +191,7 @@ namespace MAC
          * - if X_pos == brk: idx is the index of the first (smallest m_c_start) mutation with m_c_start >= c_pos.
          * - if X_pos != brk: idx is the index of a mutation spanning both positions brk-1 and brk
          */
-         boost::tuple< Size_Type, Size_Type, size_t > get_cut_data(Size_Type r_brk, bool is_contig_brk) const;
+         std::tuple< Size_Type, Size_Type, size_t > get_cut_data(Size_Type r_brk, bool is_contig_brk) const;
 
          /** If given breakpoint is spanned by a mutation, return it along with cut coordinates.
           * @param brk Position where to cut, 0-based. Alternatively, length before the cut.
@@ -200,7 +199,7 @@ namespace MAC
           * @param c_brk_cont Set of preferred breakpoints. (Optional)
           * @return Pointer to mutation to cut (NULL if none), base and alternate offsets where to cut.
           */
-         boost::tuple< const Mutation*, Size_Type, Size_Type > get_mutation_to_cut(
+         std::tuple< const Mutation*, Size_Type, Size_Type > get_mutation_to_cut(
              Size_Type brk, bool is_contig_brk, const std::set< Size_Type >& c_brk_cont = std::set< Size_Type >()) const;
 
          /** Split read chunk based on contig position and mutation map.
@@ -209,7 +208,7 @@ namespace MAC
           * @param ce_cptr Pointer to new contig entry object.
           * @return Flag whether to move read chunk to the right contig side; additional Read_Chunk object mapped to right side, if the chunk gets split
           */
-         boost::tuple< bool, std::shared_ptr< Read_Chunk > > apply_contig_split(
+         std::tuple< bool, std::shared_ptr< Read_Chunk > > apply_contig_split(
              Size_Type c_brk, const std::map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr);
 
          /** Given a read chunk breakpoint, compute the range of possible contig breakpoints.
@@ -225,21 +224,21 @@ namespace MAC
          * if given, it can be either the entire query string, or just the part mapped by cigar.
          * @return A read chunk corresponding to the query in the cigar object, and a container for Mutation objects.
          */
-         static boost::tuple< Read_Chunk, std::shared_ptr< Mutation_Cont > > make_chunk_from_cigar(
+         static std::tuple< Read_Chunk, std::shared_ptr< Mutation_Cont > > make_chunk_from_cigar(
              const Cigar& cigar, const std::string& qr = std::string());
 
          /** Construct a Read_Chunk corresponding to the read->contig mapping.
           * @return A new Read_Chunk object; a container for reversed Mutations;
           * and a Mutation translation object from original to reversed Mutations.
           */
-         boost::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry >, std::shared_ptr< Mutation_Trans_Cont > >
+         std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry >, std::shared_ptr< Mutation_Trans_Cont > >
          reverse() const;
 
          /** Translate read mutations into contig mutations.
           * @param r_mut_cont Container with read mutations.
           * @return A Mutation translation container, and a container for new mutations.
           */
-         boost::tuple< std::shared_ptr< Mutation_Trans_Cont >, std::shared_ptr< Mutation_Cont > > lift_read_mutations(
+         std::tuple< std::shared_ptr< Mutation_Trans_Cont >, std::shared_ptr< Mutation_Cont > > lift_read_mutations(
              const Mutation_Cont& r_mut_cont) const;
 
          /** Compute old contig mutations observed by a read mapping.
@@ -250,7 +249,7 @@ namespace MAC
           * start: the start of the slice (=0 for read mutations);
           * end: end of the slice, 0 if slice goes to the end of the mutation (=0 for read mutations).
           */
-         std::shared_ptr< std::vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > >
+         std::shared_ptr< std::vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > >
          get_mutations_under_mapping(const std::vector< Mutation_CPtr >& r_mut_cptr_cont,
                                      const std::map< Mutation_CPtr, Mutation_CPtr >& mut_map) const;
 
@@ -263,7 +262,7 @@ namespace MAC
           * pointer to the mutation object;
           * and a mutation start&length.
           *
-         static std::vector< boost::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > collapse_mutations(
+         static std::vector< std::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > collapse_mutations(
              const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2);
          */
 

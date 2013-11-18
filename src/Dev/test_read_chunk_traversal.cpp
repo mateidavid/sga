@@ -1,6 +1,5 @@
 #include <iostream>
 #include <string>
-#include <boost/tuple/tuple.hpp>
 #include "Read_Chunk.hpp"
 #include "print_seq.hpp"
 
@@ -95,7 +94,7 @@ int main()
             Cigar cigar(cigar_string, cigar_reversed, rf_start, qr_start);
             Read_Chunk chunk;
             shared_ptr< Mutation_Cont > mut_cont_sptr;
-            boost::tie(chunk, mut_cont_sptr) = Read_Chunk::make_chunk_from_cigar(cigar);
+            tie(chunk, mut_cont_sptr) = Read_Chunk::make_chunk_from_cigar(cigar);
 
             cout << chunk << nl;
             cout << "Mutation_Cont:" << inc_tab;

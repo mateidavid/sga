@@ -6,8 +6,6 @@
 
 #include "Read_Chunk.hpp"
 
-#include <boost/tuple/tuple.hpp>
-
 #include "Mutation.hpp"
 #include "Contig_Entry.hpp"
 #include "print_seq.hpp"
@@ -15,7 +13,6 @@
 #include "../Util/Util.h"
 
 using namespace std;
-using boost::tie;
 
 
 namespace MAC
@@ -334,31 +331,31 @@ namespace MAC
         return res;
     }
 
-    boost::tuple< Read_Chunk, shared_ptr< Mutation_Cont > > Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, const string& qr)
+    std::tuple< Read_Chunk, shared_ptr< Mutation_Cont > > Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, const string& qr)
     {
         // create objects with default constructor
-        boost::tuple< Read_Chunk, shared_ptr< Mutation_Cont > > res;
+        std::tuple< Read_Chunk, shared_ptr< Mutation_Cont > > res;
 
         // fix lengths and rc flags
-        res.get<0>()._c_start = cigar.get_rf_start();
-        res.get<0>()._c_len = cigar.get_rf_len();
-        res.get<0>()._r_start = cigar.get_qr_start();
-        res.get<0>()._r_len = cigar.get_qr_len();
-        res.get<0>()._rc = cigar.is_reversed();
+        get<0>(res)._c_start = cigar.get_rf_start();
+        get<0>(res)._c_len = cigar.get_rf_len();
+        get<0>(res)._r_start = cigar.get_qr_start();
+        get<0>(res)._r_len = cigar.get_qr_len();
+        get<0>(res)._rc = cigar.is_reversed();
 
         // construct mutations
-        res.get<1>() = make_mutations_from_cigar(cigar, qr);
+        get<1>(res) = make_mutations_from_cigar(cigar, qr);
 
         // store pointers in the Read_Chunk object
-        for (auto it = res.get<1>()->begin(); it != res.get<1>()->end(); ++it)
+        for (auto it = get<1>(res)->begin(); it != get<1>(res)->end(); ++it)
         {
-            res.get<0>()._mut_ptr_cont.push_back(&*it);
+            get<0>(res)._mut_ptr_cont.push_back(&*it);
         }
 
         return res;
     }
 
-    boost::tuple< Size_Type, Size_Type, size_t > Read_Chunk::get_cut_data(Size_Type brk, bool is_contig_brk) const
+    std::tuple< Size_Type, Size_Type, size_t > Read_Chunk::get_cut_data(Size_Type brk, bool is_contig_brk) const
     {
         assert(not is_contig_brk or (get_c_start() <= brk and brk <= get_c_end()));
         assert(is_contig_brk or (get_r_start() <= brk and brk <= get_r_end()));
@@ -428,10 +425,10 @@ namespace MAC
         assert(is_contig_brk or _rc or r_pos <= brk);
         assert(is_contig_brk or not _rc or brk <= r_pos);
 
-        return boost::make_tuple< Size_Type, Size_Type, size_t >(c_pos, r_pos, i);
+        return make_tuple(c_pos, r_pos, i);
     }
 
-    boost::tuple< const Mutation*, Size_Type, Size_Type > Read_Chunk::get_mutation_to_cut(
+    std::tuple< const Mutation*, Size_Type, Size_Type > Read_Chunk::get_mutation_to_cut(
         Size_Type brk, bool is_contig_brk, const set< Size_Type >& brk_cont) const
     {
         Size_Type c_pos;
@@ -442,7 +439,7 @@ namespace MAC
         // if we reached brk, there is no mutation to be cut
         if ((is_contig_brk and c_pos == brk)
             or (not is_contig_brk and r_pos == brk))
-            return boost::make_tuple< const Mutation*, Size_Type, Size_Type >(NULL, 0, 0);
+            return make_tuple< const Mutation*, Size_Type, Size_Type >(NULL, 0, 0);
 
         // if not, we must cut i-th mutation
         assert(i < _mut_ptr_cont.size());
@@ -469,14 +466,12 @@ namespace MAC
             sel_brk = range_start;
 
         if (is_contig_brk)
-            return boost::make_tuple< const Mutation*, Size_Type, Size_Type >(_mut_ptr_cont[i], brk - c_pos,
-                                                                       (not _rc? sel_brk - r_pos : r_pos - sel_brk));
+            return make_tuple(_mut_ptr_cont[i], brk - c_pos, (not _rc? sel_brk - r_pos : r_pos - sel_brk));
         else
-            return boost::make_tuple< const Mutation*, Size_Type, Size_Type >(_mut_ptr_cont[i], sel_brk - c_pos,
-                                                                       (not _rc? brk - r_pos : r_pos - brk));
+            return make_tuple(_mut_ptr_cont[i], sel_brk - c_pos, (not _rc? brk - r_pos : r_pos - brk));
     }
 
-    boost::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::apply_contig_split(
+    std::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::apply_contig_split(
         Size_Type c_brk, const map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr)
     {
         Size_Type c_pos = c_brk;
@@ -529,7 +524,7 @@ namespace MAC
                 // fix ce_ptr
                 _ce_ptr = ce_cptr;
             }
-            return boost::make_tuple< bool, shared_ptr< Read_Chunk > >(move_to_rhs, NULL);
+            return make_tuple(move_to_rhs, shared_ptr< Read_Chunk >(NULL));
         }
         else
         {
@@ -570,11 +565,11 @@ namespace MAC
             // drop transfered mutations from this chunk
             _mut_ptr_cont.resize(i);
 
-            return boost::make_tuple< bool, shared_ptr< Read_Chunk > >(false, shared_ptr< Read_Chunk >(rc_ptr));
+            return make_tuple(false, shared_ptr< Read_Chunk >(rc_ptr));
         }
     }
 
-    boost::tuple< shared_ptr< Read_Chunk >, shared_ptr< Contig_Entry >, shared_ptr< Mutation_Trans_Cont > >
+    std::tuple< shared_ptr< Read_Chunk >, shared_ptr< Contig_Entry >, shared_ptr< Mutation_Trans_Cont > >
     Read_Chunk::reverse() const
     {
         shared_ptr< Read_Chunk > rc_sptr(new Read_Chunk());
@@ -633,10 +628,10 @@ namespace MAC
         rc_sptr->set_ce_ptr(ce_sptr.get());
         ce_sptr->add_chunk(rc_sptr.get());
 
-        return boost::make_tuple(rc_sptr, ce_sptr, mut_trans_cont_sptr);
+        return make_tuple(rc_sptr, ce_sptr, mut_trans_cont_sptr);
     }
 
-    boost::tuple< shared_ptr< Mutation_Trans_Cont >, shared_ptr< Mutation_Cont > >
+    std::tuple< shared_ptr< Mutation_Trans_Cont >, shared_ptr< Mutation_Cont > >
     Read_Chunk::lift_read_mutations(const Mutation_Cont& r_mut_cont) const
     {
         shared_ptr< Mutation_Trans_Cont > mut_trans_cont_sptr(new Mutation_Trans_Cont());
@@ -684,7 +679,7 @@ namespace MAC
                 if (get_match_len_from_pos(pos_1) == 0)
                 {
                     // a non-matched stretch follows
-                    trans.new_mut_rev_list.push_back(boost::make_tuple(
+                    trans.new_mut_rev_list.push_back(make_tuple(
                         _mut_ptr_cont[pos_1.mut_idx], pos_1.mut_offset, (pos_2.mut_idx == pos_1.mut_idx? pos_2.mut_offset : 0)));
                 }
 
@@ -703,14 +698,14 @@ namespace MAC
             else
                 ++r_mut_rit;
         }
-        return boost::make_tuple(mut_trans_cont_sptr, new_mut_cont_sptr);
+        return make_tuple(mut_trans_cont_sptr, new_mut_cont_sptr);
     }
 
-    shared_ptr< vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > >
+    shared_ptr< vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > >
     Read_Chunk::get_mutations_under_mapping(const vector< Mutation_CPtr >& r_mut_cptr_cont, const map< Mutation_CPtr, Mutation_CPtr >& mut_map) const
     {
-        shared_ptr< vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > > res(
-            new vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > >());
+        shared_ptr< vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > > res(
+            new vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > >());
 
         Read_Chunk_Pos pos = get_start_pos();
         size_t r_mut_cnt = 0;
@@ -731,12 +726,12 @@ namespace MAC
                 assert(mut_map.count(&r_mut) == 1);
                 auto it = mut_map.find(&r_mut);
                 assert(it->second->get_start() == pos.c_pos and it->second->get_end() == pos_next.c_pos);
-                res->push_back(boost::make_tuple( it->second, 0, 0, true ));
+                res->push_back(make_tuple( it->second, 0, 0, true ));
                 ++r_mut_cnt;
             }
             else
             {
-                res->push_back(boost::make_tuple(
+                res->push_back(make_tuple(
                     _mut_ptr_cont[pos.mut_idx], pos.mut_offset, (pos_next.mut_idx == pos.mut_idx? pos_next.mut_offset : 0), false));
             }
             pos = pos_next;
@@ -747,12 +742,12 @@ namespace MAC
     }
 
     /*
-    vector< boost::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > Read_Chunk::collapse_mutations(
+    vector< std::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > Read_Chunk::collapse_mutations(
         const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2)
     {
         assert(rc1.get_r_start() == rc2.get_c_start() and rc1.get_r_len() == rc2.get_c_len());
 
-        vector< boost::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > res;
+        vector< std::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > res;
 
         Size_Type c_pos = rc1.get_c_start();
         Size_Type r1_pos = (not rc1.get_rc()? rc1.get_r_start() : rc1.get_r_end());

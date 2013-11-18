@@ -4,7 +4,6 @@
 #include "print_seq.hpp"
 
 using namespace std;
-using boost::tie;
 
 
 namespace MAC
@@ -135,7 +134,7 @@ namespace MAC
         const Mutation* mut_cptr;
         Size_Type c_offset;
         Size_Type r_offset;
-        boost::tie(mut_cptr, c_offset, r_offset) = rc_cptr->get_mutation_to_cut(r_brk, false);
+        tie(mut_cptr, c_offset, r_offset) = rc_cptr->get_mutation_to_cut(r_brk, false);
         if (mut_cptr != NULL)
         {
             cut_mutation(rc_cptr->get_ce_ptr(), mut_cptr, c_offset, r_offset);
@@ -145,7 +144,7 @@ namespace MAC
         Size_Type c_pos;
         Size_Type r_pos;
         size_t i;
-        boost::tie(c_pos, r_pos, i) = rc_cptr->get_cut_data(r_brk, false);
+        tie(c_pos, r_pos, i) = rc_cptr->get_cut_data(r_brk, false);
         assert(r_pos == r_brk);
 
         // check if an insertion at c_pos has to remain on the left of the cut
@@ -253,7 +252,7 @@ namespace MAC
         // initially, we repeatedly cut the read entries of either read
         // until their chunks match in the way described by the cigar string
         // keep track of read chunk mapping, and cigar transformation between them
-        vector< boost::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > rc_mapping;
+        vector< tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > rc_mapping;
         bool done;
         while (true)
         {
@@ -403,7 +402,7 @@ namespace MAC
                 assert(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
                        and cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len());
                 // add read chunk mapping
-                rc_mapping.push_back(boost::make_tuple(rc1_cptr, rc2_cptr, cigar.substring(op_start, op_end)));
+                rc_mapping.push_back(make_tuple(rc1_cptr, rc2_cptr, cigar.substring(op_start, op_end)));
                 // advance both chunks and cigar
                 r1_pos = rc1_cptr->get_r_end();
                 r2_pos = (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start());
@@ -414,7 +413,7 @@ namespace MAC
         // reached when we have a complete rc map
         for (size_t i = 0; i < rc_mapping.size(); ++i)
         {
-            merge_read_chunks(rc_mapping[i].get<0>(), rc_mapping[i].get<1>(), rc_mapping[i].get<2>());
+            merge_read_chunks(get<0>(rc_mapping[i]), get<1>(rc_mapping[i]), get<2>(rc_mapping[i]));
         }
     }
 

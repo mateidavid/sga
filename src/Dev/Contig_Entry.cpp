@@ -41,7 +41,7 @@ namespace MAC
         // insert remaining part
         Mutation_Cont::iterator it_new;
         bool success;
-        boost::tie(it_new, success) = _mut_cont.insert(m_new);
+        tie(it_new, success) = _mut_cont.insert(m_new);
         assert(success);
 
         return &(*it_new);
