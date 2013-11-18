@@ -12,7 +12,8 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
-
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/member.hpp>
 #include "MAC_forward.hpp"
 
 
@@ -159,6 +160,22 @@ namespace MAC
         >
       >
     > Mutation_Cont;
+
+    struct Mutation_Trans
+    {
+        Mutation_CPtr old_mut_cptr;
+        Mutation_CPtr new_mut_cptr;
+        std::vector< boost::tuple< Mutation_CPtr, Size_Type, Size_Type > > new_mut_rev_list;
+    };
+
+    typedef boost::multi_index_container<
+      Mutation_Trans,
+      boost::multi_index::indexed_by<
+        boost::multi_index::hashed_unique<
+          boost::multi_index::member< Mutation_Trans, Mutation_CPtr, &Mutation_Trans::old_mut_cptr >
+        >
+      >
+    > Mutation_Trans_Cont;
 }
 
 
