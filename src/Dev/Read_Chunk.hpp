@@ -92,6 +92,8 @@ namespace MAC
         bool get_rc() const { return _rc; }
         const std::vector< const Mutation* > get_mut_ptr_cont() const { return _mut_ptr_cont; }
         key_type get_key() const { return _r_start; }
+        Seq_Type get_seq() const;
+        Seq_Type substr(Size_Type start, Size_Type len) const;
         /**@}*/
 
         /** @name Traversal using Read_Chunk_Pos objects */
@@ -226,12 +228,19 @@ namespace MAC
          static boost::tuple< Read_Chunk, std::shared_ptr< Mutation_Cont > > make_chunk_from_cigar(
              const Cigar& cigar, const std::string& qr = std::string());
 
+         /** Construct a Read_Chunk corresponding to the read->contig mapping.
+          * @return A new Read_Chunk object; a container for reversed Mutations;
+          * and a Mutation translation object from original to reversed Mutations.
+          */
+         boost::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry >, std::shared_ptr< Mutation_Trans_Cont > >
+         reverse() const;
+
          /** Translate read mutations into contig mutations.
           * @param r_mut_cont Container with read mutations.
-          * @return A map of (old mutation ptr, new mutation ptr); and a new Mutation container.
+          * @return A Mutation translation container, and a container for new mutations.
           */
-         boost::tuple< std::shared_ptr< std::map< Mutation_CPtr, Mutation_CPtr > >, std::shared_ptr< Mutation_Cont > >
-         lift_read_mutations(const Mutation_Cont& r_mut_cont) const;
+         boost::tuple< std::shared_ptr< Mutation_Trans_Cont >, std::shared_ptr< Mutation_Cont > > lift_read_mutations(
+             const Mutation_Cont& r_mut_cont) const;
 
          /** Compute old contig mutations observed by a read mapping.
           * @param r_mut_cptr_cont
