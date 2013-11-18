@@ -37,13 +37,17 @@ namespace MAC
         /** Constructor.
          * @param seq_ptr Pointer to read sequence.
          */
-        Contig_Entry( Seq_Type* seq_ptr) : _seq_ptr(seq_ptr) {}
+        Contig_Entry(Seq_Type* seq_ptr, Size_Type seq_offset = 0) : _seq_ptr(seq_ptr), _seq_offset(seq_offset) {}
 
         /** @name Getters */
         /**@{*/
         const Seq_Type& get_seq() const { return *_seq_ptr; }
+        Size_Type get_seq_offset() const { return _seq_offset; }
+        Seq_Type substr(Size_Type start, Size_Type len) const
+        { assert(start >= _seq_offset and start + len <= _seq_offset + _seq_ptr->size()); return _seq_ptr->substr(start - _seq_offset, len); }
         Size_Type get_len() const { return _seq_ptr->size(); }
         const Mutation_Cont& get_mutation_cont() const { return _mut_cont; }
+        Mutation_Cont& mutation_cont() { return _mut_cont; }
         const Read_Chunk_CPtr_Cont& get_chunk_cptr_cont() const { return _chunk_cptr_cont; }
         /**@}*/
 
@@ -103,6 +107,7 @@ namespace MAC
 
     private:
         std::shared_ptr< Seq_Type> _seq_ptr;
+        Size_Type _seq_offset;
         Mutation_Cont _mut_cont;
         Read_Chunk_CPtr_Cont _chunk_cptr_cont;
     };
