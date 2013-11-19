@@ -166,10 +166,10 @@ namespace MAC
     {
         assert(rf_seq.size() == _rf_len);
         assert(qr_seq.size() == _qr_len);
-        auto get_rf_pos = [&] (Size_Type pos) -> char { return rf_seq[pos - _rf_start]; };
+        auto get_rf_pos = [&] (Size_Type pos) -> char { return rf_seq[pos]; };
         auto get_qr_pos = [&] (Size_Type pos) -> char {
-            assert(pos >= _qr_start and  pos <= _qr_start + _qr_len);
-            return (not _reversed? qr_seq[pos - _qr_start] : ::complement(char(qr_seq[_qr_len - 1 - pos])));
+            assert(pos < _qr_len);
+            return (not _reversed? qr_seq[pos] : ::complement(char(qr_seq[_qr_len - 1 - pos])));
         };
         for (size_t i = 0; i < get_n_ops(); ++i)
         {
@@ -177,16 +177,16 @@ namespace MAC
             {
                 vector< Cigar_Op > v;
                 Cigar_Op op;
-                op.rf_offset = get_rf_offset(i) - _rf_start;
-                op.qr_offset = get_qr_offset(i) - _qr_start;
-                op.op = (get_rf_pos(get_rf_offset(i)) == get_qr_pos(get_qr_offset(i))? '=' : 'X');
+                op.rf_offset = _op_vect[i].rf_offset;
+                op.qr_offset = _op_vect[i].qr_offset;
+                op.op = (get_rf_pos(op.rf_offset) == get_qr_pos(op.qr_offset)? '=' : 'X');
                 op.len = 1;
 
-                while (op.rf_offset + op.len != get_rf_offset(i) + get_rf_op_len(i))
+                while (op.rf_offset + op.len < _op_vect[i].rf_offset + _op_vect[i].len)
                 {
                     if ((op.op == '=')
-                        == (get_rf_pos(_rf_start + op.rf_offset + op.len)
-                            != get_qr_pos(_qr_start + (not _reversed? op.qr_offset + op.len : op.qr_offset - op.len))))
+                        == (get_rf_pos(op.rf_offset + op.len)
+                            == get_qr_pos((not _reversed? op.qr_offset + op.len : op.qr_offset - op.len))))
                     {
                         ++op.len;
                     }
@@ -199,6 +199,7 @@ namespace MAC
                         op.len = 1;
                     }
                 }
+                assert(op.rf_offset + op.len == _op_vect[i].rf_offset + _op_vect[i].len);
                 v.push_back(op);
 
                 _op_vect.erase(_op_vect.begin() + i);
