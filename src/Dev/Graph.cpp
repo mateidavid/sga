@@ -209,18 +209,6 @@ namespace MAC
         (void)rc2_cptr;
         (void)cigar;
 
-        clog << indent::nl << "merging:"
-             << indent::inc << indent::nl << *rc1_cptr
-             << indent::nl << *rc2_cptr
-             << indent::nl << "rc1: " << rc1_cptr->get_seq()
-             << indent::nl << "rc2: " << (not cigar.is_reversed()? rc2_cptr->get_seq() : reverseComplement(rc2_cptr->get_seq()))
-             << indent::dec << indent::nl << "initial cigar:" << indent::inc << cigar << indent::dec;
-
-        // replace any ambiguous M operations
-        cigar.disambiguate(rc1_cptr->get_seq(), rc2_cptr->get_seq());
-
-        clog << indent::nl << "disambiguated cigar:" << indent::inc << cigar << indent::dec;
-
         //TODO
     }
 
@@ -256,6 +244,15 @@ namespace MAC
         assert(re1_cptr != NULL);
         const Read_Entry* re2_cptr = get_read_entry(r2_name);
         assert(re2_cptr != NULL);
+
+        string r1_seq = re1_cptr->get_seq();
+        string r2_seq = re2_cptr->get_seq();
+        clog << indent::nl << "adding overlap:"
+             << indent::nl << "re1: " << r1_seq.substr(r1_start, r1_len)
+             << indent::nl << "re2: " << (not cigar.is_reversed()? r2_seq.substr(r2_start, r2_len) : reverseComplement(r2_seq.substr(r2_start, r2_len)))
+             << indent::dec << indent::nl << "initial cigar:" << indent::inc << cigar << indent::dec;
+        cigar.disambiguate(r1_seq, r2_seq);
+        clog << indent::nl << "disambiguated cigar:" << indent::inc << cigar << indent::dec;
 
         // cut r1 & r2 at the ends of the match region
         cut_read_entry(re1_cptr, r1_start, true);
