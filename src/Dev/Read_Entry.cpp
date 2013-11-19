@@ -40,6 +40,16 @@ namespace MAC
                 or (not check_start and rc_cptr->get_rc() and rc_cptr->get_c_start() == 0));
     }
 
+    Seq_Type Read_Entry::get_seq() const
+    {
+        Seq_Type res;
+        for (auto it = _chunk_cont.begin(); it != _chunk_cont.end(); ++it)
+        {
+            res += it->get_seq();
+        }
+        return res;
+    }
+
     void Read_Entry::check() const
     {
         // name is set

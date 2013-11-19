@@ -60,6 +60,7 @@ namespace MAC
         Size_Type get_len() const { return _len; }
         key_type get_key() const { return *_name_ptr; }
         const Read_Chunk_Cont& get_chunk_cont() const { return _chunk_cont; }
+        Seq_Type get_seq() const;
         /**@}*/
 
         /** Find chunk which contains given read position.
