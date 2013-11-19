@@ -31,7 +31,8 @@ namespace indent
     ios_base& dec(ios_base& stream)
     {
         /* The iword(index) function gives a reference to the index-th custom storage location as a integer */
-        stream.iword(get_indent_index())--;
+        if (stream.iword(get_indent_index()) > 0)
+            stream.iword(get_indent_index())--;
         return stream;
     }
 
