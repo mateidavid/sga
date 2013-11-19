@@ -209,6 +209,16 @@ namespace MAC
         (void)rc2_cptr;
         (void)cigar;
 
+        // do not do anything if the chunks are already mapped to the same contig
+        // NOTE: with this, we are ignoring alternate mappings
+        if (rc1_cptr->get_ce_ptr() == rc2_cptr->get_ce_ptr())
+            return;
+
+        // step 1: contruct read chunk for the rc1->rc2 mapping
+        shared_ptr< Read_Chunk > rc1_to_rc2_chunk_sptr;
+        shared_ptr< Mutation_Cont > rc1_to_rc2_mut_cont_sptr;
+        std::tie(rc1_to_rc2_chunk_sptr, rc1_to_rc2_mut_cont_sptr) = Read_Chunk::make_chunk_from_cigar(cigar);
+
         //TODO
     }
 
@@ -247,12 +257,12 @@ namespace MAC
 
         string r1_seq = re1_cptr->get_seq();
         string r2_seq = re2_cptr->get_seq();
-        clog << indent::nl << "adding overlap:"
+        clog << indent::nl << "adding overlap:" << indent::inc
              << indent::nl << "re1: " << r1_seq.substr(r1_start, r1_len)
              << indent::nl << "re2: " << (not cigar.is_reversed()? r2_seq.substr(r2_start, r2_len) : reverseComplement(r2_seq.substr(r2_start, r2_len)))
-             << indent::dec << indent::nl << "initial cigar:" << indent::inc << cigar << indent::dec;
-        cigar.disambiguate(r1_seq, r2_seq);
-        clog << indent::nl << "disambiguated cigar:" << indent::inc << cigar << indent::dec;
+             << indent::nl << "initial cigar:" << indent::inc << cigar << indent::dec;
+        cigar.disambiguate(r1_seq.substr(r1_start, r1_len), r2_seq.substr(r2_start, r2_len));
+        clog << indent::nl << "disambiguated cigar:" << indent::inc << cigar << indent::dec << indent::dec;
 
         // cut r1 & r2 at the ends of the match region
         cut_read_entry(re1_cptr, r1_start, true);

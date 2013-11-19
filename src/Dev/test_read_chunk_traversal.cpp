@@ -93,25 +93,25 @@ int main()
         for (int cigar_reversed = 0; cigar_reversed < 2; ++cigar_reversed)
         {
             Cigar cigar(cigar_string, cigar_reversed, rf_start, qr_start);
-            Read_Chunk chunk;
+            shared_ptr< Read_Chunk > chunk_sptr;
             shared_ptr< Mutation_Cont > mut_cont_sptr;
-            std::tie(chunk, mut_cont_sptr) = Read_Chunk::make_chunk_from_cigar(cigar);
+            std::tie(chunk_sptr, mut_cont_sptr) = Read_Chunk::make_chunk_from_cigar(cigar);
 
-            cout << chunk << nl;
+            cout << *chunk_sptr << nl;
             cout << "Mutation_Cont:" << inc_tab;
             print_seq(cout, *mut_cont_sptr, nl, nl);
             cout << dec_tab << nl << "tests:" << inc_tab;
 
-            test_traversal(chunk, 0, true);
+            test_traversal(*chunk_sptr, 0, true);
 
             Size_Type brk;
             for (brk = cigar.get_rf_start(); brk <= cigar.get_rf_start() + cigar.get_rf_len(); ++brk)
             {
-                test_traversal(chunk, brk, true);
+                test_traversal(*chunk_sptr, brk, true);
             }
             for (brk = cigar.get_qr_start(); brk <= cigar.get_qr_start() + cigar.get_qr_len(); ++brk)
             {
-                test_traversal(chunk, brk, false);
+                test_traversal(*chunk_sptr, brk, false);
             }
             cout << dec_tab << nl << "done" << nl;
         }

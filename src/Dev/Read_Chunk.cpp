@@ -331,28 +331,29 @@ namespace MAC
         return res;
     }
 
-    std::tuple< Read_Chunk, shared_ptr< Mutation_Cont > > Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, const string& qr)
+    std::tuple< shared_ptr< Read_Chunk >, shared_ptr< Mutation_Cont > > Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, const string& qr)
     {
         // create objects with default constructor
-        std::tuple< Read_Chunk, shared_ptr< Mutation_Cont > > res;
+        shared_ptr< Read_Chunk > chunk_sptr(new Read_Chunk());
+        shared_ptr< Mutation_Cont > mut_cont_sptr;
 
         // fix lengths and rc flags
-        get<0>(res)._c_start = cigar.get_rf_start();
-        get<0>(res)._c_len = cigar.get_rf_len();
-        get<0>(res)._r_start = cigar.get_qr_start();
-        get<0>(res)._r_len = cigar.get_qr_len();
-        get<0>(res)._rc = cigar.is_reversed();
+        chunk_sptr->_c_start = cigar.get_rf_start();
+        chunk_sptr->_c_len = cigar.get_rf_len();
+        chunk_sptr->_r_start = cigar.get_qr_start();
+        chunk_sptr->_r_len = cigar.get_qr_len();
+        chunk_sptr->_rc = cigar.is_reversed();
 
         // construct mutations
-        get<1>(res) = make_mutations_from_cigar(cigar, qr);
+        mut_cont_sptr = make_mutations_from_cigar(cigar, qr);
 
         // store pointers in the Read_Chunk object
-        for (auto it = get<1>(res)->begin(); it != get<1>(res)->end(); ++it)
+        for (auto it = mut_cont_sptr->begin(); it != mut_cont_sptr->end(); ++it)
         {
-            get<0>(res)._mut_ptr_cont.push_back(&*it);
+            chunk_sptr->_mut_ptr_cont.push_back(&*it);
         }
 
-        return res;
+        return std::make_tuple(chunk_sptr, mut_cont_sptr);
     }
 
     std::tuple< Size_Type, Size_Type, size_t > Read_Chunk::get_cut_data(Size_Type brk, bool is_contig_brk) const

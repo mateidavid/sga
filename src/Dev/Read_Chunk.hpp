@@ -224,7 +224,7 @@ namespace MAC
          * if given, it can be either the entire query string, or just the part mapped by cigar.
          * @return A read chunk corresponding to the query in the cigar object, and a container for Mutation objects.
          */
-         static std::tuple< Read_Chunk, std::shared_ptr< Mutation_Cont > > make_chunk_from_cigar(
+         static std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Mutation_Cont > > make_chunk_from_cigar(
              const Cigar& cigar, const std::string& qr = std::string());
 
          /** Construct a Read_Chunk corresponding to the read->contig mapping.
