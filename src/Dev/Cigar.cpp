@@ -6,6 +6,7 @@
 
 #include "indent.hpp"
 #include "print_seq.hpp"
+#include "../Util/Util.h"
 
 using namespace std;
 
@@ -160,6 +161,52 @@ namespace MAC
     string const Cigar::match_ops = "M=X";
     string const Cigar::deletion_ops = "DNP";
     string const Cigar::insertion_ops = "ISH";
+
+    void Cigar::disambiguate(const string& rf_seq, const string& qr_seq)
+    {
+        assert(rf_seq.size() == _rf_len);
+        assert(qr_seq.size() == _qr_len);
+        auto get_rf_pos = [&] (Size_Type pos) -> char { return rf_seq[pos - _rf_start]; };
+        auto get_qr_pos = [&] (Size_Type pos) -> char {
+            assert(pos >= _qr_start and  pos <= _qr_start + _qr_len);
+            return (not _reversed? qr_seq[pos - _qr_start] : ::complement(char(qr_seq[_qr_len - 1 - pos])));
+        };
+        for (size_t i = 0; i < get_n_ops(); ++i)
+        {
+            if (get_op(i) == 'M')
+            {
+                vector< Cigar_Op > v;
+                Cigar_Op op;
+                op.rf_offset = get_rf_offset(i) - _rf_start;
+                op.qr_offset = get_qr_offset(i) - _qr_start;
+                op.op = (get_rf_pos(get_rf_offset(i)) == get_qr_pos(get_qr_offset(i))? '=' : 'X');
+                op.len = 1;
+
+                while (op.rf_offset + op.len != get_rf_offset(i) + get_rf_op_len(i))
+                {
+                    if ((op.op == '=')
+                        == (get_rf_pos(_rf_start + op.rf_offset + op.len)
+                            != get_qr_pos(_qr_start + (not _reversed? op.qr_offset + op.len : op.qr_offset - op.len))))
+                    {
+                        ++op.len;
+                    }
+                    else
+                    {
+                        v.push_back(op);
+                        op.op = (op.op == '='? 'X' : '=');
+                        op.rf_offset += op.len;
+                        op.qr_offset = (not _reversed? op.qr_offset + op.len : op.qr_offset - op.len);
+                        op.len = 1;
+                    }
+                }
+                v.push_back(op);
+
+                _op_vect.erase(_op_vect.begin() + i);
+                _op_vect.insert(_op_vect.begin() + i, v.begin(), v.end());
+                i += v.size() - 1;
+            }
+        }
+    }
 
     ostream& operator << (ostream& os, const Cigar_Op& rhs)
     {

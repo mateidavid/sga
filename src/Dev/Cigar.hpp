@@ -126,6 +126,9 @@ namespace MAC
          */
         void cut_op(size_t idx, Size_Type len);
 
+        /** Disambiguate M operations. */
+        void disambiguate(const std::string& rf_seq, const std::string& qr_seq);
+
         /** Get string representation. */
         std::string to_string() const;
 

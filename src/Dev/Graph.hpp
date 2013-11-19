@@ -93,10 +93,12 @@ namespace MAC
         void cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr);
     };
 
+    /*
     std::vector<std::pair< Read_Chunk, Mutation_Cont >> make_chunks_from_cigar(
         Size_Type r1_start, Size_Type r1_len,
         Size_Type r2_start, Size_Type r2_len, bool r2_rc,
         const std::string& cigar);
+        */
 
 }
 

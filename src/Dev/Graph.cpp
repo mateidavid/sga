@@ -2,6 +2,7 @@
 #include "Cigar.hpp"
 #include "indent.hpp"
 #include "print_seq.hpp"
+#include "../Util/Util.h"
 
 using namespace std;
 
@@ -202,11 +203,24 @@ namespace MAC
         }
     }
 
-    void merge_read_chunks(Read_Chunk_CPtr rc1_cptr, Read_Chunk_CPtr rc2_cptr, const Cigar& cigar)
+    void merge_read_chunks(Read_Chunk_CPtr rc1_cptr, Read_Chunk_CPtr rc2_cptr, Cigar& cigar)
     {
         (void)rc1_cptr;
         (void)rc2_cptr;
         (void)cigar;
+
+        clog << indent::nl << "merging:"
+             << indent::inc << indent::nl << *rc1_cptr
+             << indent::nl << *rc2_cptr
+             << indent::nl << "rc1: " << rc1_cptr->get_seq()
+             << indent::nl << "rc2: " << (not cigar.is_reversed()? rc2_cptr->get_seq() : reverseComplement(rc2_cptr->get_seq()))
+             << indent::dec << indent::nl << "initial cigar:" << indent::inc << cigar << indent::dec;
+
+        // replace any ambiguous M operations
+        cigar.disambiguate(rc1_cptr->get_seq(), rc2_cptr->get_seq());
+
+        clog << indent::nl << "disambiguated cigar:" << indent::inc << cigar << indent::dec;
+
         //TODO
     }
 
