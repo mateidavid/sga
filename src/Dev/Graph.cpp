@@ -215,9 +215,18 @@ namespace MAC
             return;
 
         // step 1: contruct read chunk for the rc1->rc2 mapping
-        shared_ptr< Read_Chunk > rc1_to_rc2_chunk_sptr;
-        shared_ptr< Mutation_Cont > rc1_to_rc2_mut_cont_sptr;
-        std::tie(rc1_to_rc2_chunk_sptr, rc1_to_rc2_mut_cont_sptr) = Read_Chunk::make_chunk_from_cigar(cigar);
+        shared_ptr< Read_Chunk > rc1rc2_chunk_sptr;
+        shared_ptr< Mutation_Cont > rc1rc2_mut_cont_sptr;
+        std::tie(rc1rc2_chunk_sptr, rc1rc2_mut_cont_sptr) = Read_Chunk::make_chunk_from_cigar(cigar);
+
+        // translate rc1 mutations observed by rc2 into c1 mutations
+        shared_ptr< Mutation_Trans_Cont > rc1rc2_to_c1rc2_mut_trans_cont_sptr;
+        shared_ptr< Mutation_Cont > c1rc2_mut_cont_sptr;
+        std::tie(rc1rc2_to_c1rc2_mut_trans_cont_sptr, c1rc2_mut_cont_sptr) = rc1_cptr->lift_read_mutations(*rc1rc2_mut_cont_sptr);
+
+        shared_ptr< vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > > c1rc2_mut_list_sptr;
+        c1rc2_mut_list_sptr = rc1_cptr->get_mutations_under_mapping(
+            rc1rc2_chunk_sptr->get_mut_ptr_cont(), *rc1rc2_to_c1rc2_mut_trans_cont_sptr, c1rc2_mut_cont_sptr);
 
         //TODO
     }

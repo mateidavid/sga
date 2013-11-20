@@ -287,50 +287,6 @@ namespace MAC
         }
     }
 
-    /** Create a set of mutations to a reference string based on a cigar object.
-     * @param cigar Cigar object describing the match.
-     * @param qr Query string; optional: if not given, Mutation objects contain alternate string lengths only.
-     * @return Container of Mutation objects.
-     */
-    shared_ptr< Mutation_Cont > make_mutations_from_cigar(const Cigar& cigar, const string& qr)
-    {
-        shared_ptr< Mutation_Cont > res(new Mutation_Cont());
-        for (size_t i = 0; i < cigar.get_n_ops(); ++i)
-        {
-            // disallow ambigous 'M' operation
-            assert(cigar.get_op(i) != 'M');
-            if (cigar.get_op(i) != '=')
-            {
-                Mutation mut;
-                Mutation_Cont::iterator it;
-                bool success;
-                if (qr.size() > 0)
-                {
-                    // accept either the matched part of the query (length = cigar.qr_len)
-                    // or entire query (length > cigar.qr_len)
-                    assert(qr.size() >= cigar.get_qr_len());
-                    Size_Type qr_offset = (not cigar.is_reversed()? cigar.get_qr_offset(i) : cigar.get_qr_offset(i) - cigar.get_qr_op_len(i));
-                    if (qr.size() == cigar.get_qr_len())
-                    {
-                        // assume the query sequence before qr_start is missing
-                        qr_offset -= cigar.get_qr_start();
-                    }
-                    mut = Mutation(cigar.get_rf_offset(i), cigar.get_rf_op_len(i),
-                                   (not cigar.is_reversed()?
-                                    qr.substr(qr_offset, cigar.get_qr_op_len(i))
-                                    : reverseComplement(qr.substr(qr_offset, cigar.get_qr_op_len(i)))));
-                }
-                else
-                {
-                    mut = Mutation(cigar.get_rf_offset(i), cigar.get_rf_op_len(i), cigar.get_qr_op_len(i));
-                }
-                tie(it, success) = res->insert(mut);
-                assert(success);
-            }
-        }
-        return res;
-    }
-
     std::tuple< shared_ptr< Read_Chunk >, shared_ptr< Mutation_Cont > > Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, const string& qr)
     {
         // create objects with default constructor
@@ -703,7 +659,9 @@ namespace MAC
     }
 
     shared_ptr< vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > >
-    Read_Chunk::get_mutations_under_mapping(const vector< Mutation_CPtr >& r_mut_cptr_cont, const map< Mutation_CPtr, Mutation_CPtr >& mut_map) const
+    Read_Chunk::get_mutations_under_mapping(const vector< Mutation_CPtr >& r_mut_cptr_cont,
+                                            const Mutation_Trans_Cont& mut_map,
+                                            shared_ptr< Mutation_Cont > new_mut_cont_sptr) const
     {
         shared_ptr< vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > > res(
             new vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > >());
@@ -726,13 +684,13 @@ namespace MAC
             {
                 assert(mut_map.count(&r_mut) == 1);
                 auto it = mut_map.find(&r_mut);
-                assert(it->second->get_start() == pos.c_pos and it->second->get_end() == pos_next.c_pos);
-                res->push_back(make_tuple( it->second, 0, 0, true ));
+                assert(it->new_mut_cptr->get_start() == pos.c_pos and it->new_mut_cptr->get_end() == pos_next.c_pos);
+                res->push_back(std::make_tuple(it->new_mut_cptr, 0, 0, true));
                 ++r_mut_cnt;
             }
             else
             {
-                res->push_back(make_tuple(
+                res->push_back(std::make_tuple(
                     _mut_ptr_cont[pos.mut_idx], pos.mut_offset, (pos_next.mut_idx == pos.mut_idx? pos_next.mut_offset : 0), false));
             }
             pos = pos_next;

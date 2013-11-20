@@ -242,8 +242,9 @@ namespace MAC
              const Mutation_Cont& r_mut_cont) const;
 
          /** Compute old contig mutations observed by a read mapping.
-          * @param r_mut_cptr_cont
+          * @param r_mut_cptr_cont List of read mutations observed by mapping.
           * @param mut_map Map of read mutations to new contig mutations.
+          * @param new_mut_cont_sptr Container for new Mutations; this function might add to this container any merged insertions.
           * @return A vector of: (mutation ptr, start, end, bool);
           * bool: true iff this is a translated read mutation;
           * start: the start of the slice (=0 for read mutations);
@@ -251,7 +252,8 @@ namespace MAC
           */
          std::shared_ptr< std::vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > >
          get_mutations_under_mapping(const std::vector< Mutation_CPtr >& r_mut_cptr_cont,
-                                     const std::map< Mutation_CPtr, Mutation_CPtr >& mut_map) const;
+                                     const Mutation_Trans_Cont& mut_map,
+                                     std::shared_ptr< Mutation_Cont > new_mut_cont_sptr) const;
 
          /** Collapse mutations corresponding to 2 mappings.
           * @param lhs Read_Chunk object corresponding to contig->read1 mapping.
