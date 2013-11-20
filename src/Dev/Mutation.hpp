@@ -14,6 +14,7 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
 #include "MAC_forward.hpp"
+#include "Cigar.hpp"
 
 
 namespace MAC
@@ -121,7 +122,13 @@ namespace MAC
         bool is_empty() const { return _len == 0 and _seq_len == 0; }
         /**@}*/
 
-        /** Cut mutation at given offsets.
+        /** Merge with given Mutation.
+         * Pre: Mutations must be adjacent on rf.
+         * @param rhs Next Mutation.
+         */
+        void merge(const Mutation& rhs) { assert(get_end() == rhs.get_start()); _len += rhs._len; _seq_len += rhs._seq_len; _seq += rhs._seq; }
+
+         /** Cut mutation at given offsets.
          * @param base_offset Base offset, 0-based.
          * @param alt_offset Alternate sequence offset, 0-based.
          * @return The part of the original mutation that was cut from this object.
@@ -160,6 +167,16 @@ namespace MAC
       >
     > Mutation_Cont;
 
+    /** Create a set of mutations to a reference string based on a cigar object.
+     * Pre: Cigar contains no 'M' operations (use disambiguate() first).
+     * Post: Adjacent non-match operations are merged.
+     * @param cigar Cigar object describing the match.
+     * @param qr Query string; optional: if not given, Mutation objects contain alternate string lengths only.
+     * @return Container of Mutation objects.
+     */
+    std::shared_ptr< Mutation_Cont > make_mutations_from_cigar(const Cigar& cigar, const std::string& qr = std::string());
+
+    /** Mutation Translation object. */
     struct Mutation_Trans
     {
         Mutation_CPtr old_mut_cptr;
@@ -167,6 +184,7 @@ namespace MAC
         std::vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type > > new_mut_rev_list;
     };
 
+    /** Container for Mutation Translation objects. */
     typedef boost::multi_index_container<
       Mutation_Trans,
       boost::multi_index::indexed_by<
