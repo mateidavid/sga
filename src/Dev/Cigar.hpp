@@ -49,10 +49,12 @@ namespace MAC
         Size_Type get_op_len(size_t i) const { assert(i < get_n_ops()); return _op_vect[i].len; }
 
         /** Get reference length of operation, by index. */
-        Size_Type get_rf_op_len(size_t i) const { assert(i < get_n_ops()); return is_match(i) or is_deletion(i)? _op_vect[i].len : 0; }
+        Size_Type get_rf_op_len(size_t i) const
+        { assert(i <= get_n_ops()); return (i < get_n_ops() and (is_match(i) or is_deletion(i))? _op_vect[i].len : 0); }
 
         /** Get query length of operation, by index. */
-        Size_Type get_qr_op_len(size_t i) const { assert(i < get_n_ops()); return is_match(i) or is_insertion(i)? _op_vect[i].len : 0; }
+        Size_Type get_qr_op_len(size_t i) const
+        { assert(i <= get_n_ops()); return (i < get_n_ops() and (is_match(i) or is_insertion(i))? _op_vect[i].len : 0); }
 
         /** Get rf length of a sub-cigar. */
         Size_Type get_rf_sub_len(size_t start, size_t end) const
