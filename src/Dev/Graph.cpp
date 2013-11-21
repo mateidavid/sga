@@ -27,6 +27,16 @@ namespace MAC
         return &(*ce_it);
     }
 
+    void Graph::erase_contig_entry(const Contig_Entry* ce_cptr)
+    {
+        for (auto it = ce_cptr->get_chunk_cptr_cont().begin(); it != ce_cptr->get_chunk_cptr_cont().end(); ++it)
+        {
+            // the read chunks no longer point here
+            assert((*it)->get_ce_ptr() != ce_cptr);
+        }
+        _ce_cont.erase(_ce_cont.iterator_to(*ce_cptr));
+    }
+
     void Graph::add_read(const string* name_ptr, Seq_Type* seq_ptr)
     {
         // first, create read entry and place it in container
@@ -203,32 +213,105 @@ namespace MAC
         }
     }
 
-    void merge_read_chunks(Read_Chunk_CPtr rc1_cptr, Read_Chunk_CPtr rc2_cptr, Cigar& cigar)
+    void Graph::remap_chunks(map< Read_Chunk_CPtr, shared_ptr< Read_Chunk > >& rc_map,
+                      Mutation_Cont& extra_mut_cont)
     {
-        (void)rc1_cptr;
-        (void)rc2_cptr;
-        (void)cigar;
+        if (rc_map.size() == 0)
+            return;
+        const Contig_Entry* ce1_cptr = rc_map.begin()->second->get_ce_ptr();
+        const Contig_Entry* ce2_cptr = rc_map.begin()->first->get_ce_ptr();
 
+        // first construct map with extra Mutation objects as keys
+        map< Mutation_CPtr, Mutation_CPtr > extra_mut_map;
+        for (auto it = extra_mut_cont.begin(); it != extra_mut_cont.end(); ++it)
+        {
+            extra_mut_map[&*it] = NULL;
+        }
+
+        // next, go through new read chunks
+        // each time an extra mutation is first used, add it to c1 and save translation in map
+        for (auto it2 = rc_map.begin(); it2 != rc_map.end(); ++it2)
+        {
+            Read_Chunk_CPtr c2rc_cptr = it2->first;
+            Read_Chunk* c1rc_ptr = it2->second.get();
+            assert(c2rc_cptr->get_ce_ptr() == ce2_cptr);
+            assert(c1rc_ptr->get_ce_ptr() == ce1_cptr);
+            assert(c2rc_cptr->get_re_ptr() == c1rc_ptr->get_re_ptr());
+            for (size_t i = 0; i < c1rc_ptr->get_mut_ptr_cont().size(); ++i)
+            {
+                Mutation_CPtr extra_mut_cptr = c1rc_ptr->get_mut_ptr_cont()[i];
+                if (extra_mut_map.count(extra_mut_cptr) == 0)
+                {
+                    // this mutation is not from the extra Mutations container, so it already exists in c1
+                    continue;
+                }
+                if (extra_mut_map[extra_mut_cptr] == NULL)
+                {
+                    // first time we see this mutation
+                    // we add it to ce1, and save the pointer
+                    modify_contig_entry(ce1_cptr, [&] (Contig_Entry& ce) {
+                        extra_mut_map[extra_mut_cptr] = add_mut_to_cont(ce.mut_cont(), *extra_mut_cptr);
+                    });
+                }
+                assert(extra_mut_map[extra_mut_cptr] != NULL);
+                c1rc_ptr->mut_ptr_cont()[i] = extra_mut_map[extra_mut_cptr];
+            }
+            // done moving mutations
+            // now replace the read chunk in its read entry, and update pointers
+            modify_read_chunk(c2rc_cptr, [&] (Read_Chunk& rc) { rc = *c1rc_ptr; });
+            // now c2rc_cptr has the c1rc object
+            // add chunk to ce1
+            modify_contig_entry(ce1_cptr, [&] (Contig_Entry& ce) { ce.add_chunk(c2rc_cptr); });
+        }
+    }
+
+    void Graph::merge_read_chunks(Read_Chunk_CPtr c1rc1_chunk_cptr, Read_Chunk_CPtr c2rc2_chunk_cptr, Cigar& rc1rc2_cigar)
+    {
         // do not do anything if the chunks are already mapped to the same contig
         // NOTE: with this, we are ignoring alternate mappings
-        if (rc1_cptr->get_ce_ptr() == rc2_cptr->get_ce_ptr())
+        const Contig_Entry* c1_ce_cptr = c1rc1_chunk_cptr->get_ce_ptr();
+        const Contig_Entry* c2_ce_cptr = c2rc2_chunk_cptr->get_ce_ptr();
+        if (c1_ce_cptr == c2_ce_cptr)
             return;
 
         // step 1: contruct read chunk for the rc1->rc2 mapping
         shared_ptr< Read_Chunk > rc1rc2_chunk_sptr;
-        shared_ptr< Mutation_Cont > rc1rc2_mut_cont_sptr;
-        std::tie(rc1rc2_chunk_sptr, rc1rc2_mut_cont_sptr) = Read_Chunk::make_chunk_from_cigar(cigar);
+        shared_ptr< Contig_Entry > rc1_ce_sptr;
+        std::tie(rc1rc2_chunk_sptr, rc1_ce_sptr) = Read_Chunk::make_chunk_from_cigar(
+            rc1rc2_cigar, new string(c1rc1_chunk_cptr->get_seq()), c2rc2_chunk_cptr->get_seq());
 
-        // translate rc1 mutations observed by rc2 into c1 mutations
-        shared_ptr< Mutation_Trans_Cont > rc1rc2_to_c1rc2_mut_trans_cont_sptr;
-        shared_ptr< Mutation_Cont > c1rc2_mut_cont_sptr;
-        std::tie(rc1rc2_to_c1rc2_mut_trans_cont_sptr, c1rc2_mut_cont_sptr) = rc1_cptr->lift_read_mutations(*rc1rc2_mut_cont_sptr);
+        // initialize Read_Chunk translation map, and container for new mutations
+        map< Read_Chunk_CPtr, shared_ptr< Read_Chunk > > rc_map;
+        Mutation_Cont extra_c1_mut_cont;
 
-        shared_ptr< vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > > c1rc2_mut_list_sptr;
-        c1rc2_mut_list_sptr = rc1_cptr->get_mutations_under_mapping(
-            rc1rc2_chunk_sptr->get_mut_ptr_cont(), *rc1rc2_to_c1rc2_mut_trans_cont_sptr, c1rc2_mut_cont_sptr);
+        // construct c1->rc2 mapping directly from c1->rc1 & rc1->rc2
+        rc_map[c2rc2_chunk_cptr] = c1rc1_chunk_cptr->collapse_mapping(*rc1rc2_chunk_sptr, extra_c1_mut_cont);
+        Read_Chunk_CPtr c1rc2_chunk_cptr = rc_map[c2rc2_chunk_cptr].get();
 
-        //TODO
+        // next, construct r2->c2 mapping by reversing c2->rc2
+        shared_ptr< Read_Chunk > rc2c2_chunk_sptr;
+        shared_ptr< Contig_Entry > rc2_ce_sptr;
+        shared_ptr< Mutation_Trans_Cont > c2r2_to_r2c2_mut_trans_cont_sptr;
+        std::tie(rc2c2_chunk_sptr, rc2_ce_sptr, c2r2_to_r2c2_mut_trans_cont_sptr) = c2rc2_chunk_cptr->reverse();
+
+        // construct c1->c2 mapping
+        shared_ptr< Read_Chunk > c1c2_chunk_sptr = c1rc2_chunk_cptr->collapse_mapping(*rc2c2_chunk_sptr, extra_c1_mut_cont);
+
+        // for the remaining chunks mapped to c2, remap them to c1 through c1->c2 mapping
+        for (auto it = c2_ce_cptr->get_chunk_cptr_cont().begin(); it != c2_ce_cptr->get_chunk_cptr_cont().end(); ++it)
+        {
+            if (*it == c2rc2_chunk_cptr)
+            {
+                continue;
+            }
+            rc_map[*it] = c1c2_chunk_sptr->collapse_mapping(**it, extra_c1_mut_cont);
+        }
+        // at this point, all read chunks mapped to c2 are translated
+        // with pointers in rc_map and new mutations in extra_mut_cont
+        assert(rc_map.size() == c2_ce_cptr->get_chunk_cptr_cont().size());
+
+        remap_chunks(rc_map, extra_c1_mut_cont);
+        erase_contig_entry(c2_ce_cptr);
     }
 
     void Graph::add_overlap(const string& r1_name, const string& r2_name,

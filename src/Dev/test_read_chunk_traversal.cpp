@@ -2,6 +2,7 @@
 #include <string>
 #include <tuple>
 #include "Read_Chunk.hpp"
+#include "Contig_Entry.hpp"
 #include "print_seq.hpp"
 
 using namespace std;
@@ -87,20 +88,21 @@ int main()
     string cigar_string;
     Size_Type rf_start;
     Size_Type qr_start;
+    Seq_Type rf_seq;
+    Seq_Type qr_seq;
 
-    while (cin >> cigar_string >> rf_start >> qr_start)
+    while (cin >> cigar_string >> rf_start >> qr_start >> rf_seq >> qr_seq)
     {
         for (int cigar_reversed = 0; cigar_reversed < 2; ++cigar_reversed)
         {
             Cigar cigar(cigar_string, cigar_reversed, rf_start, qr_start);
             shared_ptr< Read_Chunk > chunk_sptr;
-            shared_ptr< Mutation_Cont > mut_cont_sptr;
-            std::tie(chunk_sptr, mut_cont_sptr) = Read_Chunk::make_chunk_from_cigar(cigar);
+            shared_ptr< Contig_Entry > ce_sptr;
+            std::tie(chunk_sptr, ce_sptr) = Read_Chunk::make_chunk_from_cigar(cigar, new Seq_Type(rf_seq), qr_seq);
 
             cout << *chunk_sptr << nl;
-            cout << "Mutation_Cont:" << inc_tab;
-            print_seq(cout, *mut_cont_sptr, nl, nl);
-            cout << dec_tab << nl << "tests:" << inc_tab;
+            cout << "Mutation_Cont:" << inc_tab << nl << *ce_sptr
+                 << dec_tab << nl << "tests:" << inc_tab;
 
             test_traversal(*chunk_sptr, 0, true);
 

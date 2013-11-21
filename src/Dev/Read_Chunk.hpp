@@ -8,6 +8,7 @@
 #define __READ_CHUNK_HPP
 
 #include <iostream>
+#include <tuple>
 #include <vector>
 #include <set>
 #include <map>
@@ -64,7 +65,7 @@ namespace MAC
         /** Type for an external unary modifier. */
         typedef std::function<void(Read_Chunk&)> modifier_type;
 
-        /** @name Getters */
+        /** @name Constructors */
         /**@{*/
         /** Empty constructor. */
         Read_Chunk()
@@ -89,7 +90,8 @@ namespace MAC
         Size_Type get_c_len() const { return _c_len; }
         Size_Type get_c_end() const { return _c_start + _c_len; }
         bool get_rc() const { return _rc; }
-        const std::vector< const Mutation* > get_mut_ptr_cont() const { return _mut_ptr_cont; }
+        const std::vector< const Mutation* >& get_mut_ptr_cont() const { return _mut_ptr_cont; }
+        std::vector< const Mutation* >& mut_ptr_cont() { return _mut_ptr_cont; }
         key_type get_key() const { return _r_start; }
         Seq_Type get_seq() const;
         Seq_Type substr(Size_Type start, Size_Type len) const;
@@ -213,16 +215,15 @@ namespace MAC
 
          /** Create Read_Chunk object and corresponding Mutation container from a cigar string.
          * @param cigar Cigar string.
-         * @param qr Query string, optional;
-         * if not given (empty), Mutation objects hold alternate sequence _lengths_ only;
-         * if given, it can be either the entire query string, or just the part mapped by cigar.
-         * @return A read chunk corresponding to the query in the cigar object, and a container for Mutation objects.
+         * @param rf_ptr Reference string pointer (either whole, or just mapped portion); Contig_Entry object takes ownership.
+         * @param qr Query string (either whole, or just mapped portion).
+         * @return A read chunk corresponding to the query in the cigar object, and a Contig_Entry corresponding to the rf.
          */
-         static std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Mutation_Cont > > make_chunk_from_cigar(
-             const Cigar& cigar, const std::string& qr = std::string());
+         static std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry > > make_chunk_from_cigar(
+             const Cigar& cigar, Seq_Type* rf_ptr, const Seq_Type& qr = std::string());
 
          /** Construct a Read_Chunk corresponding to the read->contig mapping.
-          * @return A new Read_Chunk object; a container for reversed Mutations;
+          * @return New Read_Chunk object and Contig_Entry objects;
           * and a Mutation translation object from original to reversed Mutations.
           */
          std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry >, std::shared_ptr< Mutation_Trans_Cont > >
@@ -262,7 +263,7 @@ namespace MAC
              const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2);
          */
 
-         std::shared_ptr< Read_Chunk > collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont);
+         std::shared_ptr< Read_Chunk > collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const;
 
          friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
 

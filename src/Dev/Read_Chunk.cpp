@@ -287,11 +287,15 @@ namespace MAC
         }
     }
 
-    std::tuple< shared_ptr< Read_Chunk >, shared_ptr< Mutation_Cont > > Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, const string& qr)
+    std::tuple< shared_ptr< Read_Chunk >, shared_ptr< Contig_Entry > >
+    Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* rf_ptr, const Seq_Type& qr)
     {
+        assert(rf_ptr->size() == cigar.get_rf_len() or rf_ptr->size() >= cigar.get_rf_start() + cigar.get_rf_len());
+        assert(qr.size() == cigar.get_qr_len() or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
+
         // create objects with default constructor
         shared_ptr< Read_Chunk > chunk_sptr(new Read_Chunk());
-        shared_ptr< Mutation_Cont > mut_cont_sptr;
+        shared_ptr< Contig_Entry > ce_sptr(new Contig_Entry(rf_ptr, (rf_ptr->size() == cigar.get_rf_len()? cigar.get_rf_start() : 0)));
 
         // fix lengths and rc flags
         chunk_sptr->_c_start = cigar.get_rf_start();
@@ -300,16 +304,20 @@ namespace MAC
         chunk_sptr->_r_len = cigar.get_qr_len();
         chunk_sptr->_rc = cigar.is_reversed();
 
-        // construct mutations
-        mut_cont_sptr = make_mutations_from_cigar(cigar, qr);
+        // fix cross-pointers
+        chunk_sptr->set_ce_ptr(ce_sptr.get());
+        ce_sptr->add_chunk(chunk_sptr.get());
+
+        // construct mutations and store them in Contig_Entry object
+        ce_sptr->mut_cont() = *(make_mutations_from_cigar(cigar, qr));
 
         // store pointers in the Read_Chunk object
-        for (auto it = mut_cont_sptr->begin(); it != mut_cont_sptr->end(); ++it)
+        for (auto it = ce_sptr->get_mut_cont().begin(); it != ce_sptr->get_mut_cont().end(); ++it)
         {
             chunk_sptr->_mut_ptr_cont.push_back(&*it);
         }
 
-        return std::make_tuple(chunk_sptr, mut_cont_sptr);
+        return std::make_tuple(chunk_sptr, ce_sptr);
     }
 
     std::tuple< Size_Type, Size_Type, size_t > Read_Chunk::get_cut_data(Size_Type brk, bool is_contig_brk) const
@@ -539,6 +547,10 @@ namespace MAC
         rc_sptr->_c_len = _r_len;
         rc_sptr->_rc = _rc;
 
+        // add cross-pointers
+        rc_sptr->set_ce_ptr(ce_sptr.get());
+        ce_sptr->add_chunk(rc_sptr.get());
+
         Read_Chunk_Pos pos = get_start_pos();
         while (pos != get_end_pos())
         {
@@ -551,13 +563,16 @@ namespace MAC
             Read_Chunk_Pos pos_next = pos;
             increment_pos(pos_next);
 
-            // create reversed Mutation (coordinates only)
-            Mutation rev_mut((not _rc? pos.r_pos : pos_next.r_pos), (not _rc? pos_next.r_pos : pos.r_pos), pos_next.c_pos - pos.c_pos);
+            // create reversed Mutation
+            Mutation rev_mut((not _rc? pos.r_pos : pos_next.r_pos),
+                             (not _rc? pos_next.r_pos - pos.r_pos : pos.r_pos - pos_next.r_pos),
+                             (not _rc? _ce_ptr->substr(pos.c_pos, pos_next.c_pos - pos.c_pos)
+                              : reverseComplement(_ce_ptr->substr(pos.c_pos, pos_next.c_pos - pos.c_pos))));
 
             // save it in Mutation container
             Mutation_Cont::iterator rev_mut_it;
             bool success;
-            tie(rev_mut_it, success) = ce_sptr->mutation_cont().insert(rev_mut);
+            tie(rev_mut_it, success) = ce_sptr->mut_cont().insert(rev_mut);
             assert(success);
 
             // save the pair in the Mutation translation container
@@ -570,9 +585,9 @@ namespace MAC
         }
 
         // save mutation pointers in the Read_Chunk object
-        Mutation_Cont::iterator rev_mut_it = ce_sptr->get_mutation_cont().begin();
-        Mutation_Cont::reverse_iterator rev_mut_rit = ce_sptr->get_mutation_cont().rbegin();
-        while (not _rc? rev_mut_it != ce_sptr->get_mutation_cont().end() : rev_mut_rit != ce_sptr->get_mutation_cont().rend())
+        Mutation_Cont::iterator rev_mut_it = ce_sptr->get_mut_cont().begin();
+        Mutation_Cont::reverse_iterator rev_mut_rit = ce_sptr->get_mut_cont().rbegin();
+        while (not _rc? rev_mut_it != ce_sptr->get_mut_cont().end() : rev_mut_rit != ce_sptr->get_mut_cont().rend())
         {
             rc_sptr->_mut_ptr_cont.push_back(not _rc? &*rev_mut_it : &*rev_mut_rit);
             if (not _rc)
@@ -581,11 +596,7 @@ namespace MAC
                 ++rev_mut_rit;
         }
 
-        // add cross-pointers
-        rc_sptr->set_ce_ptr(ce_sptr.get());
-        ce_sptr->add_chunk(rc_sptr.get());
-
-        return make_tuple(rc_sptr, ce_sptr, mut_trans_cont_sptr);
+        return std::make_tuple(rc_sptr, ce_sptr, mut_trans_cont_sptr);
     }
 
     std::tuple< shared_ptr< Mutation_Trans_Cont >, shared_ptr< Mutation_Cont > >
@@ -700,7 +711,7 @@ namespace MAC
         return res;
     }
 
-    shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont)
+    shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const
     {
         assert(rc2.get_c_start() == get_r_start() and rc2.get_c_end() == get_r_end());
         shared_ptr< Read_Chunk > res(new Read_Chunk());
@@ -710,6 +721,8 @@ namespace MAC
         res->_r_start = rc2.get_r_start();
         res->_r_len = rc2.get_r_len();
         res->_rc = (get_rc() != rc2.get_rc());
+        res->_re_ptr = rc2._re_ptr;
+        res->_ce_ptr = _ce_ptr;
 
         // traverse c1 left-to-right; traverse rc1 left-to-right if not _rc, r-to-l ow;
         Read_Chunk_Pos pos = get_start_pos();
@@ -731,6 +744,7 @@ namespace MAC
             {
                 // the stretch pos->pos_next is a match, or we are at the end;
                 // consolidate any outstanding mutations
+                m.simplify(get_ce_ptr()->substr(m.get_start(), m.get_len()));
                 if (not m.is_empty())
                 {
                     if (r_muts.size() == 0)
