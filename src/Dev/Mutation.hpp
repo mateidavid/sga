@@ -135,6 +135,11 @@ namespace MAC
          */
         Mutation cut(Size_Type base_offset, Size_Type alt_offset);
 
+        /** Simplify Mutation by dropping the ends of rf and qr if they match.
+         * @param rf Reference sequence spanned by the mutation.
+         */
+        void simplify(const Seq_Type& rf);
+
         bool operator == (const Mutation&) const;
 
         friend std::ostream& operator << (std::ostream&, const Mutation&);

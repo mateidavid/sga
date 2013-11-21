@@ -38,6 +38,31 @@ namespace MAC
         return res;
     }
 
+    void Mutation::simplify(const Seq_Type& rf)
+    {
+        assert(rf.size() == _len);
+        if (not have_seq())
+            return;
+        while (_len > 0 and _seq_len > 0 and rf[_len - 1] == _seq[_len - 1])
+        {
+            --_len;
+            --_seq_len;
+            _seq.resize(_seq.size() - 1);
+        }
+        size_t i = 0;
+        while (i < _len and i < _seq_len and rf[i] == _seq[i])
+        {
+            ++i;
+        }
+        if (i > 0)
+        {
+            _start += i;
+            _len -= i;
+            _seq_len -= i;
+            _seq = _seq.substr(i);
+        }
+    }
+
     bool Mutation::operator == (const Mutation& rhs) const
     {
         return (_start == rhs._start
