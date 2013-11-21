@@ -700,6 +700,94 @@ namespace MAC
         return res;
     }
 
+    shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont)
+    {
+        assert(rc2.get_c_start() == get_r_start() and rc2.get_c_end() == get_r_end());
+        shared_ptr< Read_Chunk > res(new Read_Chunk());
+
+        res->_c_start = get_c_start();
+        res->_c_len = get_c_len();
+        res->_r_start = rc2.get_r_start();
+        res->_r_len = rc2.get_r_len();
+        res->_rc = (get_rc() != rc2.get_rc());
+
+        // traverse c1 left-to-right; traverse rc1 left-to-right if not _rc, r-to-l ow;
+        Read_Chunk_Pos pos = get_start_pos();
+        size_t r_mut_cnt = 0;
+        Mutation fake_mut((not get_rc()? get_r_end() : get_r_start()), 0);
+        Mutation m;
+        vector< Mutation_CPtr > c_muts;
+        vector< Mutation_CPtr > r_muts;
+        while (true)
+        {
+            size_t r_mut_idx = (not get_rc()? r_mut_cnt : rc2.get_mut_ptr_cont().size() - 1 - r_mut_cnt); // next new mutation to look for
+            const Mutation& r_mut = (r_mut_cnt < rc2.get_mut_ptr_cont().size()? *rc2.get_mut_ptr_cont()[r_mut_idx] : fake_mut);
+
+            Read_Chunk_Pos pos_next;
+            bool got_r_mut = advance_pos_til_mut(pos_next, r_mut);
+
+            if ((got_r_mut and r_mut_cnt == rc2.get_mut_ptr_cont().size())
+                or (not got_r_mut and get_match_len_from_pos(pos) > 0))
+            {
+                // the stretch pos->pos_next is a match, or we are at the end;
+                // consolidate any outstanding mutations
+                if (not m.is_empty())
+                {
+                    if (r_muts.size() == 0)
+                    {
+                        // no adjacent contig mutations
+                        assert(c_muts.size() == 1);
+                        res->mut_ptr_cont().push_back(c_muts[0]);
+                    }
+                    else
+                    {
+                        // new metamutation
+                        // add it to extra Mutation container if it doesn't exist
+                        Mutation_CPtr new_mut = add_mut_to_cont(extra_mut_cont, m);
+                        res->_mut_ptr_cont.push_back(new_mut);
+                        // NOTE: here we could save the metamutation composition
+                    }
+                }
+                m = Mutation(pos_next.c_pos, 0);
+                c_muts.clear();
+                r_muts.clear();
+            }
+            else
+            {
+                // the stretch pos->post_next is not a match and we are not at the end;
+                // add mutation slice to m
+                if (got_r_mut)
+                {
+                    // this was an entire read mutation
+                    m.merge(Mutation(pos.c_pos, pos_next.c_pos - pos.c_pos,
+                                     (not get_rc()? r_mut.get_seq() : reverseComplement(r_mut.get_seq()))));
+                    r_muts.push_back(&r_mut);
+                    ++r_mut_cnt;
+                }
+                else
+                {
+                    // this was a (possibly sliced) contig mutation
+                    assert((pos_next.mut_idx == pos.mut_idx and pos_next.mut_offset > pos.mut_offset)
+                           or (pos_next.mut_idx == 0 and pos_next.mut_idx == pos.mut_idx + 1));
+                    const Mutation& c_mut = *_mut_ptr_cont[pos.mut_idx];
+                    m.merge(Mutation(pos.c_pos, pos_next.c_pos - pos.c_pos,
+                                     c_mut.get_seq().substr(
+                                         min(pos.mut_offset, c_mut.get_seq_len()),
+                                         min((pos_next.mut_offset == 0? string::npos : pos_next.mut_offset), c_mut.get_seq_len()))));
+                    c_muts.push_back(&c_mut);
+                }
+            }
+
+            if (got_r_mut and r_mut_cnt == rc2.get_mut_ptr_cont().size())
+                break;
+
+            pos = pos_next;
+        }
+        assert(pos == get_end_pos());
+
+        return res;
+    }
+
     /*
     vector< std::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > Read_Chunk::collapse_mutations(
         const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2)

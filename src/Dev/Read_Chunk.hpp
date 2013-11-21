@@ -211,12 +211,6 @@ namespace MAC
          std::tuple< bool, std::shared_ptr< Read_Chunk > > apply_contig_split(
              Size_Type c_brk, const std::map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr);
 
-         /** Given a read chunk breakpoint, compute the range of possible contig breakpoints.
-          * @param pos Breakpoint position in the read, 0-based; equivalently, length of read before breakpoint.
-          * @return Leftmost and rightmost breakpoint positions in contig.
-          */
-         std::pair< Size_Type, Size_Type > get_contig_brk_range(Size_Type pos);
-
          /** Create Read_Chunk object and corresponding Mutation container from a cigar string.
          * @param cigar Cigar string.
          * @param qr Query string, optional;
@@ -267,6 +261,8 @@ namespace MAC
          static std::vector< std::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > collapse_mutations(
              const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2);
          */
+
+         std::shared_ptr< Read_Chunk > collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont);
 
          friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
 
