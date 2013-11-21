@@ -38,6 +38,15 @@ namespace MAC
         return res;
     }
 
+    bool Mutation::operator == (const Mutation& rhs) const
+    {
+        return (_start == rhs._start
+                and _len == rhs._len
+                and _seq_len == rhs._seq_len
+                and have_seq() == rhs.have_seq()
+                and (not have_seq() or _seq == rhs._seq));
+    }
+
     shared_ptr< Mutation_Cont > make_mutations_from_cigar(const Cigar& cigar, const string& qr)
     {
         shared_ptr< Mutation_Cont > res(new Mutation_Cont());
@@ -85,6 +94,23 @@ namespace MAC
             }
         }
         return res;
+    }
+
+    Mutation_CPtr add_mut_to_cont(Mutation_Cont& mut_cont, const Mutation& mut)
+    {
+        Mutation_Cont::iterator it;
+        Mutation_Cont::iterator it_end;
+        for (std::tie(it, it_end) = mut_cont.equal_range(mut.get_key()); it != it_end; ++it)
+        {
+            if (mut == *it)
+            {
+                return &*it;
+            }
+        }
+        bool success;
+        tie(it, success) = mut_cont.insert(mut);
+        assert(success);
+        return &*it;
     }
 
     ostream& operator << (ostream& os, const Mutation& rhs)

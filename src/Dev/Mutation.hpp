@@ -135,6 +135,8 @@ namespace MAC
          */
         Mutation cut(Size_Type base_offset, Size_Type alt_offset);
 
+        bool operator == (const Mutation&) const;
+
         friend std::ostream& operator << (std::ostream&, const Mutation&);
 
     private:
@@ -175,6 +177,13 @@ namespace MAC
      * @return Container of Mutation objects.
      */
     std::shared_ptr< Mutation_Cont > make_mutations_from_cigar(const Cigar& cigar, const std::string& qr = std::string());
+
+    /** Add Mutation to container, use existing Mutation if it already exists.
+     * @param mut_cont Mutation container.
+     * @param mut Mutation to add.
+     * @return Pointer to Mutation inside container.
+     */
+    Mutation_CPtr add_mut_to_cont(Mutation_Cont& mut_cont, const Mutation& mut);
 
     /** Mutation Translation object. */
     struct Mutation_Trans
