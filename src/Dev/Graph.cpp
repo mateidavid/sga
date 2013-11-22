@@ -41,14 +41,14 @@ namespace MAC
     {
         // first, create read entry and place it in container
         Read_Entry re(name_ptr, seq_ptr->size());
-        cerr << "re:" << indent::inc << indent::nl << re << indent::dec << indent::nl;
+        cerr << indent::tab << "re:\n" << indent::inc << re << indent::dec;
         const Read_Entry* re_cptr = insert_read_entry(re);
 
         // create contig entry and place it in container
         Contig_Entry ce(seq_ptr);
-        cerr << "ce:" << indent::inc << indent::nl << ce << indent::dec << indent::nl;
+        cerr << indent::tab << "ce:\n" << indent::inc << ce << indent::dec;
         ce.add_chunk(&(*re_cptr->get_chunk_cont().begin()));
-        cerr << "ce with chunk:" << indent::inc << indent::nl << ce << indent::dec << indent::nl;
+        cerr << indent::tab << "ce with chunk:\n" << indent::inc << ce << indent::dec;
         const Contig_Entry* ce_cptr = insert_contig_entry(ce);
 
         // fix initial rc: assing it to contig entry
@@ -349,12 +349,16 @@ namespace MAC
 
         string r1_seq = re1_cptr->get_seq();
         string r2_seq = re2_cptr->get_seq();
-        clog << indent::nl << "adding overlap:" << indent::inc
+        /*
+        cerr << indent::tab << "adding overlap:" << indent::inc
              << indent::nl << "re1: " << r1_seq.substr(r1_start, r1_len)
              << indent::nl << "re2: " << (not cigar.is_reversed()? r2_seq.substr(r2_start, r2_len) : reverseComplement(r2_seq.substr(r2_start, r2_len)))
-             << indent::nl << "initial cigar:" << indent::inc << cigar << indent::dec;
+             << indent::nl << "initial cigar:\n" << indent::inc << cigar << indent::dec;
+        */
         cigar.disambiguate(r1_seq.substr(r1_start, r1_len), r2_seq.substr(r2_start, r2_len));
-        clog << indent::nl << "disambiguated cigar:" << indent::inc << cigar << indent::dec << indent::dec;
+        /*
+        cerr << indent::tab << "disambiguated cigar:\n" << indent::inc << cigar << indent::dec << indent::dec;
+        */
 
         // cut r1 & r2 at the ends of the match region
         cut_read_entry(re1_cptr, r1_start, true);
@@ -551,11 +555,12 @@ namespace MAC
 
     ostream& operator << (ostream& os, const Graph& g)
     {
-        os << "Read_Entry_Cont=" << indent::inc;
-        print_seq(os, g._re_cont, indent::nl, indent::nl);
-        os << indent::dec << indent::nl << "Contig_Entry_Cont=" << indent::inc;
-        print_seq(os, g._ce_cont, indent::nl, indent::nl);
-        os << indent::dec;
+        os << indent::tab << "(Graph\n" << indent::inc
+           << indent::tab << "Read_Entry_Cont:\n" << indent::inc;
+        print_seq(os, g._re_cont, "");
+        os << indent::dec << indent::tab << "Contig_Entry_Cont:\n" << indent::inc;
+        print_seq(os, g._ce_cont, "");
+        os << indent::dec << indent::dec << indent::tab << ")\n";
         return os;
     }
 }

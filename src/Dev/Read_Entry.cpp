@@ -82,13 +82,12 @@ namespace MAC
 
     ostream& operator << (ostream& os, const Read_Entry& rhs)
     {
-        os << "(Read_Entry &=" << (void*)&rhs
-           << indent::inc << indent::nl
-           << "name=" << rhs.get_name()
-           << indent::nl << "chunk_cont="
+        os << indent::tab << "(Read_Entry &=" << (void*)&rhs
+           << indent::inc << indent::nl << "name=" << rhs.get_name()
+           << indent::nl << "chunk_cont:\n"
            << indent::inc;
-        print_seq(os, rhs._chunk_cont, indent::nl, indent::nl);
-        os << indent::dec << indent::dec << indent::nl << ")";
+        print_seq(os, rhs._chunk_cont, "");
+        os << indent::dec << indent::dec << indent::tab << ")\n";
         return os;
     }
 }

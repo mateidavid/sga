@@ -138,15 +138,15 @@ namespace MAC
 
     std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs)
     {
-        os << "(Contig_Entry &=" << (void*)&rhs
+        os << indent::tab << "(Contig_Entry &=" << (void*)&rhs
            << indent::inc << indent::nl << "seq=" << rhs.get_seq()
-           << indent::nl << "mut_cont="
-           << indent::inc;
-        print_seq(os, rhs._mut_cont, indent::nl, indent::nl);
-        os << indent::dec << indent::nl << "chunk_cptr_cont="
-           << indent::inc;
-        print_seq(os, rhs._chunk_cptr_cont, indent::nl, indent::nl);
-        os << indent::dec << indent::dec << indent::nl << ")";
+           << indent::nl << "mut_cont:"
+           << indent::inc << '\n';
+        print_seq(os, rhs._mut_cont, "");
+        os << indent::dec << indent::tab << "chunk_cptr_cont:"
+           << indent::inc << '\n';
+        print_seq(os, rhs._chunk_cptr_cont, indent::nl, indent::tab, '\n');
+        os << indent::dec << indent::dec << indent::tab << ")" << '\n';
         return os;
     }
 }

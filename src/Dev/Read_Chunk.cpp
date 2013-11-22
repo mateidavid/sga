@@ -954,7 +954,7 @@ namespace MAC
 
     ostream& operator << (ostream& os, const Read_Chunk& rhs)
     {
-        os << "(Read_Chunk &=" << (void*)&rhs
+        os << indent::tab << "(Read_Chunk &=" << (void*)&rhs
            << indent::inc << indent::nl << "re_cptr=" << (void*)rhs._re_ptr
            << ",ce_cptr=" << (void*)rhs._ce_ptr
            << indent::nl << "r_start=" << rhs.get_r_start()
@@ -962,10 +962,10 @@ namespace MAC
            << ",c_start=" << rhs.get_c_start()
            << ",c_len=" << rhs.get_c_len()
            << ",rc=" << (int)rhs.get_rc()
-           << indent::nl << "mut_cptr_cont="
-           << indent::inc;
-        print_seq(os, rhs._mut_ptr_cont, indent::nl, indent::nl);
-        os << indent::dec << indent::dec << indent::nl << ")";
+           << indent::nl << "mut_cptr_cont:"
+           << indent::inc << '\n';
+        print_seq(os, rhs._mut_ptr_cont, "");
+        os << indent::dec << indent::dec << indent::tab << ")\n";
         return os;
     }
 }

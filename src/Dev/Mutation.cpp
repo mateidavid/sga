@@ -140,12 +140,10 @@ namespace MAC
 
     ostream& operator << (ostream& os, const Mutation& rhs)
     {
-        os << "(Mutation &=" << (void*)&rhs
-           << indent::inc << indent::nl << "start=" << (size_t)rhs.get_start()
-           << ",len=" << (size_t)rhs.get_len()
-           << ",seq_len=" << rhs.get_seq_len()
-           << ",seq=" << rhs.get_seq()
-           << indent::dec << indent::nl << ")";
+        os << indent::tab << "(Mutation &=" << (void*)&rhs << indent::inc
+           << indent::nl << "start=" << (size_t)rhs.get_start() << ",len=" << (size_t)rhs.get_len()
+           << ",seq_len=" << rhs.get_seq_len() << ",seq=" << rhs.get_seq()
+           << indent::dec << indent::nl << ")\n";
         return os;
     }
 }

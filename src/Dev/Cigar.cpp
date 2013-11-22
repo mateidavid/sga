@@ -166,6 +166,11 @@ namespace MAC
     {
         assert(rf_seq.size() == _rf_len);
         assert(qr_seq.size() == _qr_len);
+        /*
+        cerr << indent::tab << "disambiguating cigar:\n" << indent::inc << *this << indent::dec
+             << indent::tab << "rf_seq= " << rf_seq
+             << indent::nl << "qr_seq= " << (not is_reversed()? qr_seq : reverseComplement(qr_seq)) << '\n';
+        */
         auto get_rf_pos = [&] (Size_Type pos) -> char { return rf_seq[pos]; };
         auto get_qr_pos = [&] (Size_Type pos) -> char {
             assert(pos < _qr_len);
@@ -207,23 +212,26 @@ namespace MAC
                 i += v.size() - 1;
             }
         }
+        /*
+        cerr << indent::tab << "result:\n" << indent::inc << *this << indent::dec;
+        */
     }
 
     ostream& operator << (ostream& os, const Cigar_Op& rhs)
     {
-        os << (size_t)rhs.len << rhs.op << ",rf_offset=" << (size_t)rhs.rf_offset << ",qr_offset=" << (size_t)rhs.qr_offset;
+        os << '(' << (size_t)rhs.len << rhs.op << ",rf_offset=" << (size_t)rhs.rf_offset << ",qr_offset=" << (size_t)rhs.qr_offset << ')';
         return os;
     }
 
     ostream& operator << (ostream& os, const Cigar& rhs)
     {
-        os << indent::nl << "(Cigar" << indent::inc
+        os << indent::tab << "(Cigar" << indent::inc
            << indent::nl << "rf_start=" << rhs._rf_start << ",rf_len=" << rhs._rf_len
            << indent::nl << "qr_start=" << rhs._qr_start << ",qr_len=" << rhs._qr_len
            << indent::nl << "reversed=" << rhs._reversed
-           << indent::nl << "ops=" << indent::inc;
-        print_seq(os, rhs._op_vect, indent::nl, indent::nl);
-        os << indent::dec << indent::dec << indent::nl << ")";
+           << indent::nl << "ops:" << indent::inc << '\n';
+        print_seq(os, rhs._op_vect, indent::nl, indent::tab, '\n');
+        os << indent::dec << indent::dec << indent::tab << ")\n";
         return os;
     }
 }
