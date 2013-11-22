@@ -15,6 +15,7 @@ AC_PROG_CC
 
 # check for libtool
 AC_PROG_LIBTOOL
+AC_DISABLE_SHARED
 
 # Check for headers
 AC_LANG([C++])
