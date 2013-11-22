@@ -777,6 +777,9 @@ namespace MAC
                 m = Mutation(pos_next.c_pos, 0);
                 c_muts.clear();
                 r_muts.clear();
+
+                if (got_r_mut and r_mut_cnt == rc2.get_mut_ptr_cont().size())
+                    break;
             }
             else
             {
@@ -794,7 +797,7 @@ namespace MAC
                 {
                     // this was a (possibly sliced) contig mutation
                     assert((pos_next.mut_idx == pos.mut_idx and pos_next.mut_offset > pos.mut_offset)
-                           or (pos_next.mut_idx == 0 and pos_next.mut_idx == pos.mut_idx + 1));
+                           or (pos_next.mut_idx == pos.mut_idx + 1 and pos_next.mut_offset == 0));
                     const Mutation& c_mut = *_mut_ptr_cont[pos.mut_idx];
                     m.merge(Mutation(pos.c_pos, pos_next.c_pos - pos.c_pos,
                                      c_mut.get_seq().substr(
@@ -803,9 +806,6 @@ namespace MAC
                     c_muts.push_back(&c_mut);
                 }
             }
-
-            if (got_r_mut and r_mut_cnt == rc2.get_mut_ptr_cont().size())
-                break;
 
             pos = pos_next;
         }
@@ -976,7 +976,7 @@ namespace MAC
            << ",rc=" << (int)rhs.get_rc()
            << indent::nl << "mut_cptr_cont:"
            << indent::inc << '\n';
-        print_seq(os, rhs._mut_ptr_cont, "");
+        print_seq(os, rhs._mut_ptr_cont, indent::nl, indent::tab, '\n');
         os << indent::dec << indent::dec << indent::tab << ")\n";
         return os;
     }
