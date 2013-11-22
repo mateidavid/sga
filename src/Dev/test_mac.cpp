@@ -1,4 +1,6 @@
 #include <iostream>
+#include <sstream>
+#include <fstream>
 #include <vector>
 #include <list>
 
@@ -14,17 +16,19 @@ using indent::nl;
 using indent::tab;
 
 
-int main()
+int main(int argc, char* argv[])
 {
     Graph g;
+    assert(argc >= 2);
+    ifstream ifs(argv[1]);
 
     string line;
-    while (getline(cin, line))
+    while (getline(ifs, line))
     {
         cerr << line << '\n';
-        istringstream is(line + "\n");
+        istringstream iss(line + "\n");
         string rec_type;
-        is >> rec_type;
+        iss >> rec_type;
         if (rec_type == "HT")
         {
             // ignore header line for now
@@ -33,8 +37,8 @@ int main()
         {
             string* r_id_ptr = new string();
             string* r_seq_ptr = new string();
-            is >> *r_id_ptr >> *r_seq_ptr;
-            assert(not is.eof());
+            iss >> *r_id_ptr >> *r_seq_ptr;
+            assert(not iss.eof());
             g.add_read(r_id_ptr, r_seq_ptr);
             g.check();
         }
@@ -47,8 +51,8 @@ int main()
             int rc, tmp;
             string sam_cigar;
             string sam_pi;
-            is >> r1_id >> r2_id >> r1_start >> r1_end >> r1_len >> r2_start >> r2_end >> r2_len >> rc >> tmp >> sam_cigar >> sam_pi;
-            assert(not is.eof());
+            iss >> r1_id >> r2_id >> r1_start >> r1_end >> r1_len >> r2_start >> r2_end >> r2_len >> rc >> tmp >> sam_cigar >> sam_pi;
+            assert(not iss.eof());
             ++r1_end;
             ++r2_end;
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));

@@ -277,8 +277,8 @@ namespace MAC
         // step 1: contruct read chunk for the rc1->rc2 mapping
         shared_ptr< Read_Chunk > rc1rc2_chunk_sptr;
         shared_ptr< Contig_Entry > rc1_ce_sptr;
-        std::tie(rc1rc2_chunk_sptr, rc1_ce_sptr) = Read_Chunk::make_chunk_from_cigar(
-            rc1rc2_cigar, new string(c1rc1_chunk_cptr->get_seq()), c2rc2_chunk_cptr->get_seq());
+        std::tie(rc1rc2_chunk_sptr, rc1_ce_sptr) = Read_Chunk::make_chunk_from_cigar_and_chunks(
+            rc1rc2_cigar, *c1rc1_chunk_cptr, *c2rc2_chunk_cptr);
 
         // initialize Read_Chunk translation map, and container for new mutations
         map< Read_Chunk_CPtr, shared_ptr< Read_Chunk > > rc_map;

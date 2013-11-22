@@ -245,7 +245,8 @@ namespace MAC
             // we produce any remaining contig deletions at current read position,
             // except for the case when a contig deletion matches a read insertion;
             // in that case we produce the deletion first only when moving forward
-            if (forward or not mut.is_ins())
+            if ((forward or not mut.is_ins())
+                and ((forward and pos != get_end_pos()) or (not forward and pos != get_start_pos())))
             {
                 Read_Chunk_Pos pos_next = pos;
                 advance_pos(pos_next, forward);
@@ -317,6 +318,17 @@ namespace MAC
             chunk_sptr->_mut_ptr_cont.push_back(&*it);
         }
 
+        return std::make_tuple(chunk_sptr, ce_sptr);
+    }
+
+    tuple< shared_ptr< Read_Chunk >, shared_ptr< Contig_Entry > >
+    Read_Chunk::make_chunk_from_cigar_and_chunks(const Cigar& cigar, const Read_Chunk& rc1, const Read_Chunk& rc2)
+    {
+        shared_ptr< Read_Chunk > chunk_sptr;
+        shared_ptr< Contig_Entry > ce_sptr;
+        std::tie(chunk_sptr, ce_sptr) = make_chunk_from_cigar(cigar, new Seq_Type(rc1.get_seq()), rc2.get_seq());
+        // fix Read_Entry pointer
+        chunk_sptr->_re_ptr = rc2._re_ptr;
         return std::make_tuple(chunk_sptr, ce_sptr);
     }
 
@@ -736,7 +748,7 @@ namespace MAC
             size_t r_mut_idx = (not get_rc()? r_mut_cnt : rc2.get_mut_ptr_cont().size() - 1 - r_mut_cnt); // next new mutation to look for
             const Mutation& r_mut = (r_mut_cnt < rc2.get_mut_ptr_cont().size()? *rc2.get_mut_ptr_cont()[r_mut_idx] : fake_mut);
 
-            Read_Chunk_Pos pos_next;
+            Read_Chunk_Pos pos_next = pos;
             bool got_r_mut = advance_pos_til_mut(pos_next, r_mut);
 
             if ((got_r_mut and r_mut_cnt == rc2.get_mut_ptr_cont().size())

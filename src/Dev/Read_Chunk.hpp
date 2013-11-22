@@ -222,6 +222,15 @@ namespace MAC
          static std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry > > make_chunk_from_cigar(
              const Cigar& cigar, Seq_Type* rf_ptr, const Seq_Type& qr = std::string());
 
+         /** Create Read_Chunk object and corresponding Mutation container from a cigar string and 2 existing Read_Chunk objects.
+          * @param cigar Cigar string.
+          * @param rc1 Read_Chunk corresponding to rf.
+          * @param rc2 Read_Chunk corresponding to qr.
+          * @return A read chunk corresponding to the query in the cigar object, and a Contig_Entry corresponding to the rf.
+          */
+         static std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry > > make_chunk_from_cigar_and_chunks(
+             const Cigar& cigar, const Read_Chunk& rc1, const Read_Chunk& rc2);
+
          /** Construct a Read_Chunk corresponding to the read->contig mapping.
           * @return New Read_Chunk object and Contig_Entry objects;
           * and a Mutation translation object from original to reversed Mutations.
