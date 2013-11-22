@@ -60,6 +60,7 @@ int main(int argc, char* argv[])
         }
         cerr << g;
     }
+    cerr << "success\n";
 
     return EXIT_SUCCESS;
 }
