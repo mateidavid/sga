@@ -95,13 +95,16 @@ namespace MAC
          */
         void drop_mutations(const std::map< const Mutation*, const Mutation* >& mut_cptr_map);
 
+        /** Drop unused mutations. */
+        void drop_unused_mutations();
+
         /** Drop base sequence suffix.
          * @param c_brk Prefix length to keep.
          */
         void drop_base_seq(Size_Type c_brk) { _seq_ptr->resize(c_brk); }
 
         /** Integrity check. */
-        void check() const;
+        bool check() const;
 
         friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
 

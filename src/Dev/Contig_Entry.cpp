@@ -105,7 +105,28 @@ namespace MAC
         }
     }
 
-    void Contig_Entry::check() const
+    void Contig_Entry::drop_unused_mutations()
+    {
+        set< Mutation_CPtr > used_mut;
+        for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
+        {
+            Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+            for (auto mut_cptr_it = rc_cptr->get_mut_ptr_cont().begin(); mut_cptr_it != rc_cptr->get_mut_ptr_cont().end(); ++mut_cptr_it)
+            {
+                Mutation_CPtr mut_cptr = *mut_cptr_it;
+                used_mut.insert(mut_cptr);
+            }
+        }
+        for (auto mut_it = _mut_cont.begin(); mut_it != _mut_cont.end(); ++mut_it)
+        {
+            if (used_mut.count(&*mut_it) == 0)
+            {
+                _mut_cont.erase(mut_it);
+            }
+        }
+    }
+
+    bool Contig_Entry::check() const
     {
         // check base sequence exists
         assert(_seq_ptr);
@@ -134,6 +155,7 @@ namespace MAC
                 assert(mut_it != _mut_cont.end());
             }
         }
+        return true;
     }
 
     std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs)
