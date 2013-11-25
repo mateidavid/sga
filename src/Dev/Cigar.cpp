@@ -171,10 +171,10 @@ namespace MAC
              << indent::tab << "rf_seq= " << rf_seq
              << indent::nl << "qr_seq= " << (not is_reversed()? qr_seq : reverseComplement(qr_seq)) << '\n';
         */
-        auto get_rf_pos = [&] (Size_Type pos) -> char { return rf_seq[pos]; };
         auto get_qr_pos = [&] (Size_Type pos) -> char {
-            assert(pos < _qr_len);
-            return (not _reversed? qr_seq[pos] : ::complement(char(qr_seq[_qr_len - 1 - pos])));
+            assert(_reversed or pos < _qr_len);
+            assert(not _reversed or (0 < pos and pos <= _qr_len));
+            return (not _reversed? qr_seq[pos] : ::complement(char(qr_seq[pos - 1])));
         };
         for (size_t i = 0; i < get_n_ops(); ++i)
         {
@@ -184,13 +184,13 @@ namespace MAC
                 Cigar_Op op;
                 op.rf_offset = _op_vect[i].rf_offset;
                 op.qr_offset = _op_vect[i].qr_offset;
-                op.op = (get_rf_pos(op.rf_offset) == get_qr_pos(op.qr_offset)? '=' : 'X');
+                op.op = (rf_seq[op.rf_offset] == get_qr_pos(op.qr_offset)? '=' : 'X');
                 op.len = 1;
 
                 while (op.rf_offset + op.len < _op_vect[i].rf_offset + _op_vect[i].len)
                 {
                     if ((op.op == '=')
-                        == (get_rf_pos(op.rf_offset + op.len)
+                        == (rf_seq[op.rf_offset + op.len]
                             == get_qr_pos((not _reversed? op.qr_offset + op.len : op.qr_offset - op.len))))
                     {
                         ++op.len;

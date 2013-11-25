@@ -88,6 +88,7 @@ namespace MAC
         Size_Type get_r_end() const { return _r_start + _r_len; }
         Size_Type get_c_start() const { return _c_start; }
         Size_Type get_c_len() const { return _c_len; }
+        Size_Type& c_len() { return _c_len; }
         Size_Type get_c_end() const { return _c_start + _c_len; }
         bool get_rc() const { return _rc; }
         const std::vector< const Mutation* >& get_mut_ptr_cont() const { return _mut_ptr_cont; }

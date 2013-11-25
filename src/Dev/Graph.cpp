@@ -83,6 +83,8 @@ namespace MAC
             return;
         }
 
+        cerr << "before cutting contig entry: " << (void*)ce_cptr << " at " << c_brk << " mut_left_cptr=" << (void*)mut_left_cptr << '\n' << *this;
+
         // first, split any mutations that span c_pos
         vector< const Mutation* > v = ce_cptr->get_mutations_spanning_pos(c_brk);
         for (size_t i = 0; i < v.size(); ++i)
@@ -100,8 +102,6 @@ namespace MAC
         map< const Mutation*, const Mutation* > mut_cptr_map;
         auto ce_modifier = [&] (Contig_Entry& ce) { mut_cptr_map = ce.acquire_second_half_mutations(ce_cptr, c_brk, mut_left_cptr); };
         modify_contig_entry(ce_new_cptr, ce_modifier);
-        // drop those mutations from first part
-        modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.drop_mutations(mut_cptr_map); });
 
         // save the list of read chunk objects that must be modified
         Read_Chunk_CPtr_Cont chunk_cptr_cont = ce_cptr->get_chunk_cptr_cont();
@@ -136,8 +136,22 @@ namespace MAC
             }
         }
 
-        // finally, drop the second part of the base sequence from the first part
+        // drop mapped mutations from first part
+        modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.drop_mutations(mut_cptr_map); });
+        // drop the second part of the base sequence from the first part
         modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.drop_base_seq(c_brk); });
+        // fix contig length for chunks left on LHS
+        for (auto rc_cptr_it = ce_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
+        {
+            modify_read_chunk(*rc_cptr_it, [&] (Read_Chunk& rc) { rc.c_len() = ce_cptr->get_len(); });
+        }
+
+        // drop unused mutations from either contig
+        modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
+        modify_contig_entry(ce_new_cptr, [] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
+
+        cerr << "after cutting contig entry: " << (void*)ce_cptr << '\n' << *this;
+        assert(check());
     }
 
     void Graph::cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk)
@@ -274,6 +288,8 @@ namespace MAC
         if (c1_ce_cptr == c2_ce_cptr)
             return;
 
+        cerr << "before merging read chunks:\n" << *c1rc1_chunk_cptr << *c2rc2_chunk_cptr << rc1rc2_cigar << *this;
+
         // step 1: contruct read chunk for the rc1->rc2 mapping
         shared_ptr< Read_Chunk > rc1rc2_chunk_sptr;
         shared_ptr< Contig_Entry > rc1_ce_sptr;
@@ -311,7 +327,11 @@ namespace MAC
         assert(rc_map.size() == c2_ce_cptr->get_chunk_cptr_cont().size());
 
         remap_chunks(rc_map, extra_c1_mut_cont);
+        modify_contig_entry(c1_ce_cptr, [] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
         erase_contig_entry(c2_ce_cptr);
+
+        cerr << "after merging read chunks:\n" << *this;
+        assert(check());
     }
 
     void Graph::add_overlap(const string& r1_name, const string& r2_name,
@@ -412,9 +432,15 @@ namespace MAC
                 {
                     ++op_end;
                 }
-                assert(cigar.get_rf_offset(op_end - 1) < rc1_cptr->get_r_end() and rc1_cptr->get_r_end() <= cigar.get_rf_offset(op_end));
-                assert(r2_rc or (cigar.get_qr_offset(op_end - 1) < rc2_cptr->get_r_end() and rc2_cptr->get_r_end() <= cigar.get_qr_offset(op_end)));
-                assert(not r2_rc or (cigar.get_qr_offset(op_end) <= rc2_cptr->get_r_start() and rc2_cptr->get_r_start() < cigar.get_qr_offset(op_end - 1)));
+                if (cigar.get_rf_sub_len(op_start, op_end) >= rc1_cptr->get_r_len())
+                {
+                    assert(cigar.get_rf_offset(op_end - 1) < rc1_cptr->get_r_end() and rc1_cptr->get_r_end() <= cigar.get_rf_offset(op_end));
+                }
+                if (cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len())
+                {
+                    assert(r2_rc or (cigar.get_qr_offset(op_end - 1) < rc2_cptr->get_r_end() and rc2_cptr->get_r_end() <= cigar.get_qr_offset(op_end)));
+                    assert(not r2_rc or (cigar.get_qr_offset(op_end) <= rc2_cptr->get_r_start() and rc2_cptr->get_r_start() < cigar.get_qr_offset(op_end - 1)));
+                }
 
                 // check if either chunk ended during the last cigar op
                 if (cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len()
@@ -424,18 +450,17 @@ namespace MAC
                     Size_Type r1_break_len = 0;
                     if (cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len())
                     {
-                        r1_break_len = cigar.get_rf_op_prefix_len(op_end, rc1_cptr->get_r_end());
+                        r1_break_len = cigar.get_rf_op_prefix_len(op_end - 1, rc1_cptr->get_r_end());
                     }
 
                     Size_Type r2_break_len = 0;
                     if (cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len())
                     {
-                        r2_break_len = cigar.get_qr_op_prefix_len(op_end, (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start()));
+                        r2_break_len = cigar.get_qr_op_prefix_len(op_end - 1, (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start()));
                     }
 
                     assert(r1_break_len > 0 or r2_break_len > 0);
-                    cigar.cut_op(op_end, (r1_break_len == 0? r2_break_len : (r2_break_len == 0? r1_break_len : min(r1_break_len, r2_break_len))));
-                    ++op_end;
+                    cigar.cut_op(op_end - 1, (r1_break_len == 0? r2_break_len : (r2_break_len == 0? r1_break_len : min(r1_break_len, r2_break_len))));
                 }
                 // now we are sure the op ends on at least one of the read chunk boundaries
                 assert(cigar.get_rf_sub_len(op_start, op_end) <= rc1_cptr->get_r_len()
@@ -534,23 +559,24 @@ namespace MAC
         }
     }
 
-    void Graph::check() const
+    bool Graph::check() const
     {
         size_t chunks_count_1 = 0;
         size_t chunks_count_2 = 0;
         // check read entry objects
         for (auto re_it = _re_cont.begin(); re_it != _re_cont.end(); ++re_it)
         {
-            re_it->check();
+            assert(re_it->check());
             chunks_count_1 += re_it->get_chunk_cont().size();
         }
         // check contig entry objects
         for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
         {
-            ce_it->check();
+            assert(ce_it->check());
             chunks_count_2 += ce_it->get_chunk_cptr_cont().size();
         }
         assert(chunks_count_1 == chunks_count_2);
+        return true;
     }
 
     ostream& operator << (ostream& os, const Graph& g)

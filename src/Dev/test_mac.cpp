@@ -21,6 +21,11 @@ int main(int argc, char* argv[])
     Graph g;
     assert(argc >= 2);
     ifstream ifs(argv[1]);
+    if (not ifs)
+    {
+        cerr << "error opening file: " << argv[1] << '\n';
+        return EXIT_FAILURE;
+    }
 
     string line;
     while (getline(ifs, line))

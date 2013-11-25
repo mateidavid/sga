@@ -97,7 +97,7 @@ namespace MAC
         bool is_terminal(bool check_start) const;
 
         /** Integrity check. */
-        void check() const;
+        bool check() const;
 
         friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);
 

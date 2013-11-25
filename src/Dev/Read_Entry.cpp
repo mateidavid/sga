@@ -50,7 +50,7 @@ namespace MAC
         return res;
     }
 
-    void Read_Entry::check() const
+    bool Read_Entry::check() const
     {
         // name is set
         assert(_name_ptr);
@@ -77,7 +77,21 @@ namespace MAC
             {
                 assert(rc_it->get_r_end() == rc_next_it->get_r_start());
             }
+            // contigs coordinates
+            assert(rc_it->get_c_start() <= rc_it->get_c_end());
+            assert(rc_it->get_c_start() <= rc_it->get_ce_ptr()->get_seq_offset() + rc_it->get_ce_ptr()->get_len());
+            assert(rc_it->get_c_end() <= rc_it->get_ce_ptr()->get_seq_offset() + rc_it->get_ce_ptr()->get_len());
+            // mapped length
+            Size_Type c_len = rc_it->get_c_end() - rc_it->get_c_start();
+            Size_Type r_len = rc_it->get_r_end() - rc_it->get_r_start();
+            long long delta = 0;
+            for (size_t i = 0; i < rc_it->get_mut_ptr_cont().size(); ++i)
+            {
+                delta += (long long)rc_it->get_mut_ptr_cont()[i]->get_seq_len() - (long long)rc_it->get_mut_ptr_cont()[i]->get_len();
+            }
+            assert((long long)c_len + delta == (long long)r_len);
         }
+        return true;
     }
 
     ostream& operator << (ostream& os, const Read_Entry& rhs)

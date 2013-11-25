@@ -62,7 +62,7 @@ namespace MAC
                          const std::string& cigar);
 
         /** Integrity check. */
-        void check() const;
+        bool check() const;
 
         friend std::ostream& operator << (std::ostream&, const Graph&);
 

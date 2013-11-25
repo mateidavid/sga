@@ -31,7 +31,7 @@ namespace MAC
         {
             Read_Chunk_Pos pos_next = pos;
             advance_pos(pos_next, not _rc);
-            Size_Type match_len = get_match_len_from_pos(pos);
+            Size_Type match_len = get_match_len_from_pos(pos, not _rc);
             if (match_len > 0)
             {
                 string tmp = _ce_ptr->substr((not _rc? pos.c_pos : pos_next.c_pos) - _ce_ptr->get_seq_offset(), match_len);
@@ -451,47 +451,51 @@ namespace MAC
     std::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::apply_contig_split(
         Size_Type c_brk, const map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr)
     {
-        Size_Type c_pos = c_brk;
-        Size_Type r_pos;
-        size_t i;
-        if (c_brk < get_c_start())
+        // compute read chunk position corresponding to a contig cut at c_brk
+        Read_Chunk_Pos pos;
+        if (get_c_end() < c_brk)
         {
-            r_pos = (not _rc? get_r_start() : get_r_end());
-            i = 0;
+            pos = get_end_pos();
         }
-        else if (get_c_end() < c_brk)
+        else // c_brk <= c_end
         {
-            r_pos = (not _rc? get_r_end() : get_r_start());
-            i = _mut_ptr_cont.size();
-        }
-        else
-        {
-            tie(c_pos, r_pos, i) = get_cut_data(c_brk, true);
-            assert(c_pos == c_brk);
-            // if there exists an insertion at c_brk that is not in the map, it will stay on the left side of the break
-            if (i < _mut_ptr_cont.size()
-                and _mut_ptr_cont[i]->get_start() == c_brk
-                and _mut_ptr_cont[i]->is_ins()
-                and mut_cptr_map.count(_mut_ptr_cont[i]) == 0)
+            pos = get_start_pos();
+            while (pos.c_pos < c_brk)
             {
-                r_pos = (not _rc? r_pos + _mut_ptr_cont[i]->get_seq_len() : r_pos - _mut_ptr_cont[i]->get_seq_len());
-                ++i;
+                increment_pos(pos, c_brk, true);
             }
-            assert(i == _mut_ptr_cont.size() or mut_cptr_map.count(_mut_ptr_cont[i]) > 0);
+            assert(pos.c_pos == c_brk);
+            // any mutations spanning the break must be cut prior to calling this method
+            assert(pos.mut_offset == 0);
+            // if there exists an insertion at c_brk that is not in the map, it will stay on the left side of the break
+            if (pos.mut_idx < _mut_ptr_cont.size()
+                and _mut_ptr_cont[pos.mut_idx]->get_start() == c_brk
+                and _mut_ptr_cont[pos.mut_idx]->is_ins()
+                and mut_cptr_map.count(_mut_ptr_cont[pos.mut_idx]) == 0)
+            {
+                increment_pos(pos);
+                assert(pos.c_pos == c_brk);
+            }
+            assert(pos.mut_idx == _mut_ptr_cont.size() or mut_cptr_map.count(_mut_ptr_cont[pos.mut_idx]) > 0);
         }
 
-        if (r_pos == get_r_start() or r_pos == get_r_end())
+        if (pos.r_pos == get_r_start() or pos.r_pos == get_r_end())
         {
             // the chunk stays in one piece, but ce_ptr & mutation pointers might change
+            // also, drop any deletion mapped to an empty read chunk
             bool move_to_rhs = false;
-            assert(i == 0 or i == _mut_ptr_cont.size());
-            if (c_brk <= _c_start)
+            //assert(pos.mut_idx == 0 or pos.mut_idx == _mut_ptr_cont.size());
+            if ((not _rc and pos.r_pos == get_r_start())
+                or (_rc and pos.r_pos == get_r_end()))
             {
+                assert((c_brk <= _c_start and pos.mut_idx == 0)
+                       or (_c_start < c_brk and pos.mut_idx == 1 and _mut_ptr_cont[0]->is_del()));
                 move_to_rhs = true;
-                // fix contig start coordinate
-                _c_start -= c_brk;
+                // fix contig coordinates
+                _c_start = (c_brk < _c_start? _c_start - c_brk : 0);
+                _c_len = (c_brk <= _c_start? _c_len : _c_len - (c_brk - _c_start));
                 // fix mutation pointers
-                vector< const Mutation* > tmp = _mut_ptr_cont;
+                vector< const Mutation* > tmp(_mut_ptr_cont.begin() + pos.mut_idx, _mut_ptr_cont.end()); // drop initial deletion, if any
                 _mut_ptr_cont.clear();
                 for (size_t j = 0; j < tmp.size(); ++j)
                 {
@@ -501,48 +505,60 @@ namespace MAC
                 // fix ce_ptr
                 _ce_ptr = ce_cptr;
             }
-            return make_tuple(move_to_rhs, shared_ptr< Read_Chunk >(NULL));
+            else
+            {
+                assert((not _rc and pos.r_pos == get_r_end())
+                       or (_rc and pos.r_pos == get_r_start()));
+                assert((get_c_end() <= c_brk and pos.mut_idx == _mut_ptr_cont.size())
+                       or (c_brk < get_c_end() and pos.mut_idx == _mut_ptr_cont.size() - 1 and _mut_ptr_cont[pos.mut_idx]->is_del()));
+                if (pos.mut_idx == _mut_ptr_cont.size() - 1)
+                {
+                    _mut_ptr_cont.resize(pos.mut_idx); // drop final deletion, if any
+                }
+            }
+            return std::make_tuple(move_to_rhs, shared_ptr< Read_Chunk >(NULL));
         }
         else
         {
             // read chunk gets split in 2
-            assert(get_r_start() < r_pos and r_pos < get_r_end());
+            assert(get_r_start() < pos.r_pos and pos.r_pos < get_r_end());
+            assert(get_c_start() <= pos.c_pos and pos.c_pos <= get_c_end());
 
             // create new read chunk for second part of the contig
-            Read_Chunk* rc_ptr = new Read_Chunk();
-            rc_ptr->_rc = _rc;
-            rc_ptr->_re_ptr = _re_ptr;
+            shared_ptr< Read_Chunk > rc_sptr(new Read_Chunk());
+            rc_sptr->_rc = _rc;
+            rc_sptr->_re_ptr = _re_ptr;
 
-            rc_ptr->_ce_ptr = ce_cptr;
-            rc_ptr->_c_start = 0;
-            rc_ptr->_c_len = _c_start + _c_len - c_brk;
-            _c_len -= rc_ptr->_c_len;
+            rc_sptr->_ce_ptr = ce_cptr;
+            rc_sptr->_c_start = 0;
+            rc_sptr->_c_len = _c_start + _c_len - c_brk;
+            _c_len -= rc_sptr->_c_len;
 
             if (not _rc)
             {
-                rc_ptr->_r_start = r_pos;
-                rc_ptr->_r_len = _r_start + _r_len - r_pos;
-                _r_len -= rc_ptr->_r_len;
+                rc_sptr->_r_start = pos.r_pos;
+                rc_sptr->_r_len = _r_start + _r_len - pos.r_pos;
+                _r_len -= rc_sptr->_r_len;
             }
             else
             {
-                rc_ptr->_r_start = _r_start;
-                rc_ptr->_r_len = r_pos - _r_start;
-                _r_start = r_pos;
-                _r_len -= rc_ptr->_r_len;
+                rc_sptr->_r_start = _r_start;
+                rc_sptr->_r_len = pos.r_pos - _r_start;
+                _r_start = pos.r_pos;
+                _r_len -= rc_sptr->_r_len;
             }
 
             // transfer mutations starting at i (to values under mapping) to read chunk for contig rhs
-            for (size_t j = i; j < _mut_ptr_cont.size(); ++j)
+            for (size_t j = pos.mut_idx; j < _mut_ptr_cont.size(); ++j)
             {
                 assert(mut_cptr_map.count(_mut_ptr_cont[j]) > 0);
-                rc_ptr->_mut_ptr_cont.push_back(mut_cptr_map.find(_mut_ptr_cont[j])->second);
+                rc_sptr->_mut_ptr_cont.push_back(mut_cptr_map.find(_mut_ptr_cont[j])->second);
             }
 
             // drop transfered mutations from this chunk
-            _mut_ptr_cont.resize(i);
+            _mut_ptr_cont.resize(pos.mut_idx);
 
-            return make_tuple(false, shared_ptr< Read_Chunk >(rc_ptr));
+            return std::make_tuple(false, rc_sptr);
         }
     }
 

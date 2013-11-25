@@ -56,14 +56,14 @@ namespace MAC
         Size_Type get_qr_op_len(size_t i) const
         { assert(i <= get_n_ops()); return (i < get_n_ops() and (is_match(i) or is_insertion(i))? _op_vect[i].len : 0); }
 
-        /** Get rf length of a sub-cigar. */
+        /** Get rf length spanned by cigar ops [start...end-1]. */
         Size_Type get_rf_sub_len(size_t start, size_t end) const
         {
             assert(start <= end and end <= get_n_ops());
             return get_rf_offset(end) - get_rf_offset(start);
         }
 
-        /** Get qr length of a sub-cigar. */
+        /** Get qr length spanned by cigar ops [start...end-1]. */
         Size_Type get_qr_sub_len(size_t start, size_t end) const
         {
             assert(start <= end and end <= get_n_ops());
