@@ -2,6 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.59)
 AC_INIT(sga, 0.10.10, js18@sanger.ac.uk)
+# move aux files to subdir
+AC_CONFIG_AUX_DIR([auxfiles])
 AM_INIT_AUTOMAKE(foreign)
 AC_CONFIG_SRCDIR([SGA/sga.cpp])
 AC_CONFIG_HEADER([config.h])
@@ -13,9 +15,10 @@ AC_PROG_CXX
 AC_PROG_CC
 #AC_PROG_RANLIB
 
+# don't build shared libs for now; must appear before AC_PROG_LIBTOOL to take effect
+AC_DISABLE_SHARED
 # check for libtool
 AC_PROG_LIBTOOL
-AC_DISABLE_SHARED
 
 # Check for headers
 AC_LANG([C++])

@@ -20,8 +20,8 @@ Makefile
 /configure.log
 /config.status
 /stamp-h1
-/config.guess
-/config.sub
+config.guess
+config.sub
 /libtool
 /*.kdev*
 *~
