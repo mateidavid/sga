@@ -1,0 +1,8 @@
+VT      000     CAAAT
+VT      001     CAAT
+VT      002     ATTG
+VT      003     AATGG
+ED      000 001 0 4 5 0 3 4 0 -1        CG:Z:3M1D1M PI:f:100
+ED      000 002 0 4 5 0 3 4 1 -1        CG:Z:1M1D3M PI:f:100
+ED      000 003 2 4 5 0 2 5 0 -1        CG:Z:3M PI:f:100
+ED      001 002 0 3 4 0 3 4 1 -1        CG:Z:4M PI:f:100
