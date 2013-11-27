@@ -41,19 +41,21 @@ namespace MAC
     {
         // first, create read entry and place it in container
         Read_Entry re(name_ptr, seq_ptr->size());
-        cerr << indent::tab << "re:\n" << indent::inc << re << indent::dec;
+        //cerr << indent::tab << "re:\n" << indent::inc << re << indent::dec;
         const Read_Entry* re_cptr = insert_read_entry(re);
 
         // create contig entry and place it in container
         Contig_Entry ce(seq_ptr);
-        cerr << indent::tab << "ce:\n" << indent::inc << ce << indent::dec;
+        //cerr << indent::tab << "ce:\n" << indent::inc << ce << indent::dec;
         ce.add_chunk(&(*re_cptr->get_chunk_cont().begin()));
-        cerr << indent::tab << "ce with chunk:\n" << indent::inc << ce << indent::dec;
+        //cerr << indent::tab << "ce with chunk:\n" << indent::inc << ce << indent::dec;
         const Contig_Entry* ce_cptr = insert_contig_entry(ce);
 
         // fix initial rc: assing it to contig entry
         modify_read_chunk(&(*re_cptr->get_chunk_cont().begin()),
                           [&] (Read_Chunk& rc) { rc.assign_to_contig(ce_cptr, 0, seq_ptr->size(), false, vector< const Mutation* >()); });
+
+        assert(check(set< const Read_Entry* >({ re_cptr })));
     }
 
     void Graph::cut_mutation(const Contig_Entry* ce_cptr, const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset)
@@ -83,7 +85,7 @@ namespace MAC
             return;
         }
 
-        cerr << "before cutting contig entry: " << (void*)ce_cptr << " at " << c_brk << " mut_left_cptr=" << (void*)mut_left_cptr << '\n' << *this;
+        //cerr << "before cutting contig entry: " << (void*)ce_cptr << " at " << c_brk << " mut_left_cptr=" << (void*)mut_left_cptr << '\n' << *this;
 
         // first, split any mutations that span c_pos
         vector< const Mutation* > v = ce_cptr->get_mutations_spanning_pos(c_brk);
@@ -150,8 +152,8 @@ namespace MAC
         modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
         modify_contig_entry(ce_new_cptr, [] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
 
-        cerr << "after cutting contig entry: " << (void*)ce_cptr << '\n' << *this;
-        assert(check());
+        //cerr << "after cutting contig entry: " << (void*)ce_cptr << '\n' << *this;
+        assert(check(set< const Contig_Entry* >({ ce_cptr, ce_new_cptr })));
     }
 
     void Graph::cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk)
@@ -288,7 +290,7 @@ namespace MAC
         if (c1_ce_cptr == c2_ce_cptr)
             return;
 
-        cerr << "before merging read chunks:\n" << *c1rc1_chunk_cptr << *c2rc2_chunk_cptr << rc1rc2_cigar << *this;
+        //cerr << "before merging read chunks:\n" << *c1rc1_chunk_cptr << *c2rc2_chunk_cptr << rc1rc2_cigar << *this;
 
         // step 1: contruct read chunk for the rc1->rc2 mapping
         shared_ptr< Read_Chunk > rc1rc2_chunk_sptr;
@@ -330,8 +332,8 @@ namespace MAC
         modify_contig_entry(c1_ce_cptr, [] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
         erase_contig_entry(c2_ce_cptr);
 
-        cerr << "after merging read chunks:\n" << *this;
-        assert(check());
+        //cerr << "after merging read chunks:\n" << *this;
+        assert(check(set< const Contig_Entry* >({ c1_ce_cptr })));
     }
 
     void Graph::add_overlap(const string& r1_name, const string& r2_name,
@@ -557,9 +559,10 @@ namespace MAC
         {
             merge_read_chunks(get<0>(rc_mapping[i]), get<1>(rc_mapping[i]), get<2>(rc_mapping[i]));
         }
+        assert(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
     }
 
-    bool Graph::check() const
+    bool Graph::check_all() const
     {
         size_t chunks_count_1 = 0;
         size_t chunks_count_2 = 0;
@@ -576,6 +579,62 @@ namespace MAC
             chunks_count_2 += ce_it->get_chunk_cptr_cont().size();
         }
         assert(chunks_count_1 == chunks_count_2);
+        return true;
+    }
+
+    bool Graph::check(const set< const Read_Entry* >& re_set, const set< const Contig_Entry* >& ce_set) const
+    {
+        // compute contig entries referenced by read entries
+        set< const Contig_Entry* > ce_extra_set;
+        for (auto re_cptr_it = re_set.begin(); re_cptr_it != re_set.end(); ++re_cptr_it)
+        {
+            const Read_Entry* re_cptr = *re_cptr_it;
+            for (auto rc_it = re_cptr->get_chunk_cont().begin(); rc_it != re_cptr->get_chunk_cont().end(); ++rc_it)
+            {
+                ce_extra_set.insert(rc_it->get_ce_ptr());
+            }
+        }
+
+        // compute read entries referenced by contig entries
+        set< const Read_Entry* > re_extra_set;
+        for (auto ce_cptr_it = ce_set.begin(); ce_cptr_it != ce_set.end(); ++ce_cptr_it)
+        {
+            const Contig_Entry* ce_cptr = *ce_cptr_it;
+            for (auto rc_cptr_it = ce_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
+            {
+                Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+                re_extra_set.insert(rc_cptr->get_re_ptr());
+            }
+        }
+
+        // check read entry objects
+        for (auto re_cptr_it = re_set.begin(); re_cptr_it != re_set.end(); ++re_cptr_it)
+        {
+            const Read_Entry* re_cptr = *re_cptr_it;
+            assert(re_cptr->check());
+        }
+        for (auto re_cptr_it = re_extra_set.begin(); re_cptr_it != re_extra_set.end(); ++re_cptr_it)
+        {
+            const Read_Entry* re_cptr = *re_cptr_it;
+            if (re_set.count(re_cptr) > 0)
+                continue;
+            assert(re_cptr->check());
+        }
+
+        // check contig entry objects
+        for (auto ce_cptr_it = ce_set.begin(); ce_cptr_it != ce_set.end(); ++ce_cptr_it)
+        {
+            const Contig_Entry* ce_cptr = *ce_cptr_it;
+            assert(ce_cptr->check());
+        }
+        for (auto ce_cptr_it = ce_extra_set.begin(); ce_cptr_it != ce_extra_set.end(); ++ce_cptr_it)
+        {
+            const Contig_Entry* ce_cptr = *ce_cptr_it;
+            if (ce_set.count(ce_cptr) > 0)
+                continue;
+            assert(ce_cptr->check());
+        }
+
         return true;
     }
 

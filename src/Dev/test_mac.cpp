@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
     string line;
     while (getline(ifs, line))
     {
-        cerr << line << '\n';
+        cout << line << '\n';
         istringstream iss(line + "\n");
         string rec_type;
         iss >> rec_type;
@@ -45,7 +45,6 @@ int main(int argc, char* argv[])
             iss >> *r_id_ptr >> *r_seq_ptr;
             assert(not iss.eof());
             g.add_read(r_id_ptr, r_seq_ptr);
-            g.check();
         }
         else if (rec_type == "ED")
         {
@@ -61,9 +60,8 @@ int main(int argc, char* argv[])
             ++r1_end;
             ++r2_end;
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
-            g.check();
         }
-        cerr << g;
+        //cerr << g;
     }
     cerr << "success\n";
 

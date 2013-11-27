@@ -61,8 +61,10 @@ namespace MAC
                          Size_Type r2_start, Size_Type r2_len, bool r2_rc,
                          const std::string& cigar);
 
-        /** Integrity check. */
-        bool check() const;
+        /** Integrity checks. */
+        bool check_all() const;
+        bool check(const std::set< const Read_Entry* >& re_set, const std::set< const Contig_Entry* >& ce_set = std::set< const Contig_Entry* >()) const;
+        bool check(const std::set< const Contig_Entry* >& ce_set) const { return check(std::set< const Read_Entry* >(), ce_set); }
 
         friend std::ostream& operator << (std::ostream&, const Graph&);
 
