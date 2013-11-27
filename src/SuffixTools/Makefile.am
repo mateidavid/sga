@@ -4,7 +4,8 @@ libsuffixtools_a_CPPFLAGS = \
 	-I$(top_srcdir)/Util \
 	-I$(top_srcdir)/Thirdparty \
 	-I$(top_srcdir)/Bigraph \
-	-I$(top_srcdir)/Concurrency
+	-I$(top_srcdir)/Concurrency \
+	$(SPARSEHASH_CPPFLAGS)
 
 libsuffixtools_a_SOURCES = STCommon.cpp STCommon.h \
                            STGlobals.h \

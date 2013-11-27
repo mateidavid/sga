@@ -10,7 +10,9 @@ sga_CPPFLAGS = \
 	-I$(top_srcdir)/SQG \
 	-I$(top_srcdir)/Scaffold \
 	-I$(top_srcdir)/GraphDiff \
-	-I$(top_srcdir)/Thirdparty
+	-I$(top_srcdir)/Thirdparty \
+	$(SPARSEHASH_CPPFLAGS) \
+	$(BAMTOOLS_CPPFLAGS)
 
 sga_LDADD = \
 	$(top_builddir)/Scaffold/libscaffold.a \
@@ -22,9 +24,14 @@ sga_LDADD = \
 	$(top_builddir)/Bigraph/libbigraph.a \
 	$(top_builddir)/Util/libutil.a \
 	$(top_builddir)/SQG/libsqg.a \
-	$(top_builddir)/Thirdparty/libthirdparty.a
+	$(top_builddir)/Thirdparty/libthirdparty.a \
+	$(BAMTOOLS_LIBS)
 
-sga_LDFLAGS = -pthread
+# Note:
+# This package defines default AM_C(XX)FLAGS and AM_LDFLAGS in configure.ac.
+# Setting target-specific C(XX)FLAGS or LDFLAGS disables the use of the corresponding default.
+# Here, we override the default to enable pthread for sga only.
+sga_LDFLAGS = $(AM_LDFLAGS) $(BAMTOOLS_LDFLAGS) -pthread
 
 sga_SOURCES = sga.cpp \
               index.cpp index.h \

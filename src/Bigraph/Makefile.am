@@ -3,7 +3,8 @@ noinst_LIBRARIES = libbigraph.a
 libbigraph_a_CPPFLAGS = \
 	-I$(top_srcdir)/Util \
 	-I$(top_srcdir)/Thirdparty \
-	-I$(top_srcdir)/SQG
+	-I$(top_srcdir)/SQG \
+	$(SPARSEHASH_CPPFLAGS)
 
 libbigraph_a_SOURCES = \
                        Bigraph.h Bigraph.cpp \

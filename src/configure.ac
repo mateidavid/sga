@@ -29,7 +29,9 @@ AC_SEARCH_LIBS([gzopen],[z],,[AC_MSG_ERROR([libz not found, please install zlib 
 AC_SEARCH_LIBS([clock_gettime], [rt], [AC_DEFINE([HAVE_CLOCK_GETTIME], [1], [clock_getttime found])], )
 
 # Check for openmp
-AX_OPENMP([openmp_cppflags="-fopenmp" AC_DEFINE(HAVE_OPENMP,1,[Define if OpenMP is enabled])])
+#AX_OPENMP([openmp_cppflags="-fopenmp" AC_DEFINE(HAVE_OPENMP,1,[Define if OpenMP is enabled])])
+AX_OPENMP([AC_DEFINE(HAVE_OPENMP, 1, [OpenMP is enabled])])
+AC_SUBST(OPENMP_CXXFLAGS)
 
 # Check for the bamtools library path
 # Bamtools has two different path formats
@@ -40,8 +42,11 @@ AC_ARG_WITH(bamtools, AS_HELP_STRING([--with-bamtools=PATH],
 	[specify directory containing the bamtools library (http://github.com/pezmaster31/bamtools)]))
 
 if test "$with_bamtools" -a -d "$with_bamtools"; then
-    bamtools_ldflags="-Wl,-rpath,$with_bamtools/lib -L$with_bamtools/lib -Wl,-rpath,$with_bamtools/lib/bamtools -L$with_bamtools/lib/bamtools"
-    bamtools_include="-I$with_bamtools/include -I$with_bamtools/include/bamtools"
+    #bamtools_ldflags="-Wl,-rpath,$with_bamtools/lib -L$with_bamtools/lib -Wl,-rpath,$with_bamtools/lib/bamtools -L$with_bamtools/lib/bamtools"
+    #bamtools_include="-I$with_bamtools/include -I$with_bamtools/include/bamtools"
+    AC_SUBST(BAMTOOLS_CPPFLAGS, ["-I$with_bamtools/include -I$with_bamtools/include/bamtools]")
+    AC_SUBST(BAMTOOLS_LDFLAGS, ["-Wl,-rpath,$with_bamtools/lib -L$with_bamtools/lib -Wl,-rpath,$with_bamtools/lib/bamtools -L$with_bamtools/lib/bamtools"])
+    AC_SUBST(BAMTOOLS_LIBS, ["-lbamtools"])
 fi
 
 # Support for tcmalloc/jemalloc/hoard
@@ -60,17 +65,20 @@ AC_ARG_WITH(hoard, AS_HELP_STRING([--with-hoard=PATH],
 
 # Set library path to user-selected allocator
 if test "$with_hoard" -a -d "$with_hoard"; then
-	external_malloc_ldflags="-Wl,-rpath,$with_hoard -L$with_hoard"
+#	external_malloc_ldflags="-Wl,-rpath,$with_hoard -L$with_hoard"
+    AC_SUBST(EXTERNAL_MALLOC_LDFLAGS, ["-Wl,-rpath,$with_hoard -L$with_hoard"])
     enable_hoard=1
 fi
 
 if test "$with_tcmalloc" -a -d "$with_tcmalloc"; then
-	external_malloc_ldflags="-Wl,-rpath,$with_tcmalloc -L$with_tcmalloc"
+#	external_malloc_ldflags="-Wl,-rpath,$with_tcmalloc -L$with_tcmalloc"
+    AC_SUBST(EXTERNAL_MALLOC_LDFLAGS, ["-Wl,-rpath,$with_tcmalloc -L$with_tcmalloc"])
     enable_tcmalloc=1
 fi
 
 if test "$with_jemalloc" -a -d "$with_jemalloc"; then
-	external_malloc_ldflags="-Wl,-rpath,$with_jemalloc -L$with_jemalloc"
+#	external_malloc_ldflags="-Wl,-rpath,$with_jemalloc -L$with_jemalloc"
+    AC_SUBST(EXTERNAL_MALLOC_LDFLAGS, ["-Wl,-rpath,$with_jemalloc -L$with_jemalloc"])
     enable_jemalloc=1
 fi
 
@@ -79,7 +87,8 @@ AC_ARG_WITH(sparsehash, AS_HELP_STRING([--with-sparsehash=PATH],
 	[specify directory containing the google sparsehash headers http://code.google.com/p/google-sparsehash/)]))
 
 if test "$with_sparsehash" -a -d "$with_sparsehash"; then
-    sparsehash_include="-I$with_sparsehash/include"
+#    sparsehash_include="-I$with_sparsehash/include"
+    AC_SUBST(SPARSEHASH_CPPFLAGS, ["-I$with_sparsehash/include"])
 fi
 
 # Warn that multithreading is not available on macosx, since it does not implement unnamed semaphores
@@ -91,19 +100,67 @@ else
   AC_MSG_RESULT(you are not using osx so multi-threading should work.);
 fi
 
-# check for boost libs
+# Check for boost libs.
 BOOST_REQUIRE([1.46])
-BOOST_IOSTREAMS
+
+# The BOOST_IOSTREAMS macro is broken: it wrongfully picks up the first version
+# it finds, even if it is an old version from a standard location, and the user
+# specifically requested a new one.
+#
+# If boost path is specifed (either as BOOST_ROOT or --with-boost), we define
+# BOOST_IOSTREAMS_LDFLAGS to include that path, and check that the
+# boost_iostreams library can indeed be found at that specific location.
+AC_SUBST(BOOST_IOSTREAMS_LIBS, ["-lboost_iostreams"])
+if test "$with_boost"; then
+    AC_SUBST(BOOST_IOSTREAMS_LDFLAGS, ["-L$with_boost/lib -Wl,--rpath -Wl,$with_boost/lib"])
+    boost_iostreams_libs_test="$with_boost/lib/libboost_iostreams.so"
+else
+    boost_iostreams_libs_test="-lboost_iostreams"
+fi
+# now check we can compile a simple program
+AC_MSG_CHECKING([for boost_iostreams lib])
+cat >conftest.$ac_ext <<_ACEOF
+#include <boost/iostreams/device/file_descriptor.hpp>
+int main ()
+{
+    boost::iostreams::file_descriptor fd;
+    fd.close();
+    return 0;
+}
+_ACEOF
+save_CPPFLAGS=$CPPFLAGS
+save_LDFLAGS=$LDFLAGS
+save_LIBS=$LIBS
+CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
+LDFLAGS="$LDFLAGS $BOOST_IOSTREAMS_LDFLAGS"
+LIBS="$LIBS $boost_iostreams_libs_test"
+if ac_fn_cxx_try_link "$LINENO"; then
+   AC_MSG_RESULT([$boost_iostreams_libs_test])
+else
+   AC_MSG_ERROR([boost_iostreams not found])
+fi
+CPPFLAGS=$save_CPPFLAGS
+LDFLAGS=$save_LDFLAGS
+LIBS=$save_LIBS
+rm -f conftest.$ac_ext
 
 # Set compiler flags.
-AC_SUBST(AM_CXXFLAGS, "-Wall -Wextra -Werror -Wno-unknown-pragmas")
-AC_SUBST(CXXFLAGS, "-O3")
-AC_SUBST(CFLAGS, "-O3")
-AC_SUBST(CPPFLAGS, "$CPPFLAGS $openmp_cppflags $sparsehash_include $bamtools_include")
-AC_SUBST(LDFLAGS, "$openmp_cppflags $external_malloc_ldflags $bamtools_ldflags $LDFLAGS")
+AC_SUBST(AM_CFLAGS, ["-Wall -Wextra -Werror -Wno-unknown-pragmas $OPENMP_CXXFLAGS"])
+AC_SUBST(AM_CXXFLAGS, ["-Wall -Wextra -Werror -Wno-unknown-pragmas $OPENMP_CXXFLAGS"])
+AC_SUBST(AM_LDFLAGS, ["$EXTERNAL_MALLOC_LDFLAGS"])
+#AC_SUBST(CXXFLAGS, "-O3")
+#AC_SUBST(CFLAGS, "-O3")
+#AC_SUBST(CPPFLAGS, "$openmp_cppflags $sparsehash_include $bamtools_include")
+#AC_SUBST(LDFLAGS, "$openmp_cppflags $external_malloc_ldflags $bamtools_ldflags")
 
 # We always need to specify to link in bamtools
-AC_SUBST(LIBS, "$LIBS -lbamtools")
+#AC_SUBST(LIBS, "$LIBS -lbamtools")
+
+# to run tests, we need to add things to CPPFLAGS and LDFLAGS
+ORIG_CPPFLAGS=$CPPFLAGS
+CPPFLAGS="$CPPFLAGS $BAMTOOLS_CPPFLAGS $SPARSEHASH_CPPFLAGS"
+ORIG_LDFLAGS=$LDFLAGS
+LDFLAGS="$AM_LDFLAGS $LDFLAGS $BAMTOOLS_LDFLAGS"
 
 #
 if test "$enable_hoard"; then
@@ -131,6 +188,10 @@ AC_CHECK_HEADERS([ \
 
 # Make sure the bamtools headers can be found
 AC_CHECK_HEADERS([api/BamReader.h],,[AC_MSG_ERROR([The bamtools library must be installed (http://github.com/pezmaster31/bamtools). You can specify its path with the --with-bamtools=PATH option])])
+
+# restore CPPFLAGS and LDFLAGS
+CPPFLAGS=$ORIG_CPPFLAGS
+LDFLAGS=$ORIG_LDFLAGS
 
 AC_CONFIG_FILES([Makefile
         bin/Makefile

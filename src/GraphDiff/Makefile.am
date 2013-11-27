@@ -8,7 +8,9 @@ libgraphdiff_a_CPPFLAGS = \
 	-I$(top_srcdir)/SuffixTools \
 	-I$(top_srcdir)/Thirdparty \
 	-I$(top_srcdir)/Algorithm \
-    -I$(top_srcdir)/Concurrency
+    -I$(top_srcdir)/Concurrency \
+	$(SPARSEHASH_CPPFLAGS) \
+	$(BAMTOOLS_CPPFLAGS)
 
 libgraphdiff_a_SOURCES = \
         DindelUtil.h DindelUtil.cpp \

@@ -8,7 +8,8 @@ libalgorithm_a_CPPFLAGS = \
 	-I$(top_srcdir)/SuffixTools \
 	-I$(top_srcdir)/Thirdparty \
 	-I$(top_srcdir)/GraphDiff \
-    -I$(top_srcdir)/Concurrency
+	-I$(top_srcdir)/Concurrency \
+	$(SPARSEHASH_CPPFLAGS)
 
 libalgorithm_a_SOURCES = \
         OverlapAlgorithm.h OverlapAlgorithm.cpp \

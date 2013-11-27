@@ -23,3 +23,10 @@ libthirdparty_a_SOURCES = \
         rapidjson/internal/pow10.h \
         rapidjson/internal/stack.h \
         rapidjson/internal/strfunc.h
+
+# Note:
+# This package defines default AM_C(XX)FLAGS and AM_LDFLAGS in configure.ac.
+# Setting target-specific C(XX)FLAGS or LDFLAGS disables the use of the corresponding default.
+# Here, we override the default to disable -Werror for third-party libraries only.
+libthirdparty_a_CFLAGS = $(AM_CFLAGS) -Wno-error
+libthirdparty_a_CXXFLAGS = $(AM_CXXFLAGS) -Wno-error
