@@ -702,6 +702,7 @@ namespace MAC
                                             const Mutation_Trans_Cont& mut_map,
                                             shared_ptr< Mutation_Cont > new_mut_cont_sptr) const
     {
+        (void)new_mut_cont_sptr;
         shared_ptr< vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > > res(
             new vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > >());
 
