@@ -144,23 +144,11 @@ LDFLAGS=$save_LDFLAGS
 LIBS=$save_LIBS
 rm -f conftest.$ac_ext
 
-# Set compiler flags.
-AC_SUBST(AM_CFLAGS, ["-Wall -Wextra -Werror -Wno-unknown-pragmas $OPENMP_CXXFLAGS"])
-AC_SUBST(AM_CXXFLAGS, ["-Wall -Wextra -Werror -Wno-unknown-pragmas $OPENMP_CXXFLAGS"])
-AC_SUBST(AM_LDFLAGS, ["$EXTERNAL_MALLOC_LDFLAGS"])
-#AC_SUBST(CXXFLAGS, "-O3")
-#AC_SUBST(CFLAGS, "-O3")
-#AC_SUBST(CPPFLAGS, "$openmp_cppflags $sparsehash_include $bamtools_include")
-#AC_SUBST(LDFLAGS, "$openmp_cppflags $external_malloc_ldflags $bamtools_ldflags")
-
-# We always need to specify to link in bamtools
-#AC_SUBST(LIBS, "$LIBS -lbamtools")
-
-# to run tests, we need to add things to CPPFLAGS and LDFLAGS
-ORIG_CPPFLAGS=$CPPFLAGS
+# To run tests, we need to add things to CPPFLAGS and LDFLAGS; first we save their original values.
+save_CPPFLAGS=$CPPFLAGS
 CPPFLAGS="$CPPFLAGS $BAMTOOLS_CPPFLAGS $SPARSEHASH_CPPFLAGS"
-ORIG_LDFLAGS=$LDFLAGS
-LDFLAGS="$AM_LDFLAGS $LDFLAGS $BAMTOOLS_LDFLAGS"
+save_LDFLAGS=$LDFLAGS
+LDFLAGS="$LDFLAGS $EXTERNAL_MALLOC_LDFLAGS $BAMTOOLS_LDFLAGS"
 
 #
 if test "$enable_hoard"; then
@@ -190,22 +178,38 @@ AC_CHECK_HEADERS([ \
 AC_CHECK_HEADERS([api/BamReader.h],,[AC_MSG_ERROR([The bamtools library must be installed (http://github.com/pezmaster31/bamtools). You can specify its path with the --with-bamtools=PATH option])])
 
 # restore CPPFLAGS and LDFLAGS
-CPPFLAGS=$ORIG_CPPFLAGS
-LDFLAGS=$ORIG_LDFLAGS
+CPPFLAGS=$save_CPPFLAGS
+LDFLAGS=$save_LDFLAGS
+
+# Set compiler flags.
+AC_SUBST(AM_CFLAGS, ["-Wall -Wextra -Werror -Wno-unknown-pragmas $OPENMP_CXXFLAGS"])
+AC_SUBST(AM_CXXFLAGS, ["-Wall -Wextra -Werror -Wno-unknown-pragmas $OPENMP_CXXFLAGS"])
+AC_SUBST(AM_LDFLAGS, ["$EXTERNAL_MALLOC_LDFLAGS"])
+AC_SUBST(AM_CPPFLAGS, ['$(BOOST_CPPFLAGS) $(SPARSEHASH_CPPFLAGS) $(BAMTOOLS_CPPFLAGS) \
+    -I$(top_srcdir)/Thirdparty \
+    -I$(top_srcdir)/Util \
+    -I$(top_srcdir)/SQG \
+    -I$(top_srcdir)/Bigraph \
+    -I$(top_srcdir)/Algorithm \
+    -I$(top_srcdir)/StringGraph \
+    -I$(top_srcdir)/Concurrency \
+    -I$(top_srcdir)/SuffixTools \
+    -I$(top_srcdir)/Scaffold \
+    -I$(top_srcdir)/GraphDiff'])
 
 AC_CONFIG_FILES([Makefile
-        bin/Makefile
-		Thirdparty/Makefile
-		Util/Makefile
-		SQG/Makefile
-		Bigraph/Makefile
-		Algorithm/Makefile
-		StringGraph/Makefile
-		Concurrency/Makefile
-		SuffixTools/Makefile
-        GraphDiff/Makefile
-        Scaffold/Makefile
-		SGA/Makefile
-		Dev/Makefile])
+    bin/Makefile
+    Thirdparty/Makefile
+    Util/Makefile
+    SQG/Makefile
+    Bigraph/Makefile
+    Algorithm/Makefile
+    StringGraph/Makefile
+    Concurrency/Makefile
+    SuffixTools/Makefile
+    GraphDiff/Makefile
+    Scaffold/Makefile
+    SGA/Makefile
+    Dev/Makefile])
 
 AC_OUTPUT

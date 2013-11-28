@@ -3,19 +3,6 @@
 # Setting target-specific C(XX)FLAGS or LDFLAGS disables the use of the corresponding default.
 AM_CXXFLAGS += -std=c++0x
 
-AM_CPPFLAGS = \
-	$(BOOST_CPPFLAGS) \
-        -I$(top_srcdir)/Util \
-        -I$(top_srcdir)/Bigraph \
-        -I$(top_srcdir)/SuffixTools \
-        -I$(top_srcdir)/StringGraph \
-        -I$(top_srcdir)/Concurrency \
-        -I$(top_srcdir)/Algorithm \
-        -I$(top_srcdir)/SQG \
-        -I$(top_srcdir)/Scaffold \
-        -I$(top_srcdir)/GraphDiff \
-        -I$(top_srcdir)/Thirdparty
-
 noinst_PROGRAMS = bloom-filter-tool test test_mac test_read_chunk_traversal
 noinst_LTLIBRARIES = libmac.la libdev.la
 
@@ -27,8 +14,6 @@ bloom_filter_tool_LDADD = \
         $(BOOST_IOSTREAMS_LIBS)
 
 bloom_filter_tool_SOURCES = bloom-filter-tool.cpp
-
-test_CPPFLAGS = $(AM_CPPFLAGS) $(SPARSEHASH_CPPFLAGS)
 
 test_LDADD = \
         $(top_builddir)/Scaffold/libscaffold.a \
