@@ -610,6 +610,7 @@ namespace MAC
             Mutation_Trans_Cont::iterator it;
             tie(it, success) = mut_trans_cont_sptr->insert(trans);
             assert(success);
+            pos = pos_next;
         }
 
         // save mutation pointers in the Read_Chunk object

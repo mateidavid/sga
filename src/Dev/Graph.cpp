@@ -438,7 +438,7 @@ namespace MAC
                 {
                     assert(cigar.get_rf_offset(op_end - 1) < rc1_cptr->get_r_end() and rc1_cptr->get_r_end() <= cigar.get_rf_offset(op_end));
                 }
-                if (cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len())
+                if (cigar.get_qr_sub_len(op_start, op_end) >= rc2_cptr->get_r_len())
                 {
                     assert(r2_rc or (cigar.get_qr_offset(op_end - 1) < rc2_cptr->get_r_end() and rc2_cptr->get_r_end() <= cigar.get_qr_offset(op_end)));
                     assert(not r2_rc or (cigar.get_qr_offset(op_end) <= rc2_cptr->get_r_start() and rc2_cptr->get_r_start() < cigar.get_qr_offset(op_end - 1)));
