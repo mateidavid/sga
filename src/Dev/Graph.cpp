@@ -283,6 +283,7 @@ namespace MAC
 
     void Graph::merge_read_chunks(Read_Chunk_CPtr c1rc1_chunk_cptr, Read_Chunk_CPtr c2rc2_chunk_cptr, Cigar& rc1rc2_cigar)
     {
+        assert(rc1rc2_cigar.check(c1rc1_chunk_cptr->get_seq(), c2rc2_chunk_cptr->get_seq()));
         // do not do anything if the chunks are already mapped to the same contig
         // NOTE: with this, we are ignoring alternate mappings
         const Contig_Entry* c1_ce_cptr = c1rc1_chunk_cptr->get_ce_ptr();
