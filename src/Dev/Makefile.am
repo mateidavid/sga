@@ -42,9 +42,11 @@ libmac_la_SOURCES = \
 
 test_mac_SOURCES = test_mac.cpp
 
+test_mac_LDFLAGS = $(AM_LDFLAGS) $(BOOST_IOSTREAMS_LDFLAGS)
 test_mac_LDADD = libmac.la \
         $(top_builddir)/Util/libutil.a \
-        $(top_builddir)/Thirdparty/libthirdparty.a
+        $(top_builddir)/Thirdparty/libthirdparty.a \
+	$(BOOST_IOSTREAMS_LIBS)
 
 test_read_chunk_traversal_SOURCES = test_read_chunk_traversal.cpp
 

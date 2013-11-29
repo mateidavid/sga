@@ -6,6 +6,7 @@
 
 #include "Graph.hpp"
 #include "indent.hpp"
+#include "ixstream.hpp"
 
 using namespace std;
 using namespace MAC;
@@ -20,15 +21,16 @@ int main(int argc, char* argv[])
 {
     Graph g;
     assert(argc >= 2);
-    ifstream ifs(argv[1]);
-    if (not ifs)
+    ixstream ixs(argv[1]);
+    if (not ixs)
     {
         cerr << "error opening file: " << argv[1] << '\n';
         return EXIT_FAILURE;
     }
 
     string line;
-    while (getline(ifs, line))
+    size_t line_count = 0;
+    while (getline(ixs, line))
     {
         cout << line << '\n';
         istringstream iss(line + "\n");
@@ -62,7 +64,10 @@ int main(int argc, char* argv[])
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
         }
         //cerr << g;
+        if ((++line_count % 10000) == 0)
+            cerr << line_count << '\n';
     }
+    cout << g;
     cerr << "success\n";
 
     return EXIT_SUCCESS;
