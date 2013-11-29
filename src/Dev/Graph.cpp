@@ -337,6 +337,176 @@ namespace MAC
         assert(check(set< const Contig_Entry* >({ c1_ce_cptr })));
     }
 
+    shared_ptr< vector< std::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > > Graph::chunker(
+        const Read_Entry* re1_cptr, const Read_Entry* re2_cptr, Cigar& cigar)
+    {
+        shared_ptr< vector< std::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > >
+            rc_mapping_sptr(new vector< std::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > >());
+
+        Size_Type r1_start = cigar.get_rf_start();
+        Size_Type r1_len = cigar.get_rf_len();
+        Size_Type r2_start = cigar.get_qr_start();
+        Size_Type r2_len = cigar.get_qr_len();
+        bool r2_rc = cigar.is_reversed();
+        // we repeatedly cut the read entries of either read
+        // until their chunks match in the way described by the cigar string
+        // keep track of read chunk mapping, and cigar transformation between them
+        bool done;
+        while (true)
+        {
+            done = true;
+            rc_mapping_sptr->clear();
+
+            // current positions
+            Size_Type r1_pos = r1_start;
+            Size_Type r2_pos = (not r2_rc? r2_start : r2_start + r2_len);
+            size_t op_start = 0;
+            while (op_start < cigar.get_n_ops())
+            {
+                assert(r1_start < re1_cptr->get_len());
+                Read_Chunk_CPtr rc1_cptr = re1_cptr->get_chunk_with_pos(r1_pos);
+                assert(not r2_rc or r2_pos > 0);
+                Read_Chunk_CPtr rc2_cptr = (not r2_rc? re2_cptr->get_chunk_with_pos(r2_pos) : re2_cptr->get_chunk_with_pos(r2_pos - 1));
+
+                // invariant: we matched read 1 chunks before rc1
+                // to read 2 chunks before/after rc2
+                // using cigar ops before op_start
+                assert(r1_pos < r1_start + r1_len);
+                assert(r2_rc or r2_pos < r2_start + r2_len);
+                assert(not r2_rc or r2_pos > r2_start);
+
+                assert(rc1_cptr != NULL);
+                assert(rc1_cptr->get_r_start() == r1_pos);
+                assert(rc1_cptr->get_r_len() > 0);
+                assert(rc2_cptr != NULL);
+                assert(r2_rc or rc2_cptr->get_r_start() == r2_pos);
+                assert(not r2_rc or rc2_cptr->get_r_end() == r2_pos);
+                assert(rc2_cptr->get_r_len() > 0);
+
+                assert(r1_pos == cigar.get_rf_offset(op_start));
+                assert(r2_pos == cigar.get_qr_offset(op_start));
+
+                // advance past cigar ops until either chunk ends
+                size_t op_end = op_start + 1;
+                while (op_end < cigar.get_n_ops()
+                       and (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len()
+                            or (cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len() and cigar.is_insertion(op_end)))
+                       and (cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len()
+                            or (cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len() and cigar.is_insertion(op_end))))
+                {
+                    ++op_end;
+                }
+                // stop conditions: can be derived by inspecting loop
+                assert(op_end == cigar.get_n_ops()
+                       or (cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
+                           and cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len())
+                       or cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len()
+                       or cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len()
+                       or (cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
+                           and cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len()
+                           and not cigar.is_insertion(op_end))
+                       or (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len()
+                           and cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len()
+                           and not cigar.is_deletion(op_end)));
+                if (cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len())
+                {
+                    // the first inequality trivially holds with <=
+                    // but it can be shown it holds in fact with <
+                    assert(cigar.get_rf_offset(op_end - 1) < rc1_cptr->get_r_end() and rc1_cptr->get_r_end() < cigar.get_rf_offset(op_end));
+                }
+                if (cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len())
+                {
+                    // as with rf, the inequalities involving op_end-1 tivially hold with <=
+                    // but it can be shown they hold with <
+                    assert(r2_rc or (cigar.get_qr_offset(op_end - 1) < rc2_cptr->get_r_end() and rc2_cptr->get_r_end() < cigar.get_qr_offset(op_end)));
+                    assert(not r2_rc or (cigar.get_qr_offset(op_end) < rc2_cptr->get_r_start() and rc2_cptr->get_r_start() < cigar.get_qr_offset(op_end - 1)));
+                }
+
+                // check if either chunk ended during the last cigar op
+                if (cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len()
+                    or cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len())
+                {
+                    // find out which of the 2 ended earlier, cut the cigar op at that position
+                    Size_Type r1_break_len = 0;
+                    if (cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len() and not cigar.is_insertion(op_end - 1))
+                    {
+                        r1_break_len = cigar.get_rf_op_prefix_len(op_end - 1, rc1_cptr->get_r_end());
+                        assert(0 < r1_break_len and r1_break_len < cigar.get_rf_op_len(op_end - 1));
+                    }
+
+                    Size_Type r2_break_len = 0;
+                    if (cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len() and not cigar.is_deletion(op_end -1))
+                    {
+                        r2_break_len = cigar.get_qr_op_prefix_len(op_end - 1, (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start()));
+                        assert(0 < r2_break_len and r2_break_len < cigar.get_qr_op_len(op_end - 1));
+                    }
+
+                    assert(r1_break_len > 0 or r2_break_len > 0);
+                    cigar.cut_op(op_end - 1, (r1_break_len == 0? r2_break_len : (r2_break_len == 0? r1_break_len : min(r1_break_len, r2_break_len))));
+                }
+                // now we are sure the op ends on at least one of the read chunk boundaries
+                assert(cigar.get_rf_sub_len(op_start, op_end) <= rc1_cptr->get_r_len()
+                       and cigar.get_qr_sub_len(op_start, op_end) <= rc2_cptr->get_r_len());
+                assert(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
+                       or cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len());
+                // if it doesn't end on both, we might need to cut the other
+                if (cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len())
+                {
+                    // it follows from main stop condition that the next op is not an insertion
+                    assert(op_end < cigar.get_n_ops() and not cigar.is_insertion(op_end));
+                    if (cigar.get_qr_sub_len(op_start, op_end) == 0)
+                    {
+                        // no progress on rc2: rc1 is mapped entirely to a deletion
+                        // move on to next chunk on read 1
+                        assert(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
+                               and cigar.get_rf_sub_len(op_start, op_end) > 0);
+                        r1_pos = rc1_cptr->get_r_end();
+                        op_start = op_end;
+                        continue;
+                    }
+                    else
+                    {
+                        cut_read_entry(re2_cptr, cigar.get_qr_offset(op_end), false);
+                        done = false;
+                        break;
+                    }
+                }
+                if (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len())
+                {
+                    // it follows from main stop condition that the next op is not a deletion
+                    assert(op_end < cigar.get_n_ops() and not cigar.is_deletion(op_end));
+                    if (cigar.get_rf_sub_len(op_start, op_end) == 0)
+                    {
+                        // no progress on rc1: rc2 mapped entirely to an insertion
+                        // move on to next chunk on read 2
+                        assert(cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len()
+                               and cigar.get_qr_sub_len(op_start, op_end) > 0);
+                        r2_pos = (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start());
+                        op_start = op_end;
+                        continue;
+                    }
+                    else
+                    {
+                        cut_read_entry(re1_cptr, cigar.get_rf_offset(op_end), false);
+                        done = false;
+                        break;
+                    }
+                }
+                // reached when both rc1 and rc2 end at the current cigar op
+                assert(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
+                       and cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len());
+                // add read chunk mapping
+                rc_mapping_sptr->push_back(std::make_tuple(rc1_cptr, rc2_cptr, cigar.substring(op_start, op_end)));
+                // advance both chunks and cigar
+                r1_pos = rc1_cptr->get_r_end();
+                r2_pos = (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start());
+                op_start = op_end;
+            }
+            if (done) break;
+        }
+        return rc_mapping_sptr;
+    }
+
     void Graph::add_overlap(const string& r1_name, const string& r2_name,
                             Size_Type r1_start, Size_Type r1_len,
                             Size_Type r2_start, Size_Type r2_len, bool r2_rc,
@@ -389,177 +559,17 @@ namespace MAC
         cut_read_entry(re2_cptr, r2_start, true);
         cut_read_entry(re2_cptr, r2_start + r2_len, true);
 
-        // initially, we repeatedly cut the read entries of either read
-        // until their chunks match in the way described by the cigar string
-        // keep track of read chunk mapping, and cigar transformation between them
-        vector< tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > rc_mapping;
-        bool done;
-        while (true)
-        {
-            done = true;
-            rc_mapping.clear();
+        shared_ptr< vector< std::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > >
+            rc_mapping_sptr = chunker(re1_cptr, re2_cptr, cigar);
 
-            // current positions
-            Size_Type r1_pos = r1_start;
-            Size_Type r2_pos = (not r2_rc? r2_start : r2_start + r2_len);
-            size_t op_start = 0;
-            while (op_start < cigar.get_n_ops())
-            {
-                assert(r1_start < re1_cptr->get_len());
-                Read_Chunk_CPtr rc1_cptr = re1_cptr->get_chunk_with_pos(r1_pos);
-                assert(not r2_rc or r2_pos > 0);
-                Read_Chunk_CPtr rc2_cptr = (not r2_rc? re2_cptr->get_chunk_with_pos(r2_pos) : re2_cptr->get_chunk_with_pos(r2_pos - 1));
-
-                // invariant: we matched read 1 chunks before rc1
-                // to read 2 chunks before/after rc2
-                // using cigar ops before op_start
-                assert(r1_pos < r1_start + r1_len);
-                assert(r2_rc or r2_pos < r2_start + r2_len);
-                assert(not r2_rc or r2_pos > r2_start);
-
-                assert(rc1_cptr != NULL);
-                assert(rc1_cptr->get_r_start() == r1_pos);
-                assert(rc1_cptr->get_r_len() > 0);
-                assert(rc2_cptr != NULL);
-                assert(r2_rc or rc2_cptr->get_r_start() == r2_pos);
-                assert(not r2_rc or rc2_cptr->get_r_end() == r2_pos);
-                assert(rc2_cptr->get_r_len() > 0);
-
-                assert(r1_pos == cigar.get_rf_offset(op_start));
-                assert(r2_pos == cigar.get_qr_offset(op_start));
-
-                // advance past cigar ops until either chunk ends
-                size_t op_end = op_start + 1;
-                while (op_end < cigar.get_n_ops()
-                       and cigar.get_rf_sub_len(op_start, op_end) <= rc1_cptr->get_r_len()
-                       and cigar.get_qr_sub_len(op_start, op_end) <= rc2_cptr->get_r_len()
-                       and (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len()
-                            or cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len()))
-                {
-                    ++op_end;
-                }
-                if (cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len())
-                {
-                    assert(cigar.get_rf_offset(op_end - 1) <= rc1_cptr->get_r_end() and rc1_cptr->get_r_end() < cigar.get_rf_offset(op_end));
-                }
-                if (cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len())
-                {
-                    assert(r2_rc or (cigar.get_qr_offset(op_end - 1) <= rc2_cptr->get_r_end() and rc2_cptr->get_r_end() < cigar.get_qr_offset(op_end)));
-                    assert(not r2_rc or (cigar.get_qr_offset(op_end) < rc2_cptr->get_r_start() and rc2_cptr->get_r_start() <= cigar.get_qr_offset(op_end - 1)));
-                }
-
-                // check if either chunk ended during the last cigar op
-                if (cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len()
-                    or cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len())
-                {
-                    // find out which of the 2 ended earlier, cut the cigar op at that position
-                    Size_Type r1_break_len = 0;
-                    if (cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len())
-                    {
-                        r1_break_len = cigar.get_rf_op_prefix_len(op_end - 1, rc1_cptr->get_r_end());
-                    }
-
-                    Size_Type r2_break_len = 0;
-                    if (cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len())
-                    {
-                        r2_break_len = cigar.get_qr_op_prefix_len(op_end - 1, (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start()));
-                    }
-
-                    assert(r1_break_len > 0 or r2_break_len > 0);
-                    cigar.cut_op(op_end - 1, (r1_break_len == 0? r2_break_len : (r2_break_len == 0? r1_break_len : min(r1_break_len, r2_break_len))));
-                }
-                // now we are sure the op ends on at least one of the read chunk boundaries
-                assert(cigar.get_rf_sub_len(op_start, op_end) <= rc1_cptr->get_r_len()
-                       and cigar.get_qr_sub_len(op_start, op_end) <= rc2_cptr->get_r_len());
-                assert(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
-                       or cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len());
-                // if it doesn't end on both, we might need to cut the other
-                if (cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len())
-                {
-                    // rc1 ends; check if there are insertions we can append to the match
-                    while (op_end < cigar.get_n_ops()
-                           and cigar.is_insertion(op_end)
-                           and cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len())
-                    {
-                        ++op_end;
-                    }
-                    if (op_end < cigar.get_n_ops()
-                        and cigar.is_insertion(op_end - 1)
-                        and cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len())
-                    {
-                        // we went past rc2 end on insertions only
-                        cigar.cut_op(op_end - 1, cigar.get_qr_op_prefix_len(op_end - 1, (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start())));
-                    }
-                    // if at this point we don't touch rc2 end, we have to cut rc2 or discard rc1
-                    if (cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len())
-                    {
-                        if (cigar.get_qr_sub_len(op_start, op_end) == 0)
-                        {
-                            // no progress on rc2: rc1 is mapped entirely to a deletion
-                            // move on to next chunk on read 1
-                            r1_pos = rc1_cptr->get_r_end();
-                            op_start = op_end;
-                            continue;
-                        }
-                        else
-                        {
-                            cut_read_entry(re2_cptr, cigar.get_qr_offset(op_end), false);
-                            done = false;
-                            break;
-                        }
-                    }
-                }
-                if (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len())
-                {
-                    // rc2 ends; check if there are deletions we can append to the match
-                    while (op_end < cigar.get_n_ops()
-                           and cigar.is_deletion(op_end)
-                           and cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len())
-                    {
-                        ++op_end;
-                    }
-                    if (op_end < cigar.get_n_ops()
-                        and cigar.is_deletion(op_end - 1)
-                        and cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len())
-                    {
-                        // we went past rc1 end on deletions only
-                        cigar.cut_op(op_end - 1, cigar.get_rf_op_prefix_len(op_end - 1, rc1_cptr->get_r_end()));
-                    }
-                    // if at this point we don't touch rc1 end, we have to cut rc1 or discard rc2
-                    if (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len())
-                    {
-                        if (cigar.get_rf_sub_len(op_start, op_end) == 0)
-                        {
-                            // no progress on rc1: rc2 mapped entirely to an insertion
-                            // move on to next chunk on read 2
-                            r2_pos = (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start());
-                            op_start = op_end;
-                            continue;
-                        }
-                        else
-                        {
-                            cut_read_entry(re1_cptr, cigar.get_rf_offset(op_end), false);
-                            done = false;
-                            break;
-                        }
-                    }
-                }
-                // reached when both rc1 and rc2 end at the current cigar op
-                assert(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
-                       and cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len());
-                // add read chunk mapping
-                rc_mapping.push_back(make_tuple(rc1_cptr, rc2_cptr, cigar.substring(op_start, op_end)));
-                // advance both chunks and cigar
-                r1_pos = rc1_cptr->get_r_end();
-                r2_pos = (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start());
-                op_start = op_end;
-            }
-            if (done) break;
-        }
         // reached when we have a complete rc map
-        for (size_t i = 0; i < rc_mapping.size(); ++i)
+        for (size_t i = 0; i < rc_mapping_sptr->size(); ++i)
         {
-            merge_read_chunks(get<0>(rc_mapping[i]), get<1>(rc_mapping[i]), get<2>(rc_mapping[i]));
+            Read_Chunk_CPtr rc1_cptr;
+            Read_Chunk_CPtr rc2_cptr;
+            Cigar rc1rc2_cigar;
+            std::tie(rc1_cptr, rc2_cptr, rc1rc2_cigar) = (*rc_mapping_sptr)[i];
+            merge_read_chunks(rc1_cptr, rc2_cptr, rc1rc2_cigar);
         }
         assert(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
     }

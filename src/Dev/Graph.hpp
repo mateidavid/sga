@@ -97,6 +97,8 @@ namespace MAC
 
         void remap_chunks(std::map< Read_Chunk_CPtr, std::shared_ptr< Read_Chunk > >& rc_map, Mutation_Cont& extra_mut_cont);
         void merge_read_chunks(Read_Chunk_CPtr c1rc1_chunk_cptr, Read_Chunk_CPtr c2rc2_chunk_cptr, Cigar& rc1rc2_cigar);
+        std::shared_ptr< std::vector< std::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > > chunker(
+            const Read_Entry* re1_cptr, const Read_Entry* re2_cptr, Cigar& cigar);
     };
 }
 

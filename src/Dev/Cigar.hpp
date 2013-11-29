@@ -31,6 +31,7 @@ namespace MAC
          * @param rev Flag indicating coordinates are reversed on the query string.
          */
         Cigar(const std::string& cigar, bool reversed = false, Size_Type rf_start = 0, Size_Type qr_start = 0);
+        Cigar() : _rf_start(0), _qr_start(0), _rf_len(0), _qr_len(0), _reversed(false) {}
 
         bool is_reversed() const { return _reversed; }
         size_t get_n_ops() const { return _op_vect.size(); }
@@ -150,7 +151,6 @@ namespace MAC
         Size_Type _qr_len;
         bool _reversed;
 
-        Cigar() : _reversed(false) {}
         void set_qr_offsets();
 
         static char complement_op(char op);
