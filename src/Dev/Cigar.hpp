@@ -131,6 +131,9 @@ namespace MAC
         /** Disambiguate M operations. */
         void disambiguate(const std::string& rf_seq, const std::string& qr_seq);
 
+        /** Check Cigar. */
+        bool check(const std::string& rf_seq, const std::string& qr_seq) const;
+
         /** Get string representation. */
         std::string to_string() const;
 

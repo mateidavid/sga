@@ -217,6 +217,36 @@ namespace MAC
         */
     }
 
+    bool Cigar::check(const string& rf_seq, const string& qr_seq) const
+    {
+        assert(rf_seq.size() == get_rf_len());
+        assert(qr_seq.size() == get_qr_len());
+        Size_Type check_rf_len = 0;
+        Size_Type check_qr_len = 0;
+        for (size_t i = 0; i < _op_vect.size(); ++i)
+        {
+            // check rf_offset
+            assert(not i == 0 or get_rf_offset(i) == get_rf_start());
+            assert(i == 0 or get_rf_offset(i) == get_rf_offset(i-1) + get_rf_op_len(i-1));
+            // check qr_offset
+            assert(not i == 0 or get_qr_offset(i) == (not _reversed? get_qr_start() : get_qr_start() + get_qr_len()));
+            assert(i == 0 or get_qr_offset(i) == (not _reversed? get_qr_offset(i-1) + get_qr_op_len(i-1) : get_qr_offset(i-1) - get_qr_op_len(i-1)));
+            // recompute lengths
+            check_rf_len += get_rf_op_len(i);
+            check_qr_len += get_qr_op_len(i);
+            // check '=' ops
+            if (get_op(i) == '=')
+            {
+                assert(rf_seq.substr(get_rf_offset(i) - get_rf_start(), get_rf_op_len(i))
+                       == (not _reversed? qr_seq.substr(get_qr_offset(i) - get_qr_start(), get_qr_op_len(i))
+                           : reverseComplement(qr_seq.substr(get_qr_offset(i) - get_qr_op_len(i) - get_qr_start(), get_qr_op_len(i)))));
+            }
+        }
+        assert(check_rf_len == get_rf_len());
+        assert(check_qr_len == get_qr_len());
+        return true;
+    }
+
     ostream& operator << (ostream& os, const Cigar_Op& rhs)
     {
         os << '(' << (size_t)rhs.len << rhs.op << ",rf_offset=" << (size_t)rhs.rf_offset << ",qr_offset=" << (size_t)rhs.qr_offset << ')';
