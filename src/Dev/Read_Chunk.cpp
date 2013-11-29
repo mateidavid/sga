@@ -614,15 +614,9 @@ namespace MAC
         }
 
         // save mutation pointers in the Read_Chunk object
-        Mutation_Cont::iterator rev_mut_it = ce_sptr->get_mut_cont().begin();
-        Mutation_Cont::reverse_iterator rev_mut_rit = ce_sptr->get_mut_cont().rbegin();
-        while (not _rc? rev_mut_it != ce_sptr->get_mut_cont().end() : rev_mut_rit != ce_sptr->get_mut_cont().rend())
+        for (Mutation_Cont::iterator rev_mut_it = ce_sptr->get_mut_cont().begin(); rev_mut_it != ce_sptr->get_mut_cont().end(); ++rev_mut_it)
         {
-            rc_sptr->_mut_ptr_cont.push_back(not _rc? &*rev_mut_it : &*rev_mut_rit);
-            if (not _rc)
-                ++rev_mut_it;
-            else
-                ++rev_mut_rit;
+            rc_sptr->_mut_ptr_cont.push_back(&*rev_mut_it);
         }
 
         return std::make_tuple(rc_sptr, ce_sptr, mut_trans_cont_sptr);
@@ -820,7 +814,7 @@ namespace MAC
                     m.merge(Mutation(pos.c_pos, pos_next.c_pos - pos.c_pos,
                                      c_mut.get_seq().substr(
                                          min(pos.mut_offset, c_mut.get_seq_len()),
-                                         min((pos_next.mut_offset == 0? string::npos : pos_next.mut_offset), c_mut.get_seq_len()))));
+                                         min((pos_next.mut_offset == 0? string::npos : pos_next.mut_offset - pos.mut_offset), c_mut.get_seq_len()))));
                     c_muts.push_back(&c_mut);
                 }
             }

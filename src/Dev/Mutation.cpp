@@ -43,7 +43,7 @@ namespace MAC
         assert(rf.size() == _len);
         if (not have_seq())
             return;
-        while (_len > 0 and _seq_len > 0 and rf[_len - 1] == _seq[_len - 1])
+        while (_len > 0 and _seq_len > 0 and rf[_len - 1] == _seq[_seq_len - 1])
         {
             --_len;
             --_seq_len;
@@ -75,7 +75,7 @@ namespace MAC
     shared_ptr< Mutation_Cont > make_mutations_from_cigar(const Cigar& cigar, const string& qr)
     {
         shared_ptr< Mutation_Cont > res(new Mutation_Cont());
-        Mutation m;
+        Mutation m(cigar.get_rf_start(), 0);
         for (size_t i = 0; i <= cigar.get_n_ops(); ++i)
         {
             if (i == cigar.get_n_ops() or cigar.get_op(i) == '=')
