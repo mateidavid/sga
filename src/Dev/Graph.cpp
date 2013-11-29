@@ -430,19 +430,22 @@ namespace MAC
 
                 // advance past cigar ops until either chunk ends
                 size_t op_end = op_start + 1;
-                while (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len()
-                       and cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len())
+                while (op_end < cigar.get_n_ops()
+                       and cigar.get_rf_sub_len(op_start, op_end) <= rc1_cptr->get_r_len()
+                       and cigar.get_qr_sub_len(op_start, op_end) <= rc2_cptr->get_r_len()
+                       and (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len()
+                            or cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len()))
                 {
                     ++op_end;
                 }
-                if (cigar.get_rf_sub_len(op_start, op_end) >= rc1_cptr->get_r_len())
+                if (cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len())
                 {
-                    assert(cigar.get_rf_offset(op_end - 1) < rc1_cptr->get_r_end() and rc1_cptr->get_r_end() <= cigar.get_rf_offset(op_end));
+                    assert(cigar.get_rf_offset(op_end - 1) <= rc1_cptr->get_r_end() and rc1_cptr->get_r_end() < cigar.get_rf_offset(op_end));
                 }
-                if (cigar.get_qr_sub_len(op_start, op_end) >= rc2_cptr->get_r_len())
+                if (cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len())
                 {
-                    assert(r2_rc or (cigar.get_qr_offset(op_end - 1) < rc2_cptr->get_r_end() and rc2_cptr->get_r_end() <= cigar.get_qr_offset(op_end)));
-                    assert(not r2_rc or (cigar.get_qr_offset(op_end) <= rc2_cptr->get_r_start() and rc2_cptr->get_r_start() < cigar.get_qr_offset(op_end - 1)));
+                    assert(r2_rc or (cigar.get_qr_offset(op_end - 1) <= rc2_cptr->get_r_end() and rc2_cptr->get_r_end() < cigar.get_qr_offset(op_end)));
+                    assert(not r2_rc or (cigar.get_qr_offset(op_end) < rc2_cptr->get_r_start() and rc2_cptr->get_r_start() <= cigar.get_qr_offset(op_end - 1)));
                 }
 
                 // check if either chunk ended during the last cigar op
@@ -481,12 +484,11 @@ namespace MAC
                         ++op_end;
                     }
                     if (op_end < cigar.get_n_ops()
-                        and cigar.is_insertion(op_end)
+                        and cigar.is_insertion(op_end - 1)
                         and cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len())
                     {
                         // we went past rc2 end on insertions only
-                        cigar.cut_op(op_end, cigar.get_qr_op_prefix_len(op_end, (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start())));
-                        ++op_end;
+                        cigar.cut_op(op_end - 1, cigar.get_qr_op_prefix_len(op_end - 1, (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start())));
                     }
                     // if at this point we don't touch rc2 end, we have to cut rc2 or discard rc1
                     if (cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len())
@@ -517,12 +519,11 @@ namespace MAC
                         ++op_end;
                     }
                     if (op_end < cigar.get_n_ops()
-                        and cigar.is_deletion(op_end)
+                        and cigar.is_deletion(op_end - 1)
                         and cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len())
                     {
                         // we went past rc1 end on deletions only
-                        cigar.cut_op(op_end, cigar.get_rf_op_prefix_len(op_end, rc1_cptr->get_r_end()));
-                        ++op_end;
+                        cigar.cut_op(op_end - 1, cigar.get_rf_op_prefix_len(op_end - 1, rc1_cptr->get_r_end()));
                     }
                     // if at this point we don't touch rc1 end, we have to cut rc1 or discard rc2
                     if (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len())
