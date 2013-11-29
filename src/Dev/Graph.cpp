@@ -392,7 +392,7 @@ namespace MAC
                        and (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len()
                             or (cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len() and cigar.is_insertion(op_end)))
                        and (cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len()
-                            or (cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len() and cigar.is_insertion(op_end))))
+                            or (cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len() and cigar.is_deletion(op_end))))
                 {
                     ++op_end;
                 }
