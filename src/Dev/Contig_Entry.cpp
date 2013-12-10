@@ -18,7 +18,7 @@ namespace MAC
     void Contig_Entry::remove_chunk(Read_Chunk_CPtr rc_cptr)
     {
         Read_Chunk_CPtr_Cont::iterator it, it_end;
-        for (tie(it, it_end) = _chunk_cptr_cont.equal_range(rc_cptr->get_key()); it != it_end; ++it)
+        for (auto it = _chunk_cptr_cont.begin(); it != _chunk_cptr_cont.end(); ++it)
         {
             if (*it == rc_cptr)
             {

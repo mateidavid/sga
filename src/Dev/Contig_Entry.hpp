@@ -54,7 +54,7 @@ namespace MAC
         /** Add to the list of read chunks.
          * @param rc_cptr Pointer to read chunk to add.
          */
-        void add_chunk(Read_Chunk_CPtr rc_cptr) { _chunk_cptr_cont.insert(rc_cptr); }
+        void add_chunk(Read_Chunk_CPtr rc_cptr) { _chunk_cptr_cont.push_back(rc_cptr); }
 
         /** Remove read chunk.
          * @param rc_cptr Pointer to read chunk to remove.

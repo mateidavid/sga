@@ -209,7 +209,8 @@ namespace MAC
              const Mutation* mut_left_cptr = NULL;
              if (c_brk == rc_cptr->get_c_end()
                  and rc_cptr->get_mut_ptr_cont().size() > 0
-                 and (*rc_cptr->get_mut_ptr_cont().rbegin())->is_ins())
+                 and (*rc_cptr->get_mut_ptr_cont().rbegin())->is_ins()
+                 and (*rc_cptr->get_mut_ptr_cont().rbegin())->get_start() == c_brk)
              {
                  mut_left_cptr = *(rc_cptr->get_mut_ptr_cont().rbegin());
              }

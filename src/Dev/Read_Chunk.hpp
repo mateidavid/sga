@@ -316,6 +316,7 @@ namespace MAC
     > Read_Chunk_Cont;
 
     /** Container for pointers to Read_Chunk objects. */
+    /*
     typedef boost::multi_index_container<
       Read_Chunk_CPtr,
       boost::multi_index::indexed_by<
@@ -324,6 +325,8 @@ namespace MAC
         >
       >
     > Read_Chunk_CPtr_Cont;
+    */
+    typedef std::vector< Read_Chunk_CPtr > Read_Chunk_CPtr_Cont;
 }
 
 
