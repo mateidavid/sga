@@ -658,6 +658,7 @@ namespace MAC
     void Graph::dump_detailed_counts(ostream& os) const
     {
         // First read stats
+        os << "RE\tname\tlen\tnum.chunks\tchunk.lens\n";
         for (auto re_it = _re_cont.begin(); re_it != _re_cont.end(); ++re_it)
         {
             const Read_Entry* re_cptr = &*re_it;
@@ -672,6 +673,9 @@ namespace MAC
             os << '\n';
         }
         // next, contig stats
+        os << "CE\tlen\tnum.chunks\tbp.chunks\tnum.mut\tnum.mut.chunks"
+           << "\tnum.snp\tnum.ins\tnum.del\tnum.mnp\tbp.mut"
+           << "\tcovg.left\tdeg.left\tcovg.right\tdeg.right\n";
         for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
         {
             const Contig_Entry* ce_cptr = &*ce_it;
