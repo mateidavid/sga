@@ -597,6 +597,9 @@ namespace MAC
 
     bool Graph::check(const set< const Read_Entry* >& re_set, const set< const Contig_Entry* >& ce_set) const
     {
+#ifdef NO_GRAPH_CHECKS
+        return true;
+#endif
         // compute contig entries referenced by read entries
         set< const Contig_Entry* > ce_extra_set;
         for (auto re_cptr_it = re_set.begin(); re_cptr_it != re_set.end(); ++re_cptr_it)
