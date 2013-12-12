@@ -96,6 +96,28 @@ namespace MAC
          */
         bool is_terminal(bool check_start) const;
 
+        /** Get the sibling of the given read chunk.
+         * @param next Bool: if true, get next chunk; if false, get previous chunk.
+         * @return Pointer to sibling chunk, or NULL if no sibling exists.
+         */
+        Read_Chunk_CPtr get_sibling(Read_Chunk_CPtr rc_cptr, bool next) const
+        {
+            Read_Chunk_Cont::iterator rc_it = _chunk_cont.iterator_to(*rc_cptr);
+            if (next)
+            {
+                ++rc_it;
+                if (rc_it != _chunk_cont.end())
+                    return NULL;
+            }
+            else
+            {
+                if (rc_it == _chunk_cont.begin())
+                    return NULL;
+                --rc_it;
+            }
+            return &*rc_it;
+        }
+
         /** Integrity check. */
         bool check() const;
 
