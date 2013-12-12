@@ -80,7 +80,8 @@ namespace MAC
 
     void Graph::cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr)
     {
-        if (c_brk == 0 and mut_left_cptr == NULL)
+        if ((c_brk == 0 and mut_left_cptr == NULL)
+            or (c_brk == ce_cptr->get_len() and (ce_cptr->get_mut_cont().size() == 0 or not ce_cptr->get_mut_cont().rbegin()->is_ins())))
         {
             return;
         }
