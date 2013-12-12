@@ -19,9 +19,30 @@ using indent::tab;
 
 int main(int argc, char* argv[])
 {
+    string input_file;
+    string stats_file;
+    char c;
+    while ((c = getopt(argc, argv, "i:x:")) != -1) {
+        switch (c) {
+            case 'i':
+                input_file = optarg;
+                break;
+            case 'x':
+                stats_file = optarg;
+                break;
+            default:
+                cerr << "unrecognized option: " << c << endl;
+                exit(EXIT_FAILURE);
+        }
+    }
+    if (input_file.empty())
+    {
+        cerr << "no input file\n";
+        exit(EXIT_FAILURE);
+    }
+
     Graph g;
-    assert(argc >= 2);
-    ixstream ixs(argv[1]);
+    ixstream ixs(input_file);
     if (not ixs)
     {
         cerr << "error opening file: " << argv[1] << '\n';
@@ -68,6 +89,13 @@ int main(int argc, char* argv[])
             cerr << line_count << '\n';
     }
     cout << g;
+
+    if (not stats_file.empty())
+    {
+        ofstream stats_ofs(stats_file);
+        g.dump_detailed_counts(stats_ofs);
+    }
+
     cerr << "success\n";
 
     return EXIT_SUCCESS;
