@@ -106,7 +106,7 @@ namespace MAC
             if (next)
             {
                 ++rc_it;
-                if (rc_it != _chunk_cont.end())
+                if (rc_it == _chunk_cont.end())
                     return NULL;
             }
             else
