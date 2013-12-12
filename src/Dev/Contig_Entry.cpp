@@ -126,6 +126,35 @@ namespace MAC
         }
     }
 
+    tuple< size_t, size_t, size_t, size_t > Contig_Entry::get_out_degrees() const
+    {
+        size_t cnt_0 = 0;
+        size_t cnt_1 = 0;
+        set< const Contig_Entry* > set_0;
+        set< const Contig_Entry* > set_1;
+        for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
+        {
+            Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+            if (rc_cptr->get_c_start() == 0
+                and (not rc_cptr->get_rc()? rc_cptr->get_r_start() > 0 : rc_cptr->get_r_end() < rc_cptr->get_re_ptr()->get_len()))
+            {
+                ++cnt_0;
+                Read_Chunk_CPtr rc_next_cptr = rc_cptr->get_re_ptr()->get_sibling(rc_cptr, not rc_cptr->get_rc()? false : true);
+                assert(rc_next_cptr != NULL);
+                set_0.insert(rc_next_cptr->get_ce_ptr());
+            }
+            if (rc_cptr->get_c_end() == get_len()
+                and (not rc_cptr->get_rc()? rc_cptr->get_r_end() < rc_cptr->get_re_ptr()->get_len() : rc_cptr->get_r_start() > 0))
+            {
+                ++cnt_1;
+                Read_Chunk_CPtr rc_next_cptr = rc_cptr->get_re_ptr()->get_sibling(rc_cptr, not rc_cptr->get_rc()? true : false);
+                assert(rc_next_cptr != NULL);
+                set_1.insert(rc_next_cptr->get_ce_ptr());
+            }
+        }
+        return std::make_tuple(cnt_0, set_0.size(), cnt_1, set_1.size());
+    }
+
     bool Contig_Entry::check() const
     {
         // check base sequence exists

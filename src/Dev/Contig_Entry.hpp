@@ -103,6 +103,13 @@ namespace MAC
          */
         void drop_base_seq(Size_Type c_brk) { _seq_ptr->resize(c_brk); }
 
+        /** Get out-edges counts.
+         * @return A tuple (cnt_left, uniq_left, cnt_right, uniq_right), where cnt is the number
+         * of read chunks spanning that breakpoint, and uniq is the number of different contig entries
+         * where following chunks are mapped.
+         */
+        std::tuple< size_t, size_t, size_t, size_t > get_out_degrees() const;
+
         /** Integrity check. */
         bool check() const;
 
