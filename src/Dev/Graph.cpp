@@ -655,6 +655,65 @@ namespace MAC
         return true;
     }
 
+    void Graph::dump_detailed_counts(ostream& os) const
+    {
+        // First read stats
+        for (auto re_it = _re_cont.begin(); re_it != _re_cont.end(); ++re_it)
+        {
+            const Read_Entry* re_cptr = &*re_it;
+            os << "RE\t" << re_cptr->get_name() << '\t' << re_cptr->get_len() << '\t' << re_cptr->get_chunk_cont().size() << '\t';
+            for (auto rc_it = re_cptr->get_chunk_cont().begin(); rc_it != re_cptr->get_chunk_cont().end(); ++rc_it)
+            {
+                Read_Chunk_CPtr rc_cptr = &*rc_it;
+                if (rc_it != re_cptr->get_chunk_cont().begin())
+                    os << ',';
+                os << rc_cptr->get_r_len();
+            }
+            os << '\n';
+        }
+        // next, contig stats
+        for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
+        {
+            const Contig_Entry* ce_cptr = &*ce_it;
+            os << "CE\t" << ce_cptr->get_len() << '\t' << ce_cptr->get_chunk_cptr_cont().size() << '\t';
+            size_t reads_bp = 0;
+            size_t total_muts_reads = 0;
+            for (auto rc_cptr_it = ce_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
+            {
+                Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+                reads_bp += rc_cptr->get_r_len();
+                total_muts_reads += rc_cptr->get_mut_ptr_cont().size();
+            }
+            os << reads_bp << '\t' << ce_cptr->get_mut_cont().size() << '\t' << total_muts_reads << '\t';
+            size_t n_snp = 0;
+            size_t n_ins = 0;
+            size_t n_del = 0;
+            size_t n_mnp = 0;
+            size_t total_mut_bp = 0;
+            for (auto mut_it = ce_cptr->get_mut_cont().begin(); mut_it != ce_cptr->get_mut_cont().end(); ++ mut_it)
+            {
+                Mutation_CPtr mut_cptr = &*mut_it;
+                if (mut_cptr->is_snp())
+                    ++n_snp;
+                else if (mut_cptr->is_ins())
+                    ++n_ins;
+                else if (mut_cptr->is_del())
+                    ++n_del;
+                else
+                    ++n_mnp;
+                total_mut_bp += mut_cptr->get_len() + mut_cptr->get_seq_len();
+            }
+            os << n_snp << '\t' << n_ins << '\t' << n_del << '\t' << n_mnp << '\t' << total_mut_bp << '\t';
+            size_t cnt_0;
+            size_t uniq_0;
+            size_t cnt_1;
+            size_t uniq_1;
+            std::tie(cnt_0, uniq_0, cnt_1, uniq_1) = ce_cptr->get_out_degrees();
+            os << cnt_0 << '\t' << uniq_0 << '\t' << cnt_1 << '\t' << uniq_1;
+            os << '\n';
+        }
+    }
+
     ostream& operator << (ostream& os, const Graph& g)
     {
         os << indent::tab << "(Graph\n" << indent::inc

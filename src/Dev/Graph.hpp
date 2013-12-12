@@ -66,6 +66,9 @@ namespace MAC
         bool check(const std::set< const Read_Entry* >& re_set, const std::set< const Contig_Entry* >& ce_set = std::set< const Contig_Entry* >()) const;
         bool check(const std::set< const Contig_Entry* >& ce_set) const { return check(std::set< const Read_Entry* >(), ce_set); }
 
+        /** Stats. */
+        void dump_detailed_counts(std::ostream& os) const;
+
         friend std::ostream& operator << (std::ostream&, const Graph&);
 
     private:
