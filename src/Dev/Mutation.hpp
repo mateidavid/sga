@@ -15,6 +15,7 @@
 #include <boost/multi_index/member.hpp>
 #include "MAC_forward.hpp"
 #include "Cigar.hpp"
+#include "../Util/Util.h"
 
 
 namespace MAC
@@ -139,6 +140,16 @@ namespace MAC
          * @param rf Reference sequence spanned by the mutation.
          */
         void simplify(const Seq_Type& rf);
+
+        /** Reverse the mutation.
+         * @param c_len The contig length.
+         */
+        void reverse(Size_Type c_len)
+        {
+            _start = c_len - (_start + _len);
+            if (have_seq())
+                _seq = reverseComplement(_seq);
+        }
 
         bool operator == (const Mutation&) const;
 

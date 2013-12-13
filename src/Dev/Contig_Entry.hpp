@@ -103,6 +103,9 @@ namespace MAC
          */
         void drop_base_seq(Size_Type c_brk) { _seq_ptr->resize(c_brk); }
 
+        /** Reverse the contig (note: does not affect the read chunks, which need to be fixed right after). */
+        void reverse();
+
         /** Get out-edges counts.
          * @return A tuple (cnt_left, uniq_left, cnt_right, uniq_right), where cnt is the number
          * of read chunks spanning that breakpoint, and uniq is the number of different contig entries
@@ -116,7 +119,7 @@ namespace MAC
         friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
 
     private:
-        std::shared_ptr< Seq_Type> _seq_ptr;
+        std::shared_ptr< Seq_Type > _seq_ptr;
         Size_Type _seq_offset;
         Mutation_Cont _mut_cont;
         Read_Chunk_CPtr_Cont _chunk_cptr_cont;

@@ -976,6 +976,16 @@ namespace MAC
         return res;
     }
 
+    void Read_Chunk::reverse()
+    {
+        _rc = not _rc;
+        _c_start = _ce_ptr->get_len() - (_c_start + _c_len);
+        for (size_t i = 0; i < _mut_ptr_cont.size() / 2; ++i)
+        {
+            swap(_mut_ptr_cont[i], _mut_ptr_cont[_mut_ptr_cont.size() - 1 - i]);
+        }
+    }
+
     ostream& operator << (ostream& os, const Read_Chunk& rhs)
     {
         os << indent::tab << "(Read_Chunk &=" << (void*)&rhs

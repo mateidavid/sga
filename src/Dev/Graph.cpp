@@ -573,7 +573,41 @@ namespace MAC
             std::tie(rc1_cptr, rc2_cptr, rc1rc2_cigar) = (*rc_mapping_sptr)[i];
             merge_read_chunks(rc1_cptr, rc2_cptr, rc1rc2_cigar);
         }
+
+        // check if we can merge any adjacent contigs
+        //merge_contigs(re1_cptr);
+
         assert(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
+    }
+
+    void Graph::reverse_contig(const Contig_Entry* ce_cptr)
+    {
+        // reverse the contig entry sequence and mutations (in place)
+        modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.reverse(); });
+
+        // reverse the mapping chunks
+        auto rc_modifier = [] (Read_Chunk& rc) { rc.reverse(); };
+        for (auto rc_cptr_it = ce_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
+        {
+            modify_read_chunk(*rc_cptr_it, rc_modifier);
+        }
+    }
+
+    void Graph::merge_contigs(const Read_Entry* re_cptr)
+    {
+        bool done;
+        do
+        {
+            done = true;
+            for (auto rc_it = re_cptr->get_chunk_cont().begin(); rc_it != re_cptr->get_chunk_cont().end(); ++rc_it)
+            {
+                Read_Chunk_CPtr rc_cptr = &*rc_it;
+                const Contig_Entry* ce_cptr = rc_cptr->get_ce_ptr();
+                (void)ce_cptr;
+                //TODO
+            }
+        }
+        while (not done);
     }
 
     bool Graph::check_all() const

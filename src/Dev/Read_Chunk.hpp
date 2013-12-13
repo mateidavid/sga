@@ -275,6 +275,9 @@ namespace MAC
 
          std::shared_ptr< Read_Chunk > collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const;
 
+         /** Reverse the contig mapping (assumes mutations are reverse by contig entry). */
+         void reverse();
+
          friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
 
     private:

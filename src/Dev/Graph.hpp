@@ -102,6 +102,8 @@ namespace MAC
         void merge_read_chunks(Read_Chunk_CPtr c1rc1_chunk_cptr, Read_Chunk_CPtr c2rc2_chunk_cptr, Cigar& rc1rc2_cigar);
         std::shared_ptr< std::vector< std::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > > chunker(
             const Read_Entry* re1_cptr, const Read_Entry* re2_cptr, Cigar& cigar);
+        void reverse_contig(const Contig_Entry* ce_cptr);
+        void merge_contigs(const Read_Entry* re_cptr);
     };
 }
 

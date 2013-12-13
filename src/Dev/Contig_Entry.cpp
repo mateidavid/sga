@@ -9,6 +9,7 @@
 #include "Read_Chunk.hpp"
 #include "Read_Entry.hpp"
 #include "print_seq.hpp"
+#include "../Util/Util.h"
 
 using namespace std;
 
@@ -123,6 +124,30 @@ namespace MAC
             {
                 _mut_cont.erase(mut_it);
             }
+        }
+    }
+
+    void Contig_Entry::reverse()
+    {
+        // only reverse full contigs
+        assert(_seq_offset == 0);
+
+        // reverse the string
+        std::shared_ptr< Seq_Type > old_seq_ptr = _seq_ptr;
+        _seq_ptr.reset(new string(reverseComplement(*old_seq_ptr)));
+
+        // save mutation pointers
+        vector< Mutation_CPtr > mut_cptr_cont;
+        for (auto mut_it = _mut_cont.begin(); mut_it != _mut_cont.end(); ++mut_it)
+        {
+            mut_cptr_cont.push_back(&*mut_it);
+        }
+
+        // using saved pointers, change mutations in place (incudes re-keying)
+        for (auto mut_cptr_it = mut_cptr_cont.begin(); mut_cptr_it != mut_cptr_cont.end(); ++mut_cptr_it)
+        {
+            Mutation_CPtr mut_cptr = *mut_cptr_it;
+            modify_element<Mutation_Cont>(_mut_cont, mut_cptr, [&] (Mutation& mut) { mut.reverse(get_len()); });
         }
     }
 
