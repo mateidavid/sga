@@ -582,29 +582,107 @@ namespace MAC
 
     void Graph::reverse_contig(const Contig_Entry* ce_cptr)
     {
+        // construct read chunk modifier that applies reverse()
+        auto rc_reverse_mod = [&] (Read_Chunk_CPtr rc_cptr) {
+            modify_read_chunk(rc_cptr, [] (Read_Chunk& rc) { rc.reverse(); });
+        };
+
         // reverse the contig entry sequence and mutations (in place)
-        modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.reverse(); });
+        modify_contig_entry(ce_cptr, [&rc_reverse_mod] (Contig_Entry& ce) { ce.reverse(rc_reverse_mod); });
 
         // reverse the mapping chunks
+        /*
         auto rc_modifier = [] (Read_Chunk& rc) { rc.reverse(); };
         for (auto rc_cptr_it = ce_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
         {
             modify_read_chunk(*rc_cptr_it, rc_modifier);
         }
+        */
     }
 
-    void Graph::merge_contigs(const Read_Entry* re_cptr)
+    bool Graph::try_merge_contig(const Contig_Entry* ce_cptr, bool dir)
+    {
+        auto chunks_out_cont_sptr = ce_cptr->is_mergeable(dir);
+        if (not chunks_out_cont_sptr)
+            return false;
+        Read_Chunk_CPtr rc_cptr = *chunks_out_cont_sptr->begin();
+        Read_Chunk_CPtr rc_next_cptr = ce_cptr->get_next_chunk(dir, rc_cptr);
+        const Contig_Entry* ce_next_cptr = rc_next_cptr->get_ce_ptr();
+        bool same_orientation = (rc_cptr->get_rc() == rc_next_cptr->get_rc());
+        if (not same_orientation)
+        {
+            // we first reverse this contig
+            reverse_contig(ce_cptr);
+            // reversal modifications are done in-place, so chunk vectors are still valid
+            same_orientation = true;
+        }
+        if (not dir)
+        {
+            swap(ce_cptr, ce_next_cptr);
+            dir = true;
+            chunks_out_cont_sptr = ce_next_cptr->is_mergeable_one_way(true);
+            assert(chunks_out_cont_sptr);
+        }
+        // at this point:
+        // - contigs are in the same orientation
+        // - ce_cptr is the start of the merge and ce_next_cptr is the tail
+        // - chunks_out_cont_sptr contains chunks from ce_cptr that go into ce_next_cptr
+
+        Size_Type prefix_len = ce_cptr->get_len();
+        // merge ce_next_cptr into ce_cptr using merge_forward()
+        shared_ptr< Mutation_Trans_Cont > mut_map_sptr;
+        modify_contig_entry(ce_cptr, [&ce_next_cptr,&mut_map_sptr] (Contig_Entry& ce) { mut_map_sptr = ce.merge_forward(ce_next_cptr); });
+        // apply rebase modifier to all chunks from the right contig
+        for (auto rc_cptr_it = ce_next_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_next_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
+        {
+            rc_cptr = *rc_cptr_it;
+            modify_read_chunk(rc_cptr, [&] (Read_Chunk& rc) { rc.rebase(ce_cptr, prefix_len, *mut_map_sptr); });
+        }
+        // we are done with the right contig
+        erase_contig_entry(ce_next_cptr);
+        // finally, merge the read chunks that were previously crossing the contig break
+        for (auto rc_cptr_it = chunks_out_cont_sptr->begin(); rc_cptr_it != chunks_out_cont_sptr->end(); ++rc_cptr_it)
+        {
+            Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+            if (not rc_cptr->get_rc())
+            {
+                modify_read_entry(rc_cptr->get_re_ptr(), [&rc_cptr] (Read_Entry& re) { re.merge_next_chunk(rc_cptr); });
+            }
+            else
+            {
+                Read_Chunk_CPtr rc_next_cptr = ce_cptr->get_next_chunk(true, rc_cptr);
+                modify_read_entry(rc_next_cptr->get_re_ptr(), [&rc_next_cptr] (Read_Entry& re) { re.merge_next_chunk(rc_next_cptr); });
+            }
+        }
+        return true;
+    }
+
+    void Graph::merge_read_contigs(const Read_Entry* re_cptr)
     {
         bool done;
-        do
         {
             done = true;
             for (auto rc_it = re_cptr->get_chunk_cont().begin(); rc_it != re_cptr->get_chunk_cont().end(); ++rc_it)
             {
                 Read_Chunk_CPtr rc_cptr = &*rc_it;
+                if (rc_cptr->is_unmappable())
+                    continue;
                 const Contig_Entry* ce_cptr = rc_cptr->get_ce_ptr();
-                (void)ce_cptr;
-                //TODO
+                // first try to merge first contig to the left or read start
+                if (rc_it == re_cptr->get_chunk_cont().begin())
+                {
+                    if (try_merge_contig(ce_cptr, rc_cptr->get_rc()))
+                    {
+                        done = false;
+                        break;
+                    }
+                }
+                // then every contig to the right of its chunk
+                if (try_merge_contig(ce_cptr, not rc_cptr->get_rc()))
+                {
+                    done = false;
+                    break;
+                }
             }
         }
         while (not done);

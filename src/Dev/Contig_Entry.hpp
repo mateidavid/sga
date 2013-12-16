@@ -103,8 +103,8 @@ namespace MAC
          */
         void drop_base_seq(Size_Type c_brk) { _seq_ptr->resize(c_brk); }
 
-        /** Reverse the contig (note: does not affect the read chunks, which need to be fixed right after). */
-        void reverse();
+        /** Reverse the contig. */
+        void reverse(const Read_Chunk::external_modifier_type& rc_reverse_mod);
 
         /** Get out-edges counts.
          * @return A tuple (cnt_left, uniq_left, cnt_right, uniq_right), where cnt is the number
@@ -112,6 +112,46 @@ namespace MAC
          * where following chunks are mapped.
          */
         std::tuple< size_t, size_t, size_t, size_t > get_out_degrees() const;
+
+        /** Retrieve read chunks completely spanning the given interval.
+         * @param start Start of the interval, 0-based, closed.
+         * @param end End of the interval, 0-based, open.
+         */
+        std::shared_ptr< std::vector< Read_Chunk_CPtr > > get_chunks_spanning_pos(Size_Type start, Size_Type end) const;
+
+        /** Given a chunk mapped to this contig, retreive the next chunk in the same read
+         * in the given contig direction.
+         * @param dir Bool; true: past contig end; false: past contig start.
+         * @param rc_cptr Chunk whose sibling to look for.
+         * @return Next chunk in that direction, or NULL if none exists.
+         */
+        Read_Chunk_CPtr get_next_chunk(bool dir, Read_Chunk_CPtr rc_cptr) const;
+
+        /** Retrieve chunks leaving contig.
+         * @param dir Bool; true: spanning right of c_end, false: spanning left of 0.
+         * @param skip_next_unmappable Bool; true: ignore chunks whose next chunk is unmappable.
+         */
+        std::shared_ptr< std::vector< Read_Chunk_CPtr > > get_chunks_out(bool dir, bool skip_next_unmappable = true) const;
+
+        /** Check if contig has a unique neighbour in the given direction.
+         * @param dir Bool; true: past contig end, false: past contig start.
+         * @return NULL if not; otherwise, a list of read chunks spanning past contig end
+         * into another unique contig.
+         */
+        std::shared_ptr< std::vector< Read_Chunk_CPtr > > is_mergeable_one_way(bool forward) const;
+
+        /** Check if contig is mergeable with a single other contig in the given direction.
+         * @param dir Bool; true: merge past contig end, false: merge past contig start.
+         * @return NULL if not mergeable; otherwise, a list of read chunks spanning past contig end
+         * into another unique contig.
+         */
+        std::shared_ptr< std::vector< Read_Chunk_CPtr > > is_mergeable(bool dir) const;
+
+        /** Merge the given contig into this one (only affects sequence & mutations, chunks must be fixed after).
+         * @param ce_next_cptr Contig to be merged into this one.
+         * @return Translation map of mutations from the merged contig into this one.
+         */
+        std::shared_ptr< Mutation_Trans_Cont > merge_forward(const Contig_Entry* ce_next_cptr);
 
         /** Integrity check. */
         bool check() const;

@@ -127,7 +127,7 @@ namespace MAC
         }
     }
 
-    void Contig_Entry::reverse()
+    void Contig_Entry::reverse(const Read_Chunk::external_modifier_type& rc_reverse_mod)
     {
         // only reverse full contigs
         assert(_seq_offset == 0);
@@ -148,6 +148,13 @@ namespace MAC
         {
             Mutation_CPtr mut_cptr = *mut_cptr_it;
             modify_element<Mutation_Cont>(_mut_cont, mut_cptr, [&] (Mutation& mut) { mut.reverse(get_len()); });
+        }
+
+        // apply external modifier to reverse read chunks in-place
+        for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
+        {
+            Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+            rc_reverse_mod(rc_cptr);
         }
     }
 
@@ -178,6 +185,108 @@ namespace MAC
             }
         }
         return std::make_tuple(cnt_0, set_0.size(), cnt_1, set_1.size());
+    }
+
+    shared_ptr< vector< Read_Chunk_CPtr > > Contig_Entry::get_chunks_spanning_pos(Size_Type start, Size_Type end) const
+    {
+        shared_ptr< vector< Read_Chunk_CPtr > > res(new vector< Read_Chunk_CPtr >());
+        for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
+        {
+            Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+            if (rc_cptr->get_c_start() <= start and rc_cptr->get_c_end() >= end)
+            {
+                res->push_back(rc_cptr);
+            }
+        }
+        return res;
+    }
+
+    Read_Chunk_CPtr Contig_Entry::get_next_chunk(bool dir, Read_Chunk_CPtr rc_cptr) const
+    {
+        return rc_cptr->get_re_ptr()->get_sibling(rc_cptr, dir != rc_cptr->get_rc());
+    }
+
+    shared_ptr< vector< Read_Chunk_CPtr > > Contig_Entry::get_chunks_out(bool dir, bool skip_next_unmappable) const
+    {
+        shared_ptr< vector< Read_Chunk_CPtr > > res(new vector< Read_Chunk_CPtr >());
+        for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
+        {
+            Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+            if ((not dir and not rc_cptr->get_c_start() == 0)
+                or (dir and not rc_cptr->get_c_end() == get_len()))
+            {
+                continue;
+            }
+            Read_Chunk_CPtr rc_next_cptr = rc_cptr->get_re_ptr()->get_sibling(rc_cptr, dir != rc_cptr->get_rc());
+            if (rc_next_cptr == NULL or (skip_next_unmappable and rc_next_cptr->is_unmappable()))
+            {
+                continue;
+            }
+            res->push_back(rc_cptr);
+        }
+        return res;
+    }
+
+    shared_ptr< vector< Read_Chunk_CPtr > > Contig_Entry::is_mergeable_one_way(bool dir) const
+    {
+        auto chunks_out_cont_sptr = get_chunks_out(dir, true);
+        if (chunks_out_cont_sptr->size() == 0)
+            return NULL;
+        // check all chunks leaving go to the same contig, in the same orientation
+        set< std::tuple< const Contig_Entry*, bool > > ce_cptr_set;
+        for (auto rc_cptr_it = chunks_out_cont_sptr->begin(); rc_cptr_it != chunks_out_cont_sptr->end(); ++rc_cptr_it)
+        {
+            Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+            Read_Chunk_CPtr rc_next_cptr = get_next_chunk(dir, rc_cptr);
+            assert(rc_next_cptr != NULL);
+            if (rc_next_cptr->is_unmappable())
+                continue;
+            ce_cptr_set.insert(std::make_tuple(rc_next_cptr->get_ce_ptr(), rc_cptr->get_rc() == rc_next_cptr->get_rc()));
+        }
+        if (ce_cptr_set.size() != 1)
+            return NULL;
+        return chunks_out_cont_sptr;
+    }
+
+    shared_ptr< vector< Read_Chunk_CPtr > > Contig_Entry::is_mergeable(bool dir) const
+    {
+        auto chunks_out_cont_sptr = is_mergeable_one_way(dir);
+        if (not chunks_out_cont_sptr)
+            return NULL;
+        Read_Chunk_CPtr rc_cptr = *chunks_out_cont_sptr->begin();
+        Read_Chunk_CPtr rc_next_cptr = get_next_chunk(dir, rc_cptr);
+        const Contig_Entry* ce_next_cptr = rc_next_cptr->get_ce_ptr();
+        bool same_orientation = (rc_cptr->get_rc() == rc_next_cptr->get_rc());
+        auto chunks_in_cont_sptr = ce_next_cptr->is_mergeable_one_way(dir != same_orientation);
+        if (not chunks_in_cont_sptr)
+            return NULL;
+        assert(chunks_out_cont_sptr->size() == chunks_in_cont_sptr->size());
+        return chunks_out_cont_sptr;
+    }
+
+    shared_ptr< Mutation_Trans_Cont > Contig_Entry::merge_forward(const Contig_Entry* ce_next_cptr)
+    {
+        assert(_seq_offset == 0 and ce_next_cptr->_seq_offset == 0);
+        shared_ptr< Mutation_Trans_Cont > res(new Mutation_Trans_Cont());
+        // rebase mutations, copy them into this contig, and in the translation table
+        for (auto mut_it = ce_next_cptr->_mut_cont.begin(); mut_it != ce_next_cptr->_mut_cont.end(); ++mut_it)
+        {
+            Mutation_Trans mut_trans;
+            mut_trans.old_mut_cptr = &*mut_it;
+            Mutation m(*mut_it);
+            m.add_base_prefix(get_len());
+            Mutation_Cont::iterator new_mut_it;
+            bool success;
+            std::tie(new_mut_it, success) = _mut_cont.insert(m);
+            assert(success);
+            mut_trans.new_mut_cptr = &*new_mut_it;
+            Mutation_Trans_Cont::iterator it;
+            std::tie(it, success) = res->insert(mut_trans);
+            assert(success);
+        }
+        // lastly, merge the next contig's sequence into this one
+        *_seq_ptr += *ce_next_cptr->_seq_ptr;
+        return res;
     }
 
     bool Contig_Entry::check() const
