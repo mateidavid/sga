@@ -151,6 +151,9 @@ namespace MAC
                 _seq = reverseComplement(_seq);
         }
 
+        /** Change Mutation base by adding a prefix of the given length. */
+        void add_base_prefix(Size_Type len) { _start += len; }
+
         bool operator == (const Mutation&) const;
 
         friend std::ostream& operator << (std::ostream&, const Mutation&);
