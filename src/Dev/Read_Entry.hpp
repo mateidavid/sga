@@ -118,6 +118,24 @@ namespace MAC
             return &*rc_it;
         }
 
+        /** Merge the chunk following the given chunk into this one, then remove next chunk.
+         * Pre: Chunks must be mapped to the same contig.
+         * @param rc_cptr Chunk that will hold the result.
+         */
+        void merge_next_chunk(Read_Chunk_CPtr rc_cptr)
+        {
+            Read_Chunk_Cont::iterator rc_next_it = _chunk_cont.iterator_to(*rc_cptr);
+            ++rc_next_it;
+            assert(rc_next_it != _chunk_cont.end());
+            Read_Chunk_CPtr rc_next_cptr = &*rc_next_it;
+            assert(rc_next_cptr->get_ce_ptr() == rc_cptr->get_ce_ptr());
+            assert(rc_next_cptr->get_rc() == rc_cptr->get_rc());
+            // call read chunk's merge_next()
+            modify_read_chunk(rc_cptr, [&rc_next_cptr] (Read_Chunk& rc) { rc.merge_next(rc_next_cptr); });
+            // remove next chunk
+            _chunk_cont.erase(rc_next_it);
+        }
+
         /** Integrity check. */
         bool check() const;
 
