@@ -64,6 +64,7 @@ namespace MAC
 
         /** Type for an external unary modifier. */
         typedef std::function<void(Read_Chunk&)> modifier_type;
+        typedef std::function<void(const Read_Chunk*)> external_modifier_type;
 
         /** @name Constructors */
         /**@{*/
@@ -96,6 +97,7 @@ namespace MAC
         key_type get_key() const { return _r_start; }
         Seq_Type get_seq() const;
         Seq_Type substr(Size_Type start, Size_Type len) const;
+        bool is_unmappable() const { return false; }
         /**@}*/
 
         /** @name Traversal using Read_Chunk_Pos objects */
@@ -243,8 +245,10 @@ namespace MAC
           * @param r_mut_cont Container with read mutations.
           * @return A Mutation translation container, and a container for new mutations.
           */
+         /*
          std::tuple< std::shared_ptr< Mutation_Trans_Cont >, std::shared_ptr< Mutation_Cont > > lift_read_mutations(
              const Mutation_Cont& r_mut_cont) const;
+         */
 
          /** Compute old contig mutations observed by a read mapping.
           * @param r_mut_cptr_cont List of read mutations observed by mapping.
@@ -275,8 +279,26 @@ namespace MAC
 
          std::shared_ptr< Read_Chunk > collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const;
 
+         /** Check if it the last chunk in this direction.
+          * @param forward Bool; true: forward; false: backward.
+          */
+         //bool is_last(bool forward) { return (forward? get_r_end() < get_re_ptr()->get_len() : get_r_start() > 0); }
+
          /** Reverse the contig mapping (assumes mutations are reverse by contig entry). */
          void reverse();
+
+         /** Merge this read chunk with the next chunk of the same read.
+          * Pre: Chunks must be mapped to the same contig, in the same orientation, continuously.
+          * @param rc_next_cptr CPtr to next chunk.
+          */
+         void merge_next(const Read_Chunk* rc_next_cptr);
+
+         /** Rebase this chunk into another contig.
+          * @param ce_cptr New contig.
+          * @param prefix_len Length of prefix by which new contig is larger than the old one.
+          * @param mut_map Mutation translation map.
+          */
+         void rebase(const Contig_Entry* ce_cptr, Size_Type prefix_len, const Mutation_Trans_Cont& mut_map);
 
          friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
 

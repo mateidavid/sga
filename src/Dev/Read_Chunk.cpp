@@ -622,6 +622,7 @@ namespace MAC
         return std::make_tuple(rc_sptr, ce_sptr, mut_trans_cont_sptr);
     }
 
+    /*
     std::tuple< shared_ptr< Mutation_Trans_Cont >, shared_ptr< Mutation_Cont > >
     Read_Chunk::lift_read_mutations(const Mutation_Cont& r_mut_cont) const
     {
@@ -691,6 +692,7 @@ namespace MAC
         }
         return make_tuple(mut_trans_cont_sptr, new_mut_cont_sptr);
     }
+    */
 
     shared_ptr< vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > >
     Read_Chunk::get_mutations_under_mapping(const vector< Mutation_CPtr >& r_mut_cptr_cont,
@@ -983,6 +985,40 @@ namespace MAC
         for (size_t i = 0; i < _mut_ptr_cont.size() / 2; ++i)
         {
             swap(_mut_ptr_cont[i], _mut_ptr_cont[_mut_ptr_cont.size() - 1 - i]);
+        }
+    }
+
+    void Read_Chunk::merge_next(Read_Chunk_CPtr rc_next_cptr)
+    {
+        assert(rc_next_cptr != NULL);
+        assert(rc_next_cptr->get_re_ptr() == get_re_ptr());
+        assert(rc_next_cptr->get_ce_ptr() == get_ce_ptr());
+        assert(rc_next_cptr->get_rc() == get_rc());
+        assert(rc_next_cptr->get_r_start() == get_r_end());
+        assert(get_rc() or rc_next_cptr->get_c_start() == get_c_end());
+        assert(not get_rc() or rc_next_cptr->get_c_end() == get_c_start());
+
+        // fix coordinates
+        if (get_rc())
+        {
+            _c_start = rc_next_cptr->_c_start;
+        }
+        _c_len += rc_next_cptr->_c_len;
+        _r_len += rc_next_cptr->_r_len;
+    }
+
+    void Read_Chunk::rebase(const Contig_Entry* ce_cptr, Size_Type prefix_len, const Mutation_Trans_Cont& mut_map)
+    {
+        _ce_ptr = ce_cptr;
+        _c_start += prefix_len;
+        vector< Mutation_CPtr > old_mut_cptr_cont = _mut_ptr_cont;
+        _mut_ptr_cont.clear();
+        for (auto old_mut_cptr_it = old_mut_cptr_cont.begin(); old_mut_cptr_it != old_mut_cptr_cont.end(); ++old_mut_cptr_it)
+        {
+            Mutation_CPtr old_mut_cptr = *old_mut_cptr_it;
+            assert(mut_map.count(old_mut_cptr) == 1);
+            Mutation_Trans_Cont::const_iterator it = mut_map.find(old_mut_cptr);
+            _mut_ptr_cont.push_back(it->new_mut_cptr);
         }
     }
 
