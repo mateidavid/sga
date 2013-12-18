@@ -242,6 +242,7 @@ namespace MAC
         }
         else // pos.r_pos == mut_first
         {
+            /*
             // we produce any remaining contig deletions at current read position,
             // except for the case when a contig deletion matches a read insertion;
             // in that case we produce the deletion first only when moving forward
@@ -256,6 +257,7 @@ namespace MAC
                     return false;
                 }
             }
+            */
             // at this point, we produce the stretch corresponding to the read Mutation
             while (pos.r_pos != mut_second)
             {
@@ -448,7 +450,7 @@ namespace MAC
             return make_tuple(_mut_ptr_cont[i], sel_brk - c_pos, (not _rc? brk - r_pos : r_pos - brk));
     }
 
-    std::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::apply_contig_split(
+    std::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::split(
         Size_Type c_brk, const map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr)
     {
         // compute read chunk position corresponding to a contig cut at c_brk
@@ -457,7 +459,11 @@ namespace MAC
         {
             pos = get_end_pos();
         }
-        else // c_brk <= c_end
+        else if (c_brk < get_c_start())
+        {
+            pos = get_start_pos();
+        }
+        else // c_start <= c_brk <= c_end
         {
             pos = get_start_pos();
             while (pos.c_pos < c_brk)
@@ -468,7 +474,7 @@ namespace MAC
             // any mutations spanning the break must be cut prior to calling this method
             assert(pos.mut_offset == 0);
             // if there exists an insertion at c_brk that is not in the map, it will stay on the left side of the break
-            if (pos.mut_idx < _mut_ptr_cont.size()
+            while (pos.mut_idx < _mut_ptr_cont.size()
                 and _mut_ptr_cont[pos.mut_idx]->get_start() == c_brk
                 and _mut_ptr_cont[pos.mut_idx]->is_ins()
                 and mut_cptr_map.count(_mut_ptr_cont[pos.mut_idx]) == 0)
@@ -694,6 +700,7 @@ namespace MAC
     }
     */
 
+    /*
     shared_ptr< vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > >
     Read_Chunk::get_mutations_under_mapping(const vector< Mutation_CPtr >& r_mut_cptr_cont,
                                             const Mutation_Trans_Cont& mut_map,
@@ -736,14 +743,12 @@ namespace MAC
 
         return res;
     }
+    */
 
     shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const
     {
-        assert(rc2.get_c_start() == get_r_start() and rc2.get_c_end() == get_r_end());
         shared_ptr< Read_Chunk > res(new Read_Chunk());
 
-        res->_c_start = get_c_start();
-        res->_c_len = get_c_len();
         res->_r_start = rc2.get_r_start();
         res->_r_len = rc2.get_r_len();
         res->_rc = (get_rc() != rc2.get_rc());
@@ -753,20 +758,34 @@ namespace MAC
         // traverse c1 left-to-right; traverse rc1 left-to-right if not _rc, r-to-l ow;
         Read_Chunk_Pos pos = get_start_pos();
         size_t r_mut_cnt = 0;
-        Mutation fake_mut((not get_rc()? get_r_end() : get_r_start()), 0);
+        Mutation fake_mut_start((not get_rc()? rc2.get_c_start() : rc2.get_c_end()), 0);
+        Mutation fake_mut_end((not get_rc()? rc2.get_c_end() : rc2.get_c_start()), 0);
+        bool past_start = false;
         Mutation m;
         vector< Mutation_CPtr > c_muts;
         vector< Mutation_CPtr > r_muts;
         while (true)
         {
             size_t r_mut_idx = (not get_rc()? r_mut_cnt : rc2.get_mut_ptr_cont().size() - 1 - r_mut_cnt); // next new mutation to look for
-            const Mutation& r_mut = (r_mut_cnt < rc2.get_mut_ptr_cont().size()? *rc2.get_mut_ptr_cont()[r_mut_idx] : fake_mut);
+            const Mutation& r_mut = (r_mut_cnt == 0 and not past_start?
+                                     fake_mut_start :
+                                     r_mut_cnt < rc2.get_mut_ptr_cont().size()? *rc2.get_mut_ptr_cont()[r_mut_idx] : fake_mut_end);
 
             Read_Chunk_Pos pos_next = pos;
             bool got_r_mut = advance_pos_til_mut(pos_next, r_mut);
 
-            if ((got_r_mut and r_mut_cnt == rc2.get_mut_ptr_cont().size())
-                or (not got_r_mut and get_match_len_from_pos(pos) > 0))
+            if (not past_start)
+            {
+                if (got_r_mut)
+                {
+                    // skip any remaining deletions
+                    advance_pos_skip_del(pos);
+                    res->_c_start = pos.c_pos;
+                    past_start = true;
+                }
+            }
+            else if ((not got_r_mut and get_match_len_from_pos(pos) > 0)
+                or (got_r_mut and r_mut_cnt == rc2.get_mut_ptr_cont().size()))
             {
                 // the stretch pos->pos_next is a match, or we are at the end;
                 // consolidate any outstanding mutations
@@ -792,8 +811,11 @@ namespace MAC
                 c_muts.clear();
                 r_muts.clear();
 
-                if (got_r_mut and r_mut_cnt == rc2.get_mut_ptr_cont().size())
+                if (got_r_mut)
+                {
+                    res->_c_len = pos_next.c_pos - res->_c_start;
                     break;
+                }
             }
             else
             {
@@ -820,11 +842,8 @@ namespace MAC
                     c_muts.push_back(&c_mut);
                 }
             }
-
             pos = pos_next;
         }
-        assert(pos == get_end_pos());
-
         return res;
     }
 
@@ -988,7 +1007,7 @@ namespace MAC
         }
     }
 
-    void Read_Chunk::merge_next(Read_Chunk_CPtr rc_next_cptr)
+    void Read_Chunk::merge_next(Read_Chunk_CPtr rc_next_cptr, Mutation::add_mut_mod_type add_mut_mod)
     {
         assert(rc_next_cptr != NULL);
         assert(rc_next_cptr->get_re_ptr() == get_re_ptr());
@@ -1006,21 +1025,41 @@ namespace MAC
         _c_len += rc_next_cptr->_c_len;
         _r_len += rc_next_cptr->_r_len;
         // aquire mutations
+        // if there are touching mutations across the break, merge them
         if (not get_rc())
         {
-            _mut_ptr_cont.insert(_mut_ptr_cont.end(), rc_next_cptr->_mut_ptr_cont.begin(), rc_next_cptr->_mut_ptr_cont.end());
+            size_t lhs_start = 0;
+            if (_mut_ptr_cont.size() > 0 and rc_next_cptr->_mut_ptr_cont.size() > 0 and
+                _mut_ptr_cont.back()->get_end() == rc_next_cptr->_mut_ptr_cont.front()->get_start())
+            {
+                Mutation m(*_mut_ptr_cont.back());
+                m.merge(*rc_next_cptr->_mut_ptr_cont.front());
+                Mutation_CPtr m_cptr = add_mut_mod(m);
+                _mut_ptr_cont.back() = m_cptr;
+                ++lhs_start;
+            }
+            _mut_ptr_cont.insert(_mut_ptr_cont.end(), rc_next_cptr->_mut_ptr_cont.begin() + lhs_start, rc_next_cptr->_mut_ptr_cont.end());
         }
         else // _rc
         {
-            if (rc_next_cptr->_mut_ptr_cont.size() > 0)
+            size_t rhs_size = _mut_ptr_cont.size();
+            size_t lhs_size = rc_next_cptr->_mut_ptr_cont.size();
+            if (lhs_size > 0)
             {
                 // mutations from next chunk must be inserted before the ones in here
-                size_t old_size = _mut_ptr_cont.size();
-                size_t new_size = old_size + rc_next_cptr->_mut_ptr_cont.size();
-                _mut_ptr_cont.resize(new_size, NULL);
-                for (size_t i = 0; i < old_size; ++i)
-                    _mut_ptr_cont[new_size - 1 - i] = _mut_ptr_cont[old_size - 1 - i];
-                for (size_t i = 0; i <  rc_next_cptr->_mut_ptr_cont.size(); ++i)
+                if (rhs_size > 0
+                    and rc_next_cptr->_mut_ptr_cont.back()->get_end() == _mut_ptr_cont.front()->get_start())
+                {
+                    Mutation m(*rc_next_cptr->_mut_ptr_cont.back());
+                    m.merge(*_mut_ptr_cont.front());
+                    Mutation_CPtr m_cptr = add_mut_mod(m);
+                    _mut_ptr_cont.front() = m_cptr;
+                    --lhs_size;
+                }
+                _mut_ptr_cont.resize(lhs_size + rhs_size, NULL);
+                for (size_t i = 0; i < rhs_size; ++i)
+                    _mut_ptr_cont[lhs_size + rhs_size - 1 - i] = _mut_ptr_cont[rhs_size - 1 - i];
+                for (size_t i = 0; i <  lhs_size; ++i)
                     _mut_ptr_cont[i] = rc_next_cptr->_mut_ptr_cont[i];
             }
         }

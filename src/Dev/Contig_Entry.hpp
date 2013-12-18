@@ -74,6 +74,12 @@ namespace MAC
          */
         const Mutation* cut_mutation(const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset);
 
+        /** Add mutation to container if it doesn't already exists.
+         * @param m Mutation to look for.
+         * @return Pointer to mutation.
+         */
+        Mutation_CPtr add_mutation(const Mutation& m) { return add_mut_to_cont(_mut_cont, m); }
+
         /** Get chunks which contain a given mutation.
          * @param mut_cptr Pointer to mutation.
          * @return Vector of pointers to chunks that have this mutation.

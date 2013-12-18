@@ -118,7 +118,7 @@ namespace MAC
             shared_ptr< Read_Chunk > rc_new_sptr;
 
             // construct&apply read chunk modifier to implement split
-            auto rc_modifier = [&] (Read_Chunk& rc) { tie(move_to_rhs, rc_new_sptr) = rc.apply_contig_split(c_brk, mut_cptr_map, ce_new_cptr); };
+            auto rc_modifier = [&] (Read_Chunk& rc) { tie(move_to_rhs, rc_new_sptr) = rc.split(c_brk, mut_cptr_map, ce_new_cptr); };
             modify_read_chunk(rc_cptr, rc_modifier);
 
             Read_Chunk_CPtr rc_rhs_cptr = NULL;
@@ -325,11 +325,10 @@ namespace MAC
         // for the remaining chunks mapped to c2, remap them to c1 through c1->c2 mapping
         for (auto it = c2_ce_cptr->get_chunk_cptr_cont().begin(); it != c2_ce_cptr->get_chunk_cptr_cont().end(); ++it)
         {
-            if (*it == c2rc2_chunk_cptr)
-            {
+            Read_Chunk_CPtr rc_cptr = *it;
+            if (rc_cptr == c2rc2_chunk_cptr)
                 continue;
-            }
-            rc_map[*it] = c1c2_chunk_sptr->collapse_mapping(**it, extra_c1_mut_cont);
+            rc_map[rc_cptr] = c1c2_chunk_sptr->collapse_mapping(*rc_cptr, extra_c1_mut_cont);
         }
         // at this point, all read chunks mapped to c2 are translated
         // with pointers in rc_map and new mutations in extra_mut_cont
@@ -612,6 +611,8 @@ namespace MAC
         auto chunks_out_cont_sptr = ce_cptr->is_mergeable(dir);
         if (not chunks_out_cont_sptr)
             return false;
+        auto chunks_out_cont_cptr = chunks_out_cont_sptr.get();
+        (void)chunks_out_cont_cptr;
 
         Read_Chunk_CPtr rc_cptr = *chunks_out_cont_sptr->begin();
         Read_Chunk_CPtr rc_next_cptr = ce_cptr->get_next_chunk(dir, rc_cptr);
@@ -620,8 +621,9 @@ namespace MAC
         if (not same_orientation)
         {
             // we first reverse this contig
-            reverse_contig(ce_cptr);
             // reversal modifications are done in-place, so chunk vectors are still valid
+            reverse_contig(ce_cptr);
+            dir = not dir;
             same_orientation = true;
         }
         if (not dir)
@@ -629,6 +631,7 @@ namespace MAC
             swap(ce_cptr, ce_next_cptr);
             dir = true;
             chunks_out_cont_sptr = ce_cptr->is_mergeable_one_way(true);
+            chunks_out_cont_cptr = chunks_out_cont_sptr.get();
             assert(chunks_out_cont_sptr);
         }
         // at this point:
@@ -649,6 +652,11 @@ namespace MAC
         erase_contig_entry(ce_next_cptr);
         // merge the read chunks that were previously crossing the contig break
         set< Read_Chunk_CPtr > erased_chunks_set;
+        Mutation::add_mut_mod_type add_mut_mod = [&] (const Mutation& m) {
+            Mutation_CPtr res;
+            modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { res = ce.add_mutation(m); });
+            return res;
+        };
         for (auto rc_cptr_it = chunks_out_cont_sptr->begin(); rc_cptr_it != chunks_out_cont_sptr->end(); ++rc_cptr_it)
         {
             Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
@@ -656,16 +664,18 @@ namespace MAC
             if (not rc_cptr->get_rc())
             {
                 erased_chunks_set.insert(rc_next_cptr);
-                modify_read_entry(rc_cptr->get_re_ptr(), [&rc_cptr] (Read_Entry& re) { re.merge_next_chunk(rc_cptr); });
+                modify_read_entry(rc_cptr->get_re_ptr(), [&] (Read_Entry& re) { re.merge_next_chunk(rc_cptr, add_mut_mod); });
             }
             else
             {
                 erased_chunks_set.insert(rc_cptr);
-                modify_read_entry(rc_next_cptr->get_re_ptr(), [&rc_next_cptr] (Read_Entry& re) { re.merge_next_chunk(rc_next_cptr); });
+                modify_read_entry(rc_next_cptr->get_re_ptr(), [&] (Read_Entry& re) { re.merge_next_chunk(rc_next_cptr, add_mut_mod); });
             }
         }
         // remove erased chunks from contig entry
         modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.remove_chunks(erased_chunks_set); });
+        // drop any unused mutations
+        modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
 
         //cerr << "merging contigs result\n" << *ce_cptr;
 

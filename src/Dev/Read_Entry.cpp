@@ -58,36 +58,37 @@ namespace MAC
         assert(_name_ptr->size() > 0);
         for (auto rc_it = _chunk_cont.begin(); rc_it != _chunk_cont.end(); ++rc_it)
         {
+            Read_Chunk_CPtr rc_cptr = &*rc_it;
             // re_ptr
-            assert(rc_it->get_re_ptr() == this);
+            assert(rc_cptr->get_re_ptr() == this);
             // no empty chunks
-            assert(rc_it->get_r_len() > 0);
+            assert(rc_cptr->get_r_len() > 0);
             // read start&end bounds
             if (rc_it == _chunk_cont.begin())
             {
-                assert(rc_it->get_r_start() == 0);
+                assert(rc_cptr->get_r_start() == 0);
             }
             auto rc_next_it = rc_it;
             rc_next_it++;
             if (rc_next_it == _chunk_cont.end())
             {
-                assert(rc_it->get_r_end() == _len);
+                assert(rc_cptr->get_r_end() == _len);
             }
             if (rc_next_it != _chunk_cont.end())
             {
-                assert(rc_it->get_r_end() == rc_next_it->get_r_start());
+                assert(rc_cptr->get_r_end() == rc_next_it->get_r_start());
             }
             // contigs coordinates
-            assert(rc_it->get_c_start() <= rc_it->get_c_end());
-            assert(rc_it->get_c_start() <= rc_it->get_ce_ptr()->get_seq_offset() + rc_it->get_ce_ptr()->get_len());
-            assert(rc_it->get_c_end() <= rc_it->get_ce_ptr()->get_seq_offset() + rc_it->get_ce_ptr()->get_len());
+            assert(rc_cptr->get_c_start() <= rc_cptr->get_c_end());
+            assert(rc_cptr->get_c_start() <= rc_cptr->get_ce_ptr()->get_seq_offset() + rc_cptr->get_ce_ptr()->get_len());
+            assert(rc_cptr->get_c_end() <= rc_cptr->get_ce_ptr()->get_seq_offset() + rc_cptr->get_ce_ptr()->get_len());
             // mapped length
-            Size_Type c_len = rc_it->get_c_end() - rc_it->get_c_start();
-            Size_Type r_len = rc_it->get_r_end() - rc_it->get_r_start();
+            Size_Type c_len = rc_cptr->get_c_end() - rc_cptr->get_c_start();
+            Size_Type r_len = rc_cptr->get_r_end() - rc_cptr->get_r_start();
             long long delta = 0;
-            for (size_t i = 0; i < rc_it->get_mut_ptr_cont().size(); ++i)
+            for (size_t i = 0; i < rc_cptr->get_mut_ptr_cont().size(); ++i)
             {
-                delta += (long long)rc_it->get_mut_ptr_cont()[i]->get_seq_len() - (long long)rc_it->get_mut_ptr_cont()[i]->get_len();
+                delta += (long long)rc_cptr->get_mut_ptr_cont()[i]->get_seq_len() - (long long)rc_cptr->get_mut_ptr_cont()[i]->get_len();
             }
             assert((long long)c_len + delta == (long long)r_len);
         }

@@ -31,6 +31,8 @@ namespace MAC
         /** Type of key used to store Mutation objects. */
         typedef Size_Type key_type;
 
+        typedef std::function<const Mutation*(const Mutation&)> add_mut_mod_type;
+
         /** Default constructor. */
         Mutation()
         : _start(0), _len(0), _seq_len(0) {}
@@ -127,7 +129,14 @@ namespace MAC
          * Pre: Mutations must be adjacent on rf.
          * @param rhs Next Mutation.
          */
-        void merge(const Mutation& rhs) { assert(get_end() == rhs.get_start()); _len += rhs._len; _seq_len += rhs._seq_len; _seq += rhs._seq; }
+        void merge(const Mutation& rhs)
+        {
+            assert(get_end() == rhs.get_start());
+            assert(have_seq() == rhs.have_seq());
+            _len += rhs._len;
+            _seq_len += rhs._seq_len;
+            _seq += rhs._seq;
+        }
 
          /** Cut mutation at given offsets.
          * @param base_offset Base offset, 0-based.

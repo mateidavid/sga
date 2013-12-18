@@ -122,7 +122,7 @@ namespace MAC
          * Pre: Chunks must be mapped to the same contig.
          * @param rc_cptr Chunk that will hold the result.
          */
-        void merge_next_chunk(Read_Chunk_CPtr rc_cptr)
+        void merge_next_chunk(Read_Chunk_CPtr rc_cptr, Mutation::add_mut_mod_type add_mut_mod)
         {
             Read_Chunk_Cont::iterator rc_next_it = _chunk_cont.iterator_to(*rc_cptr);
             ++rc_next_it;
@@ -131,7 +131,7 @@ namespace MAC
             assert(rc_next_cptr->get_ce_ptr() == rc_cptr->get_ce_ptr());
             assert(rc_next_cptr->get_rc() == rc_cptr->get_rc());
             // call read chunk's merge_next()
-            modify_read_chunk(rc_cptr, [&rc_next_cptr] (Read_Chunk& rc) { rc.merge_next(rc_next_cptr); });
+            modify_read_chunk(rc_cptr, [&] (Read_Chunk& rc) { rc.merge_next(rc_next_cptr, add_mut_mod); });
             // remove next chunk
             _chunk_cont.erase(rc_next_it);
         }

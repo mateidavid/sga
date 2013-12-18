@@ -151,6 +151,22 @@ namespace MAC
          * @return Bool; true if breakpoint reached (i.e., mapping stretch corresponds to read Mutation), false ow.
          */
         bool advance_pos_til_mut(Read_Chunk_Pos& pos, const Mutation& mut, bool forward = true) const;
+
+        /** Advance position past any deletions.
+         * @param pos Position object.
+         * @param forward Direction.
+         */
+        void advance_pos_skip_del(Read_Chunk_Pos& pos, bool forward = true) const
+        {
+            Read_Chunk_Pos tmp_pos = pos;
+            while (true)
+            {
+                advance_pos(tmp_pos, forward);
+                if (tmp_pos.c_pos != pos.c_pos)
+                    break;
+                pos = tmp_pos;
+            }
+        }
         /**@}*/
 
         /** Set read entry pointer. */
@@ -214,7 +230,7 @@ namespace MAC
           * @param ce_cptr Pointer to new contig entry object.
           * @return Flag whether to move read chunk to the right contig side; additional Read_Chunk object mapped to right side, if the chunk gets split
           */
-         std::tuple< bool, std::shared_ptr< Read_Chunk > > apply_contig_split(
+         std::tuple< bool, std::shared_ptr< Read_Chunk > > split(
              Size_Type c_brk, const std::map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr);
 
          /** Create Read_Chunk object and corresponding Mutation container from a cigar string.
@@ -260,10 +276,12 @@ namespace MAC
           * start: the start of the slice (=0 for read mutations);
           * end: end of the slice, 0 if slice goes to the end of the mutation (=0 for read mutations).
           */
+         /*
          std::shared_ptr< std::vector< std::tuple< Mutation_CPtr, Size_Type, Size_Type, bool > > >
          get_mutations_under_mapping(const std::vector< Mutation_CPtr >& r_mut_cptr_cont,
                                      const Mutation_Trans_Cont& mut_map,
                                      std::shared_ptr< Mutation_Cont > new_mut_cont_sptr) const;
+         */
 
          /** Collapse mutations corresponding to 2 mappings.
           * @param lhs Read_Chunk object corresponding to contig->read1 mapping.
@@ -291,8 +309,9 @@ namespace MAC
          /** Merge this read chunk with the next chunk of the same read.
           * Pre: Chunks must be mapped to the same contig, in the same orientation, continuously.
           * @param rc_next_cptr CPtr to next chunk.
+          * @param add_mut_mod Modifier that allows chunk object to add mutations to contig.
           */
-         void merge_next(const Read_Chunk* rc_next_cptr);
+         void merge_next(const Read_Chunk* rc_next_cptr, Mutation::add_mut_mod_type add_mut_mod);
 
          /** Rebase this chunk into another contig.
           * @param ce_cptr New contig.
