@@ -75,19 +75,19 @@ namespace MAC
         Read_Entry_Cont _re_cont;
         Contig_Entry_Cont _ce_cont;
 
-        void modify_read_entry(const Read_Entry* re_cptr, Read_Entry::modifier_type modifier)
+        void modify_read_entry(const Read_Entry* re_cptr, Read_Entry::mod_type re_mod)
         {
-            modify_element<Read_Entry_Cont>(_re_cont, re_cptr, modifier);
+            modify_element<Read_Entry_Cont>(_re_cont, re_cptr, re_mod);
         }
 
-        void modify_contig_entry(const Contig_Entry* ce_cptr, Contig_Entry::modifier_type modifier)
+        void modify_contig_entry(const Contig_Entry* ce_cptr, Contig_Entry::mod_type ce_mod)
         {
-            modify_element<Contig_Entry_Cont>(_ce_cont, ce_cptr, modifier);
+            modify_element<Contig_Entry_Cont>(_ce_cont, ce_cptr, ce_mod);
         }
 
-        void modify_read_chunk(Read_Chunk_CPtr rc_cptr, Read_Chunk::modifier_type modifier)
+        void modify_read_chunk(Read_Chunk_CPtr rc_cptr, Read_Chunk::mod_type rc_mod)
         {
-            modify_read_entry(rc_cptr->get_re_ptr(), [&] (Read_Entry& re) { re.modify_read_chunk(rc_cptr, modifier); });
+            modify_read_entry(rc_cptr->get_re_ptr(), [&] (Read_Entry& re) { re.modify_read_chunk(rc_cptr, rc_mod); });
         }
 
         const Read_Entry* insert_read_entry(const Read_Entry& re);

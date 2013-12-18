@@ -492,14 +492,14 @@ namespace MAC
                        or (_c_start < c_brk and pos.mut_idx == 1 and _mut_ptr_cont[0]->is_del()));
                 move_to_rhs = true;
                 // fix contig coordinates
-                _c_start = (c_brk < _c_start? _c_start - c_brk : 0);
                 _c_len = (c_brk <= _c_start? _c_len : _c_len - (c_brk - _c_start));
+                _c_start = (c_brk <= _c_start? _c_start - c_brk : 0);
                 // fix mutation pointers
                 vector< const Mutation* > tmp(_mut_ptr_cont.begin() + pos.mut_idx, _mut_ptr_cont.end()); // drop initial deletion, if any
                 _mut_ptr_cont.clear();
                 for (size_t j = 0; j < tmp.size(); ++j)
                 {
-                    assert(mut_cptr_map.count(tmp[j]) > 0);
+                    assert(mut_cptr_map.count(tmp[j]) == 1);
                     _mut_ptr_cont.push_back(mut_cptr_map.find(tmp[j])->second);
                 }
                 // fix ce_ptr
@@ -1005,9 +1005,28 @@ namespace MAC
         }
         _c_len += rc_next_cptr->_c_len;
         _r_len += rc_next_cptr->_r_len;
+        // aquire mutations
+        if (not get_rc())
+        {
+            _mut_ptr_cont.insert(_mut_ptr_cont.end(), rc_next_cptr->_mut_ptr_cont.begin(), rc_next_cptr->_mut_ptr_cont.end());
+        }
+        else // _rc
+        {
+            if (rc_next_cptr->_mut_ptr_cont.size() > 0)
+            {
+                // mutations from next chunk must be inserted before the ones in here
+                size_t old_size = _mut_ptr_cont.size();
+                size_t new_size = old_size + rc_next_cptr->_mut_ptr_cont.size();
+                _mut_ptr_cont.resize(new_size, NULL);
+                for (size_t i = 0; i < old_size; ++i)
+                    _mut_ptr_cont[new_size - 1 - i] = _mut_ptr_cont[old_size - 1 - i];
+                for (size_t i = 0; i <  rc_next_cptr->_mut_ptr_cont.size(); ++i)
+                    _mut_ptr_cont[i] = rc_next_cptr->_mut_ptr_cont[i];
+            }
+        }
     }
 
-    void Read_Chunk::rebase(const Contig_Entry* ce_cptr, Size_Type prefix_len, const Mutation_Trans_Cont& mut_map)
+    void Read_Chunk::rebase(const Contig_Entry* ce_cptr, const Mutation_Trans_Cont& mut_map, Size_Type prefix_len)
     {
         _ce_ptr = ce_cptr;
         _c_start += prefix_len;

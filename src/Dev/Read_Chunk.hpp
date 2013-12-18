@@ -63,8 +63,9 @@ namespace MAC
         typedef Size_Type key_type;
 
         /** Type for an external unary modifier. */
-        typedef std::function<void(Read_Chunk&)> modifier_type;
-        typedef std::function<void(const Read_Chunk*)> external_modifier_type;
+        typedef std::function<void(Read_Chunk&)> mod_type;
+        typedef std::function<void(const Read_Chunk*)> ext_mod_type;
+        typedef std::function<void(const Read_Chunk*, const Mutation_Trans_Cont&)> ext_mod_with_map_type;
 
         /** @name Constructors */
         /**@{*/
@@ -295,10 +296,10 @@ namespace MAC
 
          /** Rebase this chunk into another contig.
           * @param ce_cptr New contig.
-          * @param prefix_len Length of prefix by which new contig is larger than the old one.
           * @param mut_map Mutation translation map.
+          * @param prefix_len Length of prefix by which new contig is larger than the old one.
           */
-         void rebase(const Contig_Entry* ce_cptr, Size_Type prefix_len, const Mutation_Trans_Cont& mut_map);
+         void rebase(const Contig_Entry* ce_cptr, const Mutation_Trans_Cont& mut_map, Size_Type prefix_len);
 
          friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
 

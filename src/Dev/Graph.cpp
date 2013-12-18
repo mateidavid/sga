@@ -81,7 +81,9 @@ namespace MAC
     void Graph::cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr)
     {
         if ((c_brk == 0 and mut_left_cptr == NULL)
-            or (c_brk == ce_cptr->get_len() and (ce_cptr->get_mut_cont().size() == 0 or not ce_cptr->get_mut_cont().rbegin()->is_ins())))
+            or (c_brk == ce_cptr->get_len() and (ce_cptr->get_mut_cont().size() == 0
+                                                 or not ce_cptr->get_mut_cont().rbegin()->is_ins()
+                                                 or ce_cptr->get_mut_cont().rbegin()->get_start() < ce_cptr->get_len())))
         {
             return;
         }
@@ -144,10 +146,12 @@ namespace MAC
         // drop the second part of the base sequence from the first part
         modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.drop_base_seq(c_brk); });
         // fix contig length for chunks left on LHS
+        /* NOOO
         for (auto rc_cptr_it = ce_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
         {
             modify_read_chunk(*rc_cptr_it, [&] (Read_Chunk& rc) { rc.c_len() = ce_cptr->get_len(); });
         }
+        */
 
         // drop unused mutations from either contig
         modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
@@ -574,9 +578,12 @@ namespace MAC
             merge_read_chunks(rc1_cptr, rc2_cptr, rc1rc2_cigar);
         }
 
-        // check if we can merge any adjacent contigs
-        //merge_contigs(re1_cptr);
+        assert(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
 
+        // check if we can merge any adjacent contigs
+        //cerr << "before merging:\n" << *this;
+        merge_read_contigs(re1_cptr);
+        //cerr << "after merging:\n" << *this;
         assert(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
     }
 
@@ -605,6 +612,7 @@ namespace MAC
         auto chunks_out_cont_sptr = ce_cptr->is_mergeable(dir);
         if (not chunks_out_cont_sptr)
             return false;
+
         Read_Chunk_CPtr rc_cptr = *chunks_out_cont_sptr->begin();
         Read_Chunk_CPtr rc_next_cptr = ce_cptr->get_next_chunk(dir, rc_cptr);
         const Contig_Entry* ce_next_cptr = rc_next_cptr->get_ce_ptr();
@@ -620,7 +628,7 @@ namespace MAC
         {
             swap(ce_cptr, ce_next_cptr);
             dir = true;
-            chunks_out_cont_sptr = ce_next_cptr->is_mergeable_one_way(true);
+            chunks_out_cont_sptr = ce_cptr->is_mergeable_one_way(true);
             assert(chunks_out_cont_sptr);
         }
         // at this point:
@@ -628,38 +636,46 @@ namespace MAC
         // - ce_cptr is the start of the merge and ce_next_cptr is the tail
         // - chunks_out_cont_sptr contains chunks from ce_cptr that go into ce_next_cptr
 
+        //cerr << "merging contigs\n" << *ce_cptr << "and\n" << *ce_next_cptr;
+        
         Size_Type prefix_len = ce_cptr->get_len();
+        // construct modifier that allows merge_forward() to rebase chunks into ce_cptr
+        auto rc_rebase_mod = [&] (Read_Chunk_CPtr rc_cptr, const Mutation_Trans_Cont& mut_map) {
+            modify_read_chunk(rc_cptr, [&] (Read_Chunk& rc) { rc.rebase(ce_cptr, mut_map, prefix_len); });
+        };
         // merge ce_next_cptr into ce_cptr using merge_forward()
-        shared_ptr< Mutation_Trans_Cont > mut_map_sptr;
-        modify_contig_entry(ce_cptr, [&ce_next_cptr,&mut_map_sptr] (Contig_Entry& ce) { mut_map_sptr = ce.merge_forward(ce_next_cptr); });
-        // apply rebase modifier to all chunks from the right contig
-        for (auto rc_cptr_it = ce_next_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_next_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
-        {
-            rc_cptr = *rc_cptr_it;
-            modify_read_chunk(rc_cptr, [&] (Read_Chunk& rc) { rc.rebase(ce_cptr, prefix_len, *mut_map_sptr); });
-        }
+        modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.merge_forward(ce_next_cptr, rc_rebase_mod); });
         // we are done with the right contig
         erase_contig_entry(ce_next_cptr);
-        // finally, merge the read chunks that were previously crossing the contig break
+        // merge the read chunks that were previously crossing the contig break
+        set< Read_Chunk_CPtr > erased_chunks_set;
         for (auto rc_cptr_it = chunks_out_cont_sptr->begin(); rc_cptr_it != chunks_out_cont_sptr->end(); ++rc_cptr_it)
         {
             Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+            Read_Chunk_CPtr rc_next_cptr = ce_cptr->get_next_chunk(true, rc_cptr);
             if (not rc_cptr->get_rc())
             {
+                erased_chunks_set.insert(rc_next_cptr);
                 modify_read_entry(rc_cptr->get_re_ptr(), [&rc_cptr] (Read_Entry& re) { re.merge_next_chunk(rc_cptr); });
             }
             else
             {
-                Read_Chunk_CPtr rc_next_cptr = ce_cptr->get_next_chunk(true, rc_cptr);
+                erased_chunks_set.insert(rc_cptr);
                 modify_read_entry(rc_next_cptr->get_re_ptr(), [&rc_next_cptr] (Read_Entry& re) { re.merge_next_chunk(rc_next_cptr); });
             }
         }
+        // remove erased chunks from contig entry
+        modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.remove_chunks(erased_chunks_set); });
+
+        //cerr << "merging contigs result\n" << *ce_cptr;
+
         return true;
     }
 
     void Graph::merge_read_contigs(const Read_Entry* re_cptr)
     {
-        bool done;
+        bool done = false;
+        while (not done)
         {
             done = true;
             for (auto rc_it = re_cptr->get_chunk_cont().begin(); rc_it != re_cptr->get_chunk_cont().end(); ++rc_it)
@@ -685,7 +701,6 @@ namespace MAC
                 }
             }
         }
-        while (not done);
     }
 
     bool Graph::check_all() const

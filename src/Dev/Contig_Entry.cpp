@@ -30,6 +30,18 @@ namespace MAC
         assert(false);
     }
 
+    void Contig_Entry::remove_chunks(const set< Read_Chunk_CPtr >& rc_cptr_set)
+    {
+        size_t i = 0;
+        while (i < _chunk_cptr_cont.size())
+        {
+            if (rc_cptr_set.count(_chunk_cptr_cont[i]) > 0)
+                _chunk_cptr_cont.erase(_chunk_cptr_cont.begin() + i);
+            else
+                ++i;
+        }
+    }
+
     const Mutation* Contig_Entry::cut_mutation(const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset)
     {
         // construct modifier that cuts existing mutation, saving remaining part
@@ -127,7 +139,7 @@ namespace MAC
         }
     }
 
-    void Contig_Entry::reverse(const Read_Chunk::external_modifier_type& rc_reverse_mod)
+    void Contig_Entry::reverse(const Read_Chunk::ext_mod_type& rc_reverse_mod)
     {
         // only reverse full contigs
         assert(_seq_offset == 0);
@@ -232,19 +244,31 @@ namespace MAC
         auto chunks_out_cont_sptr = get_chunks_out(dir, true);
         if (chunks_out_cont_sptr->size() == 0)
             return NULL;
-        // check all chunks leaving go to the same contig, in the same orientation
-        set< std::tuple< const Contig_Entry*, bool > > ce_cptr_set;
+        // check all chunks leaving go to the same (different) contig, in the same orientation
+        const Contig_Entry* candidate_ce_cptr = NULL;
+        bool candidate_orientation;
         for (auto rc_cptr_it = chunks_out_cont_sptr->begin(); rc_cptr_it != chunks_out_cont_sptr->end(); ++rc_cptr_it)
         {
             Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
             Read_Chunk_CPtr rc_next_cptr = get_next_chunk(dir, rc_cptr);
             assert(rc_next_cptr != NULL);
-            if (rc_next_cptr->is_unmappable())
-                continue;
-            ce_cptr_set.insert(std::make_tuple(rc_next_cptr->get_ce_ptr(), rc_cptr->get_rc() == rc_next_cptr->get_rc()));
+            assert(not rc_next_cptr->is_unmappable());
+            const Contig_Entry* tmp_ce_cptr = rc_next_cptr->get_ce_ptr();
+            bool tmp_orientation = (rc_cptr->get_rc() == rc_next_cptr->get_rc());
+            if (tmp_ce_cptr == this) // multiple chunks of the same read mapped across this boundary: unmergeable
+                return NULL;
+            if (candidate_ce_cptr == NULL)
+            {
+                candidate_ce_cptr = tmp_ce_cptr;
+                candidate_orientation = tmp_orientation;
+            }
+            else
+            {
+                if (tmp_ce_cptr != candidate_ce_cptr or tmp_orientation != candidate_orientation)
+                    return NULL;
+            }
         }
-        if (ce_cptr_set.size() != 1)
-            return NULL;
+        assert(candidate_ce_cptr != NULL);
         return chunks_out_cont_sptr;
     }
 
@@ -264,11 +288,11 @@ namespace MAC
         return chunks_out_cont_sptr;
     }
 
-    shared_ptr< Mutation_Trans_Cont > Contig_Entry::merge_forward(const Contig_Entry* ce_next_cptr)
+    void Contig_Entry::merge_forward (const Contig_Entry* ce_next_cptr, const Read_Chunk::ext_mod_with_map_type& rc_rebase_mod)
     {
         assert(_seq_offset == 0 and ce_next_cptr->_seq_offset == 0);
-        shared_ptr< Mutation_Trans_Cont > res(new Mutation_Trans_Cont());
-        // rebase mutations, copy them into this contig, and in the translation table
+        Mutation_Trans_Cont mut_map;
+        // rebase mutations: copy them into this contig, and in the translation table
         for (auto mut_it = ce_next_cptr->_mut_cont.begin(); mut_it != ce_next_cptr->_mut_cont.end(); ++mut_it)
         {
             Mutation_Trans mut_trans;
@@ -281,12 +305,18 @@ namespace MAC
             assert(success);
             mut_trans.new_mut_cptr = &*new_mut_it;
             Mutation_Trans_Cont::iterator it;
-            std::tie(it, success) = res->insert(mut_trans);
+            std::tie(it, success) = mut_map.insert(mut_trans);
             assert(success);
+        }
+        // rebase chunks using external modifier
+        for (auto rc_cptr_it = ce_next_cptr->_chunk_cptr_cont.begin(); rc_cptr_it != ce_next_cptr->_chunk_cptr_cont.end(); ++rc_cptr_it)
+        {
+            Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+            rc_rebase_mod(rc_cptr, mut_map);
+            _chunk_cptr_cont.push_back(rc_cptr);
         }
         // lastly, merge the next contig's sequence into this one
         *_seq_ptr += *ce_next_cptr->_seq_ptr;
-        return res;
     }
 
     bool Contig_Entry::check() const

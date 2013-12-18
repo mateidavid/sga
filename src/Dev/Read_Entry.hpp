@@ -33,7 +33,7 @@ namespace MAC
         typedef const Seq_Type& key_type;
 
         /** Type for an external unary modifier. */
-        typedef std::function<void(Read_Entry&)> modifier_type;
+        typedef std::function<void(Read_Entry&)> mod_type;
 
         /** Constructor.
          * @param name_ptr Pointer to string containing read name.
@@ -73,9 +73,9 @@ namespace MAC
          * @param chunk_cptr Pointer to read chunk to modify.
          * @param f Unary modifier function to apply.
          */
-        void modify_read_chunk(Read_Chunk_CPtr rc_cptr, Read_Chunk::modifier_type modifier)
+        void modify_read_chunk(Read_Chunk_CPtr rc_cptr, Read_Chunk::mod_type mod)
         {
-            modify_element<Read_Chunk_Cont>(_chunk_cont, rc_cptr, modifier);
+            modify_element<Read_Chunk_Cont>(_chunk_cont, rc_cptr, mod);
         }
 
         /** Add read chunk object.

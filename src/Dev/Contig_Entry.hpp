@@ -32,7 +32,7 @@ namespace MAC
     {
     public:
         /** Type for an external unary modifier. */
-        typedef std::function<void(Contig_Entry&)> modifier_type;
+        typedef std::function<void(Contig_Entry&)> mod_type;
 
         /** Constructor.
          * @param seq_ptr Pointer to read sequence.
@@ -60,6 +60,11 @@ namespace MAC
          * @param rc_cptr Pointer to read chunk to remove.
          */
         void remove_chunk(Read_Chunk_CPtr rc_cptr);
+
+        /** Remove read chunks.
+         * @param rc_cptr_set Set of read chunks to remove.
+         */
+        void remove_chunks(const std::set< Read_Chunk_CPtr >& rc_cptr_set);
 
         /** Cut mutation at given offsets.
          * @param mut_cptr Pointer to mutation to cut.
@@ -104,7 +109,7 @@ namespace MAC
         void drop_base_seq(Size_Type c_brk) { _seq_ptr->resize(c_brk); }
 
         /** Reverse the contig. */
-        void reverse(const Read_Chunk::external_modifier_type& rc_reverse_mod);
+        void reverse(const Read_Chunk::ext_mod_type& rc_reverse_mod);
 
         /** Get out-edges counts.
          * @return A tuple (cnt_left, uniq_left, cnt_right, uniq_right), where cnt is the number
@@ -147,11 +152,11 @@ namespace MAC
          */
         std::shared_ptr< std::vector< Read_Chunk_CPtr > > is_mergeable(bool dir) const;
 
-        /** Merge the given contig into this one (only affects sequence & mutations, chunks must be fixed after).
+        /** Merge the given contig into this one.
          * @param ce_next_cptr Contig to be merged into this one.
-         * @return Translation map of mutations from the merged contig into this one.
+         * @param rc_rebase_mod External modifier that allows rebasing chunks into this contig.
          */
-        std::shared_ptr< Mutation_Trans_Cont > merge_forward(const Contig_Entry* ce_next_cptr);
+        void merge_forward(const Contig_Entry* ce_next_cptr, const Read_Chunk::ext_mod_with_map_type& rc_rebase_mod);
 
         /** Integrity check. */
         bool check() const;
