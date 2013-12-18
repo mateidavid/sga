@@ -500,6 +500,12 @@ namespace MAC
                 // fix contig coordinates
                 _c_len = (c_brk <= _c_start? _c_len : _c_len - (c_brk - _c_start));
                 _c_start = (c_brk <= _c_start? _c_start - c_brk : 0);
+                if (pos.mut_idx == 1)
+                {
+                    // skip initial deletion
+                    _c_start += _mut_ptr_cont[0]->get_len();
+                    _c_len -= _mut_ptr_cont[0]->get_len();
+                }
                 // fix mutation pointers
                 vector< const Mutation* > tmp(_mut_ptr_cont.begin() + pos.mut_idx, _mut_ptr_cont.end()); // drop initial deletion, if any
                 _mut_ptr_cont.clear();
@@ -519,7 +525,9 @@ namespace MAC
                        or (c_brk < get_c_end() and pos.mut_idx == _mut_ptr_cont.size() - 1 and _mut_ptr_cont[pos.mut_idx]->is_del()));
                 if (pos.mut_idx == _mut_ptr_cont.size() - 1)
                 {
-                    _mut_ptr_cont.resize(pos.mut_idx); // drop final deletion, if any
+                    // drop final deletion
+                    _c_len -= _mut_ptr_cont[pos.mut_idx]->get_len();
+                    _mut_ptr_cont.resize(pos.mut_idx);
                 }
             }
             return std::make_tuple(move_to_rhs, shared_ptr< Read_Chunk >(NULL));
