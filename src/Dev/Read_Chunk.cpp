@@ -92,6 +92,7 @@ namespace MAC
     void Read_Chunk::increment_pos(Read_Chunk_Pos& pos, Size_Type brk, bool on_contig) const
     {
         assert(check_pos(pos));
+        assert(pos != get_end_pos());
         if (brk == 0)
         {
             // by default, use an unreachable breakpoint
@@ -154,6 +155,7 @@ namespace MAC
     void Read_Chunk::decrement_pos(Read_Chunk_Pos& pos, Size_Type brk, bool on_contig) const
     {
         assert(check_pos(pos));
+        assert(pos != get_start_pos());
         if (brk == 0)
         {
             on_contig = true;
