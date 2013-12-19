@@ -500,12 +500,14 @@ namespace MAC
                 // fix contig coordinates
                 _c_len = (c_brk <= _c_start? _c_len : _c_len - (c_brk - _c_start));
                 _c_start = (c_brk <= _c_start? _c_start - c_brk : 0);
+                /*
                 if (pos.mut_idx == 1)
                 {
                     // skip initial deletion
                     _c_start += _mut_ptr_cont[0]->get_len();
                     _c_len -= _mut_ptr_cont[0]->get_len();
                 }
+                */
                 // fix mutation pointers
                 vector< const Mutation* > tmp(_mut_ptr_cont.begin() + pos.mut_idx, _mut_ptr_cont.end()); // drop initial deletion, if any
                 _mut_ptr_cont.clear();
