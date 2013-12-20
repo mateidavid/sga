@@ -9,7 +9,8 @@
 
 #include <string>
 #include <functional>
-#include <cassert>
+
+#include "common.hpp"
 
 
 /** Multi-Allelic Contig namespace. */
@@ -37,9 +38,9 @@ namespace MAC
 template <class Container>
 inline void modify_element(Container& cont, typename Container::iterator e_it, std::function<void(typename Container::value_type&)> modifier)
 {
-    assert(e_it != cont.end());
+    ASSERT(e_it != cont.end());
     bool success = cont.modify(e_it, modifier);
-    assert(success);
+    ASSERT(success);
 }
 
 /** General-purpose modifier for boost containers.
@@ -61,7 +62,7 @@ inline void modify_element(Container& cont, const typename Container::value_type
 template <class Container>
 inline void modify_element(Container& cont, const typename Container::value_type* e_cptr, std::function<void(typename Container::value_type&)> modifier)
 {
-    assert(e_cptr != NULL);
+    ASSERT(e_cptr != NULL);
     modify_element<Container>(cont, cont.iterator_to(*e_cptr), modifier);
 }
 

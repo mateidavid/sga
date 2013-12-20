@@ -27,7 +27,7 @@ namespace MAC
                 return;
             }
         }
-        assert(false);
+        ASSERT(false);
     }
 
     void Contig_Entry::remove_chunks(const set< Read_Chunk_CPtr >& rc_cptr_set)
@@ -55,7 +55,7 @@ namespace MAC
         Mutation_Cont::iterator it_new;
         bool success;
         tie(it_new, success) = _mut_cont.insert(m_new);
-        assert(success);
+        ASSERT(success);
 
         return &(*it_new);
     }
@@ -87,7 +87,7 @@ namespace MAC
     {
         map< const Mutation*, const Mutation* > res;
 
-        assert(mut_left_cptr == NULL or (mut_left_cptr->get_start() == c_pos and mut_left_cptr->is_ins()));
+        ASSERT(mut_left_cptr == NULL or (mut_left_cptr->get_start() == c_pos and mut_left_cptr->is_ins()));
 
         Mutation_Cont::iterator mut_old_it = ce_cptr->_mut_cont.lower_bound(c_pos);
         while (mut_old_it != ce_cptr->_mut_cont.end())
@@ -102,7 +102,7 @@ namespace MAC
                 else
                     tie(mut_new_it, success) = _mut_cont.insert(
                         Mutation(mut_old_it->get_start() - c_pos, mut_old_it->get_len(), mut_old_it->get_seq_len()));
-                assert(success);
+                ASSERT(success);
                 res[&(*mut_old_it)] = &(*mut_new_it);
             }
             ++mut_old_it;
@@ -142,7 +142,7 @@ namespace MAC
     void Contig_Entry::reverse(const Read_Chunk::ext_mod_type& rc_reverse_mod)
     {
         // only reverse full contigs
-        assert(_seq_offset == 0);
+        ASSERT(_seq_offset == 0);
 
         // reverse the string
         std::shared_ptr< Seq_Type > old_seq_ptr = _seq_ptr;
@@ -184,7 +184,7 @@ namespace MAC
             {
                 ++cnt_0;
                 Read_Chunk_CPtr rc_next_cptr = rc_cptr->get_re_ptr()->get_sibling(rc_cptr, not rc_cptr->get_rc()? false : true);
-                assert(rc_next_cptr != NULL);
+                ASSERT(rc_next_cptr != NULL);
                 set_0.insert(rc_next_cptr->get_ce_ptr());
             }
             if (rc_cptr->get_c_end() == get_len()
@@ -192,7 +192,7 @@ namespace MAC
             {
                 ++cnt_1;
                 Read_Chunk_CPtr rc_next_cptr = rc_cptr->get_re_ptr()->get_sibling(rc_cptr, not rc_cptr->get_rc()? true : false);
-                assert(rc_next_cptr != NULL);
+                ASSERT(rc_next_cptr != NULL);
                 set_1.insert(rc_next_cptr->get_ce_ptr());
             }
         }
@@ -251,8 +251,8 @@ namespace MAC
         {
             Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
             Read_Chunk_CPtr rc_next_cptr = get_next_chunk(dir, rc_cptr);
-            assert(rc_next_cptr != NULL);
-            assert(not rc_next_cptr->is_unmappable());
+            ASSERT(rc_next_cptr != NULL);
+            ASSERT(not rc_next_cptr->is_unmappable());
             const Contig_Entry* tmp_ce_cptr = rc_next_cptr->get_ce_ptr();
             bool tmp_orientation = (rc_cptr->get_rc() == rc_next_cptr->get_rc());
             if (tmp_ce_cptr == this) // multiple chunks of the same read mapped across this boundary: unmergeable
@@ -268,7 +268,7 @@ namespace MAC
                     return NULL;
             }
         }
-        assert(candidate_ce_cptr != NULL);
+        ASSERT(candidate_ce_cptr != NULL);
         return chunks_out_cont_sptr;
     }
 
@@ -284,13 +284,13 @@ namespace MAC
         auto chunks_in_cont_sptr = ce_next_cptr->is_mergeable_one_way(dir != same_orientation);
         if (not chunks_in_cont_sptr)
             return NULL;
-        assert(chunks_out_cont_sptr->size() == chunks_in_cont_sptr->size());
+        ASSERT(chunks_out_cont_sptr->size() == chunks_in_cont_sptr->size());
         return chunks_out_cont_sptr;
     }
 
     void Contig_Entry::merge_forward (const Contig_Entry* ce_next_cptr, const Read_Chunk::ext_mod_with_map_type& rc_rebase_mod)
     {
-        assert(_seq_offset == 0 and ce_next_cptr->_seq_offset == 0);
+        ASSERT(_seq_offset == 0 and ce_next_cptr->_seq_offset == 0);
         Mutation_Trans_Cont mut_map;
         // rebase mutations: copy them into this contig, and in the translation table
         for (auto mut_it = ce_next_cptr->_mut_cont.begin(); mut_it != ce_next_cptr->_mut_cont.end(); ++mut_it)
@@ -302,11 +302,11 @@ namespace MAC
             Mutation_Cont::iterator new_mut_it;
             bool success;
             std::tie(new_mut_it, success) = _mut_cont.insert(m);
-            assert(success);
+            ASSERT(success);
             mut_trans.new_mut_cptr = &*new_mut_it;
             Mutation_Trans_Cont::iterator it;
             std::tie(it, success) = mut_map.insert(mut_trans);
-            assert(success);
+            ASSERT(success);
         }
         // rebase chunks using external modifier
         for (auto rc_cptr_it = ce_next_cptr->_chunk_cptr_cont.begin(); rc_cptr_it != ce_next_cptr->_chunk_cptr_cont.end(); ++rc_cptr_it)
@@ -322,23 +322,23 @@ namespace MAC
     bool Contig_Entry::check() const
     {
         // check base sequence exists
-        assert(_seq_ptr);
+        ASSERT(_seq_ptr);
         // mutations:
         for (auto mut_it = _mut_cont.begin(); mut_it != _mut_cont.end(); ++mut_it)
         {
             Mutation_CPtr mut_cptr = &*mut_it;
             // check base coordinates
-            assert(mut_cptr->get_start() <= _seq_ptr->size() and mut_cptr->get_end() <= _seq_ptr->size());
+            ASSERT(mut_cptr->get_start() <= _seq_ptr->size() and mut_cptr->get_end() <= _seq_ptr->size());
             // no empty mutations
-            assert(not mut_cptr->is_empty());
+            ASSERT(not mut_cptr->is_empty());
         }
         // read chunks:
         for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
         {
             // check contig pointers
-            assert((*rc_cptr_it)->get_ce_ptr() == this);
+            ASSERT((*rc_cptr_it)->get_ce_ptr() == this);
             // check contig coordinates
-            assert((*rc_cptr_it)->get_c_end() <= _seq_ptr->size());
+            ASSERT((*rc_cptr_it)->get_c_end() <= _seq_ptr->size());
             // mutation pointers:
             for (auto mut_cptr_it = (*rc_cptr_it)->get_mut_ptr_cont().begin(); mut_cptr_it != (*rc_cptr_it)->get_mut_ptr_cont().end(); ++mut_cptr_it)
             {
@@ -348,7 +348,7 @@ namespace MAC
                 {
                     ++mut_it;
                 }
-                assert(mut_it != _mut_cont.end());
+                ASSERT(mut_it != _mut_cont.end());
             }
         }
         return true;

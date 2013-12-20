@@ -4,6 +4,8 @@
 #include <vector>
 #include <list>
 
+#include "globals.hpp"
+#include "common.hpp"
 #include "Graph.hpp"
 #include "indent.hpp"
 #include "ixstream.hpp"
@@ -19,6 +21,7 @@ using indent::tab;
 
 int main(int argc, char* argv[])
 {
+    global::program_name = argv[0];
     string input_file;
     string stats_file;
     char c;
@@ -66,7 +69,8 @@ int main(int argc, char* argv[])
             string* r_id_ptr = new string();
             string* r_seq_ptr = new string();
             iss >> *r_id_ptr >> *r_seq_ptr;
-            assert(not iss.eof());
+            ASSERT(not iss.eof());
+            global::assert_message = string("VT ") + *r_id_ptr;
             g.add_read(r_id_ptr, r_seq_ptr);
         }
         else if (rec_type == "ED")
@@ -79,9 +83,10 @@ int main(int argc, char* argv[])
             string sam_cigar;
             string sam_pi;
             iss >> r1_id >> r2_id >> r1_start >> r1_end >> r1_len >> r2_start >> r2_end >> r2_len >> rc >> tmp >> sam_cigar >> sam_pi;
-            assert(not iss.eof());
+            ASSERT(not iss.eof());
             ++r1_end;
             ++r2_end;
+            global::assert_message = string("ED ") + r1_id + " " + r2_id;
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
         }
         //cerr << g;

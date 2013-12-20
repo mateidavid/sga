@@ -44,7 +44,7 @@ namespace MAC
         const Seq_Type& get_seq() const { return *_seq_ptr; }
         Size_Type get_seq_offset() const { return _seq_offset; }
         Seq_Type substr(Size_Type start, Size_Type len) const
-        { assert(start >= _seq_offset and start + len <= _seq_offset + _seq_ptr->size()); return _seq_ptr->substr(start - _seq_offset, len); }
+        { ASSERT(start >= _seq_offset and start + len <= _seq_offset + _seq_ptr->size()); return _seq_ptr->substr(start - _seq_offset, len); }
         Size_Type get_len() const { return _seq_ptr->size(); }
         const Mutation_Cont& get_mut_cont() const { return _mut_cont; }
         Mutation_Cont& mut_cont() { return _mut_cont; }

@@ -32,6 +32,8 @@ test_SOURCES = test.cpp
 libdev_la_SOURCES = kmer_gen.cpp
 
 libmac_la_SOURCES = \
+	globals.cpp \
+	common.cpp \
         Mutation.cpp \
         Read_Chunk.cpp \
         Read_Entry.cpp \

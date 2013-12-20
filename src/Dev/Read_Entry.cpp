@@ -26,7 +26,7 @@ namespace MAC
         }
         else
         {
-            assert(it != _chunk_cont.begin());
+            ASSERT(it != _chunk_cont.begin());
             return &(*(--it));
         }
     }
@@ -53,30 +53,30 @@ namespace MAC
     bool Read_Entry::check() const
     {
         // name is set
-        assert(_name_ptr);
+        ASSERT(_name_ptr);
         // name not empty
-        assert(_name_ptr->size() > 0);
+        ASSERT(_name_ptr->size() > 0);
         for (auto rc_it = _chunk_cont.begin(); rc_it != _chunk_cont.end(); ++rc_it)
         {
             Read_Chunk_CPtr rc_cptr = &*rc_it;
             // re_ptr
-            assert(rc_cptr->get_re_ptr() == this);
+            ASSERT(rc_cptr->get_re_ptr() == this);
             // read start&end bounds
             if (rc_it == _chunk_cont.begin())
             {
-                assert(rc_cptr->get_r_start() == 0);
+                ASSERT(rc_cptr->get_r_start() == 0);
             }
             auto rc_next_it = rc_it;
             rc_next_it++;
             if (rc_next_it == _chunk_cont.end())
             {
-                assert(rc_cptr->get_r_end() == _len);
+                ASSERT(rc_cptr->get_r_end() == _len);
             }
             if (rc_next_it != _chunk_cont.end())
             {
-                assert(rc_cptr->get_r_end() == rc_next_it->get_r_start());
+                ASSERT(rc_cptr->get_r_end() == rc_next_it->get_r_start());
             }
-            assert(rc_cptr->check());
+            ASSERT(rc_cptr->check());
         }
         return true;
     }

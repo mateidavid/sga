@@ -44,38 +44,38 @@ namespace MAC
         const Cigar_Op& get_op_struct(size_t i) const { return _op_vect[i]; }
 
         /** Get operation. */
-        char get_op(size_t i) const { assert(i < get_n_ops()); return _op_vect[i].op; }
+        char get_op(size_t i) const { ASSERT(i < get_n_ops()); return _op_vect[i].op; }
 
         /** Get operation length, by index. */
-        Size_Type get_op_len(size_t i) const { assert(i < get_n_ops()); return _op_vect[i].len; }
+        Size_Type get_op_len(size_t i) const { ASSERT(i < get_n_ops()); return _op_vect[i].len; }
 
         /** Get reference length of operation, by index. */
         Size_Type get_rf_op_len(size_t i) const
-        { assert(i <= get_n_ops()); return (i < get_n_ops() and (is_match(i) or is_deletion(i))? _op_vect[i].len : 0); }
+        { ASSERT(i <= get_n_ops()); return (i < get_n_ops() and (is_match(i) or is_deletion(i))? _op_vect[i].len : 0); }
 
         /** Get query length of operation, by index. */
         Size_Type get_qr_op_len(size_t i) const
-        { assert(i <= get_n_ops()); return (i < get_n_ops() and (is_match(i) or is_insertion(i))? _op_vect[i].len : 0); }
+        { ASSERT(i <= get_n_ops()); return (i < get_n_ops() and (is_match(i) or is_insertion(i))? _op_vect[i].len : 0); }
 
         /** Get rf length spanned by cigar ops [start...end-1]. */
         Size_Type get_rf_sub_len(size_t start, size_t end) const
         {
-            assert(start <= end and end <= get_n_ops());
+            ASSERT(start <= end and end <= get_n_ops());
             return get_rf_offset(end) - get_rf_offset(start);
         }
 
         /** Get qr length spanned by cigar ops [start...end-1]. */
         Size_Type get_qr_sub_len(size_t start, size_t end) const
         {
-            assert(start <= end and end <= get_n_ops());
+            ASSERT(start <= end and end <= get_n_ops());
             return (not _reversed? get_qr_offset(end) - get_qr_offset(start) : get_qr_offset(start) - get_qr_offset(end));
         }
 
         /** Get reference offset of operation, by index. */
-        Size_Type get_rf_offset(size_t i) const { assert(i <= get_n_ops()); return _rf_start + (i < get_n_ops()? _op_vect[i].rf_offset : _rf_len); }
+        Size_Type get_rf_offset(size_t i) const { ASSERT(i <= get_n_ops()); return _rf_start + (i < get_n_ops()? _op_vect[i].rf_offset : _rf_len); }
 
         /** Get query offset of operation, by index. */
-        Size_Type get_qr_offset(size_t i) const { assert(i <= get_n_ops()); return _qr_start + (i < get_n_ops()? _op_vect[i].qr_offset : (not _reversed? _qr_len : 0)); }
+        Size_Type get_qr_offset(size_t i) const { ASSERT(i <= get_n_ops()); return _qr_start + (i < get_n_ops()? _op_vect[i].qr_offset : (not _reversed? _qr_len : 0)); }
 
         /** Get length of the op before given rf position.
          * @param i Index of the op to consider.
@@ -83,8 +83,8 @@ namespace MAC
          */
         Size_Type get_rf_op_prefix_len(size_t i, Size_Type pos) const
         {
-            assert(i < get_n_ops());
-            assert(get_rf_offset(i) <= pos and pos <= get_rf_offset(i + 1));
+            ASSERT(i < get_n_ops());
+            ASSERT(get_rf_offset(i) <= pos and pos <= get_rf_offset(i + 1));
             return pos - get_rf_offset(i);
         }
 
@@ -94,15 +94,15 @@ namespace MAC
          */
         Size_Type get_qr_op_prefix_len(size_t i, Size_Type pos) const
         {
-            assert(i < get_n_ops());
+            ASSERT(i < get_n_ops());
             if (not _reversed)
             {
-                assert(get_qr_offset(i) <= pos and pos <= get_qr_offset(i + 1));
+                ASSERT(get_qr_offset(i) <= pos and pos <= get_qr_offset(i + 1));
                 return pos - get_qr_offset(i);
             }
             else // _reversed
             {
-                assert(get_qr_offset(i + 1) <= pos and pos <= get_qr_offset(i));
+                ASSERT(get_qr_offset(i + 1) <= pos and pos <= get_qr_offset(i));
                 return get_qr_offset(i) - pos;
             }
         }
@@ -110,9 +110,9 @@ namespace MAC
         void set_rf_start(Size_Type rf_start) { _rf_start = rf_start; }
         void set_qr_start(Size_Type qr_start) { _qr_start = qr_start; }
 
-        bool is_match(size_t i) const { assert(i < get_n_ops()); return Cigar::is_match_op(_op_vect[i].op); }
-        bool is_deletion(size_t i) const { assert(i < get_n_ops()); return Cigar::is_deletion_op(_op_vect[i].op); }
-        bool is_insertion(size_t i) const { assert(i < get_n_ops()); return Cigar::is_insertion_op(_op_vect[i].op); }
+        bool is_match(size_t i) const { ASSERT(i < get_n_ops()); return Cigar::is_match_op(_op_vect[i].op); }
+        bool is_deletion(size_t i) const { ASSERT(i < get_n_ops()); return Cigar::is_deletion_op(_op_vect[i].op); }
+        bool is_insertion(size_t i) const { ASSERT(i < get_n_ops()); return Cigar::is_insertion_op(_op_vect[i].op); }
 
         /** Get complementary cigar (qr->rf). */
         Cigar complement() const;

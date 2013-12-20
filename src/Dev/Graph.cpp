@@ -14,7 +14,7 @@ namespace MAC
         Read_Entry_Cont::iterator re_it;
         bool success;
         tie(re_it, success) = _re_cont.insert(re);
-        assert(success);
+        ASSERT(success);
         return &(*re_it);
     }
 
@@ -23,7 +23,7 @@ namespace MAC
         Contig_Entry_Cont::iterator ce_it;
         bool success;
         tie(ce_it, success) = _ce_cont.insert(_ce_cont.end(), ce);
-        assert(success);
+        ASSERT(success);
         return &(*ce_it);
     }
 
@@ -32,7 +32,7 @@ namespace MAC
         for (auto it = ce_cptr->get_chunk_cptr_cont().begin(); it != ce_cptr->get_chunk_cptr_cont().end(); ++it)
         {
             // the read chunks no longer point here
-            assert((*it)->get_ce_ptr() != ce_cptr);
+            ASSERT((*it)->get_ce_ptr() != ce_cptr);
         }
         _ce_cont.erase(_ce_cont.iterator_to(*ce_cptr));
     }
@@ -55,7 +55,7 @@ namespace MAC
         modify_read_chunk(&(*re_cptr->get_chunk_cont().begin()),
                           [&] (Read_Chunk& rc) { rc.assign_to_contig(ce_cptr, 0, seq_ptr->size(), false, vector< const Mutation* >()); });
 
-        assert(check(set< const Read_Entry* >({ re_cptr })));
+        ASSERT(check(set< const Read_Entry* >({ re_cptr })));
     }
 
     void Graph::cut_mutation(const Contig_Entry* ce_cptr, const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset)
@@ -94,8 +94,8 @@ namespace MAC
         vector< const Mutation* > v = ce_cptr->get_mutations_spanning_pos(c_brk);
         for (size_t i = 0; i < v.size(); ++i)
         {
-            assert(v[i]->get_start() < c_brk and c_brk < v[i]->get_end());
-            assert(v[i] != mut_left_cptr);
+            ASSERT(v[i]->get_start() < c_brk and c_brk < v[i]->get_end());
+            ASSERT(v[i] != mut_left_cptr);
             cut_mutation(ce_cptr, v[i], c_brk - v[i]->get_start(), 0);
         }
 
@@ -158,14 +158,14 @@ namespace MAC
         modify_contig_entry(ce_new_cptr, [] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
 
         //cerr << "after cutting contig entry: " << (void*)ce_cptr << '\n' << *this;
-        assert(check(set< const Contig_Entry* >({ ce_cptr, ce_new_cptr })));
+        ASSERT(check(set< const Contig_Entry* >({ ce_cptr, ce_new_cptr })));
         return true;
     }
 
     bool Graph::cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk, bool force)
     {
-        assert(rc_cptr->get_r_len() > 0);
-        assert(rc_cptr->get_r_start() <= r_brk and r_brk <= rc_cptr->get_r_end());
+        ASSERT(rc_cptr->get_r_len() > 0);
+        ASSERT(rc_cptr->get_r_start() <= r_brk and r_brk <= rc_cptr->get_r_end());
         if (r_brk == rc_cptr->get_r_start() or r_brk == rc_cptr->get_r_end())
         {
             if (not force)
@@ -195,7 +195,7 @@ namespace MAC
                         and rc_cptr->get_mut_ptr_cont()[rc_cptr->get_mut_ptr_cont().size() - 1]->get_start() == rc_cptr->get_c_end())
                     {
                         mut_left_cptr = rc_cptr->get_mut_ptr_cont()[rc_cptr->get_mut_ptr_cont().size() - 1];
-                        assert(mut_left_cptr->is_ins());
+                        ASSERT(mut_left_cptr->is_ins());
                     }
                     return cut_contig_entry(rc_cptr->get_ce_ptr(), rc_cptr->get_c_end(), mut_left_cptr);
                 }
@@ -207,7 +207,7 @@ namespace MAC
         }
         else
         {
-            assert(rc_cptr->get_r_start() < r_brk and r_brk < rc_cptr->get_r_end());
+            ASSERT(rc_cptr->get_r_start() < r_brk and r_brk < rc_cptr->get_r_end());
             bool cut_made = false;
             Read_Chunk::Pos pos = rc_cptr->get_start_pos();
             pos.jump_to_brk(r_brk, false);
@@ -215,7 +215,7 @@ namespace MAC
             if (pos.mut_offset > 0)
             {
                 // must cut a mutation
-                assert(pos.mut_idx < rc_cptr->get_mut_ptr_cont().size());
+                ASSERT(pos.mut_idx < rc_cptr->get_mut_ptr_cont().size());
                 Mutation_CPtr mut_cptr = rc_cptr->get_mut_ptr_cont()[pos.mut_idx];
                 cut_mutation(rc_cptr->get_ce_ptr(), mut_cptr, min(pos.mut_offset, mut_cptr->get_len()), min(pos.mut_offset, mut_cptr->get_seq_len()));
                 cut_made = true;
@@ -223,8 +223,8 @@ namespace MAC
                 pos.jump_to_brk(r_brk, false);
             }
             // now we are certain the breakpoint no longer falls inside a mutation (insertion/mnp)
-            assert(pos.r_pos == r_brk);
-            assert(pos.mut_offset == 0);
+            ASSERT(pos.r_pos == r_brk);
+            ASSERT(pos.mut_offset == 0);
 
             // check if an insertion at c_pos has to remain on the left of the cut
             Mutation_CPtr mut_left_cptr = NULL;
@@ -232,7 +232,7 @@ namespace MAC
                 and rc_cptr->get_mut_ptr_cont()[pos.mut_idx - 1]->get_start() == pos.c_pos)
             {
                 mut_left_cptr = rc_cptr->get_mut_ptr_cont()[pos.mut_idx - 1];
-                assert(mut_left_cptr->is_ins());
+                ASSERT(mut_left_cptr->is_ins());
             }
 
             // cut contig at given c_offset
@@ -256,7 +256,7 @@ namespace MAC
         else
         {
             Read_Chunk_CPtr rc_cptr = re_cptr->get_chunk_with_pos(r_brk);
-            assert(rc_cptr->get_r_start() <= r_brk and r_brk < rc_cptr->get_r_end());
+            ASSERT(rc_cptr->get_r_start() <= r_brk and r_brk < rc_cptr->get_r_end());
             if (r_brk == rc_cptr->get_r_start())
             {
                 // we might have to cut the previous chunk as well
@@ -291,9 +291,9 @@ namespace MAC
         {
             Read_Chunk_CPtr c2rc_cptr = it2->first;
             Read_Chunk* c1rc_ptr = it2->second.get();
-            assert(c2rc_cptr->get_ce_ptr() == ce2_cptr);
-            assert(c1rc_ptr->get_ce_ptr() == ce1_cptr);
-            assert(c2rc_cptr->get_re_ptr() == c1rc_ptr->get_re_ptr());
+            ASSERT(c2rc_cptr->get_ce_ptr() == ce2_cptr);
+            ASSERT(c1rc_ptr->get_ce_ptr() == ce1_cptr);
+            ASSERT(c2rc_cptr->get_re_ptr() == c1rc_ptr->get_re_ptr());
             for (size_t i = 0; i < c1rc_ptr->get_mut_ptr_cont().size(); ++i)
             {
                 Mutation_CPtr extra_mut_cptr = c1rc_ptr->get_mut_ptr_cont()[i];
@@ -310,7 +310,7 @@ namespace MAC
                         extra_mut_map[extra_mut_cptr] = add_mut_to_cont(ce.mut_cont(), *extra_mut_cptr);
                     });
                 }
-                assert(extra_mut_map[extra_mut_cptr] != NULL);
+                ASSERT(extra_mut_map[extra_mut_cptr] != NULL);
                 c1rc_ptr->mut_ptr_cont()[i] = extra_mut_map[extra_mut_cptr];
             }
             // done moving mutations
@@ -324,9 +324,9 @@ namespace MAC
 
     void Graph::merge_read_chunks(Read_Chunk_CPtr c1rc1_chunk_cptr, Read_Chunk_CPtr c2rc2_chunk_cptr, Cigar& rc1rc2_cigar)
     {
-        assert(rc1rc2_cigar.check(c1rc1_chunk_cptr->get_seq(), c2rc2_chunk_cptr->get_seq()));
-        assert(c1rc1_chunk_cptr->get_c_start() == 0 and c1rc1_chunk_cptr->get_c_end() == c1rc1_chunk_cptr->get_ce_ptr()->get_len());
-        assert(c2rc2_chunk_cptr->get_c_start() == 0 and c2rc2_chunk_cptr->get_c_end() == c2rc2_chunk_cptr->get_ce_ptr()->get_len());
+        ASSERT(rc1rc2_cigar.check(c1rc1_chunk_cptr->get_seq(), c2rc2_chunk_cptr->get_seq()));
+        ASSERT(c1rc1_chunk_cptr->get_c_start() == 0 and c1rc1_chunk_cptr->get_c_end() == c1rc1_chunk_cptr->get_ce_ptr()->get_len());
+        ASSERT(c2rc2_chunk_cptr->get_c_start() == 0 and c2rc2_chunk_cptr->get_c_end() == c2rc2_chunk_cptr->get_ce_ptr()->get_len());
         // do not do anything if the chunks are already mapped to the same contig
         // NOTE: with this, we are ignoring alternate mappings
         const Contig_Entry* c1_ce_cptr = c1rc1_chunk_cptr->get_ce_ptr();
@@ -370,14 +370,14 @@ namespace MAC
         }
         // at this point, all read chunks mapped to c2 are translated
         // with pointers in rc_map and new mutations in extra_mut_cont
-        assert(rc_map.size() == c2_ce_cptr->get_chunk_cptr_cont().size());
+        ASSERT(rc_map.size() == c2_ce_cptr->get_chunk_cptr_cont().size());
 
         remap_chunks(rc_map, extra_c1_mut_cont);
         modify_contig_entry(c1_ce_cptr, [] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
         erase_contig_entry(c2_ce_cptr);
 
         //cerr << "after merging read chunks:\n" << *this;
-        assert(check(set< const Contig_Entry* >({ c1_ce_cptr })));
+        ASSERT(check(set< const Contig_Entry* >({ c1_ce_cptr })));
     }
 
     shared_ptr< vector< std::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > > Graph::chunker(
@@ -406,28 +406,28 @@ namespace MAC
             size_t op_start = 0;
             while (op_start < cigar.get_n_ops())
             {
-                assert(r1_start < re1_cptr->get_len());
+                ASSERT(r1_start < re1_cptr->get_len());
                 Read_Chunk_CPtr rc1_cptr = re1_cptr->get_chunk_with_pos(r1_pos);
-                assert(not r2_rc or r2_pos > 0);
+                ASSERT(not r2_rc or r2_pos > 0);
                 Read_Chunk_CPtr rc2_cptr = (not r2_rc? re2_cptr->get_chunk_with_pos(r2_pos) : re2_cptr->get_chunk_with_pos(r2_pos - 1));
 
                 // invariant: we matched read 1 chunks before rc1
                 // to read 2 chunks before/after rc2
                 // using cigar ops before op_start
-                assert(r1_pos < r1_start + r1_len);
-                assert(r2_rc or r2_pos < r2_start + r2_len);
-                assert(not r2_rc or r2_pos > r2_start);
+                ASSERT(r1_pos < r1_start + r1_len);
+                ASSERT(r2_rc or r2_pos < r2_start + r2_len);
+                ASSERT(not r2_rc or r2_pos > r2_start);
 
-                assert(rc1_cptr != NULL);
-                assert(rc1_cptr->get_r_start() == r1_pos);
-                assert(rc1_cptr->get_r_len() > 0);
-                assert(rc2_cptr != NULL);
-                assert(r2_rc or rc2_cptr->get_r_start() == r2_pos);
-                assert(not r2_rc or rc2_cptr->get_r_end() == r2_pos);
-                assert(rc2_cptr->get_r_len() > 0);
+                ASSERT(rc1_cptr != NULL);
+                ASSERT(rc1_cptr->get_r_start() == r1_pos);
+                ASSERT(rc1_cptr->get_r_len() > 0);
+                ASSERT(rc2_cptr != NULL);
+                ASSERT(r2_rc or rc2_cptr->get_r_start() == r2_pos);
+                ASSERT(not r2_rc or rc2_cptr->get_r_end() == r2_pos);
+                ASSERT(rc2_cptr->get_r_len() > 0);
 
-                assert(r1_pos == cigar.get_rf_offset(op_start));
-                assert(r2_pos == cigar.get_qr_offset(op_start));
+                ASSERT(r1_pos == cigar.get_rf_offset(op_start));
+                ASSERT(r2_pos == cigar.get_qr_offset(op_start));
 
                 // advance past cigar ops until either chunk ends
                 size_t op_end = op_start + 1;
@@ -440,7 +440,7 @@ namespace MAC
                     ++op_end;
                 }
                 // stop conditions: can be derived by inspecting loop
-                assert(op_end == cigar.get_n_ops()
+                ASSERT(op_end == cigar.get_n_ops()
                        or (cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
                            and cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len())
                        or cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len()
@@ -455,14 +455,14 @@ namespace MAC
                 {
                     // the first inequality trivially holds with <=
                     // but it can be shown it holds in fact with <
-                    assert(cigar.get_rf_offset(op_end - 1) < rc1_cptr->get_r_end() and rc1_cptr->get_r_end() < cigar.get_rf_offset(op_end));
+                    ASSERT(cigar.get_rf_offset(op_end - 1) < rc1_cptr->get_r_end() and rc1_cptr->get_r_end() < cigar.get_rf_offset(op_end));
                 }
                 if (cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len())
                 {
                     // as with rf, the inequalities involving op_end-1 tivially hold with <=
                     // but it can be shown they hold with <
-                    assert(r2_rc or (cigar.get_qr_offset(op_end - 1) < rc2_cptr->get_r_end() and rc2_cptr->get_r_end() < cigar.get_qr_offset(op_end)));
-                    assert(not r2_rc or (cigar.get_qr_offset(op_end) < rc2_cptr->get_r_start() and rc2_cptr->get_r_start() < cigar.get_qr_offset(op_end - 1)));
+                    ASSERT(r2_rc or (cigar.get_qr_offset(op_end - 1) < rc2_cptr->get_r_end() and rc2_cptr->get_r_end() < cigar.get_qr_offset(op_end)));
+                    ASSERT(not r2_rc or (cigar.get_qr_offset(op_end) < rc2_cptr->get_r_start() and rc2_cptr->get_r_start() < cigar.get_qr_offset(op_end - 1)));
                 }
 
                 // check if either chunk ended during the last cigar op
@@ -474,34 +474,34 @@ namespace MAC
                     if (cigar.get_rf_sub_len(op_start, op_end) > rc1_cptr->get_r_len() and not cigar.is_insertion(op_end - 1))
                     {
                         r1_break_len = cigar.get_rf_op_prefix_len(op_end - 1, rc1_cptr->get_r_end());
-                        assert(0 < r1_break_len and r1_break_len < cigar.get_rf_op_len(op_end - 1));
+                        ASSERT(0 < r1_break_len and r1_break_len < cigar.get_rf_op_len(op_end - 1));
                     }
 
                     Size_Type r2_break_len = 0;
                     if (cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len() and not cigar.is_deletion(op_end -1))
                     {
                         r2_break_len = cigar.get_qr_op_prefix_len(op_end - 1, (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start()));
-                        assert(0 < r2_break_len and r2_break_len < cigar.get_qr_op_len(op_end - 1));
+                        ASSERT(0 < r2_break_len and r2_break_len < cigar.get_qr_op_len(op_end - 1));
                     }
 
-                    assert(r1_break_len > 0 or r2_break_len > 0);
+                    ASSERT(r1_break_len > 0 or r2_break_len > 0);
                     cigar.cut_op(op_end - 1, (r1_break_len == 0? r2_break_len : (r2_break_len == 0? r1_break_len : min(r1_break_len, r2_break_len))));
                 }
                 // now we are sure the op ends on at least one of the read chunk boundaries
-                assert(cigar.get_rf_sub_len(op_start, op_end) <= rc1_cptr->get_r_len()
+                ASSERT(cigar.get_rf_sub_len(op_start, op_end) <= rc1_cptr->get_r_len()
                        and cigar.get_qr_sub_len(op_start, op_end) <= rc2_cptr->get_r_len());
-                assert(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
+                ASSERT(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
                        or cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len());
                 // if it doesn't end on both, we might need to cut the other
                 if (cigar.get_qr_sub_len(op_start, op_end) < rc2_cptr->get_r_len())
                 {
                     // it follows from main stop condition that the next op is not an insertion
-                    assert(op_end < cigar.get_n_ops() and not cigar.is_insertion(op_end));
+                    ASSERT(op_end < cigar.get_n_ops() and not cigar.is_insertion(op_end));
                     if (cigar.get_qr_sub_len(op_start, op_end) == 0)
                     {
                         // no progress on rc2: rc1 is mapped entirely to a deletion
                         // move on to next chunk on read 1
-                        assert(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
+                        ASSERT(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
                                and cigar.get_rf_sub_len(op_start, op_end) > 0);
                         r1_pos = rc1_cptr->get_r_end();
                         op_start = op_end;
@@ -517,12 +517,12 @@ namespace MAC
                 if (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len())
                 {
                     // it follows from main stop condition that the next op is not a deletion
-                    assert(op_end < cigar.get_n_ops() and not cigar.is_deletion(op_end));
+                    ASSERT(op_end < cigar.get_n_ops() and not cigar.is_deletion(op_end));
                     if (cigar.get_rf_sub_len(op_start, op_end) == 0)
                     {
                         // no progress on rc1: rc2 mapped entirely to an insertion
                         // move on to next chunk on read 2
-                        assert(cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len()
+                        ASSERT(cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len()
                                and cigar.get_qr_sub_len(op_start, op_end) > 0);
                         r2_pos = (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start());
                         op_start = op_end;
@@ -536,7 +536,7 @@ namespace MAC
                     }
                 }
                 // reached when both rc1 and rc2 end at the current cigar op
-                assert(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
+                ASSERT(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
                        and cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len());
                 // add read chunk mapping
                 rc_mapping_sptr->push_back(std::make_tuple(rc1_cptr, rc2_cptr, cigar.substring(op_start, op_end)));
@@ -557,8 +557,8 @@ namespace MAC
     {
         // construct cigar object
         Cigar cigar(cigar_string, r2_rc, r1_start, r2_start);
-        assert(r1_len == cigar.get_rf_len());
-        assert(r2_len == cigar.get_qr_len());
+        ASSERT(r1_len == cigar.get_rf_len());
+        ASSERT(r2_len == cigar.get_qr_len());
 
         // discard indels at either end of the cigar string
         while (cigar.get_n_ops() > 0 and not cigar.is_match(0))
@@ -579,9 +579,9 @@ namespace MAC
             return;
 
         const Read_Entry* re1_cptr = get_read_entry(r1_name);
-        assert(re1_cptr != NULL);
+        ASSERT(re1_cptr != NULL);
         const Read_Entry* re2_cptr = get_read_entry(r2_name);
-        assert(re2_cptr != NULL);
+        ASSERT(re2_cptr != NULL);
 
         string r1_seq = re1_cptr->get_seq();
         string r2_seq = re2_cptr->get_seq();
@@ -615,13 +615,13 @@ namespace MAC
             merge_read_chunks(rc1_cptr, rc2_cptr, rc1rc2_cigar);
         }
 
-        assert(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
+        ASSERT(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
 
         // check if we can merge any adjacent contigs
         //cerr << "before merging:\n" << *this;
         merge_read_contigs(re1_cptr);
         //cerr << "after merging:\n" << *this;
-        assert(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
+        ASSERT(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
     }
 
     void Graph::reverse_contig(const Contig_Entry* ce_cptr)
@@ -670,7 +670,7 @@ namespace MAC
             dir = true;
             chunks_out_cont_sptr = ce_cptr->is_mergeable_one_way(true);
             chunks_out_cont_cptr = chunks_out_cont_sptr.get();
-            assert(chunks_out_cont_sptr);
+            ASSERT(chunks_out_cont_sptr);
         }
         // at this point:
         // - contigs are in the same orientation
@@ -758,16 +758,16 @@ namespace MAC
         // check read entry objects
         for (auto re_it = _re_cont.begin(); re_it != _re_cont.end(); ++re_it)
         {
-            assert(re_it->check());
+            ASSERT(re_it->check());
             chunks_count_1 += re_it->get_chunk_cont().size();
         }
         // check contig entry objects
         for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
         {
-            assert(ce_it->check());
+            ASSERT(ce_it->check());
             chunks_count_2 += ce_it->get_chunk_cptr_cont().size();
         }
-        assert(chunks_count_1 == chunks_count_2);
+        ASSERT(chunks_count_1 == chunks_count_2);
         return true;
     }
 
@@ -803,28 +803,28 @@ namespace MAC
         for (auto re_cptr_it = re_set.begin(); re_cptr_it != re_set.end(); ++re_cptr_it)
         {
             const Read_Entry* re_cptr = *re_cptr_it;
-            assert(re_cptr->check());
+            ASSERT(re_cptr->check());
         }
         for (auto re_cptr_it = re_extra_set.begin(); re_cptr_it != re_extra_set.end(); ++re_cptr_it)
         {
             const Read_Entry* re_cptr = *re_cptr_it;
             if (re_set.count(re_cptr) > 0)
                 continue;
-            assert(re_cptr->check());
+            ASSERT(re_cptr->check());
         }
 
         // check contig entry objects
         for (auto ce_cptr_it = ce_set.begin(); ce_cptr_it != ce_set.end(); ++ce_cptr_it)
         {
             const Contig_Entry* ce_cptr = *ce_cptr_it;
-            assert(ce_cptr->check());
+            ASSERT(ce_cptr->check());
         }
         for (auto ce_cptr_it = ce_extra_set.begin(); ce_cptr_it != ce_extra_set.end(); ++ce_cptr_it)
         {
             const Contig_Entry* ce_cptr = *ce_cptr_it;
             if (ce_set.count(ce_cptr) > 0)
                 continue;
-            assert(ce_cptr->check());
+            ASSERT(ce_cptr->check());
         }
 
         return true;

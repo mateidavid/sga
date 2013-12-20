@@ -19,8 +19,8 @@ namespace MAC
     {
         Mutation res;
 
-        assert(base_offset <= _len);
-        assert(alt_offset <= _seq_len);
+        ASSERT(base_offset <= _len);
+        ASSERT(alt_offset <= _seq_len);
 
         if (have_seq())
         {
@@ -40,7 +40,7 @@ namespace MAC
 
     void Mutation::simplify(const Seq_Type& rf)
     {
-        assert(rf.size() == _len);
+        ASSERT(rf.size() == _len);
         if (not have_seq())
             return;
         while (_len > 0 and _seq_len > 0 and rf[_len - 1] == _seq[_seq_len - 1])
@@ -86,20 +86,20 @@ namespace MAC
                     Mutation_Cont::iterator it;
                     bool success;
                     tie(it, success) = res->insert(m);
-                    assert(success);
+                    ASSERT(success);
                 }
                 m = Mutation(cigar.get_rf_offset(i) + cigar.get_rf_op_len(i), 0); // ok to call even with i == n_ops
             }
             else
             {
                 // disallow ambigous 'M' operation
-                assert(cigar.get_op(i) != 'M');
+                ASSERT(cigar.get_op(i) != 'M');
                 Mutation tmp;
                 if (qr.size() > 0)
                 {
                     // accept either the matched part of the query (length = cigar.qr_len)
                     // or entire query (length > cigar.qr_len)
-                    assert(qr.size() >= cigar.get_qr_len());
+                    ASSERT(qr.size() >= cigar.get_qr_len());
                     Size_Type qr_offset = (not cigar.is_reversed()? cigar.get_qr_offset(i) : cigar.get_qr_offset(i) - cigar.get_qr_op_len(i));
                     if (qr.size() == cigar.get_qr_len())
                     {
@@ -134,7 +134,7 @@ namespace MAC
         }
         bool success;
         tie(it, success) = mut_cont.insert(mut);
-        assert(success);
+        ASSERT(success);
         return &*it;
     }
 

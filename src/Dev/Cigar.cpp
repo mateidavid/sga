@@ -2,7 +2,6 @@
 
 #include <sstream>
 #include <cstdlib>
-#include <cassert>
 
 #include "indent.hpp"
 #include "print_seq.hpp"
@@ -21,7 +20,7 @@ namespace MAC
         size_t tmp_len;
         while (is >> tmp_len >> tmp.op)
         {
-            assert(Cigar::is_match_op(tmp.op) or Cigar::is_deletion_op(tmp.op) or Cigar::is_insertion_op(tmp.op));
+            ASSERT(Cigar::is_match_op(tmp.op) or Cigar::is_deletion_op(tmp.op) or Cigar::is_insertion_op(tmp.op));
             tmp.len = (Size_Type)tmp_len;
             tmp.rf_offset = _rf_len;
             _op_vect.push_back(tmp);
@@ -104,13 +103,13 @@ namespace MAC
         static const string from_op = "M=XDNPISH";
         static const string to_op = "M=XIIIDDD";
         size_t i = from_op.find_first_of(op);
-        assert(i != string::npos);
+        ASSERT(i != string::npos);
         return to_op[i];
     }
 
     Cigar Cigar::substring(size_t start, size_t end)
     {
-        assert(start <= end and end <= get_n_ops());
+        ASSERT(start <= end and end <= get_n_ops());
         Cigar res;
         res._reversed = _reversed;
         Size_Type rf_start_offset = (start < get_n_ops()? _op_vect[start].rf_offset : 0);
@@ -140,11 +139,11 @@ namespace MAC
 
     void Cigar::cut_op(size_t idx, Size_Type len)
     {
-        assert(idx <= get_n_ops());
+        ASSERT(idx <= get_n_ops());
         if (idx == get_n_ops())
             return;
 
-        assert(len <= _op_vect[idx].len);
+        ASSERT(len <= _op_vect[idx].len);
         if (len == 0 or len == _op_vect[idx].len)
             return;
 
@@ -164,16 +163,16 @@ namespace MAC
 
     void Cigar::disambiguate(const string& rf_seq, const string& qr_seq)
     {
-        assert(rf_seq.size() == _rf_len);
-        assert(qr_seq.size() == _qr_len);
+        ASSERT(rf_seq.size() == _rf_len);
+        ASSERT(qr_seq.size() == _qr_len);
         /*
         cerr << indent::tab << "disambiguating cigar:\n" << indent::inc << *this << indent::dec
              << indent::tab << "rf_seq= " << rf_seq
              << indent::nl << "qr_seq= " << (not is_reversed()? qr_seq : reverseComplement(qr_seq)) << '\n';
         */
         auto get_qr_pos = [&] (Size_Type pos) -> char {
-            assert(_reversed or pos < _qr_len);
-            assert(not _reversed or (0 < pos and pos <= _qr_len));
+            ASSERT(_reversed or pos < _qr_len);
+            ASSERT(not _reversed or (0 < pos and pos <= _qr_len));
             return (not _reversed? qr_seq[pos] : ::complement(char(qr_seq[pos - 1])));
         };
         for (size_t i = 0; i < get_n_ops(); ++i)
@@ -204,7 +203,7 @@ namespace MAC
                         op.len = 1;
                     }
                 }
-                assert(op.rf_offset + op.len == _op_vect[i].rf_offset + _op_vect[i].len);
+                ASSERT(op.rf_offset + op.len == _op_vect[i].rf_offset + _op_vect[i].len);
                 v.push_back(op);
 
                 _op_vect.erase(_op_vect.begin() + i);
@@ -219,31 +218,31 @@ namespace MAC
 
     bool Cigar::check(const string& rf_seq, const string& qr_seq) const
     {
-        assert(rf_seq.size() == get_rf_len());
-        assert(qr_seq.size() == get_qr_len());
+        ASSERT(rf_seq.size() == get_rf_len());
+        ASSERT(qr_seq.size() == get_qr_len());
         Size_Type check_rf_len = 0;
         Size_Type check_qr_len = 0;
         for (size_t i = 0; i < _op_vect.size(); ++i)
         {
             // check rf_offset
-            assert(not i == 0 or get_rf_offset(i) == get_rf_start());
-            assert(i == 0 or get_rf_offset(i) == get_rf_offset(i-1) + get_rf_op_len(i-1));
+            ASSERT(not i == 0 or get_rf_offset(i) == get_rf_start());
+            ASSERT(i == 0 or get_rf_offset(i) == get_rf_offset(i-1) + get_rf_op_len(i-1));
             // check qr_offset
-            assert(not i == 0 or get_qr_offset(i) == (not _reversed? get_qr_start() : get_qr_start() + get_qr_len()));
-            assert(i == 0 or get_qr_offset(i) == (not _reversed? get_qr_offset(i-1) + get_qr_op_len(i-1) : get_qr_offset(i-1) - get_qr_op_len(i-1)));
+            ASSERT(not i == 0 or get_qr_offset(i) == (not _reversed? get_qr_start() : get_qr_start() + get_qr_len()));
+            ASSERT(i == 0 or get_qr_offset(i) == (not _reversed? get_qr_offset(i-1) + get_qr_op_len(i-1) : get_qr_offset(i-1) - get_qr_op_len(i-1)));
             // recompute lengths
             check_rf_len += get_rf_op_len(i);
             check_qr_len += get_qr_op_len(i);
             // check '=' ops
             if (get_op(i) == '=')
             {
-                assert(rf_seq.substr(get_rf_offset(i) - get_rf_start(), get_rf_op_len(i))
+                ASSERT(rf_seq.substr(get_rf_offset(i) - get_rf_start(), get_rf_op_len(i))
                        == (not _reversed? qr_seq.substr(get_qr_offset(i) - get_qr_start(), get_qr_op_len(i))
                            : reverseComplement(qr_seq.substr(get_qr_offset(i) - get_qr_op_len(i) - get_qr_start(), get_qr_op_len(i)))));
             }
         }
-        assert(check_rf_len == get_rf_len());
-        assert(check_qr_len == get_qr_len());
+        ASSERT(check_rf_len == get_rf_len());
+        ASSERT(check_qr_len == get_qr_len());
         return true;
     }
 

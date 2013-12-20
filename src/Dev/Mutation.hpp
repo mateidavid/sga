@@ -8,11 +8,11 @@
 #define __MUTATION_HPP
 
 #include <iostream>
-#include <cassert>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
+
 #include "MAC_forward.hpp"
 #include "Cigar.hpp"
 #include "../Util/Util.h"
@@ -63,7 +63,7 @@ namespace MAC
          */
         static Mutation make_ins(Size_Type start, const Seq_Type& seq)
         {
-            assert(seq.size() > 0);
+            ASSERT(seq.size() > 0);
             return Mutation(start, 0, seq);
         }
 
@@ -73,7 +73,7 @@ namespace MAC
          */
         static Mutation make_ins(Size_Type start, Size_Type seq_len)
         {
-            assert(seq_len > 0);
+            ASSERT(seq_len > 0);
             return Mutation(start, 0, seq_len);
         }
 
@@ -83,7 +83,7 @@ namespace MAC
          */
         static Mutation make_mnp(Size_Type start, const Seq_Type& seq)
         {
-            assert(seq.size() > 0);
+            ASSERT(seq.size() > 0);
             return Mutation(start, seq.size(), seq);
         }
 
@@ -93,7 +93,7 @@ namespace MAC
          */
         static Mutation make_mnp(Size_Type start, Size_Type seq_len)
         {
-            assert(seq_len > 0);
+            ASSERT(seq_len > 0);
             return Mutation(start, seq_len, seq_len);
         }
 
@@ -137,8 +137,8 @@ namespace MAC
             }
             else
             {
-                assert(get_end() == rhs.get_start());
-                assert(have_seq() == rhs.have_seq());
+                ASSERT(get_end() == rhs.get_start());
+                ASSERT(have_seq() == rhs.have_seq());
                 _len += rhs._len;
                 _seq_len += rhs._seq_len;
                 _seq += rhs._seq;

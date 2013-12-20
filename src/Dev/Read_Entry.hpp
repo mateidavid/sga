@@ -41,7 +41,7 @@ namespace MAC
          */
         Read_Entry(const std::string* name_ptr, Size_Type len) : _name_ptr(name_ptr), _len(len)
         {
-            assert(name_ptr != NULL);
+            ASSERT(name_ptr != NULL);
             Read_Chunk chunk(this, len);
             _chunk_cont.insert(chunk);
         }
@@ -86,7 +86,7 @@ namespace MAC
             Read_Chunk_Cont::iterator it;
             bool success;
             tie(it, success) = _chunk_cont.insert(*rc_cptr);
-            assert(success);
+            ASSERT(success);
             return &(*it);
         }
 
@@ -126,10 +126,10 @@ namespace MAC
         {
             Read_Chunk_Cont::iterator rc_next_it = _chunk_cont.iterator_to(*rc_cptr);
             ++rc_next_it;
-            assert(rc_next_it != _chunk_cont.end());
+            ASSERT(rc_next_it != _chunk_cont.end());
             Read_Chunk_CPtr rc_next_cptr = &*rc_next_it;
-            assert(rc_next_cptr->get_ce_ptr() == rc_cptr->get_ce_ptr());
-            assert(rc_next_cptr->get_rc() == rc_cptr->get_rc());
+            ASSERT(rc_next_cptr->get_ce_ptr() == rc_cptr->get_ce_ptr());
+            ASSERT(rc_next_cptr->get_rc() == rc_cptr->get_rc());
             // call read chunk's merge_next()
             modify_read_chunk(rc_cptr, [&] (Read_Chunk& rc) { rc.merge_next(rc_next_cptr, add_mut_mod); });
             // remove next chunk

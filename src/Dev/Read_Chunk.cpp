@@ -20,15 +20,15 @@ namespace MAC
 {
     bool Read_Chunk::Pos::check() const
     {
-        assert(rc_cptr != NULL);
-        assert(rc_cptr->get_c_start() <= c_pos and c_pos <= rc_cptr->get_c_end());
-        assert(rc_cptr->get_r_start() <= r_pos and r_pos <= rc_cptr->get_r_end());
-        assert(mut_idx <= rc_cptr->_mut_ptr_cont.size());
-        assert(not mut_offset == 0
+        ASSERT(rc_cptr != NULL);
+        ASSERT(rc_cptr->get_c_start() <= c_pos and c_pos <= rc_cptr->get_c_end());
+        ASSERT(rc_cptr->get_r_start() <= r_pos and r_pos <= rc_cptr->get_r_end());
+        ASSERT(mut_idx <= rc_cptr->_mut_ptr_cont.size());
+        ASSERT(not mut_offset == 0
                or c_pos <= (mut_idx < rc_cptr->_mut_ptr_cont.size()?
                             rc_cptr->_mut_ptr_cont[mut_idx]->get_start()
                             : rc_cptr->get_c_end()));
-        assert(not mut_offset != 0
+        ASSERT(not mut_offset != 0
                or (mut_idx < rc_cptr->_mut_ptr_cont.size()
                    and c_pos == rc_cptr->_mut_ptr_cont[mut_idx]->get_start() + min(mut_offset, rc_cptr->_mut_ptr_cont[mut_idx]->get_len())));
         return true;
@@ -36,7 +36,7 @@ namespace MAC
 
     inline Size_Type Read_Chunk::Pos::get_match_len(bool forward) const
     {
-        assert(check());
+        ASSERT(check());
         if (mut_offset != 0)
         {
             return 0;
@@ -53,16 +53,16 @@ namespace MAC
 
     void Read_Chunk::Pos::increment(Size_Type brk, bool on_contig)
     {
-        assert(check());
-        assert(*this != rc_cptr->get_end_pos());
+        ASSERT(check());
+        ASSERT(*this != rc_cptr->get_end_pos());
         if (brk == 0)
         {
             // by default, use an unreachable breakpoint
             on_contig = true;
             brk = rc_cptr->get_c_end() + 1;
         }
-        assert(not on_contig or c_pos < brk);
-        assert(on_contig or (not rc_cptr->get_rc()? r_pos < brk : brk < r_pos));
+        ASSERT(not on_contig or c_pos < brk);
+        ASSERT(on_contig or (not rc_cptr->get_rc()? r_pos < brk : brk < r_pos));
         if (mut_idx < rc_cptr->_mut_ptr_cont.size()
             and c_pos == rc_cptr->_mut_ptr_cont[mut_idx]->get_start() + min(mut_offset, rc_cptr->_mut_ptr_cont[mut_idx]->get_len()))
         {
@@ -100,7 +100,7 @@ namespace MAC
         {
             // a match stretch follows
             Size_Type match_len = get_match_len(true);
-            assert(match_len > 0);
+            ASSERT(match_len > 0);
             Size_Type skip_len = 0;
             if (on_contig and brk < c_pos + match_len)
             {
@@ -121,13 +121,13 @@ namespace MAC
 
     void Read_Chunk::Pos::decrement(Size_Type brk, bool on_contig)
     {
-        assert(check());
-        assert(*this != rc_cptr->get_start_pos());
+        ASSERT(check());
+        ASSERT(*this != rc_cptr->get_start_pos());
         if (brk == 0)
         {
             on_contig = true;
         }
-        assert(on_contig? brk <= c_pos : (not rc_cptr->get_rc()? brk < r_pos : r_pos < brk));
+        ASSERT(on_contig? brk <= c_pos : (not rc_cptr->get_rc()? brk < r_pos : r_pos < brk));
         if (mut_offset != 0
             or (mut_offset == 0 and mut_idx > 0
                 and c_pos == rc_cptr->_mut_ptr_cont[mut_idx - 1]->get_end()))
@@ -138,7 +138,7 @@ namespace MAC
                 --mut_idx;
                 mut_offset = max(rc_cptr->_mut_ptr_cont[mut_idx]->get_len(), rc_cptr->_mut_ptr_cont[mut_idx]->get_seq_len());
             }
-            assert(mut_offset > 0);
+            ASSERT(mut_offset > 0);
             Size_Type c_leftover = min(rc_cptr->_mut_ptr_cont[mut_idx]->get_len(), mut_offset);
             Size_Type r_leftover = min(rc_cptr->_mut_ptr_cont[mut_idx]->get_seq_len(), mut_offset);
             Size_Type c_skip_len = 0;
@@ -167,7 +167,7 @@ namespace MAC
         {
             // a match stretch follows
             Size_Type match_len = get_match_len(false);
-            assert(match_len > 0);
+            ASSERT(match_len > 0);
             Size_Type skip_len = 0;
             if (on_contig and c_pos - match_len < brk)
             {
@@ -188,9 +188,9 @@ namespace MAC
 
     void Read_Chunk::Pos::jump_to_brk(Size_Type brk, bool on_contig)
     {
-        assert(check());
-        assert(not on_contig or (rc_cptr->get_c_start() <= brk and brk <= rc_cptr->get_c_end()));
-        assert(on_contig or (rc_cptr->get_r_start() <= brk and brk <= rc_cptr->get_r_end()));
+        ASSERT(check());
+        ASSERT(not on_contig or (rc_cptr->get_c_start() <= brk and brk <= rc_cptr->get_c_end()));
+        ASSERT(on_contig or (rc_cptr->get_r_start() <= brk and brk <= rc_cptr->get_r_end()));
         bool forward = (on_contig?
                         c_pos <= brk
                         : (not rc_cptr->get_rc()) == (r_pos <= brk));
@@ -208,13 +208,13 @@ namespace MAC
         {
             mut_first = mut.get_start();
             mut_second = mut.get_end();
-            assert(r_pos <= mut_first);
+            ASSERT(r_pos <= mut_first);
         }
         else
         {
             mut_first = mut.get_end();
             mut_second = mut.get_start();
-            assert(mut_first <= r_pos);
+            ASSERT(mut_first <= r_pos);
         }
         if (r_pos != mut_first)
         {
@@ -260,8 +260,8 @@ namespace MAC
     std::tuple< shared_ptr< Read_Chunk >, shared_ptr< Contig_Entry > >
     Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* rf_ptr, const Seq_Type& qr)
     {
-        assert(rf_ptr->size() == cigar.get_rf_len() or rf_ptr->size() >= cigar.get_rf_start() + cigar.get_rf_len());
-        assert(qr.size() == cigar.get_qr_len() or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
+        ASSERT(rf_ptr->size() == cigar.get_rf_len() or rf_ptr->size() >= cigar.get_rf_start() + cigar.get_rf_len());
+        ASSERT(qr.size() == cigar.get_qr_len() or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
 
         // create objects with default constructor
         shared_ptr< Read_Chunk > chunk_sptr(new Read_Chunk());
@@ -304,8 +304,8 @@ namespace MAC
     /*
     std::tuple< Size_Type, Size_Type, size_t > Read_Chunk::get_cut_data(Size_Type brk, bool is_contig_brk) const
     {
-        assert(not is_contig_brk or (get_c_start() <= brk and brk <= get_c_end()));
-        assert(is_contig_brk or (get_r_start() <= brk and brk <= get_r_end()));
+        ASSERT(not is_contig_brk or (get_c_start() <= brk and brk <= get_c_end()));
+        ASSERT(is_contig_brk or (get_r_start() <= brk and brk <= get_r_end()));
 
         Size_Type c_pos = get_c_start();
         Size_Type r_pos = (not _rc? get_r_start() : get_r_end());
@@ -319,12 +319,12 @@ namespace MAC
             mut_cptr = (i < _mut_ptr_cont.size()? _mut_ptr_cont[i] : &fake_mut);
 
             // mutations are expected in contig order
-            assert(c_pos <= mut_cptr->get_start());
+            ASSERT(c_pos <= mut_cptr->get_start());
 
             // progress
-            assert(not is_contig_brk or c_pos <= brk);
-            assert(is_contig_brk or _rc or r_pos <= brk);
-            assert(is_contig_brk or not _rc or brk <= r_pos);
+            ASSERT(not is_contig_brk or c_pos <= brk);
+            ASSERT(is_contig_brk or _rc or r_pos <= brk);
+            ASSERT(is_contig_brk or not _rc or brk <= r_pos);
 
             Size_Type match_len = mut_cptr->get_start() - c_pos;
             // stop if breakpoint is inside the next matched region, or right after it
@@ -349,9 +349,9 @@ namespace MAC
             r_pos = (not _rc? r_pos + match_len : r_pos - match_len);
 
             // we do not get here if breakpoint is now on the edge of the last matching region
-            assert(not is_contig_brk or c_pos < brk);
-            assert(is_contig_brk or _rc or r_pos < brk);
-            assert(is_contig_brk or not _rc or brk < r_pos);
+            ASSERT(not is_contig_brk or c_pos < brk);
+            ASSERT(is_contig_brk or _rc or r_pos < brk);
+            ASSERT(is_contig_brk or not _rc or brk < r_pos);
 
             // stop if next mutation completely spans read breakpoint
             if ((is_contig_brk and brk < c_pos + mut_cptr->get_len())
@@ -366,11 +366,11 @@ namespace MAC
             r_pos = (not _rc? r_pos + mut_cptr->get_seq_len() : r_pos - mut_cptr->get_seq_len());
         }
 
-        assert(get_c_start() <= c_pos and c_pos <= get_c_end());
-        assert(get_r_start() <= r_pos and r_pos <= get_r_end());
-        assert(not is_contig_brk or c_pos <= brk);
-        assert(is_contig_brk or _rc or r_pos <= brk);
-        assert(is_contig_brk or not _rc or brk <= r_pos);
+        ASSERT(get_c_start() <= c_pos and c_pos <= get_c_end());
+        ASSERT(get_r_start() <= r_pos and r_pos <= get_r_end());
+        ASSERT(not is_contig_brk or c_pos <= brk);
+        ASSERT(is_contig_brk or _rc or r_pos <= brk);
+        ASSERT(is_contig_brk or not _rc or brk <= r_pos);
 
         return make_tuple(c_pos, r_pos, i);
     }
@@ -389,12 +389,12 @@ namespace MAC
             return make_tuple< const Mutation*, Size_Type, Size_Type >(NULL, 0, 0);
 
         // if not, we must cut i-th mutation
-        assert(i < _mut_ptr_cont.size());
-        assert(c_pos == _mut_ptr_cont[i]->get_start());
+        ASSERT(i < _mut_ptr_cont.size());
+        ASSERT(c_pos == _mut_ptr_cont[i]->get_start());
 
-        assert(not is_contig_brk or (c_pos < brk and brk < _mut_ptr_cont[i]->get_end()));
-        assert(is_contig_brk or _rc or (r_pos < brk and brk < r_pos + _mut_ptr_cont[i]->get_seq_len()));
-        assert(is_contig_brk or not _rc or (r_pos > brk and brk > r_pos - _mut_ptr_cont[i]->get_seq_len()));
+        ASSERT(not is_contig_brk or (c_pos < brk and brk < _mut_ptr_cont[i]->get_end()));
+        ASSERT(is_contig_brk or _rc or (r_pos < brk and brk < r_pos + _mut_ptr_cont[i]->get_seq_len()));
+        ASSERT(is_contig_brk or not _rc or (r_pos > brk and brk > r_pos - _mut_ptr_cont[i]->get_seq_len()));
 
         // range for possible contig cuts
         Size_Type range_start = (is_contig_brk?
@@ -436,9 +436,9 @@ namespace MAC
         {
             pos = get_start_pos();
             pos.jump_to_brk(c_brk, true);
-            assert(pos.c_pos == c_brk);
+            ASSERT(pos.c_pos == c_brk);
             // any mutations spanning the break must be cut prior to calling this method
-            assert(pos.mut_offset == 0);
+            ASSERT(pos.mut_offset == 0);
             // if there exists an insertion at c_brk that is not in the map, it will stay on the left side of the break
             while (pos.mut_idx < _mut_ptr_cont.size()
                 and _mut_ptr_cont[pos.mut_idx]->get_start() == c_brk
@@ -446,9 +446,9 @@ namespace MAC
                 and mut_cptr_map.count(_mut_ptr_cont[pos.mut_idx]) == 0)
             {
                 pos.increment();
-                assert(pos.c_pos == c_brk);
+                ASSERT(pos.c_pos == c_brk);
             }
-            assert(pos.mut_idx == _mut_ptr_cont.size() or mut_cptr_map.count(_mut_ptr_cont[pos.mut_idx]) > 0);
+            ASSERT(pos.mut_idx == _mut_ptr_cont.size() or mut_cptr_map.count(_mut_ptr_cont[pos.mut_idx]) > 0);
         }
 
         if (pos.r_pos == get_r_start() or pos.r_pos == get_r_end())
@@ -456,11 +456,11 @@ namespace MAC
             // the chunk stays in one piece, but ce_ptr & mutation pointers might change
             // also, drop any deletion mapped to an empty read chunk
             bool move_to_rhs = false;
-            //assert(pos.mut_idx == 0 or pos.mut_idx == _mut_ptr_cont.size());
+            //ASSERT(pos.mut_idx == 0 or pos.mut_idx == _mut_ptr_cont.size());
             if ((not _rc and pos.r_pos == get_r_start())
                 or (_rc and pos.r_pos == get_r_end()))
             {
-                assert((c_brk <= _c_start and pos.mut_idx == 0)
+                ASSERT((c_brk <= _c_start and pos.mut_idx == 0)
                        or (_c_start < c_brk and pos.mut_idx == 1 and _mut_ptr_cont[0]->is_del()));
                 move_to_rhs = true;
                 // fix contig coordinates
@@ -479,7 +479,7 @@ namespace MAC
                 _mut_ptr_cont.clear();
                 for (size_t j = 0; j < tmp.size(); ++j)
                 {
-                    assert(mut_cptr_map.count(tmp[j]) == 1);
+                    ASSERT(mut_cptr_map.count(tmp[j]) == 1);
                     _mut_ptr_cont.push_back(mut_cptr_map.find(tmp[j])->second);
                 }
                 // fix ce_ptr
@@ -487,9 +487,9 @@ namespace MAC
             }
             else
             {
-                assert((not _rc and pos.r_pos == get_r_end())
+                ASSERT((not _rc and pos.r_pos == get_r_end())
                        or (_rc and pos.r_pos == get_r_start()));
-                assert((get_c_end() <= c_brk and pos.mut_idx == _mut_ptr_cont.size())
+                ASSERT((get_c_end() <= c_brk and pos.mut_idx == _mut_ptr_cont.size())
                        or (c_brk < get_c_end() and pos.mut_idx == _mut_ptr_cont.size() - 1 and _mut_ptr_cont[pos.mut_idx]->is_del()));
                 if (pos.mut_idx == _mut_ptr_cont.size() - 1)
                 {
@@ -503,8 +503,8 @@ namespace MAC
         else
         {
             // read chunk gets split in 2
-            assert(get_r_start() < pos.r_pos and pos.r_pos < get_r_end());
-            assert(get_c_start() <= pos.c_pos and pos.c_pos <= get_c_end());
+            ASSERT(get_r_start() < pos.r_pos and pos.r_pos < get_r_end());
+            ASSERT(get_c_start() <= pos.c_pos and pos.c_pos <= get_c_end());
 
             // create new read chunk for second part of the contig
             shared_ptr< Read_Chunk > rc_sptr(new Read_Chunk());
@@ -533,7 +533,7 @@ namespace MAC
             // transfer mutations starting at i (to values under mapping) to read chunk for contig rhs
             for (size_t j = pos.mut_idx; j < _mut_ptr_cont.size(); ++j)
             {
-                assert(mut_cptr_map.count(_mut_ptr_cont[j]) > 0);
+                ASSERT(mut_cptr_map.count(_mut_ptr_cont[j]) > 0);
                 rc_sptr->_mut_ptr_cont.push_back(mut_cptr_map.find(_mut_ptr_cont[j])->second);
             }
 
@@ -587,7 +587,7 @@ namespace MAC
             Mutation_Cont::iterator rev_mut_it;
             bool success;
             tie(rev_mut_it, success) = ce_sptr->mut_cont().insert(rev_mut);
-            assert(success);
+            ASSERT(success);
 
             // save the pair in the Mutation translation container
             Mutation_Trans trans;
@@ -595,7 +595,7 @@ namespace MAC
             trans.new_mut_cptr = &*rev_mut_it;
             Mutation_Trans_Cont::iterator it;
             tie(it, success) = mut_trans_cont_sptr->insert(trans);
-            assert(success);
+            ASSERT(success);
             pos = pos_next;
         }
 
@@ -626,8 +626,8 @@ namespace MAC
             Read_Chunk_Pos pos_next;
             for (pos_next = pos; not advance_pos_til_mut(pos_next, r_mut); pos = pos_next);
 
-            assert(_rc or (pos.r_pos == r_mut.get_start() and pos_next.r_pos == r_mut.get_end()));
-            assert(not _rc or (pos_next.r_pos == r_mut.get_start() and pos.r_pos == r_mut.get_end()));
+            ASSERT(_rc or (pos.r_pos == r_mut.get_start() and pos_next.r_pos == r_mut.get_end()));
+            ASSERT(not _rc or (pos_next.r_pos == r_mut.get_start() and pos.r_pos == r_mut.get_end()));
 
             Mutation m;
             if (r_mut.have_seq())
@@ -639,7 +639,7 @@ namespace MAC
             Mutation_Cont::iterator new_mut_it;
             bool success;
             tie(new_mut_it, success) = new_mut_cont_sptr->insert(m);
-            assert(success);
+            ASSERT(success);
 
             // prepare translation entry
             Mutation_Trans trans;
@@ -650,7 +650,7 @@ namespace MAC
             Read_Chunk_Pos pos_1 = pos;
             while (pos_1 != pos_next)
             {
-                assert(pos_1.r_pos != pos_next.r_pos);
+                ASSERT(pos_1.r_pos != pos_next.r_pos);
                 Read_Chunk_Pos pos_2 = pos;
                 increment_pos(pos_2, pos_next.r_pos, false);
 
@@ -667,7 +667,7 @@ namespace MAC
             // insert new Mutation translation
             Mutation_Trans_Cont::iterator it;
             tie(it, success) = mut_trans_cont_sptr->insert(trans);
-            assert(success);
+            ASSERT(success);
 
             // we do not advance pos to pos_next, because read Mutations can be overlapping
             // next iteration starts again at pos, looking for the next read Mutation
@@ -706,9 +706,9 @@ namespace MAC
 
             if (got_r_mut)
             {
-                assert(mut_map.count(&r_mut) == 1);
+                ASSERT(mut_map.count(&r_mut) == 1);
                 auto it = mut_map.find(&r_mut);
-                assert(it->new_mut_cptr->get_start() == pos.c_pos and it->new_mut_cptr->get_end() == pos_next.c_pos);
+                ASSERT(it->new_mut_cptr->get_start() == pos.c_pos and it->new_mut_cptr->get_end() == pos_next.c_pos);
                 res->push_back(std::make_tuple(it->new_mut_cptr, 0, 0, true));
                 ++r_mut_cnt;
             }
@@ -719,7 +719,7 @@ namespace MAC
             }
             pos = pos_next;
         }
-        assert(pos == get_end_pos());
+        ASSERT(pos == get_end_pos());
 
         return res;
     }
@@ -727,7 +727,7 @@ namespace MAC
 
     shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const
     {
-        assert(get_r_start() <= rc2.get_c_start() and rc2.get_c_end() <= get_r_end());
+        ASSERT(get_r_start() <= rc2.get_c_start() and rc2.get_c_end() <= get_r_end());
         shared_ptr< Read_Chunk > res(new Read_Chunk());
 
         res->_r_start = rc2.get_r_start();
@@ -759,7 +759,7 @@ namespace MAC
             {
                 if (got_r_mut)
                 {
-                    assert(pos_next == pos);
+                    ASSERT(pos_next == pos);
                     res->_c_start = pos.c_pos;
                     past_start = true;
                     if (pos == get_start_pos())
@@ -773,9 +773,9 @@ namespace MAC
                             {
                                 break;
                             }
-                            assert(tmp_pos.r_pos == pos_next.r_pos);
-                            assert(tmp_pos.mut_offset == 0);
-                            assert(tmp_pos.mut_idx == pos_next.mut_idx + 1);
+                            ASSERT(tmp_pos.r_pos == pos_next.r_pos);
+                            ASSERT(tmp_pos.mut_offset == 0);
+                            ASSERT(tmp_pos.mut_idx == pos_next.mut_idx + 1);
                             // initial deletions are always whole (offset==0 in pos_next and tmp_pos)
                             Mutation_CPtr c_mut_cptr = _mut_ptr_cont[pos_next.mut_idx];
                             m.merge(*c_mut_cptr);
@@ -800,7 +800,7 @@ namespace MAC
                             // rc2 contains insertions only, and is mapped to the contig end
                             // in this case, we leave the deletion, as it is needed
                             // to make the result aligned on the contig end
-                            assert(rc2.get_c_start() == rc2.get_c_end());
+                            ASSERT(rc2.get_c_start() == rc2.get_c_end());
                         }
                     }
                 }
@@ -808,7 +808,7 @@ namespace MAC
             else if ((not got_r_mut and pos.get_match_len() > 0)
                 or (got_r_mut and r_mut_cnt == rc2.get_mut_ptr_cont().size()))
             {
-                assert(not got_r_mut or pos_next == pos);
+                ASSERT(not got_r_mut or pos_next == pos);
                 if (got_r_mut and pos_next.r_pos == get_end_pos().r_pos)
                 {
                     // if rc2 ends on contig end, incorporate remaining deletions
@@ -816,11 +816,11 @@ namespace MAC
                     while (tmp_pos != get_end_pos())
                     {
                         tmp_pos.increment();
-                        assert(tmp_pos.r_pos == pos_next.r_pos);
-                        assert(tmp_pos.mut_offset == 0);
-                        assert(tmp_pos.mut_idx == pos_next.mut_idx + 1);
+                        ASSERT(tmp_pos.r_pos == pos_next.r_pos);
+                        ASSERT(tmp_pos.mut_offset == 0);
+                        ASSERT(tmp_pos.mut_idx == pos_next.mut_idx + 1);
                         // final deletions are whole, or we have used a read mutation
-                        assert(pos_next.mut_offset == 0 or r_muts.size() > 0);
+                        ASSERT(pos_next.mut_offset == 0 or r_muts.size() > 0);
                         Mutation_CPtr c_mut_cptr = _mut_ptr_cont[pos_next.mut_idx];
                         m.merge(Mutation(pos_next.c_pos, tmp_pos.c_pos - pos_next.c_pos, 0));
                         c_muts.push_back(c_mut_cptr);
@@ -837,7 +837,7 @@ namespace MAC
                     if (r_muts.size() == 0)
                     {
                         // no adjacent contig mutations
-                        assert(c_muts.size() == 1);
+                        ASSERT(c_muts.size() == 1);
                         res->mut_ptr_cont().push_back(c_muts[0]);
                     }
                     else
@@ -875,7 +875,7 @@ namespace MAC
                 else
                 {
                     // this was a (possibly sliced) contig mutation
-                    assert((pos_next.mut_idx == pos.mut_idx and pos_next.mut_offset > pos.mut_offset)
+                    ASSERT((pos_next.mut_idx == pos.mut_idx and pos_next.mut_offset > pos.mut_offset)
                            or (pos_next.mut_idx == pos.mut_idx + 1 and pos_next.mut_offset == 0));
                     const Mutation& c_mut = *_mut_ptr_cont[pos.mut_idx];
                     m.merge(Mutation(pos.c_pos, pos_next.c_pos - pos.c_pos,
@@ -887,9 +887,9 @@ namespace MAC
             }
             pos = pos_next;
         }
-        assert(not (rc2.get_c_start() == get_r_start())
+        ASSERT(not (rc2.get_c_start() == get_r_start())
                or (not get_rc()? res->get_c_start() == get_c_start() : res->get_c_end() == get_c_end()));
-        assert(not (rc2.get_c_end() == get_r_end())
+        ASSERT(not (rc2.get_c_end() == get_r_end())
                or (not get_rc()? res->get_c_end() == get_c_end() : res->get_c_start() == get_c_start()));
         return res;
     }
@@ -898,7 +898,7 @@ namespace MAC
     vector< std::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > Read_Chunk::collapse_mutations(
         const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2)
     {
-        assert(rc1.get_r_start() == rc2.get_c_start() and rc1.get_r_len() == rc2.get_c_len());
+        ASSERT(rc1.get_r_start() == rc2.get_c_start() and rc1.get_r_len() == rc2.get_c_len());
 
         vector< std::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > res;
 
@@ -912,21 +912,21 @@ namespace MAC
         while (i1 < rc1._mut_ptr_cont.size() or i2 < rc2._mut_ptr_cont.size())
         {
             // iteration may not stop in the middle of a read mutation
-            assert(not rc1.get_rc()? r1_pos <= rc1.get_r_end() : rc1.get_r_start() <= r1_pos);
+            ASSERT(not rc1.get_rc()? r1_pos <= rc1.get_r_end() : rc1.get_r_start() <= r1_pos);
             // i2 < n2 and r1 not reversed => before i2 mutation
-            assert(not (i2 < rc2._mut_ptr_cont.size() and not rc1.get_rc()) or r1_pos <= rc2._mut_ptr_cont[i2]->get_start());
+            ASSERT(not (i2 < rc2._mut_ptr_cont.size() and not rc1.get_rc()) or r1_pos <= rc2._mut_ptr_cont[i2]->get_start());
             // 0 <= i2 - 1 < n2 and r1 not reversed => after i2 - 1 mutation
-            assert(not (0 < i2 and i2 < rc2._mut_ptr_cont.size() + 1 and not rc1.get_rc()) or rc2._mut_ptr_cont[i2 - 1]->get_end());
+            ASSERT(not (0 < i2 and i2 < rc2._mut_ptr_cont.size() + 1 and not rc1.get_rc()) or rc2._mut_ptr_cont[i2 - 1]->get_end());
             // i2 < n2 and r1 reversed => after i2 mutation
-            assert(not (i2 < rc2._mut_ptr_cont.size() and rc1.get_rc()) or rc2._mut_ptr_cont[i2]->get_end() <= r1_pos);
+            ASSERT(not (i2 < rc2._mut_ptr_cont.size() and rc1.get_rc()) or rc2._mut_ptr_cont[i2]->get_end() <= r1_pos);
             // 0 <= i2 - 1 < n2 and r1 reversed => before i2 - 1 mutation
-            assert(not (0 < i2 and i2 < rc2._mut_ptr_cont.size() + 1 and rc1.get_rc()) or r1_pos <= rc2._mut_ptr_cont[i2 - 1]->get_start());
+            ASSERT(not (0 < i2 and i2 < rc2._mut_ptr_cont.size() + 1 and rc1.get_rc()) or r1_pos <= rc2._mut_ptr_cont[i2 - 1]->get_start());
 
-            assert(c_pos <= rc1.get_c_end());
+            ASSERT(c_pos <= rc1.get_c_end());
             // if k1 != 0, we must be in the middle of a contig mutation
-            assert(not k1 != 0 or (i1 < rc1._mut_ptr_cont.size() and c_pos == rc1._mut_ptr_cont[i1]->get_start() + k1));
+            ASSERT(not k1 != 0 or (i1 < rc1._mut_ptr_cont.size() and c_pos == rc1._mut_ptr_cont[i1]->get_start() + k1));
             // if k1 == 0 and i1 not at the end, the next contig mutation is at the right
-            assert(not (k1 == 0 and i1 < rc1._mut_ptr_cont.size()) or c_pos <= rc1._mut_ptr_cont[i1]->get_start());
+            ASSERT(not (k1 == 0 and i1 < rc1._mut_ptr_cont.size()) or c_pos <= rc1._mut_ptr_cont[i1]->get_start());
 
             // if we are not on the boundary of either a contig mutation or a read mutation, advance until next boundary
             if (k1 == 0
@@ -958,7 +958,7 @@ namespace MAC
                     if (c_pos + c_span < (i1 < rc1._mut_ptr_cont.size()? rc1._mut_ptr_cont[i1]->get_start() + k1 : rc1.get_c_end()))
                     {
                         // in the middle of a matched region
-                        assert(k1 == 0);
+                        ASSERT(k1 == 0);
                         Size_Type match_len = (i1 < rc1._mut_ptr_cont.size()? rc1._mut_ptr_cont[i1]->get_start() : rc1.get_c_end()) - (c_pos + c_span);
                         Size_Type skip_len = min(match_len, rc2._mut_ptr_cont[i2]->get_len() - r1_span);
                         c_span += skip_len;
@@ -969,8 +969,8 @@ namespace MAC
                         // on the border or inside a contig mutation
                         // could not have finished the contig mutations at this point
                         // because there are read bases to be consumed
-                        assert(i1 < rc1._mut_ptr_cont.size());
-                        assert(c_pos + c_span == rc1._mut_ptr_cont[i1]->get_start() + k1);
+                        ASSERT(i1 < rc1._mut_ptr_cont.size());
+                        ASSERT(c_pos + c_span == rc1._mut_ptr_cont[i1]->get_start() + k1);
 
                         Size_Type r1_leftover = (rc1._mut_ptr_cont[i1]->get_seq_len() >= k1? rc1._mut_ptr_cont[i1]->get_seq_len() - k1 : 0);
                         Size_Type c_leftover = (rc1._mut_ptr_cont[i1]->get_len() >= k1? rc1._mut_ptr_cont[i1]->get_len() - k1 : 0);
@@ -988,7 +988,7 @@ namespace MAC
                         else
                         {
                             // still in the middle of the same mutation
-                            assert(r1_span == rc2._mut_ptr_cont[i2]->get_len());
+                            ASSERT(r1_span == rc2._mut_ptr_cont[i2]->get_len());
                         }
                     }
                 }
@@ -1007,7 +1007,7 @@ namespace MAC
                 and c_pos == rc1._mut_ptr_cont[i1]->get_start() + k1
                 and rc1._mut_ptr_cont[i1]->get_seq_len() <= k1)
             {
-                assert(rc1._mut_ptr_cont[i1]->get_len() > k1);
+                ASSERT(rc1._mut_ptr_cont[i1]->get_len() > k1);
                 res.push_back(true, _mut_ptr_cont[i1], k1, _mut_ptr_cont[i1]->get_len());
                 c_pos += _mut_ptr_cont[i1]->get_len();
                 k1 = 0;
@@ -1034,14 +1034,14 @@ namespace MAC
         for (Pos pos = get_start_pos(); not (pos == get_end_pos()); increment_pos(pos))
         {
             // if no breakpoints are used, we should never stop in the middle of a mutation
-            assert(pos.mut_offset == 0);
+            ASSERT(pos.mut_offset == 0);
             if (get_match_len_from_pos(pos) == 0)
             {
                 // at the start of a mutation
                 res.push_back(pos.r_pos);
             }
         }
-        assert(res.size() == _mut_ptr_cont.size());
+        ASSERT(res.size() == _mut_ptr_cont.size());
         return res;
     }
     */
@@ -1058,13 +1058,13 @@ namespace MAC
 
     void Read_Chunk::merge_next(Read_Chunk_CPtr rc_next_cptr, Mutation::add_mut_mod_type add_mut_mod)
     {
-        assert(rc_next_cptr != NULL);
-        assert(rc_next_cptr->get_re_ptr() == get_re_ptr());
-        assert(rc_next_cptr->get_ce_ptr() == get_ce_ptr());
-        assert(rc_next_cptr->get_rc() == get_rc());
-        assert(rc_next_cptr->get_r_start() == get_r_end());
-        assert(get_rc() or rc_next_cptr->get_c_start() == get_c_end());
-        assert(not get_rc() or rc_next_cptr->get_c_end() == get_c_start());
+        ASSERT(rc_next_cptr != NULL);
+        ASSERT(rc_next_cptr->get_re_ptr() == get_re_ptr());
+        ASSERT(rc_next_cptr->get_ce_ptr() == get_ce_ptr());
+        ASSERT(rc_next_cptr->get_rc() == get_rc());
+        ASSERT(rc_next_cptr->get_r_start() == get_r_end());
+        ASSERT(get_rc() or rc_next_cptr->get_c_start() == get_c_end());
+        ASSERT(not get_rc() or rc_next_cptr->get_c_end() == get_c_start());
 
         // fix coordinates
         if (get_rc())
@@ -1123,7 +1123,7 @@ namespace MAC
         for (auto old_mut_cptr_it = old_mut_cptr_cont.begin(); old_mut_cptr_it != old_mut_cptr_cont.end(); ++old_mut_cptr_it)
         {
             Mutation_CPtr old_mut_cptr = *old_mut_cptr_it;
-            assert(mut_map.count(old_mut_cptr) == 1);
+            ASSERT(mut_map.count(old_mut_cptr) == 1);
             Mutation_Trans_Cont::const_iterator it = mut_map.find(old_mut_cptr);
             _mut_ptr_cont.push_back(it->new_mut_cptr);
         }
@@ -1161,18 +1161,18 @@ namespace MAC
 
     Seq_Type Read_Chunk::substr(Size_Type start, Size_Type len) const
     {
-        assert(start >= _r_start and start + len <= _r_start + _r_len);
+        ASSERT(start >= _r_start and start + len <= _r_start + _r_len);
         return get_seq().substr(start - _r_start, len);
     }
 
     bool Read_Chunk::check() const
     {
         // no empty chunks
-        assert(get_r_len() > 0);
+        ASSERT(get_r_len() > 0);
         // contigs coordinates
-        assert(get_c_start() <= get_c_end());
-        assert(get_c_start() <= get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len());
-        assert(get_c_end() <= get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len());
+        ASSERT(get_c_start() <= get_c_end());
+        ASSERT(get_c_start() <= get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len());
+        ASSERT(get_c_end() <= get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len());
         // mapped length
         Size_Type c_len = get_c_end() - get_c_start();
         Size_Type r_len = get_r_end() - get_r_start();
@@ -1180,22 +1180,22 @@ namespace MAC
         for (size_t i = 0; i < get_mut_ptr_cont().size(); ++i)
         {
             // no empty mutations
-            assert(not get_mut_ptr_cont()[i]->is_empty());
+            ASSERT(not get_mut_ptr_cont()[i]->is_empty());
             // mutations must be in contig order
-            assert(i == 0 or get_mut_ptr_cont()[i - 1]->get_end() <= get_mut_ptr_cont()[i]->get_start());
+            ASSERT(i == 0 or get_mut_ptr_cont()[i - 1]->get_end() <= get_mut_ptr_cont()[i]->get_start());
 #ifndef ALLOW_CONSECUTIVE_MUTATIONS
-            assert(i == 0 or get_mut_ptr_cont()[i - 1]->get_end() < get_mut_ptr_cont()[i]->get_start());
+            ASSERT(i == 0 or get_mut_ptr_cont()[i - 1]->get_end() < get_mut_ptr_cont()[i]->get_start());
 #endif
             delta += (long long)get_mut_ptr_cont()[i]->get_seq_len() - (long long)get_mut_ptr_cont()[i]->get_len();
         }
-        assert((long long)c_len + delta == (long long)r_len);
+        ASSERT((long long)c_len + delta == (long long)r_len);
 #ifndef ALLOW_PART_MAPPED_INNER_CHUNKS
         // chunks must end on contig breaks except for first and last
-        assert(get_r_start() == 0
+        ASSERT(get_r_start() == 0
                or (not get_rc()?
                    get_c_start() == 0
                    : get_c_end() == get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len()));
-        assert(get_r_end() == get_re_ptr()->get_len()
+        ASSERT(get_r_end() == get_re_ptr()->get_len()
                or (not get_rc()?
                    get_c_end() == get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len()
                    : get_c_start() == 0));
