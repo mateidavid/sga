@@ -93,10 +93,10 @@ namespace MAC
         const Read_Entry* insert_read_entry(const Read_Entry& re);
         const Contig_Entry* insert_contig_entry(const Contig_Entry& ce);
         void erase_contig_entry(const Contig_Entry* ce_cptr);
-        void cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk, bool force = false);
-        void cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk);
+        bool cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk, bool force = false);
+        bool cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk, bool force = false);
         void cut_mutation(const Contig_Entry* ce_cptr, const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset);
-        void cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr);
+        bool cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr);
 
         void remap_chunks(std::map< Read_Chunk_CPtr, std::shared_ptr< Read_Chunk > >& rc_map, Mutation_Cont& extra_mut_cont);
         void merge_read_chunks(Read_Chunk_CPtr c1rc1_chunk_cptr, Read_Chunk_CPtr c2rc2_chunk_cptr, Cigar& rc1rc2_cigar);

@@ -326,8 +326,11 @@ namespace MAC
         // mutations:
         for (auto mut_it = _mut_cont.begin(); mut_it != _mut_cont.end(); ++mut_it)
         {
+            Mutation_CPtr mut_cptr = &*mut_it;
             // check base coordinates
-            assert(mut_it->get_start() <= _seq_ptr->size() and mut_it->get_end() <= _seq_ptr->size());
+            assert(mut_cptr->get_start() <= _seq_ptr->size() and mut_cptr->get_end() <= _seq_ptr->size());
+            // no empty mutations
+            assert(not mut_cptr->is_empty());
         }
         // read chunks:
         for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)

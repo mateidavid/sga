@@ -24,32 +24,6 @@
 
 namespace MAC
 {
-    /** Set of coordinates used to traverse a Read_Chunk mapping. */
-    struct Read_Chunk_Pos
-    {
-        /** Contig position. */
-        Size_Type c_pos;
-        /** Read position. */
-        Size_Type r_pos;
-        /** Number of mutations passed. */
-        size_t mut_idx;
-        /** If non-zero, offset into mutation mut_idx. */
-        size_t mut_offset;
-
-        /** Constructor. */
-        Read_Chunk_Pos(Size_Type _c_pos = 0, Size_Type _r_pos = 0, size_t _mut_idx = 0, size_t _mut_offset = 0)
-        : c_pos(_c_pos), r_pos(_r_pos), mut_idx(_mut_idx), mut_offset(_mut_offset) {}
-
-        /** Comparison operator. */
-        bool operator == (const Read_Chunk_Pos& rhs)
-        {
-            return c_pos == rhs.c_pos and r_pos == rhs.r_pos and mut_idx == rhs.mut_idx and mut_offset == rhs.mut_offset;
-        }
-        bool operator != (const Read_Chunk_Pos& rhs) { return not (*this == rhs); }
-    };
-
-    std::ostream& operator << (std::ostream&, const Read_Chunk_Pos&);
-
     /** Holds information about a read chunk.
      *
      * Reads will be partitioned into chunks of non-zero size as they are mapped to contigs.
@@ -101,73 +75,103 @@ namespace MAC
         bool is_unmappable() const { return false; }
         /**@}*/
 
-        /** @name Traversal using Read_Chunk_Pos objects */
-        /**@{*/
-        /** Asserts that Read_Chunk_Pos object is valid. */
-        inline bool check_pos(const Read_Chunk_Pos& pos) const;
+        /** Set of coordinates used to traverse a Read_Chunk mapping. */
+        struct Pos
+        {
+        public:
+            /** Contig position. */
+            Size_Type c_pos;
+            /** Read position. */
+            Size_Type r_pos;
+            /** Number of mutations passed. */
+            size_t mut_idx;
+            /** If non-zero, offset into mutation mut_idx. */
+            Size_Type mut_offset;
+
+        private:
+            /** Read_Chunk parent object. */
+            const Read_Chunk* rc_cptr;
+
+            /** Constructor. */
+            Pos(Size_Type _c_pos = 0, Size_Type _r_pos = 0, size_t _mut_idx = 0, Size_Type _mut_offset = 0, const Read_Chunk* _rc_cptr = NULL)
+            : c_pos(_c_pos), r_pos(_r_pos), mut_idx(_mut_idx), mut_offset(_mut_offset), rc_cptr(_rc_cptr) {}
+
+        public:
+            /** Get length of unmutated mapped stretch starting at given position.
+             * @param forward Bool; true if looking for match stretch forward, false if backward.
+             * @return The length of the next stretch of unmutated bases; 0 if on the breakpoint of a mutation.
+             */
+            inline Size_Type get_match_len(bool forward = true) const;
+
+            /** Increment position object past the next mapping stretch, stopping at the given breakpoint.
+             * @param brk Breakpoint position.
+             * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
+             */
+            void increment(Size_Type brk = 0, bool on_contig = true);
+
+            /** Decrement position object past the next mapping stretch, stopping at the given breakpoint.
+             * @param brk Breakpoint position.
+             * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
+             */
+            void decrement(Size_Type brk = 0, bool on_contig = true);
+
+            /** Advance position object: wrapper for increment and decrement.
+             * @param forward Direction; true: increment; false: decrement.
+             * @param brk Breakpoint position.
+             * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
+             */
+            void advance(bool forward, Size_Type brk = 0, bool on_contig = true)
+            { if (forward) increment(brk, on_contig); else decrement(brk, on_contig); }
+
+            /** Get position corresponding to given breakpoint.
+             * @param brk Breakpoint location.
+             * @param on_contig Bool; true iff this is a contig breakpoint.
+             */
+            void jump_to_brk(Size_Type brk, bool on_contig);
+
+            /** Advance position, but using a read Mutation breakpoint.
+             * Repeated calls to this function will produce mapping stretches prior to the read Mutation,
+             * including sliced contig mutations, followed by the stretch corresponding to the read Mutation.
+             * @param mut Read Mutation to use as breakpoint.
+             * @param forward Direction; true: increment; false: decrement.
+             * @return Bool; true if breakpoint reached (i.e., mapping stretch corresponds to read Mutation), false ow.
+             */
+            bool advance_til_mut(const Mutation& mut, bool forward = true);
+
+            /** Advance position past any deletions.
+             * @param forward Direction.
+             */
+            void advance_past_del(bool forward = true)
+            {
+                Pos tmp_pos = *this;
+                while ((forward and *this != rc_cptr->get_start_pos()) or (not forward and *this != rc_cptr->get_end_pos()))
+                {
+                    tmp_pos.advance(forward);
+                    if (tmp_pos.r_pos != r_pos)
+                        break;
+                    *this = tmp_pos;
+                }
+            }
+
+            /** Asserts that Pos object is valid. */
+            bool check() const;
+
+            /** Comparison operators. */
+            bool operator == (const Pos& rhs)
+            {
+                return c_pos == rhs.c_pos and r_pos == rhs.r_pos and mut_idx == rhs.mut_idx and mut_offset == rhs.mut_offset;
+            }
+            bool operator != (const Pos& rhs) { return not (*this == rhs); }
+            /** To stream. */
+            friend std::ostream& operator << (std::ostream&, const Pos&);
+            friend class Read_Chunk;
+        };
 
         /** Get mapping start position. */
-        Read_Chunk_Pos get_start_pos() const { return Read_Chunk_Pos(get_c_start(), (not _rc? get_r_start() : get_r_end()), 0, 0); }
+        Pos get_start_pos() const { return Pos(get_c_start(), (not _rc? get_r_start() : get_r_end()), 0, 0, this); }
 
         /** Get mapping end position. */
-        Read_Chunk_Pos get_end_pos() const { return Read_Chunk_Pos(get_c_end(), (not _rc? get_r_end() : get_r_start()), _mut_ptr_cont.size(), 0); }
-
-        /** Get length of unmutated mapped stretch starting at given position.
-         * @param pos Read_Chunk_Pos object.
-         * @param forward Bool; true if looking for match stretch forward, false if backward.
-         * @return The length of the next stretch of unmutated bases; 0 if on the breakpoint of a mutation.
-         */
-        inline Size_Type get_match_len_from_pos(const Read_Chunk_Pos& pos, bool forward = true) const;
-
-        /** Increment position object past the next mapping stretch, stopping at the given breakpoint.
-         * @param pos Read_Chunk_Pos position object.
-         * @param brk Breakpoint position.
-         * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
-         */
-        void increment_pos(Read_Chunk_Pos& pos, Size_Type brk = 0, bool on_contig = true) const;
-
-        /** Decrement position object past the next mapping stretch, stopping at the given breakpoint.
-         * @param pos Read_Chunk_Pos position object.
-         * @param brk Breakpoint position.
-         * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
-         */
-        void decrement_pos(Read_Chunk_Pos& pos, Size_Type brk = 0, bool on_contig = true) const;
-
-        /** Advance position object: wrapper for increment and decrement.
-         * @param pos Read_Chunk_Pos position object.
-         * @param forward Direction; true: increment; false: decrement.
-         * @param brk Breakpoint position.
-         * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
-         */
-        void advance_pos(Read_Chunk_Pos& pos, bool forward, Size_Type brk = 0, bool on_contig = true) const
-        { if (forward) increment_pos(pos, brk, on_contig); else decrement_pos(pos, brk, on_contig); }
-
-        /** Advance position, but using a read Mutation breakpoint.
-         * Repeated calls to this function will produce mapping stretches prior to the read Mutation,
-         * including sliced contig mutations, followed by the stretch corresponding to the read Mutation.
-         * @param pos Position to advance.
-         * @param mut Read Mutation to use as breakpoint.
-         * @param forward Direction; true: increment; false: decrement.
-         * @return Bool; true if breakpoint reached (i.e., mapping stretch corresponds to read Mutation), false ow.
-         */
-        bool advance_pos_til_mut(Read_Chunk_Pos& pos, const Mutation& mut, bool forward = true) const;
-
-        /** Advance position past any deletions.
-         * @param pos Position object.
-         * @param forward Direction.
-         */
-        void advance_pos_skip_del(Read_Chunk_Pos& pos, bool forward = true) const
-        {
-            Read_Chunk_Pos tmp_pos = pos;
-            while (true)
-            {
-                advance_pos(tmp_pos, forward);
-                if (tmp_pos.c_pos != pos.c_pos)
-                    break;
-                pos = tmp_pos;
-            }
-        }
-        /**@}*/
+        Pos get_end_pos() const { return Pos(get_c_end(), (not _rc? get_r_end() : get_r_start()), _mut_ptr_cont.size(), 0, this); }
 
         /** Set read entry pointer. */
         void set_re_ptr(const Read_Entry* re_ptr) { _re_ptr = re_ptr; }
@@ -213,7 +217,9 @@ namespace MAC
          * - if X_pos == brk: idx is the index of the first (smallest m_c_start) mutation with m_c_start >= c_pos.
          * - if X_pos != brk: idx is the index of a mutation spanning both positions brk-1 and brk
          */
-         std::tuple< Size_Type, Size_Type, size_t > get_cut_data(Size_Type r_brk, bool is_contig_brk) const;
+        /*
+        std::tuple< Size_Type, Size_Type, size_t > get_cut_data(Size_Type r_brk, bool is_contig_brk) const;
+         */
 
          /** If given breakpoint is spanned by a mutation, return it along with cut coordinates.
           * @param brk Position where to cut, 0-based. Alternatively, length before the cut.
@@ -221,8 +227,10 @@ namespace MAC
           * @param c_brk_cont Set of preferred breakpoints. (Optional)
           * @return Pointer to mutation to cut (NULL if none), base and alternate offsets where to cut.
           */
+         /*
          std::tuple< const Mutation*, Size_Type, Size_Type > get_mutation_to_cut(
              Size_Type brk, bool is_contig_brk, const std::set< Size_Type >& c_brk_cont = std::set< Size_Type >()) const;
+          */
 
          /** Split read chunk based on contig position and mutation map.
           * @param c_brk Contig breakpoint.
@@ -333,7 +341,9 @@ namespace MAC
         std::vector<const Mutation*> _mut_ptr_cont;
 
         /** Compute read positions of the contig mutations in this object. */
+        /*
         std::vector< Size_Type > get_mut_pos() const;
+        */
     };
 
     /** Pointer to constant Read_Chunk. */

@@ -88,9 +88,27 @@ namespace MAC
             long long delta = 0;
             for (size_t i = 0; i < rc_cptr->get_mut_ptr_cont().size(); ++i)
             {
+                // no empty mutations
+                assert(not rc_cptr->get_mut_ptr_cont()[i]->is_empty());
+                // mutations must be in contig order
+                assert(i == 0 or rc_cptr->get_mut_ptr_cont()[i - 1]->get_end() <= rc_cptr->get_mut_ptr_cont()[i]->get_start());
+#ifndef ALLOW_CONSECUTIVE_MUTATIONS
+                assert(i == 0 or rc_cptr->get_mut_ptr_cont()[i - 1]->get_end() < rc_cptr->get_mut_ptr_cont()[i]->get_start());
+#endif
                 delta += (long long)rc_cptr->get_mut_ptr_cont()[i]->get_seq_len() - (long long)rc_cptr->get_mut_ptr_cont()[i]->get_len();
             }
             assert((long long)c_len + delta == (long long)r_len);
+#ifndef ALLOW_PART_MAPPED_INNER_CHUNKS
+            // chunks must end on contig breaks except for first and last
+            assert(rc_it == _chunk_cont.begin()
+                   or (not rc_cptr->get_rc()?
+                       rc_cptr->get_c_start() == 0
+                       : rc_cptr->get_c_end() == rc_cptr->get_ce_ptr()->get_seq_offset() + rc_cptr->get_ce_ptr()->get_len()));
+            assert(rc_next_it == _chunk_cont.end()
+                   or (not rc_cptr->get_rc()?
+                       rc_cptr->get_c_end() == rc_cptr->get_ce_ptr()->get_seq_offset() + rc_cptr->get_ce_ptr()->get_len()
+                       : rc_cptr->get_c_start() == 0));
+#endif
         }
         return true;
     }

@@ -78,14 +78,14 @@ namespace MAC
         }
     }
 
-    void Graph::cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr)
+    bool Graph::cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr)
     {
         if ((c_brk == 0 and mut_left_cptr == NULL)
             or (c_brk == ce_cptr->get_len() and (ce_cptr->get_mut_cont().size() == 0
                                                  or not ce_cptr->get_mut_cont().rbegin()->is_ins()
                                                  or ce_cptr->get_mut_cont().rbegin()->get_start() < ce_cptr->get_len())))
         {
-            return;
+            return false;
         }
 
         //cerr << "before cutting contig entry: " << (void*)ce_cptr << " at " << c_brk << " mut_left_cptr=" << (void*)mut_left_cptr << '\n' << *this;
@@ -159,79 +159,114 @@ namespace MAC
 
         //cerr << "after cutting contig entry: " << (void*)ce_cptr << '\n' << *this;
         assert(check(set< const Contig_Entry* >({ ce_cptr, ce_new_cptr })));
+        return true;
     }
 
-    void Graph::cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk)
+    bool Graph::cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk, bool force)
     {
-        const Mutation* mut_cptr;
-        Size_Type c_offset;
-        Size_Type r_offset;
-        tie(mut_cptr, c_offset, r_offset) = rc_cptr->get_mutation_to_cut(r_brk, false);
-        if (mut_cptr != NULL)
+        assert(rc_cptr->get_r_len() > 0);
+        assert(rc_cptr->get_r_start() <= r_brk and r_brk <= rc_cptr->get_r_end());
+        if (r_brk == rc_cptr->get_r_start() or r_brk == rc_cptr->get_r_end())
         {
-            cut_mutation(rc_cptr->get_ce_ptr(), mut_cptr, c_offset, r_offset);
-        }
-        // now we are certain the breakpoint no longer falls inside a mutation (insertion/mnp)
-
-        Size_Type c_pos;
-        Size_Type r_pos;
-        size_t i;
-        tie(c_pos, r_pos, i) = rc_cptr->get_cut_data(r_brk, false);
-        assert(r_pos == r_brk);
-
-        // check if an insertion at c_pos has to remain on the left of the cut
-        const Mutation* mut_left_cptr = NULL;
-        if (i > 0
-            and rc_cptr->get_mut_ptr_cont()[i-1]->get_start() == c_pos
-            and rc_cptr->get_mut_ptr_cont()[i-1]->is_ins())
-        {
-            mut_left_cptr = rc_cptr->get_mut_ptr_cont()[i-1];
-        }
-
-        // cut contig at given c_offset
-        // all insertions at c_pos go to the right except for at most one, passed as argument
-        cut_contig_entry(rc_cptr->get_ce_ptr(), c_pos, mut_left_cptr);
-    }
-
-    void Graph::cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk, bool force)
-    {
-        // if cut is at the very start or end, and the force flag is on, cut the underlying contig directly
-        if (r_brk == 0 or r_brk == re_cptr->get_len())
-        {
-             if (not force)
-             {
-                 return;
-             }
-
-             // compute contig cut coordinates: ce_cptr & c_brk
-             Read_Chunk_CPtr rc_cptr = (r_brk == 0?
-                                        &*re_cptr->get_chunk_cont().begin()
-                                        : &*re_cptr->get_chunk_cont().rbegin());
-             Size_Type c_brk = ((r_brk == 0) == (not rc_cptr->get_rc())?
-                                rc_cptr->get_c_start()
-                                : rc_cptr->get_c_end());
-             // if read chunk ends in insertion, that must remain on the left of the cut
-             const Mutation* mut_left_cptr = NULL;
-             if (c_brk == rc_cptr->get_c_end()
-                 and rc_cptr->get_mut_ptr_cont().size() > 0
-                 and (*rc_cptr->get_mut_ptr_cont().rbegin())->is_ins()
-                 and (*rc_cptr->get_mut_ptr_cont().rbegin())->get_start() == c_brk)
-             {
-                 mut_left_cptr = *(rc_cptr->get_mut_ptr_cont().rbegin());
-             }
-             cut_contig_entry(rc_cptr->get_ce_ptr(), c_brk, mut_left_cptr);
+            if (not force)
+            {
+                return false;
+            }
+            if ((r_brk == rc_cptr->get_r_start()) == (not rc_cptr->get_rc()))
+            {
+                // cut if mapping doesn't start on contig start
+                if (rc_cptr->get_c_start() != 0)
+                {
+                    return cut_contig_entry(rc_cptr->get_ce_ptr(), rc_cptr->get_c_start(), NULL);
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                // cut if mapping doesn't end on contig end
+                if (rc_cptr->get_c_end() != rc_cptr->get_ce_ptr()->get_len())
+                {
+                    // if chunk ends in insertion, keep it on lhs, along with the rest of the chunk
+                    Mutation_CPtr mut_left_cptr = NULL;
+                    if (rc_cptr->get_mut_ptr_cont().size() > 0
+                        and rc_cptr->get_mut_ptr_cont()[rc_cptr->get_mut_ptr_cont().size() - 1]->get_start() == rc_cptr->get_c_end())
+                    {
+                        mut_left_cptr = rc_cptr->get_mut_ptr_cont()[rc_cptr->get_mut_ptr_cont().size() - 1];
+                        assert(mut_left_cptr->is_ins());
+                    }
+                    return cut_contig_entry(rc_cptr->get_ce_ptr(), rc_cptr->get_c_end(), mut_left_cptr);
+                }
+                else
+                {
+                    return false;
+                }
+            }
         }
         else
         {
-            // find read chunk that must be cut
-            Read_Chunk_CPtr rc_cptr = re_cptr->get_chunk_with_pos(r_brk);
-
-            // if cut is at the start of the chunk, there is nothing to do
-            if (rc_cptr == NULL or rc_cptr->get_r_start() == r_brk)
-                return;
             assert(rc_cptr->get_r_start() < r_brk and r_brk < rc_cptr->get_r_end());
+            bool cut_made = false;
+            Read_Chunk::Pos pos = rc_cptr->get_start_pos();
+            pos.jump_to_brk(r_brk, false);
 
-            cut_read_chunk(rc_cptr, r_brk);
+            if (pos.mut_offset > 0)
+            {
+                // must cut a mutation
+                assert(pos.mut_idx < rc_cptr->get_mut_ptr_cont().size());
+                Mutation_CPtr mut_cptr = rc_cptr->get_mut_ptr_cont()[pos.mut_idx];
+                cut_mutation(rc_cptr->get_ce_ptr(), mut_cptr, min(pos.mut_offset, mut_cptr->get_len()), min(pos.mut_offset, mut_cptr->get_seq_len()));
+                cut_made = true;
+                pos = rc_cptr->get_start_pos();
+                pos.jump_to_brk(r_brk, false);
+            }
+            // now we are certain the breakpoint no longer falls inside a mutation (insertion/mnp)
+            assert(pos.r_pos == r_brk);
+            assert(pos.mut_offset == 0);
+
+            // check if an insertion at c_pos has to remain on the left of the cut
+            Mutation_CPtr mut_left_cptr = NULL;
+            if (pos.mut_idx > 0
+                and rc_cptr->get_mut_ptr_cont()[pos.mut_idx - 1]->get_start() == pos.c_pos)
+            {
+                mut_left_cptr = rc_cptr->get_mut_ptr_cont()[pos.mut_idx - 1];
+                assert(mut_left_cptr->is_ins());
+            }
+
+            // cut contig at given c_offset
+            // all insertions at c_pos go to the right except for at most one, passed as argument
+            return cut_contig_entry(rc_cptr->get_ce_ptr(), pos.c_pos, mut_left_cptr) or cut_made;
+        }
+    }
+
+    bool Graph::cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk, bool force)
+    {
+        if (r_brk == 0)
+        {
+            Read_Chunk_CPtr rc_cptr = &*re_cptr->get_chunk_cont().begin();
+            return cut_read_chunk(rc_cptr, r_brk, force);
+        }
+        else if (r_brk == re_cptr->get_len())
+        {
+            Read_Chunk_CPtr rc_cptr = &*re_cptr->get_chunk_cont().rbegin();
+            return cut_read_chunk(rc_cptr, r_brk, force);
+        }
+        else
+        {
+            Read_Chunk_CPtr rc_cptr = re_cptr->get_chunk_with_pos(r_brk);
+            assert(rc_cptr->get_r_start() <= r_brk and r_brk < rc_cptr->get_r_end());
+            if (r_brk == rc_cptr->get_r_start())
+            {
+                // we might have to cut the previous chunk as well
+                // we only ever cut 1 chunk at a time, if if first call returns true, the second cut is not performed
+                return cut_read_chunk(re_cptr->get_sibling(rc_cptr, false), r_brk, force) or cut_read_chunk(rc_cptr, r_brk, force);
+            }
+            else
+            {
+                return cut_read_chunk(rc_cptr, r_brk, force);
+            }
         }
     }
 
