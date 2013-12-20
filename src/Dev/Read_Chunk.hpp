@@ -144,7 +144,7 @@ namespace MAC
             void advance_past_del(bool forward = true)
             {
                 Pos tmp_pos = *this;
-                while ((forward and *this != rc_cptr->get_start_pos()) or (not forward and *this != rc_cptr->get_end_pos()))
+                while ((forward and *this != rc_cptr->get_end_pos()) or (not forward and *this != rc_cptr->get_start_pos()))
                 {
                     tmp_pos.advance(forward);
                     if (tmp_pos.r_pos != r_pos)
@@ -327,6 +327,8 @@ namespace MAC
           * @param prefix_len Length of prefix by which new contig is larger than the old one.
           */
          void rebase(const Contig_Entry* ce_cptr, const Mutation_Trans_Cont& mut_map, Size_Type prefix_len);
+
+         bool check() const;
 
          friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
 

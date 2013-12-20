@@ -325,6 +325,8 @@ namespace MAC
     void Graph::merge_read_chunks(Read_Chunk_CPtr c1rc1_chunk_cptr, Read_Chunk_CPtr c2rc2_chunk_cptr, Cigar& rc1rc2_cigar)
     {
         assert(rc1rc2_cigar.check(c1rc1_chunk_cptr->get_seq(), c2rc2_chunk_cptr->get_seq()));
+        assert(c1rc1_chunk_cptr->get_c_start() == 0 and c1rc1_chunk_cptr->get_c_end() == c1rc1_chunk_cptr->get_ce_ptr()->get_len());
+        assert(c2rc2_chunk_cptr->get_c_start() == 0 and c2rc2_chunk_cptr->get_c_end() == c2rc2_chunk_cptr->get_ce_ptr()->get_len());
         // do not do anything if the chunks are already mapped to the same contig
         // NOTE: with this, we are ignoring alternate mappings
         const Contig_Entry* c1_ce_cptr = c1rc1_chunk_cptr->get_ce_ptr();
@@ -364,6 +366,7 @@ namespace MAC
             if (rc_cptr == c2rc2_chunk_cptr)
                 continue;
             rc_map[rc_cptr] = c1c2_chunk_sptr->collapse_mapping(*rc_cptr, extra_c1_mut_cont);
+            rc_map[rc_cptr]->check();
         }
         // at this point, all read chunks mapped to c2 are translated
         // with pointers in rc_map and new mutations in extra_mut_cont

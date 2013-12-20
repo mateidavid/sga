@@ -131,11 +131,18 @@ namespace MAC
          */
         void merge(const Mutation& rhs)
         {
-            assert(get_end() == rhs.get_start());
-            assert(have_seq() == rhs.have_seq());
-            _len += rhs._len;
-            _seq_len += rhs._seq_len;
-            _seq += rhs._seq;
+            if (is_empty())
+            {
+                *this = rhs;
+            }
+            else
+            {
+                assert(get_end() == rhs.get_start());
+                assert(have_seq() == rhs.have_seq());
+                _len += rhs._len;
+                _seq_len += rhs._seq_len;
+                _seq += rhs._seq;
+            }
         }
 
          /** Cut mutation at given offsets.

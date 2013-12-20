@@ -7,6 +7,7 @@
 #include "Read_Chunk.hpp"
 
 #include "Mutation.hpp"
+#include "Read_Entry.hpp"
 #include "Contig_Entry.hpp"
 #include "print_seq.hpp"
 #include "indent.hpp"
@@ -726,6 +727,7 @@ namespace MAC
 
     shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const
     {
+        assert(get_r_start() <= rc2.get_c_start() and rc2.get_c_end() <= get_r_end());
         shared_ptr< Read_Chunk > res(new Read_Chunk());
 
         res->_r_start = rc2.get_r_start();
@@ -758,20 +760,65 @@ namespace MAC
                 if (got_r_mut)
                 {
                     assert(pos_next == pos);
-                    // skip any remaining deletions
-                    pos.advance_past_del();
                     res->_c_start = pos.c_pos;
                     past_start = true;
+                    if (pos == get_start_pos())
+                    {
+                        // if rc2 starts on contig break, incorporate initial deletions
+                        Read_Chunk::Pos tmp_pos = pos_next;
+                        while (tmp_pos != get_end_pos())
+                        {
+                            tmp_pos.increment();
+                            if (tmp_pos.r_pos != pos_next.r_pos)
+                            {
+                                break;
+                            }
+                            assert(tmp_pos.r_pos == pos_next.r_pos);
+                            assert(tmp_pos.mut_offset == 0);
+                            assert(tmp_pos.mut_idx == pos_next.mut_idx + 1);
+                            // initial deletions are always whole (offset==0 in pos_next and tmp_pos)
+                            Mutation_CPtr c_mut_cptr = _mut_ptr_cont[pos_next.mut_idx];
+                            m.merge(*c_mut_cptr);
+                            c_muts.push_back(c_mut_cptr);
+                            pos_next = tmp_pos;
+                        }
+                    }
+                    else
+                    {
+                        // if rc2 doesn't start on contig break, skip initial deletions
+                        pos_next.advance_past_del();
+                    }
                 }
             }
             else if ((not got_r_mut and pos.get_match_len() > 0)
                 or (got_r_mut and r_mut_cnt == rc2.get_mut_ptr_cont().size()))
             {
+                assert(not got_r_mut or pos_next == pos);
+                if (got_r_mut and pos_next.r_pos == get_end_pos().r_pos)
+                {
+                    // if rc2 ends on contig end, incorporate remaining deletions
+                    Read_Chunk::Pos tmp_pos = pos_next;
+                    while (tmp_pos != get_end_pos())
+                    {
+                        tmp_pos.increment();
+                        assert(tmp_pos.r_pos == pos_next.r_pos);
+                        assert(tmp_pos.mut_offset == 0);
+                        assert(tmp_pos.mut_idx == pos_next.mut_idx + 1);
+                        // final deletions are whole, or we have used a read mutation
+                        assert(pos_next.mut_offset == 0 or r_muts.size() > 0);
+                        Mutation_CPtr c_mut_cptr = _mut_ptr_cont[pos_next.mut_idx];
+                        m.merge(Mutation(pos_next.c_pos, tmp_pos.c_pos - pos_next.c_pos, 0));
+                        c_muts.push_back(c_mut_cptr);
+                        pos_next = tmp_pos;
+                    }
+
+                }
                 // the stretch pos->pos_next is a match, or we are at the end;
                 // consolidate any outstanding mutations
                 m.simplify(get_ce_ptr()->substr(m.get_start(), m.get_len()));
                 if (not m.is_empty())
                 {
+                    /*
                     if (r_muts.size() == 0)
                     {
                         // no adjacent contig mutations
@@ -779,6 +826,7 @@ namespace MAC
                         res->mut_ptr_cont().push_back(c_muts[0]);
                     }
                     else
+                    */
                     {
                         // new metamutation
                         // add it to extra Mutation container if it doesn't exist
@@ -787,7 +835,7 @@ namespace MAC
                         // NOTE: here we could save the metamutation composition
                     }
                 }
-                m = Mutation(pos_next.c_pos, 0);
+                m = Mutation();
                 c_muts.clear();
                 r_muts.clear();
 
@@ -824,6 +872,10 @@ namespace MAC
             }
             pos = pos_next;
         }
+        assert(not (rc2.get_c_start() == get_r_start())
+               or (not get_rc()? res->get_c_start() == get_c_start() : res->get_c_end() == get_c_end()));
+        assert(not (rc2.get_c_end() == get_r_end())
+               or (not get_rc()? res->get_c_end() == get_c_end() : res->get_c_start() == get_c_start()));
         return res;
     }
 
@@ -1096,6 +1148,44 @@ namespace MAC
     {
         assert(start >= _r_start and start + len <= _r_start + _r_len);
         return get_seq().substr(start - _r_start, len);
+    }
+
+    bool Read_Chunk::check() const
+    {
+        // no empty chunks
+        assert(get_r_len() > 0);
+        // contigs coordinates
+        assert(get_c_start() <= get_c_end());
+        assert(get_c_start() <= get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len());
+        assert(get_c_end() <= get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len());
+        // mapped length
+        Size_Type c_len = get_c_end() - get_c_start();
+        Size_Type r_len = get_r_end() - get_r_start();
+        long long delta = 0;
+        for (size_t i = 0; i < get_mut_ptr_cont().size(); ++i)
+        {
+            // no empty mutations
+            assert(not get_mut_ptr_cont()[i]->is_empty());
+            // mutations must be in contig order
+            assert(i == 0 or get_mut_ptr_cont()[i - 1]->get_end() <= get_mut_ptr_cont()[i]->get_start());
+#ifndef ALLOW_CONSECUTIVE_MUTATIONS
+            assert(i == 0 or get_mut_ptr_cont()[i - 1]->get_end() < get_mut_ptr_cont()[i]->get_start());
+#endif
+            delta += (long long)get_mut_ptr_cont()[i]->get_seq_len() - (long long)get_mut_ptr_cont()[i]->get_len();
+        }
+        assert((long long)c_len + delta == (long long)r_len);
+#ifndef ALLOW_PART_MAPPED_INNER_CHUNKS
+        // chunks must end on contig breaks except for first and last
+        assert(get_r_start() == 0
+               or (not get_rc()?
+                   get_c_start() == 0
+                   : get_c_end() == get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len()));
+        assert(get_r_end() == get_re_ptr()->get_len()
+               or (not get_rc()?
+                   get_c_end() == get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len()
+                   : get_c_start() == 0));
+#endif
+        return true;
     }
 
     ostream& operator << (ostream& os, const Read_Chunk::Pos& pos)
