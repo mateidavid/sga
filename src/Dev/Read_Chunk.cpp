@@ -786,7 +786,22 @@ namespace MAC
                     else
                     {
                         // if rc2 doesn't start on contig break, skip initial deletions
-                        pos_next.advance_past_del();
+                        Read_Chunk::Pos tmp_pos = pos_next;
+                        tmp_pos.advance_past_del();
+                        // FIX: notorious situation:
+                        // do not skip deletions if we can reach the contig end on deletins only,
+                        // and read is aligned on contig end
+                        if (tmp_pos != get_end_pos())
+                        {
+                            pos_next = tmp_pos;
+                        }
+                        else
+                        {
+                            // rc2 contains insertions only, and is mapped to the contig end
+                            // in this case, we leave the deletion, as it is needed
+                            // to make the result aligned on the contig end
+                            assert(rc2.get_c_start() == rc2.get_c_end());
+                        }
                     }
                 }
             }
