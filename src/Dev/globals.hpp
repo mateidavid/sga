@@ -17,11 +17,13 @@
 
 #define CONCAT(...) __VA_ARGS__
 
+#include <string>
+
 
 namespace global
 {
-    GLOBAL(const char *, prog_name);
-    GLOBAL(const char *, assert_message);
+    GLOBAL(std::string, program_name);
+    GLOBAL(std::string, assert_message);
 }
 
 

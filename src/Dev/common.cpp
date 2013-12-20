@@ -10,11 +10,11 @@ namespace boost
 {
     void assertion_failed(char const * expr, char const * function, char const * file, long line)
     {
-        BOOST_ASSERT_MSG_OSTREAM << (global::prog_name != NULL? global::prog_name : "?") << ": "
+        BOOST_ASSERT_MSG_OSTREAM << global::program_name << ": "
             << file << ':' << line << ": "
             << function << ": "
             << "Assertion '" << expr << "' failed";
-        if (global::assert_message != NULL)
+        if (not global::assert_message.empty())
         {
             BOOST_ASSERT_MSG_OSTREAM << ": [" << global::assert_message << ']';
         }
@@ -23,11 +23,11 @@ namespace boost
     }
     void assertion_failed_msg(char const * expr, char const * msg, char const * function, char const * file, long line)
     {
-        BOOST_ASSERT_MSG_OSTREAM << (global::prog_name != NULL? global::prog_name : "?") << ": "
+        BOOST_ASSERT_MSG_OSTREAM << global::program_name << ": "
             << file << ':' << line << ": "
             << function << ": "
             << "Assertion '" << expr << "' failed: " << msg;
-        if (global::assert_message != NULL)
+        if (not global::assert_message.empty())
         {
             BOOST_ASSERT_MSG_OSTREAM << ": [" << global::assert_message << ']';
         }
