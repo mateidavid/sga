@@ -1,4 +1,6 @@
 #include "Graph.hpp"
+
+#include "globals.hpp"
 #include "Cigar.hpp"
 #include "indent.hpp"
 #include "print_seq.hpp"
@@ -617,11 +619,13 @@ namespace MAC
 
         ASSERT(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
 
-        // check if we can merge any adjacent contigs
-        //cerr << "before merging:\n" << *this;
-        merge_read_contigs(re1_cptr);
-        //cerr << "after merging:\n" << *this;
-        ASSERT(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
+        if (global::merge_contigs_at_each_step)
+        {
+            //cerr << "before merging:\n" << *this;
+            merge_read_contigs(re1_cptr);
+            //cerr << "after merging:\n" << *this;
+            ASSERT(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
+        }
     }
 
     void Graph::reverse_contig(const Contig_Entry* ce_cptr)
@@ -748,6 +752,15 @@ namespace MAC
                     break;
                 }
             }
+        }
+    }
+
+    void Graph::merge_all_read_contigs()
+    {
+        for (auto re_it = _re_cont.begin(); re_it != _re_cont.end(); ++re_it)
+        {
+            const Read_Entry* re_cptr = &*re_it;
+            merge_read_contigs(re_cptr);
         }
     }
 

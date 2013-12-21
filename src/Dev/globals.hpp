@@ -24,6 +24,9 @@ namespace global
 {
     GLOBAL(std::string, program_name);
     GLOBAL(std::string, assert_message);
+    GLOBAL_INIT(bool, merge_contigs_at_each_step, false);
+    GLOBAL_INIT(bool, merge_contigs_at_end, false);
+    GLOBAL_INIT(bool, print_graph, false);
 }
 
 

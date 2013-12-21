@@ -61,6 +61,9 @@ namespace MAC
                          Size_Type r2_start, Size_Type r2_len, bool r2_rc,
                          const std::string& cigar);
 
+        /** Merge all contigs. */
+        void merge_all_read_contigs();
+
         /** Integrity checks. */
         bool check_all() const;
         bool check(const std::set< const Read_Entry* >& re_set, const std::set< const Contig_Entry* >& ce_set = std::set< const Contig_Entry* >()) const;

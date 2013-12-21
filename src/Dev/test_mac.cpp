@@ -25,13 +25,22 @@ int main(int argc, char* argv[])
     string input_file;
     string stats_file;
     char c;
-    while ((c = getopt(argc, argv, "i:x:")) != -1) {
+    while ((c = getopt(argc, argv, "i:x:sep")) != -1) {
         switch (c) {
             case 'i':
                 input_file = optarg;
                 break;
             case 'x':
                 stats_file = optarg;
+                break;
+            case 's':
+                global::merge_contigs_at_each_step = true;
+                break;
+            case 'e':
+                global::merge_contigs_at_end = true;
+                break;
+            case 'p':
+                global::print_graph = true;
                 break;
             default:
                 cerr << "unrecognized option: " << c << endl;
@@ -43,6 +52,8 @@ int main(int argc, char* argv[])
         cerr << "no input file\n";
         exit(EXIT_FAILURE);
     }
+    clog << "merging contigs at each step: " << (global::merge_contigs_at_each_step? "yes" : "no") << '\n';
+    clog << "merging contigs at end: " << (global::merge_contigs_at_end? "yes" : "no") << '\n';
 
     Graph g;
     ixstream ixs(input_file);
@@ -93,8 +104,14 @@ int main(int argc, char* argv[])
         if ((++line_count % 10000) == 0)
             cerr << line_count << '\n';
     }
-    cout << g;
-
+    if (global::merge_contigs_at_end)
+    {
+        g.merge_all_read_contigs();
+    }
+    if (global::print_graph)
+    {
+        cout << g;
+    }
     if (not stats_file.empty())
     {
         ofstream stats_ofs(stats_file);
