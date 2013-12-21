@@ -794,6 +794,7 @@ namespace MAC
                         if (tmp_pos != get_end_pos())
                         {
                             pos_next = tmp_pos;
+                            res->_c_start = pos_next.c_pos;
                         }
                         else
                         {
