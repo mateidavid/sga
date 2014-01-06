@@ -27,6 +27,8 @@ namespace global
     GLOBAL_INIT(bool, merge_contigs_at_each_step, false);
     GLOBAL_INIT(bool, merge_contigs_at_end, false);
     GLOBAL_INIT(bool, print_graph, false);
+    GLOBAL_INIT(bool, progress_graph_op, false);
+    GLOBAL_INIT(int, progress_count, 0);
 }
 
 

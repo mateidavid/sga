@@ -25,7 +25,8 @@ int main(int argc, char* argv[])
     string input_file;
     string stats_file;
     char c;
-    while ((c = getopt(argc, argv, "i:x:sep")) != -1) {
+    while ((c = getopt(argc, argv, "i:x:segpc:")) != -1) {
+        istringstream optarg_s(optarg != NULL? optarg : "");
         switch (c) {
             case 'i':
                 input_file = optarg;
@@ -39,8 +40,14 @@ int main(int argc, char* argv[])
             case 'e':
                 global::merge_contigs_at_end = true;
                 break;
-            case 'p':
+            case 'g':
                 global::print_graph = true;
+                break;
+            case 'p':
+                global::progress_graph_op = true;
+                break;
+            case 'c':
+                optarg_s >> global::progress_count;
                 break;
             default:
                 cerr << "unrecognized option: " << c << endl;
@@ -67,7 +74,10 @@ int main(int argc, char* argv[])
     size_t line_count = 0;
     while (getline(ixs, line))
     {
-        cout << line << '\n';
+        if (global::progress_graph_op)
+        {
+            cerr << line << '\n';
+        }
         istringstream iss(line + "\n");
         string rec_type;
         iss >> rec_type;
@@ -101,8 +111,13 @@ int main(int argc, char* argv[])
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
         }
         //cerr << g;
-        if ((++line_count % 10000) == 0)
-            cerr << line_count << '\n';
+        if (global::progress_count > 0)
+        {
+            if ((++line_count % global::progress_count) == 0)
+            {
+                cerr << line_count << '\n';
+            }
+        }
     }
     if (global::merge_contigs_at_end)
     {
