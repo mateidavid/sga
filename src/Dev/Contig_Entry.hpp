@@ -35,9 +35,15 @@ namespace MAC
         typedef std::function<void(Contig_Entry&)> mod_type;
 
         /** Constructor.
-         * @param seq_ptr Pointer to read sequence.
+         * @param seq_ptr Pointer to read sequence (assume ownership).
          */
         Contig_Entry(Seq_Type* seq_ptr, Size_Type seq_offset = 0) : _seq_ptr(seq_ptr), _seq_offset(seq_offset) {}
+
+        /** Constructor out of a Read_Chunk. */
+        Contig_Entry(Read_Chunk_CPtr rc_cptr) : _seq_ptr(new Seq_Type(rc_cptr->get_seq())), _seq_offset(0)
+        {
+            _chunk_cptr_cont.push_back(rc_cptr);
+        }
 
         /** @name Getters */
         /**@{*/
