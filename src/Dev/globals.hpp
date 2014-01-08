@@ -29,6 +29,7 @@ namespace global
     GLOBAL_INIT(bool, print_graph, false);
     GLOBAL_INIT(bool, progress_graph_op, false);
     GLOBAL_INIT(int, progress_count, 0);
+    GLOBAL_INIT(size_t, unmap_trigger_len, 10);
 }
 
 
