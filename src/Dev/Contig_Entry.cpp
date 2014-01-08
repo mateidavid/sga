@@ -252,7 +252,7 @@ namespace MAC
             Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
             Read_Chunk_CPtr rc_next_cptr = get_next_chunk(dir, rc_cptr);
             ASSERT(rc_next_cptr != NULL);
-            ASSERT(not rc_next_cptr->is_unmappable());
+            //ASSERT(not rc_next_cptr->is_unmappable());
             const Contig_Entry* tmp_ce_cptr = rc_next_cptr->get_ce_ptr();
             bool tmp_orientation = (rc_cptr->get_rc() == rc_next_cptr->get_rc());
             if (tmp_ce_cptr == this) // multiple chunks of the same read mapped across this boundary: unmergeable
