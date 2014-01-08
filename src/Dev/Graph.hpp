@@ -108,6 +108,10 @@ namespace MAC
         void reverse_contig(const Contig_Entry* ce_cptr);
         bool try_merge_contig(const Contig_Entry* ce_cptr, bool forward);
         void merge_read_contigs(const Read_Entry* re_cptr);
+        void unmap_chunk(Read_Chunk_CPtr rc_cptr);
+        void extend_unmapped_chunk(Read_Chunk_CPtr rc_cptr);
+        void extend_unmapped_chunk_dir(const Read_Entry* re_cptr, Size_Type pos, bool dir);
+        void merge_unmappable_chunks(Read_Chunk_CPtr rc1_cptr, Read_Chunk_CPtr rc2_cptr);
     };
 }
 
