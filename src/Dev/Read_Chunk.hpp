@@ -45,14 +45,14 @@ namespace MAC
         /**@{*/
         /** Empty constructor. */
         Read_Chunk()
-        : _re_ptr(NULL), _ce_ptr(NULL), _r_start(0), _r_len(0), _c_start(0), _c_len(0), _rc(false) {}
+        : _re_ptr(NULL), _ce_ptr(NULL), _r_start(0), _r_len(0), _c_start(0), _c_len(0), _rc(false), _is_unmappable(false) {}
 
         /** Constructs a single read chunk from a read, and maps it to a new contig.
          * @param re_ptr Pointer to read entry where this chunk comes from.
          * @param len Length of the read.
          */
         Read_Chunk(const Read_Entry* re_ptr, Size_Type len)
-        : _re_ptr(re_ptr), _ce_ptr(NULL), _r_start(0), _r_len(len), _c_start(0), _c_len(len), _rc(false) {}
+        : _re_ptr(re_ptr), _ce_ptr(NULL), _r_start(0), _r_len(len), _c_start(0), _c_len(len), _rc(false), _is_unmappable(false) {}
         /**@}*/
 
         /** @name Getters */
@@ -72,7 +72,8 @@ namespace MAC
         key_type get_key() const { return _r_start; }
         Seq_Type get_seq() const;
         Seq_Type substr(Size_Type start, Size_Type len) const;
-        bool is_unmappable() const { return false; }
+        bool is_unmappable() const { return _is_unmappable; }
+        void set_unmappable() { _is_unmappable = true; }
         /**@}*/
 
         /** Set of coordinates used to traverse a Read_Chunk mapping. */
@@ -340,6 +341,7 @@ namespace MAC
         Size_Type _c_start;
         Size_Type _c_len;
         bool _rc;
+        bool _is_unmappable;
         std::vector<const Mutation*> _mut_ptr_cont;
 
         /** Compute read positions of the contig mutations in this object. */
