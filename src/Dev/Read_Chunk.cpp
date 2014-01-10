@@ -1216,6 +1216,7 @@ namespace MAC
         os << indent::tab << "(Read_Chunk &=" << (void*)&rhs
            << indent::inc << indent::nl << "re_cptr=" << (void*)rhs._re_ptr
            << ",ce_cptr=" << (void*)rhs._ce_ptr
+           << ",is_unmappable=" << (int)rhs._is_unmappable
            << indent::nl << "r_start=" << rhs.get_r_start()
            << ",r_len=" << rhs.get_r_len()
            << ",c_start=" << rhs.get_c_start()

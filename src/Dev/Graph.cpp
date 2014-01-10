@@ -168,6 +168,11 @@ namespace MAC
     {
         ASSERT(rc_cptr->get_r_len() > 0);
         ASSERT(rc_cptr->get_r_start() <= r_brk and r_brk <= rc_cptr->get_r_end());
+        if (rc_cptr->is_unmappable())
+        {
+            // never cut unmappable chunks
+            return false;
+        }
         if (r_brk == rc_cptr->get_r_start() or r_brk == rc_cptr->get_r_end())
         {
             if (not force)
@@ -399,6 +404,7 @@ namespace MAC
         bool done;
         while (true)
         {
+            // after every graph modification, restart at the beginning
             done = true;
             rc_mapping_sptr->clear();
 
@@ -458,14 +464,24 @@ namespace MAC
                            and not cigar.is_insertion(op_end))
                        or (cigar.get_rf_sub_len(op_start, op_end) < rc1_remaining_len
                            and cigar.get_qr_sub_len(op_start, op_end) == rc2_remaining_len
-                           and not cigar.is_deletion(op_end)));
+                           and not cigar.is_deletion(op_end))
+                       or (cigar.get_rf_sub_len(op_start, op_end) == rc1_remaining_len
+                           and cigar.get_qr_sub_len(op_start, op_end) == rc2_remaining_len));
+                // we previously cut the chunks at the ends of the mapping
+                // cuts don't succeed only if those chunks are unmappable
+                ASSERT(op_end < cigar.get_n_ops()
+                       or cigar.get_rf_sub_len(op_start, op_end) >= rc1_remaining_len
+                       or rc1_cptr->is_unmappable());
+                ASSERT(op_end < cigar.get_n_ops()
+                       or cigar.get_qr_sub_len(op_start, op_end) >= rc2_remaining_len
+                       or rc2_cptr->is_unmappable());
                 if (cigar.get_rf_sub_len(op_start, op_end) > rc1_remaining_len)
                 {
                     // the first inequality trivially holds with <=
                     // but it can be shown it holds in fact with <
                     ASSERT(cigar.get_rf_offset(op_end - 1) < rc1_cptr->get_r_end() and rc1_cptr->get_r_end() < cigar.get_rf_offset(op_end));
                 }
-                if (cigar.get_qr_sub_len(op_start, op_end) > rc2_cptr->get_r_len())
+                if (cigar.get_qr_sub_len(op_start, op_end) > rc2_remaining_len)
                 {
                     // as with rf, the inequalities involving op_end-1 tivially hold with <=
                     // but it can be shown they hold with <
@@ -496,16 +512,22 @@ namespace MAC
                     cigar.cut_op(op_end - 1, (r1_break_len == 0? r2_break_len : (r2_break_len == 0? r1_break_len : min(r1_break_len, r2_break_len))));
                 }
 
-                // now we are sure the op ends on at least one of the read chunk boundaries
                 ASSERT(cigar.get_rf_sub_len(op_start, op_end) <= rc1_remaining_len
                        and cigar.get_qr_sub_len(op_start, op_end) <= rc2_remaining_len);
+                // now we are sure the op ends on at least one of the read chunk boundaries
+                // unless these are the last chunks and they are both unmappable
+                if (op_end == cigar.get_n_ops() and rc1_cptr->is_unmappable() and rc2_cptr->is_unmappable())
+                {
+                    ASSERT(done);
+                    break;
+                }
                 ASSERT(cigar.get_rf_sub_len(op_start, op_end) == rc1_remaining_len
                        or cigar.get_qr_sub_len(op_start, op_end) == rc2_remaining_len);
                 // if it doesn't end on both, we might need to cut the other
                 if (cigar.get_qr_sub_len(op_start, op_end) < rc2_remaining_len)
                 {
                     // it follows from main stop condition that the next op is not an insertion
-                    ASSERT(op_end < cigar.get_n_ops() and not cigar.is_insertion(op_end));
+                    ASSERT(op_end == cigar.get_n_ops() or not cigar.is_insertion(op_end));
                     if (cigar.get_qr_sub_len(op_start, op_end) == 0)
                     {
                         // no progress on rc2: rc1 is mapped entirely to a deletion
@@ -542,15 +564,15 @@ namespace MAC
                         break;
                     }
                 }
-                if (cigar.get_rf_sub_len(op_start, op_end) < rc1_cptr->get_r_len())
+                if (cigar.get_rf_sub_len(op_start, op_end) < rc1_remaining_len)
                 {
                     // it follows from main stop condition that the next op is not a deletion
-                    ASSERT(op_end < cigar.get_n_ops() and not cigar.is_deletion(op_end));
+                    ASSERT(op_end == cigar.get_n_ops() or not cigar.is_deletion(op_end));
                     if (cigar.get_rf_sub_len(op_start, op_end) == 0)
                     {
                         // no progress on rc1: rc2 mapped entirely to an insertion
                         // move on to next chunk on read 2
-                        ASSERT(cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len()
+                        ASSERT(cigar.get_qr_sub_len(op_start, op_end) == rc2_remaining_len
                                and cigar.get_qr_sub_len(op_start, op_end) > 0);
                         r2_pos = (not r2_rc? rc2_cptr->get_r_end() : rc2_cptr->get_r_start());
                         op_start = op_end;
@@ -583,8 +605,8 @@ namespace MAC
                     }
                 }
                 // reached when both rc1 and rc2 end at the current cigar op
-                ASSERT(cigar.get_rf_sub_len(op_start, op_end) == rc1_cptr->get_r_len()
-                       and cigar.get_qr_sub_len(op_start, op_end) == rc2_cptr->get_r_len());
+                ASSERT(cigar.get_rf_sub_len(op_start, op_end) == rc1_remaining_len
+                       and cigar.get_qr_sub_len(op_start, op_end) == rc2_remaining_len);
                 if (rc1_cptr->is_unmappable() and not rc2_cptr->is_unmappable())
                 {
                     unmap_chunk(rc2_cptr);
@@ -660,6 +682,7 @@ namespace MAC
         */
 
         // cut r1 & r2 at the ends of the match region
+        // NOTE: unmappable chunks are never cut
         cut_read_entry(re1_cptr, r1_start, true);
         cut_read_entry(re1_cptr, r1_start + r1_len, true);
         cut_read_entry(re2_cptr, r2_start, true);
@@ -679,6 +702,9 @@ namespace MAC
         }
 
         ASSERT(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
+
+        // check for unmappable chunks in the contigs recently merged
+        scan_read_for_unmappable_chunks(re1_cptr, r1_start, r1_start + r1_len);
 
         if (global::merge_contigs_at_each_step)
         {
@@ -881,10 +907,10 @@ namespace MAC
             ASSERT(rc_cptr->get_r_start() <= rc_start and rc_end <= rc_cptr->get_r_end());
             if (rc_cptr->get_r_start() != rc_start or rc_cptr->get_r_end() != rc_end)
             {
-                // this chunk has already been merged with other unmappable chunks
+                // already been merged with other unmappable chunks
                 continue;
             }
-            extend_unmapped_chunk(rc_cptr);
+            extend_unmapped_chunk(re_cptr, rc_start, rc_end);
         }
     }
 
@@ -907,7 +933,7 @@ namespace MAC
             }
             Read_Chunk_CPtr next_rc_cptr = re_cptr->get_chunk_with_pos(not dir? pos - 1 : pos);
 
-            if (not next_rc_cptr->is_unmappable() and leftover_bp < global::unmap_trigger_len)
+            if (not next_rc_cptr->is_unmappable() and leftover_bp <= global::unmap_trigger_len)
             {
                 unmap_chunk(next_rc_cptr);
                 continue;
@@ -919,22 +945,28 @@ namespace MAC
                                         (not dir? rc_cptr : next_rc_cptr));
                 continue;
             }
+
+            // next chunk is mappable
+            // check there is a minimum of mappable bp
+            // if not, unmap small intermediate chunks and merge them
             ASSERT(not next_rc_cptr->is_unmappable());
-            ASSERT(leftover_bp >= global::unmap_trigger_len);
+            ASSERT(leftover_bp > global::unmap_trigger_len);
+            // skip small mappable chunks
             list< std::tuple< Size_Type, Size_Type > > skipped_chunks;
             Size_Type skipped_len = 0;
             while (not next_rc_cptr->is_unmappable()
-                   and skipped_len + next_rc_cptr->get_r_len() < global::unmap_trigger_len)
+                   and skipped_len + next_rc_cptr->get_r_len() <= global::unmap_trigger_len)
             {
                 skipped_chunks.push_back(std::make_tuple(next_rc_cptr->get_r_start(), next_rc_cptr->get_r_end()));
                 skipped_len += next_rc_cptr->get_r_len();
                 next_rc_cptr = re_cptr->get_sibling(next_rc_cptr, dir);
+                // since skipped_len < unmap_trigger_len <= leftover_bp
                 ASSERT(next_rc_cptr != NULL);
             }
+            ASSERT(skipped_len <= global::unmap_trigger_len);
             if (next_rc_cptr->is_unmappable())
             {
-                ASSERT(skipped_len < global::unmap_trigger_len);
-                // unmap all skipped chunks if they are not modified in previous iterations
+                // unmap all skipped chunks (if they are not modified in previous iterations)
                 for (auto it = skipped_chunks.begin(); it != skipped_chunks.end(); ++it)
                 {
                     Size_Type rc_start;
@@ -943,19 +975,21 @@ namespace MAC
                     rc_cptr = re_cptr->get_chunk_with_pos(rc_start);
                     if (rc_cptr->get_r_start() != rc_start or rc_cptr->get_r_end() != rc_end or rc_cptr->is_unmappable())
                     {
+                        // already been merged with other unmappable chunks
                         continue;
                     }
                     unmap_chunk(rc_cptr);
                 }
             }
+            else
+            {
+                break;
+            }
         }
     }
 
-    void Graph::extend_unmapped_chunk(Read_Chunk_CPtr rc_cptr)
+    void Graph::extend_unmapped_chunk(const Read_Entry* re_cptr, Size_Type rc_start, Size_Type rc_end)
     {
-        const Read_Entry* re_cptr = rc_cptr->get_re_ptr();
-        Size_Type rc_start = rc_cptr->get_r_start();
-        Size_Type rc_end = rc_cptr->get_r_end();
         extend_unmapped_chunk_dir(re_cptr, rc_start, false);
         extend_unmapped_chunk_dir(re_cptr, rc_end, true);
     }
@@ -968,6 +1002,57 @@ namespace MAC
         bool success;
         success = try_merge_contig(rc1_cptr->get_ce_ptr(), true);
         ASSERT(success);
+    }
+
+    void Graph::scan_read_for_unmappable_chunks(const Read_Entry* re_cptr, Size_Type rc_start, Size_Type rc_end)
+    {
+        Size_Type pos = rc_start;
+        while (pos < rc_end)
+        {
+            Read_Chunk_CPtr rc_cptr = re_cptr->get_chunk_with_pos(pos);
+            ASSERT(rc_cptr != NULL);
+            ASSERT(rc_cptr->get_r_start() <= pos);
+            ASSERT(pos < rc_cptr->get_r_end());
+            pos = rc_cptr->get_r_end();
+            scan_contig_for_unmappable_chunks(rc_cptr->get_ce_ptr());
+        }
+    }
+
+    void Graph::scan_contig_for_unmappable_chunks(const Contig_Entry* ce_cptr)
+    {
+        // if 2 chunks of the same read are mapped to overlapping regions of this contig, unmap both
+        list< std::tuple< const Read_Entry*, Size_Type, Size_Type > > chunk_list;
+        for (size_t i = 0; i < ce_cptr->get_chunk_cptr_cont().size(); ++i)
+        {
+            Read_Chunk_CPtr rc1_cptr = ce_cptr->get_chunk_cptr_cont()[i];
+            for (size_t j = 0; j < i; ++j)
+            {
+                Read_Chunk_CPtr rc2_cptr = ce_cptr->get_chunk_cptr_cont()[j];
+                if (rc1_cptr->get_re_ptr() == rc2_cptr->get_re_ptr()
+                    and ((rc1_cptr->get_c_start() <= rc2_cptr->get_c_start() and rc2_cptr->get_c_start() < rc1_cptr->get_c_end())
+                         or (rc2_cptr->get_c_start() <= rc1_cptr->get_c_start() and rc1_cptr->get_c_start() < rc2_cptr->get_c_end())))
+                {
+                    // overlapping chunks from the same read
+                    chunk_list.push_back(std::make_tuple(rc1_cptr->get_re_ptr(), rc1_cptr->get_r_start(), rc1_cptr->get_r_end()));
+                    chunk_list.push_back(std::make_tuple(rc2_cptr->get_re_ptr(), rc2_cptr->get_r_start(), rc2_cptr->get_r_end()));
+                }
+            }
+        }
+        for (auto it = chunk_list.begin(); it != chunk_list.end(); ++it)
+        {
+            const Read_Entry* re_cptr;
+            Size_Type rc_start;
+            Size_Type rc_end;
+            std::tie(re_cptr, rc_start, rc_end) = *it;
+            Read_Chunk_CPtr rc_cptr = re_cptr->get_chunk_with_pos(rc_start);
+            // either the chunk has the same boundaries as when it was discovered
+            // or it was marked unmappable in previous iterations
+            //ASSERT((rc_cptr->get_r_start() == rc_start and rc_cptr->get_r_end() == rc_end) or rc_cptr->is_unmappable());
+            if (not rc_cptr->is_unmappable())
+            {
+                unmap_chunk(rc_cptr);
+            }
+        }
     }
 
     bool Graph::check_all() const

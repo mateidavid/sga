@@ -109,9 +109,11 @@ namespace MAC
         bool try_merge_contig(const Contig_Entry* ce_cptr, bool forward);
         void merge_read_contigs(const Read_Entry* re_cptr);
         void unmap_chunk(Read_Chunk_CPtr rc_cptr);
-        void extend_unmapped_chunk(Read_Chunk_CPtr rc_cptr);
+        void extend_unmapped_chunk(const Read_Entry* re_cptr, Size_Type rc_start, Size_Type rc_end);
         void extend_unmapped_chunk_dir(const Read_Entry* re_cptr, Size_Type pos, bool dir);
         void merge_unmappable_chunks(Read_Chunk_CPtr rc1_cptr, Read_Chunk_CPtr rc2_cptr);
+        void scan_read_for_unmappable_chunks(const Read_Entry* re_cptr, Size_Type rc_start, Size_Type rc_end);
+        void scan_contig_for_unmappable_chunks(const Contig_Entry* ce_cptr);
     };
 }
 

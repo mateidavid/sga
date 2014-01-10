@@ -241,7 +241,7 @@ namespace MAC
 
     shared_ptr< vector< Read_Chunk_CPtr > > Contig_Entry::is_mergeable_one_way(bool dir) const
     {
-        auto chunks_out_cont_sptr = get_chunks_out(dir, true);
+        auto chunks_out_cont_sptr = get_chunks_out(dir, false);
         if (chunks_out_cont_sptr->size() == 0)
             return NULL;
         // check all chunks leaving go to the same (different) contig, in the same orientation
