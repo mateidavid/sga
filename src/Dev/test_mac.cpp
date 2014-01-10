@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
     string input_file;
     string stats_file;
     char c;
-    while ((c = getopt(argc, argv, "i:x:segpc:")) != -1) {
+    while ((c = getopt(argc, argv, "i:x:segGpc:u:")) != -1) {
         istringstream optarg_s(optarg != NULL? optarg : "");
         switch (c) {
             case 'i':
@@ -43,11 +43,17 @@ int main(int argc, char* argv[])
             case 'g':
                 global::print_graph = true;
                 break;
+            case 'G':
+                global::print_graph_each_step = true;
+                break;
             case 'p':
                 global::progress_graph_op = true;
                 break;
             case 'c':
                 optarg_s >> global::progress_count;
+                break;
+            case 'u':
+                optarg_s >> global::unmap_trigger_len;
                 break;
             default:
                 cerr << "unrecognized option: " << c << endl;
@@ -61,6 +67,7 @@ int main(int argc, char* argv[])
     }
     clog << "merging contigs at each step: " << (global::merge_contigs_at_each_step? "yes" : "no") << '\n';
     clog << "merging contigs at end: " << (global::merge_contigs_at_end? "yes" : "no") << '\n';
+    clog << "using unmap_trigger_len: " << global::unmap_trigger_len << '\n';
 
     Graph g;
     ixstream ixs(input_file);
@@ -110,7 +117,10 @@ int main(int argc, char* argv[])
             global::assert_message = string("ED ") + r1_id + " " + r2_id;
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
         }
-        //cerr << g;
+        if (global::print_graph_each_step)
+        {
+            cerr << g;
+        }
         if (global::progress_count > 0)
         {
             if ((++line_count % global::progress_count) == 0)
