@@ -128,6 +128,7 @@ int main(int argc, char* argv[])
                 cerr << line_count << '\n';
             }
         }
+        //ASSERT(g.check_all());
     }
     if (global::merge_contigs_at_end)
     {

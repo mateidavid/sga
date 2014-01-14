@@ -701,10 +701,10 @@ namespace MAC
             merge_read_chunks(rc1_cptr, rc2_cptr, rc1rc2_cigar);
         }
 
-        ASSERT(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
-
         // check for unmappable chunks in the contigs recently merged
         scan_read_for_unmappable_chunks(re1_cptr, r1_start, r1_start + r1_len);
+
+        ASSERT(check(set< const Read_Entry* >({ re1_cptr, re2_cptr })));
 
         if (global::merge_contigs_at_each_step)
         {
@@ -742,12 +742,15 @@ namespace MAC
         {
             return false;
         }
-        auto chunks_out_cont_cptr = chunks_out_cont_sptr.get();
-        (void)chunks_out_cont_cptr;
 
         Read_Chunk_CPtr rc_cptr = *chunks_out_cont_sptr->begin();
         Read_Chunk_CPtr rc_next_cptr = ce_cptr->get_next_chunk(dir, rc_cptr);
         const Contig_Entry* ce_next_cptr = rc_next_cptr->get_ce_ptr();
+        if (rc_cptr->is_unmappable() != rc_next_cptr->is_unmappable())
+        {
+            // don't merge mappable with unmappable
+            return false;
+        }
         bool same_orientation = (rc_cptr->get_rc() == rc_next_cptr->get_rc());
         if (not same_orientation)
         {
@@ -762,7 +765,6 @@ namespace MAC
             swap(ce_cptr, ce_next_cptr);
             dir = true;
             chunks_out_cont_sptr = ce_cptr->is_mergeable_one_way(true);
-            chunks_out_cont_cptr = chunks_out_cont_sptr.get();
             ASSERT(chunks_out_cont_sptr);
         }
         // at this point:
@@ -883,11 +885,13 @@ namespace MAC
 
         // chunks mapping to this contig are remapped to individual contigs, with unmappable flag set
         // we also save them in a list using Read_Entry and offsets
-        list< std::tuple< const Read_Entry*, Size_Type, Size_Type > > chunk_list;
+        list< const Read_Entry* > re_list;
+        list< std::tuple< Size_Type, Size_Type > > pos_list;
         for (auto rc_cptr_it = ce_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
         {
             rc_cptr = *rc_cptr_it;
-            chunk_list.push_back(std::make_tuple(rc_cptr->get_re_ptr(), rc_cptr->get_r_start(), rc_cptr->get_r_end()));
+            re_list.push_back(rc_cptr->get_re_ptr());
+            pos_list.push_back(std::make_tuple(rc_cptr->get_r_start(), rc_cptr->get_r_end()));
             const Contig_Entry* new_ce_cptr = insert_contig_entry(Contig_Entry(rc_cptr));
             modify_read_chunk(rc_cptr, [&] (Read_Chunk& rc) {
                 rc.assign_to_contig(new_ce_cptr, 0, new_ce_cptr->get_len(), false, vector<Mutation_CPtr>());
@@ -899,9 +903,12 @@ namespace MAC
         erase_contig_entry(ce_cptr);
 
         // for all read chunks made unmappable, try to merge them with nearby unmappable chunks
-        for (auto it = chunk_list.begin(); it != chunk_list.end(); ++it)
+        auto re_it = re_list.begin();
+        auto pos_it = pos_list.begin();
+        for (; re_it != re_list.end(); ++re_it, ++pos_it)
         {
-            std::tie(re_cptr, rc_start, rc_end) = *it;
+            re_cptr = *re_it;
+            std::tie(rc_start, rc_end) = *pos_it;
             rc_cptr = re_cptr->get_chunk_with_pos(rc_start);
             ASSERT(rc_cptr->is_unmappable());
             ASSERT(rc_cptr->get_r_start() <= rc_start and rc_end <= rc_cptr->get_r_end());
@@ -912,6 +919,7 @@ namespace MAC
             }
             extend_unmapped_chunk(re_cptr, rc_start, rc_end);
         }
+        ASSERT(check(set< const Read_Entry* >(re_list.begin(), re_list.end())));
     }
 
     void Graph::extend_unmapped_chunk_dir(const Read_Entry* re_cptr, Size_Type pos, bool dir)
@@ -986,6 +994,7 @@ namespace MAC
                 break;
             }
         }
+        ASSERT(check(set< const Read_Entry* >({ re_cptr })));
     }
 
     void Graph::extend_unmapped_chunk(const Read_Entry* re_cptr, Size_Type rc_start, Size_Type rc_end)
@@ -1021,7 +1030,8 @@ namespace MAC
     void Graph::scan_contig_for_unmappable_chunks(const Contig_Entry* ce_cptr)
     {
         // if 2 chunks of the same read are mapped to overlapping regions of this contig, unmap both
-        list< std::tuple< const Read_Entry*, Size_Type, Size_Type > > chunk_list;
+        list< const Read_Entry* > re_list;
+        list< std::tuple< Size_Type, Size_Type > > pos_list;
         for (size_t i = 0; i < ce_cptr->get_chunk_cptr_cont().size(); ++i)
         {
             Read_Chunk_CPtr rc1_cptr = ce_cptr->get_chunk_cptr_cont()[i];
@@ -1033,17 +1043,28 @@ namespace MAC
                          or (rc2_cptr->get_c_start() <= rc1_cptr->get_c_start() and rc1_cptr->get_c_start() < rc2_cptr->get_c_end())))
                 {
                     // overlapping chunks from the same read
-                    chunk_list.push_back(std::make_tuple(rc1_cptr->get_re_ptr(), rc1_cptr->get_r_start(), rc1_cptr->get_r_end()));
-                    chunk_list.push_back(std::make_tuple(rc2_cptr->get_re_ptr(), rc2_cptr->get_r_start(), rc2_cptr->get_r_end()));
+                    re_list.push_back(rc1_cptr->get_re_ptr());
+                    pos_list.push_back(std::make_tuple(rc1_cptr->get_r_start(), rc1_cptr->get_r_end()));
+                    re_list.push_back(rc2_cptr->get_re_ptr());
+                    pos_list.push_back(std::make_tuple(rc2_cptr->get_r_start(), rc2_cptr->get_r_end()));
+                    /*
+                    cerr << "overlapping chunks from same read: " << rc1_cptr->get_re_ptr()->get_name() << ' '
+                    << rc1_cptr->get_r_start() << ' ' << rc1_cptr->get_r_end() << ' '
+                    << rc2_cptr->get_r_start() << ' ' << rc2_cptr->get_r_end() << '\n'
+                    << *rc1_cptr << *rc2_cptr << *ce_cptr;
+                    */
                 }
             }
         }
-        for (auto it = chunk_list.begin(); it != chunk_list.end(); ++it)
+        auto re_it = re_list.begin();
+        auto pos_it = pos_list.begin();
+        for (; re_it != re_list.end() && pos_it != pos_list.end(); ++re_it, ++pos_it)
         {
             const Read_Entry* re_cptr;
             Size_Type rc_start;
             Size_Type rc_end;
-            std::tie(re_cptr, rc_start, rc_end) = *it;
+            re_cptr = *re_it;
+            std::tie(rc_start, rc_end) = *pos_it;
             Read_Chunk_CPtr rc_cptr = re_cptr->get_chunk_with_pos(rc_start);
             // either the chunk has the same boundaries as when it was discovered
             // or it was marked unmappable in previous iterations
@@ -1053,6 +1074,8 @@ namespace MAC
                 unmap_chunk(rc_cptr);
             }
         }
+
+        ASSERT(check(set< const Read_Entry* >(re_list.begin(), re_list.end())));
     }
 
     bool Graph::check_all() const
@@ -1147,7 +1170,7 @@ namespace MAC
                 Read_Chunk_CPtr rc_cptr = &*rc_it;
                 if (rc_it != re_cptr->get_chunk_cont().begin())
                     os << ',';
-                os << rc_cptr->get_r_len();
+                os << (rc_cptr->is_unmappable()? "*" : "") << rc_cptr->get_r_len();
             }
             os << '\n';
         }

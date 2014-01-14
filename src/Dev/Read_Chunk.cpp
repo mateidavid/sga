@@ -1201,6 +1201,14 @@ namespace MAC
                    get_c_end() == get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len()
                    : get_c_start() == 0));
 #endif
+        // unmappable contigs have no mutations and a single chunk
+        if (_is_unmappable)
+        {
+            ASSERT(_mut_ptr_cont.size() == 0);
+            ASSERT(_ce_ptr->get_chunk_cptr_cont().size() == 1);
+            ASSERT(_ce_ptr->get_chunk_cptr_cont().front() == this);
+            ASSERT(_ce_ptr->get_mut_cont().size() == 0);
+        }
         return true;
     }
 
