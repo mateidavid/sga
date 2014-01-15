@@ -22,17 +22,18 @@ using indent::tab;
 int main(int argc, char* argv[])
 {
     global::program_name = argv[0];
-    string input_file;
-    string stats_file;
     char c;
-    while ((c = getopt(argc, argv, "i:x:segGpc:u:")) != -1) {
+    while ((c = getopt(argc, argv, "i:x:y:segGpc:u:")) != -1) {
         istringstream optarg_s(optarg != NULL? optarg : "");
         switch (c) {
             case 'i':
-                input_file = optarg;
+                global::input_file = optarg;
                 break;
             case 'x':
-                stats_file = optarg;
+                global::stats_file_1 = optarg;
+                break;
+            case 'y':
+                global::stats_file_2 = optarg;
                 break;
             case 's':
                 global::merge_contigs_at_each_step = true;
@@ -60,7 +61,7 @@ int main(int argc, char* argv[])
                 exit(EXIT_FAILURE);
         }
     }
-    if (input_file.empty())
+    if (global::input_file.empty())
     {
         cerr << "no input file\n";
         exit(EXIT_FAILURE);
@@ -70,7 +71,7 @@ int main(int argc, char* argv[])
     clog << "using unmap_trigger_len: " << global::unmap_trigger_len << '\n';
 
     Graph g;
-    ixstream ixs(input_file);
+    ixstream ixs(global::input_file);
     if (not ixs)
     {
         cerr << "error opening file: " << argv[1] << '\n';
@@ -132,16 +133,21 @@ int main(int argc, char* argv[])
     }
     if (global::merge_contigs_at_end)
     {
+        if (not global::stats_file_2.empty())
+        {
+            ofstream stats_2_ofs(global::stats_file_2);
+            g.dump_detailed_counts(stats_2_ofs);
+        }
         g.merge_all_read_contigs();
     }
     if (global::print_graph)
     {
         cout << g;
     }
-    if (not stats_file.empty())
+    if (not global::stats_file_1.empty())
     {
-        ofstream stats_ofs(stats_file);
-        g.dump_detailed_counts(stats_ofs);
+        ofstream stats_1_ofs(global::stats_file_1);
+        g.dump_detailed_counts(stats_1_ofs);
     }
 
     cerr << "success\n";
