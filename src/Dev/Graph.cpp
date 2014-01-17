@@ -1119,35 +1119,37 @@ namespace MAC
         }
     }
 
-    Size_Type Graph::visit_contig(const Contig_Entry* ce_cptr, bool dir)
+    std::tuple< Size_Type, bool> Graph::visit_contig(const Contig_Entry* ce_cptr, bool dir)
     {
         if ((ce_cptr->get_colour() & 0x1) != 0)
         {
-            return 0;
+            return std::make_tuple(0, (ce_cptr->get_colour() & (dir == false? 0x4 : 0x8)) != 0);
         }
-        shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > neighbours_sptr;
+        shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > > neighbours_sptr;
         neighbours_sptr = ce_cptr->get_neighbours(dir);
         ASSERT(neighbours_sptr->size() > 0);
         if (neighbours_sptr->size() > 1)
         {
-            return 0;
+            modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.colour() |= (dir == false? 0x4 : 0x8); });
+            return std::make_tuple(0, true);
         }
         ASSERT(neighbours_sptr->size() == 1);
         modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() |= 0x1; });
         neighbours_sptr = ce_cptr->get_neighbours(not dir);
         Size_Type tmp = 0;
+        bool dead_end = false;
         if (neighbours_sptr->size() == 1)
         {
             const Contig_Entry* ce_next_cptr;
             bool flip;
-            std::tie(ce_next_cptr, flip) = *neighbours_sptr->begin();
-            tmp = visit_contig(ce_next_cptr, (not dir) == flip);
+            std::tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
+            std::tie(tmp, dead_end) = visit_contig(ce_next_cptr, (not dir) == flip);
         }
-        if (neighbours_sptr->size() != 1 or tmp == 0)
+        if (neighbours_sptr->size() != 1 or dead_end)
         {
             modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.colour() |= (not dir == false? 0x4 : 0x8); });
         }
-        return ce_cptr->get_len() + tmp;
+        return std::make_tuple(ce_cptr->get_len() + tmp, false);
     }
 
     void Graph::print_supercontig_lengths(ostream& os)
@@ -1155,7 +1157,7 @@ namespace MAC
         for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
         {
             const Contig_Entry* ce_cptr = &*ce_it;
-            shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > neighbours_sptr;
+            shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > > neighbours_sptr;
             if (ce_cptr->is_unmappable())
             {
                 continue;
@@ -1171,23 +1173,25 @@ namespace MAC
             Size_Type supercontig_right_len = 0;
             const Contig_Entry* ce_next_cptr;
             bool flip;
+            bool dead_end = false;
             neighbours_sptr = ce_cptr->get_neighbours(false);
             if (neighbours_sptr->size() == 1)
             {
-                std::tie(ce_next_cptr, flip) = *neighbours_sptr->begin();
-                supercontig_left_len = visit_contig(ce_next_cptr, false == flip);
+                std::tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
+                std::tie(supercontig_left_len, dead_end) = visit_contig(ce_next_cptr, false == flip);
             }
-            if (neighbours_sptr->size() != 1 or supercontig_left_len == 0)
+            if (neighbours_sptr->size() != 1 or dead_end)
             {
                 modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() |= 0x4; });
             }
             neighbours_sptr = ce_cptr->get_neighbours(true);
+            dead_end = false;
             if (neighbours_sptr->size() == 1)
             {
-                std::tie(ce_next_cptr, flip) = *neighbours_sptr->begin();
-                supercontig_right_len = visit_contig(ce_next_cptr, true == flip);
+                std::tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
+                std::tie(supercontig_right_len, dead_end) = visit_contig(ce_next_cptr, true == flip);
             }
-            if (neighbours_sptr->size() != 1 or supercontig_right_len == 0)
+            if (neighbours_sptr->size() != 1 or dead_end)
             {
                 modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() |= 0x8; });
             }
@@ -1394,8 +1398,8 @@ namespace MAC
             }
             else
             {
-                shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > neighbours_left_sptr;
-                shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > neighbours_right_sptr;
+                shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > > neighbours_left_sptr;
+                shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > > neighbours_right_sptr;
                 neighbours_left_sptr = ce_cptr->get_neighbours(false);
                 neighbours_right_sptr = ce_cptr->get_neighbours(true);
                 os << neighbours_left_sptr->size() << '\t' << neighbours_right_sptr->size() << '\t';
@@ -1407,8 +1411,9 @@ namespace MAC
                     {
                         os << ',';
                     }
-                    std::tie(tmp_ce_cptr, tmp_flip) = *it;
-                    os << '(' << tmp_ce_cptr->get_contig_id() << ',' << int(tmp_flip) << ')';
+                    std::tie(tmp_ce_cptr, tmp_flip) = it->first;
+                    unsigned int tmp_support = it->second;
+                    os << '(' << tmp_ce_cptr->get_contig_id() << ',' << int(tmp_flip) << ',' << tmp_support  << ')';
                 }
                 if (neighbours_left_sptr->size() == 0)
                 {
@@ -1423,8 +1428,9 @@ namespace MAC
                     {
                         os << ',';
                     }
-                    std::tie(tmp_ce_cptr, tmp_flip) = *it;
-                    os << '(' << tmp_ce_cptr->get_contig_id() << ',' << int(tmp_flip) << ')';
+                    std::tie(tmp_ce_cptr, tmp_flip) = it->first;
+                    unsigned int tmp_support = it->second;
+                    os << '(' << tmp_ce_cptr->get_contig_id() << ',' << int(tmp_flip) << ',' << tmp_support << ')';
                 }
                 if (neighbours_right_sptr->size() == 0)
                 {

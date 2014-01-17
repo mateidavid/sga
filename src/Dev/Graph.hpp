@@ -69,7 +69,7 @@ namespace MAC
         void clear_contig_visit();
 
         /** Mark contig endpoints and branches. */
-        Size_Type visit_contig(const Contig_Entry* ce_cptr, bool dir);
+        std::tuple< Size_Type, bool > visit_contig(const Contig_Entry* ce_cptr, bool dir);
         void print_supercontig_lengths(std::ostream& os);
         void set_contig_ids();
         void unmap_single_chunks();

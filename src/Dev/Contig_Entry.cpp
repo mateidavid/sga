@@ -319,10 +319,12 @@ namespace MAC
         *_seq_ptr += *ce_next_cptr->_seq_ptr;
     }
 
-    shared_ptr< set< std::tuple< const Contig_Entry*, bool > > >
-    Contig_Entry::get_neighbours(bool dir, bool skip_unmappable) const
+    shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > >
+    Contig_Entry::get_neighbours(bool dir, bool skip_unmappable, bool trim_results) const
     {
-        shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > res(new set< std::tuple< const Contig_Entry*, bool > >());
+        shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > >
+        res(new map< std::tuple< const Contig_Entry*, bool >, unsigned int >());
+        unsigned int support = 0;
         for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
         {
             Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
@@ -340,7 +342,39 @@ namespace MAC
             {
                 continue;
             }
-            res->insert(std::make_tuple(rc_next_cptr->get_ce_ptr(), rc_cptr->get_rc() != rc_next_cptr->get_rc()));
+            ++support;
+            std::tuple< const Contig_Entry*, bool > t = std::make_tuple(rc_next_cptr->get_ce_ptr(), rc_cptr->get_rc() != rc_next_cptr->get_rc());
+            if (res->count(t) == 0)
+            {
+                (*res)[t] = 1;
+            }
+            else
+            {
+                ++(*res)[t];
+            }
+        }
+        // remove neighbours with single support
+        if (skip_unmappable and trim_results)
+        {
+            for (auto it = res->begin(); it != res->end(); ++it)
+            {
+                if (it->second == 1)
+                {
+                    /*
+                    const Contig_Entry* ce_next_cptr;
+                    bool flip;
+                    std::tie(ce_next_cptr, flip) = it->first;
+                    auto neighbours_next_sptr = ce_next_cptr->get_neighbours(dir == flip, true, false);
+                    ASSERT(neighbours_next_sptr->count(std::make_tuple(this, flip)) == 1);
+                    unsigned int neighbour_support = 0;
+                    for (auto it2 = neighbours_next_sptr->begin(); it2 != neighbours_next_sptr->end(); ++it2)
+                    {
+                        neighbour_support += it2->second;
+                    }
+                    */
+                    res->erase(it);
+                }
+            }
         }
         return res;
     }
@@ -387,7 +421,7 @@ namespace MAC
         {
             return true;
         }
-        shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > neighbours_sptr;
+        shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > > neighbours_sptr;
         const Contig_Entry* ce_next_cptr;
         bool flip;
         neighbours_sptr = get_neighbours(dir);
@@ -397,7 +431,7 @@ namespace MAC
         }
         else if (neighbours_sptr->size() == 1)
         {
-            std::tie(ce_next_cptr, flip) = *neighbours_sptr->begin();
+            std::tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
             neighbours_sptr = ce_next_cptr->get_neighbours(dir == flip);
             ASSERT(neighbours_sptr->size() > 0);
             if (neighbours_sptr->size() == 1)
@@ -416,7 +450,7 @@ namespace MAC
             ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) != 0);
             for (auto it = neighbours_sptr->begin(); it != neighbours_sptr->end(); ++it)
             {
-                std::tie(ce_next_cptr, flip) = *it;
+                std::tie(ce_next_cptr, flip) = it->first;
                 ASSERT((ce_next_cptr->get_colour() & ((dir == flip) == false? 0x4 : 0x8)) != 0);
             }
         }

@@ -180,8 +180,8 @@ namespace MAC
          * @param skip_unmappable Bool; true: include mappable contig after skipping an unmappable chunk;
          * false: include only mappable contigs that are direct neighbours.
          */
-        std::shared_ptr< std::set< std::tuple< const Contig_Entry*, bool > > >
-        get_neighbours(bool dir, bool skip_unmappable = true) const;
+        std::shared_ptr< std::map< std::tuple< const Contig_Entry*, bool >, unsigned int > >
+        get_neighbours(bool dir, bool skip_unmappable = true, bool trim_results = true) const;
 
         /** Integrity check. */
         bool check() const;
