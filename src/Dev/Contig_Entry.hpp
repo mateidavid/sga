@@ -37,10 +37,10 @@ namespace MAC
         /** Constructor.
          * @param seq_ptr Pointer to read sequence (assume ownership).
          */
-        Contig_Entry(Seq_Type* seq_ptr, Size_Type seq_offset = 0) : _seq_ptr(seq_ptr), _seq_offset(seq_offset) {}
+        Contig_Entry(Seq_Type* seq_ptr, Size_Type seq_offset = 0) : _seq_ptr(seq_ptr), _seq_offset(seq_offset), _colour(0) {}
 
         /** Constructor out of a Read_Chunk. */
-        Contig_Entry(Read_Chunk_CPtr rc_cptr) : _seq_ptr(new Seq_Type(rc_cptr->get_seq())), _seq_offset(0)
+        Contig_Entry(Read_Chunk_CPtr rc_cptr) : _seq_ptr(new Seq_Type(rc_cptr->get_seq())), _seq_offset(0), _colour(0)
         {
             _chunk_cptr_cont.push_back(rc_cptr);
         }
@@ -55,6 +55,11 @@ namespace MAC
         const Mutation_Cont& get_mut_cont() const { return _mut_cont; }
         Mutation_Cont& mut_cont() { return _mut_cont; }
         const Read_Chunk_CPtr_Cont& get_chunk_cptr_cont() const { return _chunk_cptr_cont; }
+        int get_colour() const { return _colour; }
+        int& colour() { return _colour; }
+        size_t get_contig_id() const { return _contig_id; }
+        size_t& contig_id() { return _contig_id; }
+        bool is_unmappable() const { return _chunk_cptr_cont.size() == 1 and _chunk_cptr_cont.front()->is_unmappable(); }
         /**@}*/
 
         /** Add to the list of read chunks.
@@ -170,8 +175,17 @@ namespace MAC
          */
         void merge_forward(const Contig_Entry* ce_next_cptr, const Read_Chunk::ext_mod_with_map_type& rc_rebase_mod);
 
+        /** Get neighbour contigs.
+         * @param dir Bool; true: past contig end, false: past contig start.
+         * @param skip_unmappable Bool; true: include mappable contig after skipping an unmappable chunk;
+         * false: include only mappable contigs that are direct neighbours.
+         */
+        std::shared_ptr< std::set< std::tuple< const Contig_Entry*, bool > > >
+        get_neighbours(bool dir, bool skip_unmappable = true) const;
+
         /** Integrity check. */
         bool check() const;
+        bool check_colour(bool dir) const;
 
         friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
 
@@ -180,6 +194,8 @@ namespace MAC
         Size_Type _seq_offset;
         Mutation_Cont _mut_cont;
         Read_Chunk_CPtr_Cont _chunk_cptr_cont;
+        int _colour;
+        size_t _contig_id;
     };
 
     /** Container for Contig_Entry objects. */

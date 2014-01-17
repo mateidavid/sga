@@ -288,7 +288,7 @@ namespace MAC
         return chunks_out_cont_sptr;
     }
 
-    void Contig_Entry::merge_forward (const Contig_Entry* ce_next_cptr, const Read_Chunk::ext_mod_with_map_type& rc_rebase_mod)
+    void Contig_Entry::merge_forward(const Contig_Entry* ce_next_cptr, const Read_Chunk::ext_mod_with_map_type& rc_rebase_mod)
     {
         ASSERT(_seq_offset == 0 and ce_next_cptr->_seq_offset == 0);
         Mutation_Trans_Cont mut_map;
@@ -319,10 +319,37 @@ namespace MAC
         *_seq_ptr += *ce_next_cptr->_seq_ptr;
     }
 
+    shared_ptr< set< std::tuple< const Contig_Entry*, bool > > >
+    Contig_Entry::get_neighbours(bool dir, bool skip_unmappable) const
+    {
+        shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > res(new set< std::tuple< const Contig_Entry*, bool > >());
+        for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
+        {
+            Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
+            if ((not dir and not rc_cptr->get_c_start() == 0)
+                or (dir and not rc_cptr->get_c_end() == get_len()))
+            {
+                continue;
+            }
+            Read_Chunk_CPtr rc_next_cptr = rc_cptr->get_re_ptr()->get_sibling(rc_cptr, dir != rc_cptr->get_rc());
+            if (rc_next_cptr != NULL and skip_unmappable and rc_next_cptr->is_unmappable())
+            {
+                rc_next_cptr = rc_next_cptr->get_re_ptr()->get_sibling(rc_next_cptr, dir != rc_cptr->get_rc());
+            }
+            if (rc_next_cptr == NULL or rc_next_cptr->is_unmappable())
+            {
+                continue;
+            }
+            res->insert(std::make_tuple(rc_next_cptr->get_ce_ptr(), rc_cptr->get_rc() != rc_next_cptr->get_rc()));
+        }
+        return res;
+    }
+
     bool Contig_Entry::check() const
     {
         // check base sequence exists
         ASSERT(_seq_ptr);
+        ASSERT(_chunk_cptr_cont.size() > 0);
         // mutations:
         for (auto mut_it = _mut_cont.begin(); mut_it != _mut_cont.end(); ++mut_it)
         {
@@ -354,10 +381,53 @@ namespace MAC
         return true;
     }
 
+    bool Contig_Entry::check_colour(bool dir) const
+    {
+        if (is_unmappable())
+        {
+            return true;
+        }
+        shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > neighbours_sptr;
+        const Contig_Entry* ce_next_cptr;
+        bool flip;
+        neighbours_sptr = get_neighbours(dir);
+        if (neighbours_sptr->size() == 0)
+        {
+            ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) != 0);
+        }
+        else if (neighbours_sptr->size() == 1)
+        {
+            std::tie(ce_next_cptr, flip) = *neighbours_sptr->begin();
+            neighbours_sptr = ce_next_cptr->get_neighbours(dir == flip);
+            ASSERT(neighbours_sptr->size() > 0);
+            if (neighbours_sptr->size() == 1)
+            {
+                ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) == 0
+                       and (ce_next_cptr->get_colour() & ((dir == flip) == false? 0x4 : 0x8)) == 0);
+            }
+            else
+            {
+                ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) != 0
+                       and (ce_next_cptr->get_colour() & ((dir == flip) == false? 0x4 : 0x8)) != 0);
+            }
+        }
+        else
+        {
+            ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) != 0);
+            for (auto it = neighbours_sptr->begin(); it != neighbours_sptr->end(); ++it)
+            {
+                std::tie(ce_next_cptr, flip) = *it;
+                ASSERT((ce_next_cptr->get_colour() & ((dir == flip) == false? 0x4 : 0x8)) != 0);
+            }
+        }
+        return true;
+    }
+
     std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs)
     {
         os << indent::tab << "(Contig_Entry &=" << (void*)&rhs
            << indent::inc << indent::nl << "seq=\"" << rhs.get_seq() << "\",len=" << rhs.get_len()
+           << ",col=" << rhs.get_colour() << ",is_unmappable=" << (int)rhs.is_unmappable()
            << indent::nl << "mut_cont:"
            << indent::inc << '\n';
         print_seq(os, rhs._mut_cont, indent::nl, indent::tab, '\n');

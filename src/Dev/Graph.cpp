@@ -159,8 +159,21 @@ namespace MAC
         modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
         modify_contig_entry(ce_new_cptr, [] (Contig_Entry& ce) { ce.drop_unused_mutations(); });
 
-        //cerr << "after cutting contig entry: " << (void*)ce_cptr << '\n' << *this;
-        ASSERT(check(set< const Contig_Entry* >({ ce_cptr, ce_new_cptr })));
+        if (ce_new_cptr->get_chunk_cptr_cont().size() == 0)
+        {
+            erase_contig_entry(ce_new_cptr);
+            ASSERT(check(set< const Contig_Entry* >({ ce_cptr })));
+        }
+        else if (ce_cptr->get_chunk_cptr_cont().size() == 0)
+        {
+            erase_contig_entry(ce_cptr);
+            ASSERT(check(set< const Contig_Entry* >({ ce_new_cptr })));
+        }
+        else
+        {
+            //cerr << "after cutting contig entry: " << (void*)ce_cptr << '\n' << *this;
+            ASSERT(check(set< const Contig_Entry* >({ ce_cptr, ce_new_cptr })));
+        }
         return true;
     }
 
@@ -1040,7 +1053,17 @@ namespace MAC
                 Read_Chunk_CPtr rc2_cptr = ce_cptr->get_chunk_cptr_cont()[j];
                 if (rc1_cptr->get_re_ptr() == rc2_cptr->get_re_ptr()
                     and ((rc1_cptr->get_c_start() <= rc2_cptr->get_c_start() and rc2_cptr->get_c_start() < rc1_cptr->get_c_end())
-                         or (rc2_cptr->get_c_start() <= rc1_cptr->get_c_start() and rc1_cptr->get_c_start() < rc2_cptr->get_c_end())))
+                         or (rc2_cptr->get_c_start() <= rc1_cptr->get_c_start() and rc1_cptr->get_c_start() < rc2_cptr->get_c_end())
+                         or (rc1_cptr->get_c_end() == rc2_cptr->get_c_start()
+                             and rc1_cptr->get_mut_ptr_cont().size() > 0
+                             and rc2_cptr->get_mut_ptr_cont().size() > 0
+                             and rc1_cptr->get_mut_ptr_cont().back()->is_ins()
+                             and rc1_cptr->get_mut_ptr_cont().back() == rc2_cptr->get_mut_ptr_cont().front())
+                         or (rc2_cptr->get_c_end() == rc1_cptr->get_c_start()
+                             and rc2_cptr->get_mut_ptr_cont().size() > 0
+                             and rc1_cptr->get_mut_ptr_cont().size() > 0
+                             and rc2_cptr->get_mut_ptr_cont().back()->is_ins()
+                             and rc2_cptr->get_mut_ptr_cont().back() == rc1_cptr->get_mut_ptr_cont().front())))
                 {
                     // overlapping chunks from the same read
                     re_list.push_back(rc1_cptr->get_re_ptr());
@@ -1076,6 +1099,146 @@ namespace MAC
         }
 
         ASSERT(check(set< const Read_Entry* >(re_list.begin(), re_list.end())));
+    }
+
+    void Graph::clear_contig_colours()
+    {
+        for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
+        {
+            const Contig_Entry* ce_cptr = &*ce_it;
+            modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() = 0; });
+        }
+    }
+
+    void Graph::clear_contig_visit()
+    {
+        for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
+        {
+            const Contig_Entry* ce_cptr = &*ce_it;
+            modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() &= ~0x3; });
+        }
+    }
+
+    Size_Type Graph::visit_contig(const Contig_Entry* ce_cptr, bool dir)
+    {
+        if ((ce_cptr->get_colour() & 0x1) != 0)
+        {
+            return 0;
+        }
+        shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > neighbours_sptr;
+        neighbours_sptr = ce_cptr->get_neighbours(dir);
+        ASSERT(neighbours_sptr->size() > 0);
+        if (neighbours_sptr->size() > 1)
+        {
+            return 0;
+        }
+        ASSERT(neighbours_sptr->size() == 1);
+        modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() |= 0x1; });
+        neighbours_sptr = ce_cptr->get_neighbours(not dir);
+        Size_Type tmp = 0;
+        if (neighbours_sptr->size() == 1)
+        {
+            const Contig_Entry* ce_next_cptr;
+            bool flip;
+            std::tie(ce_next_cptr, flip) = *neighbours_sptr->begin();
+            tmp = visit_contig(ce_next_cptr, (not dir) == flip);
+        }
+        if (neighbours_sptr->size() != 1 or tmp == 0)
+        {
+            modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.colour() |= (not dir == false? 0x4 : 0x8); });
+        }
+        return ce_cptr->get_len() + tmp;
+    }
+
+    void Graph::print_supercontig_lengths(ostream& os)
+    {
+        for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
+        {
+            const Contig_Entry* ce_cptr = &*ce_it;
+            shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > neighbours_sptr;
+            if (ce_cptr->is_unmappable())
+            {
+                continue;
+            }
+            ASSERT((ce_cptr->get_colour() & 0x2) == 0);
+            if ((ce_cptr->get_colour() & 0x1) != 0)
+            {
+                continue;
+            }
+            // mark contig as visited
+            modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() |= 0x1; });
+            Size_Type supercontig_left_len = 0;
+            Size_Type supercontig_right_len = 0;
+            const Contig_Entry* ce_next_cptr;
+            bool flip;
+            neighbours_sptr = ce_cptr->get_neighbours(false);
+            if (neighbours_sptr->size() == 1)
+            {
+                std::tie(ce_next_cptr, flip) = *neighbours_sptr->begin();
+                supercontig_left_len = visit_contig(ce_next_cptr, false == flip);
+            }
+            if (neighbours_sptr->size() != 1 or supercontig_left_len == 0)
+            {
+                modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() |= 0x4; });
+            }
+            neighbours_sptr = ce_cptr->get_neighbours(true);
+            if (neighbours_sptr->size() == 1)
+            {
+                std::tie(ce_next_cptr, flip) = *neighbours_sptr->begin();
+                supercontig_right_len = visit_contig(ce_next_cptr, true == flip);
+            }
+            if (neighbours_sptr->size() != 1 or supercontig_right_len == 0)
+            {
+                modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() |= 0x8; });
+            }
+            os << supercontig_left_len + supercontig_right_len + ce_cptr->get_len() << '\n';
+        }
+    }
+
+    void Graph::set_contig_ids()
+    {
+        size_t contig_id = 0;
+        for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
+        {
+            const Contig_Entry* ce_cptr = &*ce_it;
+            modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.contig_id() = contig_id; });
+            ++contig_id;
+        }
+    }
+
+    void Graph::unmap_single_chunks()
+    {
+        for (auto re_it = _re_cont.begin(); re_it != _re_cont.end(); ++re_it)
+        {
+            const Read_Entry* re_cptr = &*re_it;
+            bool done = false;
+            while (not done)
+            {
+                done = true;
+                for (auto rc_it = re_cptr->get_chunk_cont().begin(); rc_it != re_cptr->get_chunk_cont().end(); ++rc_it)
+                {
+                    Read_Chunk_CPtr rc_cptr = &*rc_it;
+                    const Contig_Entry* ce_cptr = rc_cptr->get_ce_ptr();
+                    if (not ce_cptr->is_unmappable() and ce_cptr->get_chunk_cptr_cont().size() == 1)
+                    {
+                        unmap_chunk(rc_cptr);
+                        done = false;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    bool Graph::check_colours() const
+    {
+        for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
+        {
+            const Contig_Entry* ce_cptr = &*ce_it;
+            ASSERT(ce_cptr->check_colour(false));
+            ASSERT(ce_cptr->check_colour(true));
+        }
+        return true;
     }
 
     bool Graph::check_all() const
@@ -1160,7 +1323,7 @@ namespace MAC
     void Graph::dump_detailed_counts(ostream& os) const
     {
         // First read stats
-        os << "RE\tname\tlen\tnum.chunks\tchunk.lens\n";
+        os << "RE\tname\tlen\tnum.chunks\tchunk.lens\tcontigs\n";
         for (auto re_it = _re_cont.begin(); re_it != _re_cont.end(); ++re_it)
         {
             const Read_Entry* re_cptr = &*re_it;
@@ -1172,16 +1335,24 @@ namespace MAC
                     os << ',';
                 os << (rc_cptr->is_unmappable()? "*" : "") << rc_cptr->get_r_len();
             }
+            os << '\t';
+            for (auto rc_it = re_cptr->get_chunk_cont().begin(); rc_it != re_cptr->get_chunk_cont().end(); ++rc_it)
+            {
+                Read_Chunk_CPtr rc_cptr = &*rc_it;
+                if (rc_it != re_cptr->get_chunk_cont().begin())
+                    os << ',';
+                os << rc_cptr->get_ce_ptr()->get_contig_id();
+            }
             os << '\n';
         }
         // next, contig stats
-        os << "CE\tlen\tnum.chunks\tbp.chunks\tnum.mut\tnum.mut.chunks"
+        os << "CE\tid\tlen\tnum.chunks\tbp.chunks\tnum.mut\tnum.mut.chunks"
            << "\tnum.snp\tnum.ins\tnum.del\tnum.mnp\tbp.mut"
-           << "\tcovg.left\tdeg.left\tcovg.right\tdeg.right\n";
+           << "\tcovg.left\tdeg.left\tcovg.right\tdeg.right\tunmappable\tdeg.left.skip\tdeg.right.skip\tcontigs.left.skip\tcontigs.right.skip\n";
         for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
         {
             const Contig_Entry* ce_cptr = &*ce_it;
-            os << "CE\t" << ce_cptr->get_len() << '\t' << ce_cptr->get_chunk_cptr_cont().size() << '\t';
+            os << "CE\t" << ce_cptr->get_contig_id() << '\t' << ce_cptr->get_len() << '\t' << ce_cptr->get_chunk_cptr_cont().size() << '\t';
             size_t reads_bp = 0;
             size_t total_muts_reads = 0;
             for (auto rc_cptr_it = ce_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
@@ -1215,7 +1386,51 @@ namespace MAC
             size_t cnt_1;
             size_t uniq_1;
             std::tie(cnt_0, uniq_0, cnt_1, uniq_1) = ce_cptr->get_out_degrees();
-            os << cnt_0 << '\t' << uniq_0 << '\t' << cnt_1 << '\t' << uniq_1;
+            os << cnt_0 << '\t' << uniq_0 << '\t' << cnt_1 << '\t' << uniq_1 << '\t';
+            os << (int)ce_cptr->is_unmappable() << '\t';
+            if (ce_cptr->is_unmappable())
+            {
+                os << ".\t.\t.\t.";
+            }
+            else
+            {
+                shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > neighbours_left_sptr;
+                shared_ptr< set< std::tuple< const Contig_Entry*, bool > > > neighbours_right_sptr;
+                neighbours_left_sptr = ce_cptr->get_neighbours(false);
+                neighbours_right_sptr = ce_cptr->get_neighbours(true);
+                os << neighbours_left_sptr->size() << '\t' << neighbours_right_sptr->size() << '\t';
+                for (auto it = neighbours_left_sptr->begin(); it != neighbours_left_sptr->end(); ++it)
+                {
+                    const Contig_Entry* tmp_ce_cptr;
+                    bool tmp_flip;
+                    if (it != neighbours_left_sptr->begin())
+                    {
+                        os << ',';
+                    }
+                    std::tie(tmp_ce_cptr, tmp_flip) = *it;
+                    os << '(' << tmp_ce_cptr->get_contig_id() << ',' << int(tmp_flip) << ')';
+                }
+                if (neighbours_left_sptr->size() == 0)
+                {
+                    os << '.';
+                }
+                os << '\t';
+                for (auto it = neighbours_right_sptr->begin(); it != neighbours_right_sptr->end(); ++it)
+                {
+                    const Contig_Entry* tmp_ce_cptr;
+                    bool tmp_flip;
+                    if (it != neighbours_right_sptr->begin())
+                    {
+                        os << ',';
+                    }
+                    std::tie(tmp_ce_cptr, tmp_flip) = *it;
+                    os << '(' << tmp_ce_cptr->get_contig_id() << ',' << int(tmp_flip) << ')';
+                }
+                if (neighbours_right_sptr->size() == 0)
+                {
+                    os << '.';
+                }
+            }
             os << '\n';
         }
     }

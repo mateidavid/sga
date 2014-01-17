@@ -64,10 +64,21 @@ namespace MAC
         /** Merge all contigs. */
         void merge_all_read_contigs();
 
+        /** Clear contig colors. */
+        void clear_contig_colours();
+        void clear_contig_visit();
+
+        /** Mark contig endpoints and branches. */
+        Size_Type visit_contig(const Contig_Entry* ce_cptr, bool dir);
+        void print_supercontig_lengths(std::ostream& os);
+        void set_contig_ids();
+        void unmap_single_chunks();
+
         /** Integrity checks. */
         bool check_all() const;
         bool check(const std::set< const Read_Entry* >& re_set, const std::set< const Contig_Entry* >& ce_set = std::set< const Contig_Entry* >()) const;
         bool check(const std::set< const Contig_Entry* >& ce_set) const { return check(std::set< const Read_Entry* >(), ce_set); }
+        bool check_colours() const;
 
         /** Stats. */
         void dump_detailed_counts(std::ostream& os) const;

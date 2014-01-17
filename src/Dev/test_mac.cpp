@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 {
     global::program_name = argv[0];
     char c;
-    while ((c = getopt(argc, argv, "i:x:y:segGpc:u:")) != -1) {
+    while ((c = getopt(argc, argv, "i:x:y:segGpc:u:l:")) != -1) {
         istringstream optarg_s(optarg != NULL? optarg : "");
         switch (c) {
             case 'i':
@@ -55,6 +55,9 @@ int main(int argc, char* argv[])
                 break;
             case 'u':
                 optarg_s >> global::unmap_trigger_len;
+                break;
+            case 'l':
+                global::supercontig_lengths_file = optarg;
                 break;
             default:
                 cerr << "unrecognized option: " << c << endl;
@@ -131,6 +134,9 @@ int main(int argc, char* argv[])
         }
         //ASSERT(g.check_all());
     }
+    g.unmap_single_chunks();
+    g.set_contig_ids();
+    ASSERT(g.check_all());
     if (global::merge_contigs_at_end)
     {
         if (not global::stats_file_2.empty())
@@ -139,17 +145,23 @@ int main(int argc, char* argv[])
             g.dump_detailed_counts(stats_2_ofs);
         }
         g.merge_all_read_contigs();
-    }
-    if (global::print_graph)
-    {
-        cout << g;
+        ASSERT(g.check_all());
     }
     if (not global::stats_file_1.empty())
     {
         ofstream stats_1_ofs(global::stats_file_1);
         g.dump_detailed_counts(stats_1_ofs);
     }
-
+    if (not global::supercontig_lengths_file.empty())
+    {
+        ofstream lengths_file(global::supercontig_lengths_file);
+        g.print_supercontig_lengths(lengths_file);
+        ASSERT(g.check_colours());
+    }
+    if (global::print_graph)
+    {
+        cout << g;
+    }
     cerr << "success\n";
 
     return EXIT_SUCCESS;
