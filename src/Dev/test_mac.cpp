@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
     if (not global::supercontig_lengths_file.empty())
     {
         ofstream lengths_file(global::supercontig_lengths_file);
-        g.print_supercontig_lengths(lengths_file);
+        g.print_supercontig_lengths_2(lengths_file);
         ASSERT(g.check_colours());
     }
     if (global::print_graph)

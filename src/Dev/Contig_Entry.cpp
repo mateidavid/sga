@@ -319,12 +319,12 @@ namespace MAC
         *_seq_ptr += *ce_next_cptr->_seq_ptr;
     }
 
-    shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > >
+    shared_ptr< map< std::tuple< const Contig_Entry*, bool >, std::tuple< unsigned int, Size_Type, Size_Type > > >
     Contig_Entry::get_neighbours(bool dir, bool skip_unmappable, bool trim_results) const
     {
-        shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > >
-        res(new map< std::tuple< const Contig_Entry*, bool >, unsigned int >());
-        unsigned int support = 0;
+        shared_ptr< map< std::tuple< const Contig_Entry*, bool >, std::tuple< unsigned int, Size_Type, Size_Type > > >
+        res(new map< std::tuple< const Contig_Entry*, bool >, std::tuple< unsigned int, Size_Type, Size_Type > >());
+        //unsigned int support = 0;
         for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
         {
             Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
@@ -334,23 +334,29 @@ namespace MAC
                 continue;
             }
             Read_Chunk_CPtr rc_next_cptr = rc_cptr->get_re_ptr()->get_sibling(rc_cptr, dir != rc_cptr->get_rc());
+            Size_Type skipped_len = 0;
             if (rc_next_cptr != NULL and skip_unmappable and rc_next_cptr->is_unmappable())
             {
+                skipped_len = rc_next_cptr->get_r_len();
                 rc_next_cptr = rc_next_cptr->get_re_ptr()->get_sibling(rc_next_cptr, dir != rc_cptr->get_rc());
             }
             if (rc_next_cptr == NULL or rc_next_cptr->is_unmappable())
             {
                 continue;
             }
-            ++support;
+            //++support;
             std::tuple< const Contig_Entry*, bool > t = std::make_tuple(rc_next_cptr->get_ce_ptr(), rc_cptr->get_rc() != rc_next_cptr->get_rc());
             if (res->count(t) == 0)
             {
-                (*res)[t] = 1;
+                (*res)[t] = std::make_tuple(1, skipped_len, skipped_len);
             }
             else
             {
-                ++(*res)[t];
+                unsigned int tmp_support;
+                Size_Type min_skipped_len;
+                Size_Type max_skipped_len;
+                std::tie(tmp_support, min_skipped_len, max_skipped_len) = (*res)[t];
+                (*res)[t] = std::make_tuple(tmp_support + 1, min(min_skipped_len, skipped_len), max(max_skipped_len, skipped_len));
             }
         }
         // remove neighbours with single support
@@ -358,7 +364,7 @@ namespace MAC
         {
             for (auto it = res->begin(); it != res->end(); ++it)
             {
-                if (it->second == 1)
+                if (get<0>(it->second) == 1)
                 {
                     /*
                     const Contig_Entry* ce_next_cptr;
@@ -421,38 +427,14 @@ namespace MAC
         {
             return true;
         }
-        shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > > neighbours_sptr;
-        const Contig_Entry* ce_next_cptr;
-        bool flip;
-        neighbours_sptr = get_neighbours(dir);
-        if (neighbours_sptr->size() == 0)
+        auto neighbours_sptr = get_neighbours(dir);
+        if (neighbours_sptr->size() == 1)
         {
-            ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) != 0);
-        }
-        else if (neighbours_sptr->size() == 1)
-        {
-            std::tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
-            neighbours_sptr = ce_next_cptr->get_neighbours(dir == flip);
-            ASSERT(neighbours_sptr->size() > 0);
-            if (neighbours_sptr->size() == 1)
-            {
-                ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) == 0
-                       and (ce_next_cptr->get_colour() & ((dir == flip) == false? 0x4 : 0x8)) == 0);
-            }
-            else
-            {
-                ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) != 0
-                       and (ce_next_cptr->get_colour() & ((dir == flip) == false? 0x4 : 0x8)) != 0);
-            }
+            ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) == 0);
         }
         else
         {
             ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) != 0);
-            for (auto it = neighbours_sptr->begin(); it != neighbours_sptr->end(); ++it)
-            {
-                std::tie(ce_next_cptr, flip) = it->first;
-                ASSERT((ce_next_cptr->get_colour() & ((dir == flip) == false? 0x4 : 0x8)) != 0);
-            }
         }
         return true;
     }

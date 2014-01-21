@@ -1051,7 +1051,8 @@ namespace MAC
             for (size_t j = 0; j < i; ++j)
             {
                 Read_Chunk_CPtr rc2_cptr = ce_cptr->get_chunk_cptr_cont()[j];
-                if (rc1_cptr->get_re_ptr() == rc2_cptr->get_re_ptr()
+                if (rc1_cptr->get_re_ptr() == rc2_cptr->get_re_ptr())
+                    /*
                     and ((rc1_cptr->get_c_start() <= rc2_cptr->get_c_start() and rc2_cptr->get_c_start() < rc1_cptr->get_c_end())
                          or (rc2_cptr->get_c_start() <= rc1_cptr->get_c_start() and rc1_cptr->get_c_start() < rc2_cptr->get_c_end())
                          or (rc1_cptr->get_c_end() == rc2_cptr->get_c_start()
@@ -1064,12 +1065,13 @@ namespace MAC
                              and rc1_cptr->get_mut_ptr_cont().size() > 0
                              and rc2_cptr->get_mut_ptr_cont().back()->is_ins()
                              and rc2_cptr->get_mut_ptr_cont().back() == rc1_cptr->get_mut_ptr_cont().front())))
+                    */
                 {
                     // overlapping chunks from the same read
                     re_list.push_back(rc1_cptr->get_re_ptr());
                     pos_list.push_back(std::make_tuple(rc1_cptr->get_r_start(), rc1_cptr->get_r_end()));
-                    re_list.push_back(rc2_cptr->get_re_ptr());
-                    pos_list.push_back(std::make_tuple(rc2_cptr->get_r_start(), rc2_cptr->get_r_end()));
+                    //re_list.push_back(rc2_cptr->get_re_ptr());
+                    //pos_list.push_back(std::make_tuple(rc2_cptr->get_r_start(), rc2_cptr->get_r_end()));
                     /*
                     cerr << "overlapping chunks from same read: " << rc1_cptr->get_re_ptr()->get_name() << ' '
                     << rc1_cptr->get_r_start() << ' ' << rc1_cptr->get_r_end() << ' '
@@ -1125,8 +1127,7 @@ namespace MAC
         {
             return std::make_tuple(0, (ce_cptr->get_colour() & (dir == false? 0x4 : 0x8)) != 0);
         }
-        shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > > neighbours_sptr;
-        neighbours_sptr = ce_cptr->get_neighbours(dir);
+        auto neighbours_sptr = ce_cptr->get_neighbours(dir);
         ASSERT(neighbours_sptr->size() > 0);
         if (neighbours_sptr->size() > 1)
         {
@@ -1152,12 +1153,62 @@ namespace MAC
         return std::make_tuple(ce_cptr->get_len() + tmp, false);
     }
 
+    void Graph::dfs_scontig(const Contig_Entry* ce_cptr, bool ce_endpoint, bool dir,
+                            list< std::tuple< const Contig_Entry*, size_t, size_t, bool > >& l, bool& cycle)
+    {
+        while (true)
+        {
+            if ((ce_cptr->get_colour() & 0x1) != 0)
+            {
+                cycle = (ce_cptr->get_colour() & (ce_endpoint == false? 0x4 : 0x8)) == 0;
+                break;
+            }
+            auto neighbours_sptr = ce_cptr->get_neighbours(ce_endpoint);
+            ASSERT(neighbours_sptr->size() > 0);
+            if (neighbours_sptr->size() > 1)
+            {
+                modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.colour() |= (ce_endpoint == false? 0x4 : 0x8); });
+                cycle = false;
+                break;
+            }
+            ASSERT(neighbours_sptr->size() == 1);
+            modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() |= 0x1; });
+            {
+                auto t = std::make_tuple(ce_cptr, ce_cptr->get_len(), ce_cptr->get_len(), dir == ce_endpoint);
+                not dir? l.push_front(t) : l.push_back(t);
+            }
+            neighbours_sptr = ce_cptr->get_neighbours(not ce_endpoint);
+            if (neighbours_sptr->size() == 1)
+            {
+                const Contig_Entry* ce_next_cptr;
+                bool flip;
+                unsigned int tmp_support;
+                Size_Type min_skipped_len;
+                Size_Type max_skipped_len;
+                std::tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
+                std::tie(tmp_support, min_skipped_len, max_skipped_len) = neighbours_sptr->begin()->second;
+                if (max_skipped_len > 0)
+                {
+                    auto t = std::make_tuple((const Contig_Entry*)NULL, min_skipped_len, max_skipped_len, false);
+                    not dir? l.push_front(t) : l.push_back(t);
+                }
+                ce_cptr = ce_next_cptr;
+                ce_endpoint = not ce_endpoint == flip;
+            }
+            else
+            {
+                modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.colour() |= (not ce_endpoint == false? 0x4 : 0x8); });
+                cycle = false;
+                break;
+            }
+        }
+    }
+
     void Graph::print_supercontig_lengths(ostream& os)
     {
         for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
         {
             const Contig_Entry* ce_cptr = &*ce_it;
-            shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > > neighbours_sptr;
             if (ce_cptr->is_unmappable())
             {
                 continue;
@@ -1174,7 +1225,7 @@ namespace MAC
             const Contig_Entry* ce_next_cptr;
             bool flip;
             bool dead_end = false;
-            neighbours_sptr = ce_cptr->get_neighbours(false);
+            auto neighbours_sptr = ce_cptr->get_neighbours(false);
             if (neighbours_sptr->size() == 1)
             {
                 std::tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
@@ -1196,6 +1247,114 @@ namespace MAC
                 modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() |= 0x8; });
             }
             os << supercontig_left_len + supercontig_right_len + ce_cptr->get_len() << '\n';
+        }
+    }
+
+    void Graph::print_supercontig_lengths_2(ostream& os)
+    {
+        for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
+        {
+            const Contig_Entry* ce_cptr = &*ce_it;
+            if (ce_cptr->is_unmappable())
+            {
+                continue;
+            }
+            ASSERT((ce_cptr->get_colour() & 0x2) == 0);
+            if ((ce_cptr->get_colour() & 0x1) != 0)
+            {
+                continue;
+            }
+            // mark contig as visited
+            modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) { ce.colour() |= 0x1; });
+            list< std::tuple< const Contig_Entry*, Size_Type, Size_Type, bool > > l[2];
+            bool cycle[2];
+            shared_ptr< map< std::tuple< const Contig_Entry*, bool >, std::tuple< unsigned int, Size_Type, Size_Type > > >
+            neighbours_sptr[2];
+            for (int side = 0; side < 2; ++side)
+            {
+                neighbours_sptr[side] = ce_cptr->get_neighbours(side == 1);
+                if (neighbours_sptr[side]->size() != 1)
+                {
+                    modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) { ce.colour() |= (side == 0? 0x4 : 0x8); });
+                }
+            }
+            for (int side = 0; side < 2; ++side)
+            {
+                cycle[side] = false;
+                if (neighbours_sptr[side]->size() == 1)
+                {
+                    const Contig_Entry* ce_next_cptr;
+                    bool flip;
+                    std::tie(ce_next_cptr, flip) = neighbours_sptr[side]->begin()->first;
+                    unsigned int tmp_support;
+                    Size_Type min_skipped_len;
+                    Size_Type max_skipped_len;
+                    std::tie(tmp_support, min_skipped_len, max_skipped_len) = neighbours_sptr[side]->begin()->second;
+                    if (max_skipped_len > 0)
+                    {
+                        auto t = std::make_tuple((const Contig_Entry*)NULL, min_skipped_len, max_skipped_len, false);
+                        side == 0? l[side].push_front(t) : l[side].push_back(t);
+                    }
+                    dfs_scontig(ce_next_cptr, (side == 1) == flip, side == 1, l[side], cycle[side]);
+                }
+            }
+            ASSERT(cycle[0] == cycle[1]);
+            Size_Type scon_len = ce_cptr->get_len();
+            Size_Type scon_min_skip_len = 0;
+            Size_Type scon_max_skip_len = 0;
+            for (int side = 0; side < 2; ++side)
+            {
+                for (auto it = l[side].begin(); it != l[side].end(); ++it)
+                {
+                    const Contig_Entry* tmp_ce_cptr;
+                    Size_Type min_skipped_len;
+                    Size_Type max_skipped_len;
+                    bool flip;
+                    std::tie(tmp_ce_cptr, min_skipped_len, max_skipped_len, flip) = *it;
+                    if (tmp_ce_cptr != NULL)
+                    {
+                        scon_len += tmp_ce_cptr->get_len();
+                    }
+                    else
+                    {
+                        scon_min_skip_len += min_skipped_len;
+                        scon_max_skip_len += max_skipped_len;
+                    }
+                }
+            }
+            os << scon_len << '\t' << scon_min_skip_len << '-' << scon_max_skip_len << '\t';
+            for (int side = 0; side < 2; ++side)
+            {
+                if (side == 1)
+                {
+                    if (l[0].size() > 0)
+                    {
+                        os << ',';
+                    }
+                    os << '(' << ce_cptr->get_contig_id() << ',' << ce_cptr->get_len() << ",0)";
+                }
+                for (auto it = l[side].begin(); it != l[side].end(); ++it)
+                {
+                    if (side == 1 or (side == 0 and it != l[side].begin()))
+                    {
+                        os << ',';
+                    }
+                    const Contig_Entry* tmp_ce_cptr;
+                    Size_Type min_skipped_len;
+                    Size_Type max_skipped_len;
+                    bool flip;
+                    std::tie(tmp_ce_cptr, min_skipped_len, max_skipped_len, flip) = *it;
+                    if (tmp_ce_cptr != NULL)
+                    {
+                        os << '(' << tmp_ce_cptr->get_contig_id() << ',' << tmp_ce_cptr->get_len() << ',' << int(flip) << ')';
+                    }
+                    else
+                    {
+                        os << "(.," << min_skipped_len << ',' << max_skipped_len << ")";
+                    }
+                }
+            }
+            os << '\n';
         }
     }
 
@@ -1398,10 +1557,8 @@ namespace MAC
             }
             else
             {
-                shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > > neighbours_left_sptr;
-                shared_ptr< map< std::tuple< const Contig_Entry*, bool >, unsigned int > > neighbours_right_sptr;
-                neighbours_left_sptr = ce_cptr->get_neighbours(false);
-                neighbours_right_sptr = ce_cptr->get_neighbours(true);
+                auto neighbours_left_sptr = ce_cptr->get_neighbours(false);
+                auto neighbours_right_sptr = ce_cptr->get_neighbours(true);
                 os << neighbours_left_sptr->size() << '\t' << neighbours_right_sptr->size() << '\t';
                 for (auto it = neighbours_left_sptr->begin(); it != neighbours_left_sptr->end(); ++it)
                 {
@@ -1412,8 +1569,12 @@ namespace MAC
                         os << ',';
                     }
                     std::tie(tmp_ce_cptr, tmp_flip) = it->first;
-                    unsigned int tmp_support = it->second;
-                    os << '(' << tmp_ce_cptr->get_contig_id() << ',' << int(tmp_flip) << ',' << tmp_support  << ')';
+                    unsigned int tmp_support;
+                    Size_Type min_skipped_len;
+                    Size_Type max_skipped_len;
+                    std::tie(tmp_support, min_skipped_len, max_skipped_len) = it->second;
+                    os << '(' << tmp_ce_cptr->get_contig_id() << ',' << int(tmp_flip) << ',' << tmp_support
+                       << ',' << min_skipped_len << ',' << max_skipped_len << ')';
                 }
                 if (neighbours_left_sptr->size() == 0)
                 {
@@ -1429,8 +1590,12 @@ namespace MAC
                         os << ',';
                     }
                     std::tie(tmp_ce_cptr, tmp_flip) = it->first;
-                    unsigned int tmp_support = it->second;
-                    os << '(' << tmp_ce_cptr->get_contig_id() << ',' << int(tmp_flip) << ',' << tmp_support << ')';
+                    unsigned int tmp_support;
+                    Size_Type min_skipped_len;
+                    Size_Type max_skipped_len;
+                    std::tie(tmp_support, min_skipped_len, max_skipped_len) = it->second;
+                    os << '(' << tmp_ce_cptr->get_contig_id() << ',' << int(tmp_flip) << ',' << tmp_support
+                       << ',' << min_skipped_len << ',' << max_skipped_len << ')';
                 }
                 if (neighbours_right_sptr->size() == 0)
                 {
