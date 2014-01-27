@@ -42,11 +42,18 @@ int main()
     factory_type::const_idn_type p4(p3);
     cout << "p4=" << p4 << '\n';
 
-    //factory_type::idn_type p5(p4);
-    //cout << "p5=" << p5 << '\n';
+    factory_type::idn_type p5(p4);
+    cout << "p5=" << p5 << '\n';
 
-    //p4 = p3;
+    p4 = p3;
     //p2 = p4;
+
+    cout << "p1=" << p1 << '\n';
+    cout << "p2=" << p2 << '\n';
+    cout << "p1=" << p1++ << '\n';
+    cout << "p2=" << ++p2 << '\n';
+    cout << "p1=" << p1 << '\n';
+    cout << "p2=" << p2 << '\n';
 
     /*
     typedef Factory< A > factory_type;

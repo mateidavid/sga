@@ -2,8 +2,6 @@
 #define __FACTORY_HPP
 
 #include <iostream>
-#include <boost/mpl/if.hpp>
-#include <boost/utility/enable_if.hpp>
 
 #include "common.hpp"
 
@@ -14,115 +12,116 @@ namespace factory
     {
         template <class T>
         class Factory;
+        template <class T>
+        class Identifier_Base;
+        template <class T>
+        class Identifier;
+        template <class T>
+        class Const_Identifier;
+
+        template <class T>
+        bool operator == (const Identifier_Base< T >&, const Identifier_Base< T >&);
+        template <class T>
+        bool operator != (const Identifier_Base< T >&, const Identifier_Base< T >&);
+        template <class T>
+        std::ostream& operator << (std::ostream& os, const Identifier_Base< T >&);
+        template <class T>
+        std::ostream& operator << (std::ostream& os, const Factory< T >&);
 
         /** Pointer replacement class.
          *
          * Objects of type T can be referred to using an Identifier< T > as long as they
          * are stored by a Factory< T >.
          * @param T Type pointed at.
-         * @param const_val Bool; true iff object points to a constant value.
          */
-        template <class T, bool const_val>
-        class Qual_Identifier
+        template <class T>
+        class Identifier_Base
         {
         private:
             struct from_const_enabler {};
         public:
             typedef T val_type;
-            typedef typename boost::mpl::if_c< const_val,
-                                               const val_type,
-                                               val_type >::type qual_val_type;
             typedef Factory< T > fact_type;
 
+            /** Object resembling a NULL pointer in comparisons. */
+            const Identifier_Base null() const { return Identifier_Base(); }
+            /** Bool conversion. */
+            operator bool() const { return _val != 0; }
+            /** Prefix increment operator. */
+            Identifier_Base& operator ++ () { ++_val; return *this; }
+            /** Postfix increment operator. */
+            Identifier_Base operator ++ (int) { Identifier_Base res(*this); ++(*this); return res; }
+
+        protected:
             /** @name Constructors */
             /**@{*/
             /** Empty constructor. */
-            Qual_Identifier() : _val(0) {}
-            /** Constructor from another non-constant identifier; always enabled. */
-            Qual_Identifier(const Qual_Identifier< T, false >& rhs) : _val(rhs._val) {}
-            /** Constructor from another constant identifier; enabled only for constant identifiers. */
-            template <bool const_val_other>
-            Qual_Identifier(const Qual_Identifier< T, const_val_other >& rhs,
-                            typename boost::enable_if_c<
-                                const_val_other && const_val,
-                                from_const_enabler
-                                >::type = from_const_enabler()) : _val(rhs._val) {}
+            Identifier_Base() : _val(0) {}
+            /** Copy constructor. */
+            Identifier_Base(const Identifier_Base& rhs) : _val(rhs._val) {}
             /**@}*/
 
-            /** Object resembling a NULL pointer in comparisons. */
-            const Qual_Identifier null() const { return Qual_Identifier(); }
-            /** Main dereference operator; uses active factory pointer to retreive object. */
-            qual_val_type& operator * () const
+            /** Dereference object. */
+            val_type& dereference(const fact_type* fact_cptr = fact_type::get_active_ptr()) const
             {
-                ASSERT(fact_type::_active_ptr);
-                return fact_type::_active_ptr->get_elem(*this);
+                ASSERT(fact_cptr);
+                return fact_cptr->get_elem(*this);
             }
-            /** Secondary dereference operator; NOTE: target type must implement it as well. */
-            qual_val_type& operator -> () const { return *(*this); }
-            /** Bool conversion. */
-            operator bool() const { return _val != 0; }
 
         private:
-            friend class Qual_Identifier< T, not const_val >;
-
             friend class Factory< T >;
-            template <class U, bool const_val_1, bool const_val_2>
-            friend bool operator == (const Qual_Identifier<U, const_val_1>&,
-                                     const Qual_Identifier<U, const_val_2>&);
-            template <class U, bool const_val_1, bool const_val_2>
-            friend bool operator != (const Qual_Identifier<U, const_val_1>&,
-                                     const Qual_Identifier<U, const_val_2>&);
-            template <class U, bool const_val_other>
-            friend std::ostream& operator << (std::ostream&,
-                                              const Qual_Identifier<U, const_val_other>&);
-            template <class U>
-            friend std::ostream& operator << (std::ostream& os, const Factory< U >& rhs);
+
+            friend bool operator == <>(const Identifier_Base&, const Identifier_Base&);
+            friend bool operator != <>(const Identifier_Base&, const Identifier_Base&);
+            friend std::ostream& operator << <>(std::ostream&, const Identifier_Base&);
 
             uint32_t _val;
         };
 
-        template <class T, bool const_1, bool const_2>
-        bool operator == (const Qual_Identifier< T, const_1 >& lhs,
-                          const Qual_Identifier< T, const_2 >& rhs)
+        template <class T>
+        bool operator == (const Identifier_Base< T >& lhs, const Identifier_Base< T >& rhs)
         {
             return lhs._val == rhs._val;
         }
 
-        template <class T, bool const_1, bool const_2>
-        bool operator != (const Qual_Identifier< T, const_1 >& lhs,
-                          const Qual_Identifier< T, const_2 >& rhs)
+        template <class T>
+        bool operator != (const Identifier_Base< T >& lhs, const Identifier_Base< T >& rhs)
         {
             return !(lhs == rhs);
         }
 
-        template <class T, bool const_val>
-        std::ostream& operator <<(std::ostream& os,
-                                  const Qual_Identifier< T, const_val >& rhs)
+        template <class T>
+        std::ostream& operator <<(std::ostream& os, const Identifier_Base< T >& rhs)
         {
             os << "[_val=" << rhs._val << "]";
             return os;
         }
 
-        /** Non-constant identifier. */
-        template <class T>
-        class Identifier : public Qual_Identifier< T, false >
-        {
-        public:
-            Identifier() {}
-            Identifier(const Qual_Identifier< T, false >& rhs)
-                : Qual_Identifier< T, false >(rhs) {}
-        };
-
         /** Constant identifier. */
         template <class T>
-        class Const_Identifier : public Qual_Identifier< T, true >
+        class Const_Identifier : public Identifier_Base< T >
         {
         public:
             Const_Identifier() {}
-            Const_Identifier(const Qual_Identifier< T, true >& rhs)
-                : Qual_Identifier< T, true >(rhs) {}
-            Const_Identifier(const Qual_Identifier< T, false >& rhs)
-                : Qual_Identifier< T, true >(rhs) {}
+            Const_Identifier(const Const_Identifier& rhs) : Identifier_Base< T >(rhs) {}
+
+            const T& operator * () const { return this->dereference(); }
+            const T& operator -> () const { return this->dereference(); }
+        };
+
+        /** Non-constant identifier. */
+        template <class T>
+        class Identifier : public Identifier_Base< T >
+        {
+        public:
+            Identifier() {}
+            Identifier(const Identifier& rhs) : Identifier_Base< T >(rhs) {}
+            explicit Identifier(const Const_Identifier< T >& rhs) : Identifier_Base< T >(rhs) {}
+            operator const Const_Identifier< T >& () const { return *(Const_Identifier< T >*)this; }
+            operator Const_Identifier< T >& () { return *(Const_Identifier< T >*)this; }
+
+            T& operator * () const { return this->dereference(); }
+            T& operator -> () const { return this->dereference(); }
         };
 
         /** Wrapper type used by Factory objects to store free node list without overhead. */
@@ -160,12 +159,19 @@ namespace factory
              */
             Factory(bool activate = false) : _cont(1, wrapper_type()), _next_free_idn() { if (activate) set_active(); }
 
-            /** Get element pointed at. */
-            val_type& get_elem(idn_type elem_idn)
+        private:
+            /** Dereference identifier. */
+            wrapper_type& dereference(const Identifier_Base< T >& elem_idn_base) const
             {
-                return _cont.at(elem_idn._val)._key;
+                return const_cast<wrapper_type&>(_cont.at(elem_idn_base._val));
+            }
+            /** Get element pointed at. */
+            val_type& get_elem(const Identifier_Base< T >& elem_idn_base) const
+            {
+                return dereference(elem_idn_base)._key;
             }
 
+        public:
             /** Allocate space for new element and return pointer to it. */
             idn_type new_elem()
             {
@@ -186,23 +192,24 @@ namespace factory
             }
 
             /** Delete element pointed at. */
-            void del_elem(idn_type elem_idn)
+            void del_elem(const_idn_type elem_idn)
             {
                 _cont.at(elem_idn._val)._next_free_idn = _next_free_idn;
-                _next_free_idn = elem_idn;
+                _next_free_idn = idn_type(elem_idn);
             }
 
             /** Use this object to resolve all managed pointers. */
             void set_active() { _active_ptr = this; }
 
+            /** Get active factory pointer. */
+            static Factory* get_active_ptr() { return _active_ptr; }
+
         private:
-            friend class Qual_Identifier< T, true >;
-            friend class Qual_Identifier< T, false >;
+            friend class Identifier_Base< T > ;
 
             static Factory* _active_ptr;
 
-            template <class U>
-            friend std::ostream& operator << (std::ostream&, const Factory< U >&);
+            friend std::ostream& operator << <>(std::ostream&, const Factory&);
 
             std::deque< wrapper_type > _cont;
             idn_type _next_free_idn;
@@ -218,12 +225,12 @@ namespace factory
             size_t n_free = 0;
             for (auto crt = rhs._next_free_idn;
                  crt;
-                 crt = rhs._cont.at(crt._val)._next_free_idn)
+                 crt = rhs.dereference(crt)._next_free_idn)
             {
                 ++n_free;
             }
             os << "n_free=" << n_free << '\n'
-               << "next_free=" << rhs._next_free_idn._val << '\n';
+               << "next_free=" << rhs._next_free_idn << '\n';
             for (auto it = rhs._cont.begin(); it != rhs._cont.end(); ++it)
             {
                 os << "[key=" << it->_key
