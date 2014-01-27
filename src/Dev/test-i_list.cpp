@@ -22,6 +22,8 @@ struct A
 
     A* operator -> () { return this; }
     const A* operator -> () const { return this; }
+
+    A& operator ++ () { ++_r_start; return *this; }
 };
 
 ostream& operator <<(ostream& os, const A& rhs)
@@ -35,7 +37,7 @@ struct traits
 {
     typedef A val_type;
     typedef A::idn_type val_ptr_type;
-    typedef A& val_ref_type;
+    typedef A::const_idn_type const_val_ptr_type;
 
     typedef A node_type;
     typedef A::idn_type node_ptr_type;
@@ -88,35 +90,60 @@ int main()
 
     typedef factory::Factory< A > factory_type;
     typedef factory_type::idn_type idn_type;
+    typedef I_List<traits> list_type;
     factory_type f;
     f.set_active();
     
     idn_type a;
-    a = f.add_elem();
-    I_List<traits> l(a);
+    a = f.new_elem();
+    list_type l(a);
 
-    a = f.add_elem();
+    a = f.new_elem();
     a->_r_start = 5;
     a->_c_start = 17;
     l.push_back(a);
 
-    a = f.add_elem();
+    a = f.new_elem();
     a->_r_start = 15;
     a->_c_start = 23;
     l.push_back(a);
 
-    a = f.add_elem();
+    a = f.new_elem();
     a->_r_start = 8;
     a->_c_start = 1;
     l.push_front(a);
 
     cout << f;
 
-    cout << "l:\n";
+    cout << "l: beg->end\n";
     for (auto it = l.begin(); it != l.end(); ++it)
+    {
+        clog << ++(*it) << '\n';
+    }
+    cout << "l: rbeg->rend\n";
+    for (auto it = l.rbegin(); it != l.rend(); ++it)
+    {
+        clog << ++(*it) << '\n';
+    }
+    cout << "l: cbeg->cend\n";
+    for (auto it = ((const list_type)l).begin(); it != l.end(); ++it)
     {
         clog << *it << '\n';
     }
+    cout << "l: crbeg->crend\n";
+    for (auto it = ((const list_type)l).rbegin(); it != l.rend(); ++it)
+    {
+        clog << *it << '\n';
+    }
+
+    auto f_it = l.begin();
+    auto r_it = l.rbegin();
+    while (f_it != r_it)
+    {
+        ++f_it;
+    }
+    clog << "last element: " << *f_it << '\n';
+    l.check();
 
     return 0;
 }
