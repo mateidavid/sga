@@ -5,51 +5,50 @@
 
 using namespace std;
 
+typedef factory::Factory< size_t > fact_type;
+typedef fact_type::ptr_type ptr_type;
+typedef fact_type::const_ptr_type const_ptr_type;
+typedef fact_type::ref_type ref_type;
+typedef fact_type::const_ref_type const_ref_type;
 
-void fcn_const_ref(factory::Bounded_Reference< size_t, true > r)
+void fcn_const_ref(const_ref_type r)
 {
     cout << "fcn: r=" << r << '\n';
 }
 
 int main()
 {
-    /*
-    Factory_Wrapper<int> w;
-    int& i = w._key;
-    */
-
-    typedef factory::Factory< size_t > factory_type;
-    factory_type f;
+    fact_type f;
     f.set_active();
-    factory_type::ptr_type p1, p2, p3;
+    ptr_type p1, p2, p3;
 
-    clog << "sizeof(val_type)=" << sizeof(factory_type::val_type) << '\n';
-    clog << "sizeof(ptr_type)=" << sizeof(factory_type::ptr_type) << '\n';
-    clog << "sizeof(wrapper_type)=" << sizeof(factory::detail::Factory_Wrapper<factory_type::val_type>) << '\n';
+    clog << "sizeof(val_type)=" << sizeof(fact_type::val_type) << '\n';
+    clog << "sizeof(ptr_type)=" << sizeof(ptr_type) << '\n';
+    clog << "sizeof(wrapper_type)=" << sizeof(factory::detail::Factory_Wrapper<fact_type::val_type>) << '\n';
 
     p1 = f.new_elem();
-    (*p1) = 17;
+    *p1 = 17;
     p2 = f.new_elem();
     *p2 = 9;
     p3 = f.new_elem();
     *p3 = 24;
-    cout << f;
+    cout << "factory after new 17,9,24:\n" << f;
 
-    factory_type::const_ptr_type p4(p3);
-    factory_type::const_ptr_type p5(p4);
-    f.del_elem((factory_type::const_ptr_type)p2);
-    cout << f;
-
+    const_ptr_type p4(p3);
+    cout << "(p4 == p3): " << (p4 == p3) << '\n';
+    cout << "(p4 != p3): " << (p4 != p3) << '\n';
+    cout << "(p4): " << (bool)p4 << '\n';
+    const_ptr_type p5(p4);
+    f.del_elem(p2);
     p2 = f.new_elem();
     *p2 = 15;
     p3 = f.new_elem();
     *p3 = 42;
-    cout << f;
+    cout << "factory after del 9, new 15,42:\n" << f;
 
-    //factory_type::const_idn_type p4(p3);
+    //fact_type::const_idn_type p4(p3);
     cout << "p4=" << p4 << '\n';
-
-    //factory_type::idn_type p5(p4);
+    //fact_type::idn_type p5(p4);
     cout << "p5=" << p5 << '\n';
 
     p4 = p3;
@@ -64,7 +63,7 @@ int main()
 
     cout << "-----\n";
 
-    factory::Bounded_Reference< size_t, false > r1(*p1);
+    ref_type r1(*p1);
     cout << "p1=" << p1 << '\n';
     cout << "r1(*p1)=" << r1 << '\n';
 
@@ -74,8 +73,8 @@ int main()
     cout << "q1=" << q1 << '\n';
     cout << "q2=" << q2 << '\n';
 
-    factory::Bounded_Reference< size_t, false > r2 = *p2;
-    factory::Bounded_Reference< size_t, false > r3 = r2;
+    ref_type r2 = *p2;
+    ref_type r3 = r2;
     cout << "r1=" << r1 << '\n';
     cout << "r2=" << r2 << '\n';
     cout << "r3=" << r3 << '\n';
@@ -93,17 +92,37 @@ int main()
     fcn_const_ref(*p1);
     fcn_const_ref(r2);
 
+    const_ref_type cr1(r1);
+    //cr1 = 18;
+    cout << "cr1=" << cr1 << '\n';
+    r2 = cr1;
+    cout << "r2=" << r2 << '\n';
+    ref_type r4(cr1);
+    r4 = 33;
+    cout << "r4=" << r4 << '\n';
+
+    //*p4 = 28;
+    cout << "p4=" << p4 << '\n';
+
+    factory::Bounded_Pointer< const void > vp1(p1);
+    ptr_type p6(vp1);
+
+    const ptr_type cp7(p1);
+    ptr_type p8(cp7);
+
+    /*
     factory::Holder< size_t > h1;
     cout << "sizeof(holder)=" << sizeof(h1) << "\n";
     h1 = 59;
-    factory::Bounded_Reference< size_t, false > r4 = h1;
+    factory::Bounded_Reference< size_t > r4 = h1;
     cout << "r4=" << r4 << "\n";
     cout << f;
+    */
 
     /*
-    typedef Factory< A > factory_type;
-    typedef factory_type::ptr_type ptr_type;
-    factory_type f;
+    typedef Factory< A > fact_type;
+    typedef fact_type::ptr_type ptr_type;
+    fact_type f;
     ptr_type::_factory_ptr = &f;
     
     ptr_type a;
