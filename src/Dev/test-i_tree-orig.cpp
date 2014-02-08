@@ -21,7 +21,7 @@ struct B
     ptr_type _r_child;
     int _col;
 
-    B() { cerr << "constructing B at: " << (void*) this << '\n'; }
+    B() { clog << "constructing B at: " << (void*) this << '\n'; }
     B(const B& rhs)
     : _r_start(rhs._r_start), _c_start(rhs._c_start),
     _parent(rhs._parent), _l_child(rhs._l_child), _r_child(rhs._r_child), _col(rhs._col)
@@ -30,7 +30,7 @@ struct B
     B* operator -> () { return this; }
     const B* operator -> () const { return this; }
 
-    B& operator ++ () { ++_r_start; return *this; }
+    //B& operator ++ () { ++_r_start; return *this; }
 };
 
 bool operator < (const B& lhs, const B& rhs) { return lhs._r_start < rhs._r_start; }
@@ -86,8 +86,8 @@ struct Value_Traits
     static pointer to_value_ptr(node_ptr n) { return n; }
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 
-    Value_Traits* operator -> () { return this; }
-    const Value_Traits* operator -> () const { return this; }
+    //Value_Traits* operator -> () { return this; }
+    //const Value_Traits* operator -> () const { return this; }
 };
 
 typedef factory::Factory< B > fact_type;
@@ -100,36 +100,91 @@ typedef boost::intrusive::multiset< B, boost::intrusive::value_traits< Value_Tra
 
 int main()
 {
+    clog << "--- type sizes:\n";
+    clog << "sizeof(val_type)=" << sizeof(fact_type::val_type) << '\n';
+    clog << "sizeof(ptr_type)=" << sizeof(ptr_type) << '\n';
+    clog << "sizeof(wrapper_type)=" << sizeof(factory::detail::Factory_Wrapper< fact_type::val_type >) << '\n';
+
+    clog << "--- type names:"
+         << "\nB: " << typeid(B).name()
+         << "\nconst B: " << typeid(const B).name()
+         << "\nFactory< B >: " << typeid(factory::Factory< B >).name()
+         << "\nBounded_Pointer< B >: " << typeid(factory::Bounded_Pointer< B >).name()
+         << "\nBounded_Pointer< const B >: " << typeid(factory::Bounded_Pointer< const B >).name()
+         << "\nBounded_Reference< B >: " << typeid(factory::Bounded_Reference< B >).name()
+         << "\nBounded_Reference< const B >: " << typeid(factory::Bounded_Reference< const B >).name()
+         << "\nHolder< B >: " << typeid(factory::Holder< B >).name()
+         << "\nValue_Traits< B >: " << typeid(Value_Traits< B >).name()
+         << "\nNode_Traits< B >: " << typeid(Node_Traits< B >).name()
+         << "\nvoid: " << typeid(void).name()
+         << "\nconst void: " << typeid(const void).name()
+         << '\n';
+
+    clog << "--- constructing factory\n";
     fact_type f(true);
-    itree_type t;
 
-    factory::detail::Bounded_Pointer<const Value_Traits< B >, unsigned int> wtf1;
-    const factory::detail::Bounded_Pointer<const void, unsigned int>& wtf2(wtf1);
+    clog << "--- constructing itree\n";
+    itree_type l;
 
-    ptr_type a;
+    size_t n = 10;
 
-    a = f.new_elem();
-    a->_r_start = 5;
-    a->_c_start = 17;
-    t.insert(*a);
+    clog << "--- constructing vector of pointers\n";
+    vector< ptr_type > ptr_a(n);
 
-    a = f.new_elem();
-    a->_r_start = 15;
-    a->_c_start = 23;
-    t.insert(*a);
+    clog << "--- allocating elements\n";
+    for (size_t i = 0; i < n; ++i)
+    {
+        clog << "--- allocating element at index " << i << '\n';
+        ptr_type& a = ptr_a[i];
+        a = f.new_elem();
+        a->_r_start = i;
+        a->_c_start = 50 + i;
+    }
 
-    a = f.new_elem();
-    a->_r_start = 8;
-    a->_c_start = 1;
-    t.insert(*a);
+    clog << "--- inserting elements in tree\n";
+    for (size_t i = 0; i < n; ++i)
+    {
+        clog << "--- inserting element at index " << i << '\n';
+        l.insert(*ptr_a[i]);
+    }
 
-    cout << "factory:\n" << f;
+    clog << "--- factory:\n" << f;
+    clog << "--- tree:\n";
+    auto it = l.begin();
+    auto it_end = l.end();
+    while (it != it_end)
+    {
+        clog << "--- next element\n";
+        clog << *it << '\n';
+        ++it;
+    }
 
-    cout << "tree:\n";
-    for (auto it = t.begin(); it != t.end(); ++it)
+    clog << "--- removing even index elements from tree\n";
+    for (size_t i = 0; i < n; ++i)
+    {
+        if (i % 2 > 0)
+        {
+            continue;
+        }
+        itree_type::const_iterator it = l.iterator_to(*ptr_a[i]);
+        l.erase(it);
+    }
+
+    clog << "--- factory:\n" << f;
+    clog << "--- tree:\n";
+    for (it = l.begin(); it != l.end(); ++it)
     {
         clog << *it << '\n';
     }
+
+    clog << "--- deallocating elements\n";
+    for (size_t i = 0; i < n; ++i)
+    {
+        f.del_elem(ptr_a[i]);
+    }
+
+    clog << "--- exiting\n";
+
 
     return 0;
 }

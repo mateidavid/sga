@@ -1,5 +1,6 @@
 #include <iostream>
 #include <boost/intrusive/list.hpp>
+#include <typeinfo>
 
 #include "common.hpp"
 #include "factory.hpp"
@@ -19,12 +20,12 @@ struct A
     ptr_type _prev;
     ptr_type _next;
 
-    A() { cerr << "constructing A at: " << (void*) this << '\n'; }
+    A() { clog << "constructing A at: " << (void*) this << '\n'; }
 
     A* operator -> () { return this; }
     const A* operator -> () const { return this; }
 
-    A& operator ++ () { ++_r_start; return *this; }
+    //A& operator ++ () { ++_r_start; return *this; }
 };
 
 ostream& operator <<(ostream& os, const A& rhs)
@@ -54,7 +55,7 @@ struct Value_Traits
     typedef Node_Traits< T > node_traits;
     typedef typename node_traits::node_ptr node_ptr;
     typedef typename node_traits::const_node_ptr const_node_ptr;
-    typedef A value_type;
+    typedef T value_type;
     typedef node_ptr pointer;
     typedef const_node_ptr const_pointer;
     typedef typename node_traits::fact_type::ref_type reference;
@@ -76,73 +77,98 @@ typedef fact_type::const_ref_type const_ref_type;
 
 typedef boost::intrusive::list< A, boost::intrusive::value_traits< Value_Traits < A > > > ilist_type;
 
+
 int main()
 {
-    /*
-    Factory_Wrapper<int> w;
-    int& i = w._key;
-    */
+    clog << "--- type sizes:\n";
+    clog << "sizeof(val_type)=" << sizeof(fact_type::val_type) << '\n';
+    clog << "sizeof(ptr_type)=" << sizeof(ptr_type) << '\n';
+    clog << "sizeof(wrapper_type)=" << sizeof(factory::detail::Factory_Wrapper< fact_type::val_type >) << '\n';
 
-    /*
-    typedef Factory< size_t > factory_type;
-    factory_type f;
-    factory_type::ptr_type::_factory_ptr = &f;
-    factory_type::ptr_type p1, p2, p3;
+    clog << "--- type names:"
+         << "\nA: " << typeid(A).name()
+         << "\nconst A: " << typeid(const A).name()
+         << "\nFactory< A >: " << typeid(factory::Factory< A >).name()
+         << "\nBounded_Pointer< A >: " << typeid(factory::Bounded_Pointer< A >).name()
+         << "\nBounded_Pointer< const A >: " << typeid(factory::Bounded_Pointer< const A >).name()
+         << "\nBounded_Reference< A >: " << typeid(factory::Bounded_Reference< A >).name()
+         << "\nBounded_Reference< const A >: " << typeid(factory::Bounded_Reference< const A >).name()
+         << "\nHolder< A >: " << typeid(factory::Holder< A >).name()
+         << "\nValue_Traits< A >: " << typeid(Value_Traits< A >).name()
+         << "\nNode_Traits< A >: " << typeid(Node_Traits< A >).name()
+         << "\nvoid: " << typeid(void).name()
+         << "\nconst void: " << typeid(const void).name()
+         << '\n';
 
-    clog << "sizeof(val_type)=" << sizeof(factory_type::val_type) << '\n';
-    clog << "sizeof(ptr_type)=" << sizeof(factory_type::ptr_type) << '\n';
-    clog << "sizeof(wrapper_type)=" << sizeof(factory_type::wrapper_type) << '\n';
-
-    p1 = f.new_elem();
-    *p1 = 17;
-    p2 = f.new_elem();
-    *p2 = 9;
-    p3 = f.new_elem();
-    *p3 = 24;
-    f.print();
-
-    f.del_elem(p2);
-    f.print();
-
-    p2 = f.new_elem();
-    *p2 = 15;
-    p3 = f.new_elem();
-    *p3 = 42;
-    f.print();
-    */
-
+    clog << "--- constructing factory\n";
     fact_type f(true);
+
+    clog << "--- constructing ilist\n";
     ilist_type l;
-    
-    ptr_type a;
 
-    a = f.new_elem();
-    a->_r_start = 5;
-    a->_c_start = 17;
-    l.push_back(*a);
+    size_t n = 4;
 
-    a = f.new_elem();
-    a->_r_start = 15;
-    a->_c_start = 23;
-    l.push_back(*a);
+    clog << "--- constructing vector of pointers\n";
+    vector< ptr_type > ptr_a(n);
 
-    a = f.new_elem();
-    a->_r_start = 8;
-    a->_c_start = 1;
-    l.push_front(*a);
+    clog << "--- allocating elements\n";
+    for (size_t i = 0; i < n; ++i)
+    {
+        clog << "--- allocating element at index " << i << '\n';
+        ptr_type& a = ptr_a[i];
+        a = f.new_elem();
+        a->_r_start = i;
+        a->_c_start = 50 + i;
+    }
 
-    cout << f;
+    clog << "--- inserting elements in list\n";
+    for (size_t i = 0; i < n; ++i)
+    {
+        clog << "--- inserting element at index " << i << '\n';
+        if (i < n / 2)
+        {
+            l.push_back(*ptr_a[i]);
+        }
+        else
+        {
+            l.push_front(*ptr_a[i]);
+        }
+    }
 
-    cout << "l: beg->end\n";
+    clog << "--- factory:\n" << f;
+
+    clog << "--- list:\n";
+    for (auto it = l.begin(); it != l.end(); ++it)
+    {
+        clog << "--- next element\n";
+        clog << *it << '\n';
+    }
+
+    clog << "--- removing even index elements from list\n";
+    for (size_t i = 0; i < n; ++i)
+    {
+        if (i % 2 > 0)
+        {
+            continue;
+        }
+        ilist_type::const_iterator it = l.iterator_to(*ptr_a[i]);
+        l.erase(it);
+    }
+
+    clog << "--- factory:\n" << f;
+    clog << "--- list:\n";
     for (auto it = l.begin(); it != l.end(); ++it)
     {
         clog << *it << '\n';
     }
-    cout << "l: rbeg->rend\n";
-    for (auto it = l.rbegin(); it != l.rend(); ++it)
+
+    clog << "--- deallocating elements\n";
+    for (size_t i = 0; i < n; ++i)
     {
-        clog << *it << '\n';
+        f.del_elem(ptr_a[i]);
     }
+
+    clog << "--- exiting\n";
 
     return 0;
 }

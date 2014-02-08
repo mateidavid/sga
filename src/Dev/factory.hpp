@@ -7,6 +7,7 @@
 #include <boost/intrusive/pointer_traits.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/utility/enable_if.hpp>
+#include <typeinfo>
 
 #include "common.hpp"
 
@@ -15,6 +16,12 @@ namespace factory
 {
     namespace detail
     {
+        template <class A, class B>
+        bool operator != (const A& lhs, const B& rhs)
+        {
+            return !(lhs == rhs);
+        }
+
         template <class T, class Base_Ptr>
         class Identifier;
         template <class T, class Base_Ptr>
@@ -154,6 +161,17 @@ namespace factory
             typedef typename Bounded_Pointer_Types< T, Base_Ptr >::idn_type idn_type;
         public:
             typedef typename Bounded_Pointer_Types< T, Base_Ptr >::unqual_val_type unqual_val_type;
+            // rebinder
+            template <class U>
+            struct rebind
+            {
+                //typedef Bounded_Pointer< U, Base_Ptr > type;
+                typedef typename boost::mpl::if_c<
+                    std::is_same< std::remove_const< U >, std::remove_const< T > >::value,
+                    Bounded_Pointer< U, Base_Ptr >,
+                    U*
+                    >::type type;
+            };
 
         public:
             Bounded_Pointer() {}
@@ -340,7 +358,7 @@ namespace factory
                     _cont.push_back(wrapper_type());
                     res._id._ptr = _cont.size() - 1;
                 }
-                std::clog << "allocating space for new element at: " << (void*)&_cont.at(res._id._ptr) << '\n';
+                std::clog << "allocating element at: " << (void*)&_cont.at(res._id._ptr) << '\n';
                 new (&_cont.at(res._id._ptr)) val_type(std::forward<Args>(args)...);
                 return res;
             }
@@ -348,6 +366,7 @@ namespace factory
             /** Delete element pointed at. */
             void del_elem(const_ptr_type elem_ptr)
             {
+                std::clog << "deallocating element at: " << (void*)&_cont.at(elem_ptr._id._ptr) << '\n';
                 _cont.at(elem_ptr._id._ptr)._next_free_idn = _next_free_idn;
                 _next_free_idn = elem_ptr._id;
             }
@@ -450,29 +469,47 @@ namespace boost { namespace intrusive
         typedef factory::Bounded_Pointer< T, Base_Ptr > pointer;
         typedef ptrdiff_t difference_type;
         typedef factory::Bounded_Reference< T, Base_Ptr > reference;
+
         template <class U>
         struct rebind_pointer
         {
-            typedef factory::Bounded_Pointer< U, Base_Ptr > type;
+            typedef typename factory::Bounded_Pointer< T, Base_Ptr >::template rebind<U>::type type;
         };
 
         template <class R>
-        static pointer pointer_to(R r) { return pointer(); }
-        static pointer pointer_to(reference r) { return &r; }
+        static pointer pointer_to(R r)
+        {
+            std::clog << "pointer_to specialization from [" << typeid(R).name() << "] to [Ptr<" << typeid(T).name() << ">]\n";
+            return pointer();
+        }
+
+        static pointer pointer_to(reference r)
+        {
+            std::clog << "pointer_to overload from [" << typeid(reference).name() << "] to [Ptr<" << typeid(T).name() << ">]\n";
+            return &r;
+        }
+        static pointer pointer_to(const factory::Holder< T, Base_Ptr >& r)
+        {
+            std::clog << "pointer_to overload from [" << typeid(const factory::Holder< T, Base_Ptr >&).name() << "] to [Ptr<" << typeid(T).name() << ">]\n";
+            return pointer(&r);
+        }
 
         template <class U>
         static pointer static_cast_from(const factory::Bounded_Pointer< U, Base_Ptr >& uptr)
         {
+            std::clog << "static cast from [Ptr<" << typeid(U).name() << ">] to [Ptr<" << typeid(T).name() << ">]\n";
             return pointer(uptr);
         }
         template <class U>
         static pointer const_cast_from(const factory::Bounded_Pointer< U, Base_Ptr >& uptr)
         {
+            std::clog << "const cast from [Ptr<" << typeid(U).name() << ">] to [Ptr<" << typeid(T).name() << ">]\n";
             return pointer(uptr);
         }
         template <class U>
         static pointer dynamic_cast_from(const factory::Bounded_Pointer< U, Base_Ptr >& uptr)
         {
+            std::clog << "dynamic cast from [Ptr<" << typeid(U).name() << ">] to [Ptr<" << typeid(T).name() << ">]\n";
             return pointer(uptr);
         }
     };
