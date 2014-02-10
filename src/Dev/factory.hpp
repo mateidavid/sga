@@ -86,96 +86,25 @@ namespace factory
             return lhs._ptr == rhs._ptr;
         }
 
-        template <class T, class Base_Ptr>
-        struct Bounded_Pointer_Types
+        template <class T, class Base_Ptr = uint32_t>
+        class Bounded_Pointer
         {
-        private:
-            struct enabler {};
         public:
             typedef T val_type;
             typedef Base_Ptr base_ptr_type;
+            typedef val_type* real_ptr_type;
             typedef typename std::remove_const< val_type >::type unqual_val_type;
         protected:
             typedef Identifier< unqual_val_type, Base_Ptr > idn_type;
             static const bool is_void = idn_type::is_void;
         public:
             typedef typename idn_type::fact_type fact_type;
-            typedef val_type* real_ptr_type;
             typedef typename boost::mpl::if_c< not is_void, Bounded_Reference< val_type, Base_Ptr >, void >::type ref_type;
-        };
 
-        template <class T, class Base_Ptr>
-        struct Bounded_Pointer_Base : public Bounded_Pointer_Types< T, Base_Ptr >
-        {
-        protected:
-            typedef typename Bounded_Pointer_Types< T, Base_Ptr >::idn_type idn_type;
-        public:
-            typedef typename Bounded_Pointer_Types< T, Base_Ptr >::val_type val_type;
-            typedef typename Bounded_Pointer_Types< T, Base_Ptr >::unqual_val_type unqual_val_type;
-            typedef typename Bounded_Pointer_Types< T, Base_Ptr >::ref_type ref_type;
-            typedef typename Bounded_Pointer_Types< T, Base_Ptr >::real_ptr_type real_ptr_type;
-        public:
-            Bounded_Pointer_Base() {}
-            Bounded_Pointer_Base(const Bounded_Pointer_Base& rhs) : _id(rhs._id) {}
-            ref_type operator * () const { return ref_type(_id); }
-            real_ptr_type operator -> () const { return &_id.dereference(); }
-
-            operator typename boost::mpl::if_c<
-                std::is_same< val_type, unqual_val_type >::value,
-                void*,
-                const void* >::type () const
-            { return &_id.dereference(); }
-
-        protected:
-            friend class Bounded_Reference< T, Base_Ptr >;
-            friend class Factory< unqual_val_type, Base_Ptr >;
-            Bounded_Pointer_Base(const idn_type& id) : _id(id) {}
-            idn_type _id;
-        };
-
-        /*
-        template <class Base_Ptr>
-        struct Bounded_Pointer_Base< void, Base_Ptr > : public Bounded_Pointer_Types< void, Base_Ptr >
-        {
-        protected:
-            typedef typename Bounded_Pointer_Types< void, Base_Ptr >::idn_type idn_type;
-        public:
-            Bounded_Pointer_Base() {}
-            Bounded_Pointer_Base(const Bounded_Pointer_Base& rhs) : _id(rhs._id) {}
-       protected:
-            Bounded_Pointer_Base(const idn_type& id) : _id(id) {}
-            idn_type _id;
-        };
-
-        template <class Base_Ptr>
-        struct Bounded_Pointer_Base< const void, Base_Ptr > : public Bounded_Pointer_Types< const void, Base_Ptr >
-        {
-        protected:
-            typedef typename Bounded_Pointer_Types< const void, Base_Ptr >::idn_type idn_type;
-        public:
-            Bounded_Pointer_Base() {}
-            Bounded_Pointer_Base(const Bounded_Pointer_Base& rhs) : _id(rhs._id) {}
-        protected:
-            Bounded_Pointer_Base(const idn_type& id) : _id(id) {}
-            idn_type _id;
-        };
-        */
-
-        template <class T, class Base_Ptr = uint32_t>
-        class Bounded_Pointer : public Bounded_Pointer_Base< T, Base_Ptr >
-        {
-        public:
-            typedef T val_type;
-            typedef Base_Ptr base_ptr_type;
-        protected:
-            typedef typename Bounded_Pointer_Types< T, Base_Ptr >::idn_type idn_type;
-        public:
-            typedef typename Bounded_Pointer_Types< T, Base_Ptr >::unqual_val_type unqual_val_type;
             // rebinder
             template <class U>
             struct rebind
             {
-                //typedef Bounded_Pointer< U, Base_Ptr > type;
                 typedef typename boost::mpl::if_c<
                     std::is_same< std::remove_const< U >, std::remove_const< T > >::value,
                     Bounded_Pointer< U, Base_Ptr >,
@@ -185,7 +114,7 @@ namespace factory
 
         public:
             Bounded_Pointer() {}
-            Bounded_Pointer(const Bounded_Pointer& rhs) : Bounded_Pointer_Base< T, Base_Ptr >(rhs) {}
+            Bounded_Pointer(const Bounded_Pointer& rhs) : _id(rhs._id) {}
             //explicit Bounded_Pointer(int zero) : _id() { ASSERT(zero == 0); }
 
             // implicit conversion to const
@@ -194,37 +123,39 @@ namespace factory
             operator const Bounded_Pointer< const unqual_val_type, Base_Ptr >& () const
             { return *reinterpret_cast<const Bounded_Pointer< const unqual_val_type, Base_Ptr >* >(this); }
 
-            // explicit conversion to anything else
-            template <class U>
-            explicit operator Bounded_Pointer< U, Base_Ptr >& ()
-            { return *reinterpret_cast<Bounded_Pointer< U, Base_Ptr >*>(this); }
-            template <class U>
-            explicit operator const Bounded_Pointer< U, Base_Ptr >& () const
-            { return *reinterpret_cast<const Bounded_Pointer< U, Base_Ptr >*>(this); }
+            // unconst
+            explicit operator Bounded_Pointer< unqual_val_type, Base_Ptr >& ()
+            { return *reinterpret_cast<Bounded_Pointer< unqual_val_type, Base_Ptr >*>(this); }
+            explicit operator const Bounded_Pointer< unqual_val_type, Base_Ptr >& () const
+            { return *reinterpret_cast<const Bounded_Pointer< unqual_val_type, Base_Ptr >*>(this); }
 
-            /*
-            // implicit conversion to any const
-            template <class U>
-            operator Bounded_Pointer< const U, Base_Ptr >& ()
-            { return *reinterpret_cast<Bounded_Pointer< const U, Base_Ptr >*>(this); }
-            template <class U>
-            operator const Bounded_Pointer< const U, Base_Ptr >& () const
-            { return *reinterpret_cast<const Bounded_Pointer< const U, Base_Ptr >*>(this); }
-            */
+            // conversion to void*
+            operator typename boost::mpl::if_c<
+                std::is_same< val_type, unqual_val_type >::value,
+                void*,
+                const void* >::type () const
+            { return &_id.dereference(); }
 
             operator bool() const { return this->_id; }
             Bounded_Pointer& operator ++ () { ++(this->_id)._ptr; return *this; }
             Bounded_Pointer operator ++ (int) { Bounded_Pointer res(*this); ++(*this); return res; }
 
+            // dereferencing operators
+            ref_type operator * () const { return ref_type(_id); }
+            real_ptr_type operator -> () const { return &_id.dereference(); }
+
         private:
-            template <class U, class Other_Base_Ptr>
-            friend class Bounded_Reference;
+            friend class Bounded_Reference< val_type, Base_Ptr >;
+            friend class Factory< unqual_val_type, Base_Ptr >;
+
             template <class LHS_T, class RHS_T, class Other_Base_Ptr>
             friend bool operator == (const Bounded_Pointer< LHS_T, Other_Base_Ptr >&,
                                      const Bounded_Pointer< RHS_T, Other_Base_Ptr >&);
             friend std::ostream& operator << <>(std::ostream&, const Bounded_Pointer&);
 
-            Bounded_Pointer(const Bounded_Pointer_Base< T, Base_Ptr >& rhs) : Bounded_Pointer_Base< T, Base_Ptr >(rhs) {}
+            Bounded_Pointer(const idn_type& id) : _id(id) {}
+
+            idn_type _id;
         };
 
         template <class LHS_T, class RHS_T, class Other_Base_Ptr>
@@ -262,12 +193,16 @@ namespace factory
             // automatic conversion to const
             operator Bounded_Reference< const unqual_val_type, Base_Ptr >& ()
             { return *reinterpret_cast< Bounded_Reference< const unqual_val_type, Base_Ptr >* >(this); }
-            // explicit conversion to anything else
-            template <class U>
-            explicit operator Bounded_Reference< U, Base_Ptr >& ()
-            { return *reinterpret_cast< Bounded_Reference< U, Base_Ptr >* >(this); }
+            operator const Bounded_Reference< const unqual_val_type, Base_Ptr >& () const
+            { return *reinterpret_cast< const Bounded_Reference< const unqual_val_type, Base_Ptr >* >(this); }
 
-            ptr_type operator & () const { return ptr_type(Bounded_Pointer_Base< T, Base_Ptr >(_id)); }
+            // explicit unconst
+            explicit operator Bounded_Reference< unqual_val_type, Base_Ptr >& ()
+            { return *reinterpret_cast< Bounded_Reference< unqual_val_type, Base_Ptr >* >(this); }
+            explicit operator const Bounded_Reference< unqual_val_type, Base_Ptr >& () const
+            { return *reinterpret_cast< const Bounded_Reference< unqual_val_type, Base_Ptr >* >(this); }
+
+            ptr_type operator & () const { return ptr_type(_id); }
 
             operator real_ref_type () const { return _id.dereference(); }
 
@@ -284,7 +219,7 @@ namespace factory
             { _id.dereference() = rhs._id.dereference(); return *this; }
 
         private:
-            friend struct Bounded_Pointer_Base< T, Base_Ptr >;
+            friend class Bounded_Pointer< T, Base_Ptr >;
             friend std::ostream& operator << <>(std::ostream&, const Bounded_Reference&);
 
             Bounded_Reference(const idn_type& id) : _id(id) {}
@@ -488,41 +423,27 @@ namespace boost { namespace intrusive
             typedef typename factory::Bounded_Pointer< T, Base_Ptr >::template rebind<U>::type type;
         };
 
-        template <class R>
-        static pointer pointer_to(R r)
-        {
-            std::clog << "pointer_to specialization from [" << typeid(R).name() << "] to [Ptr<" << typeid(T).name() << ">]\n";
-            return pointer();
-        }
-
         static pointer pointer_to(reference r)
         {
-            std::clog << "pointer_to overload from [" << typeid(reference).name() << "] to [Ptr<" << typeid(T).name() << ">]\n";
+            std::clog << "pointer_to from [" << typeid(reference).name()
+                      << "] to [Ptr<" << typeid(T).name() << ">]\n";
             return &r;
         }
         static pointer pointer_to(const factory::Holder< T, Base_Ptr >& r)
         {
-            std::clog << "pointer_to overload from [" << typeid(const factory::Holder< T, Base_Ptr >&).name() << "] to [Ptr<" << typeid(T).name() << ">]\n";
+            std::clog << "pointer_to from ["
+                      << typeid(const factory::Holder< T, Base_Ptr >&).name()
+                      << "] to [Ptr<" << typeid(T).name() << ">]\n";
             return pointer(&r);
         }
 
-        template <class U>
-        static pointer static_cast_from(const factory::Bounded_Pointer< U, Base_Ptr >& uptr)
+        static pointer const_cast_from(
+            const factory::Bounded_Pointer<
+                const typename factory::Bounded_Pointer< T, Base_Ptr >::unqual_val_type,
+                Base_Ptr >& cptr)
         {
-            std::clog << "static cast from [Ptr<" << typeid(U).name() << ">] to [Ptr<" << typeid(T).name() << ">]\n";
-            return pointer(uptr);
-        }
-        template <class U>
-        static pointer const_cast_from(const factory::Bounded_Pointer< U, Base_Ptr >& uptr)
-        {
-            std::clog << "const cast from [Ptr<" << typeid(U).name() << ">] to [Ptr<" << typeid(T).name() << ">]\n";
-            return pointer(uptr);
-        }
-        template <class U>
-        static pointer dynamic_cast_from(const factory::Bounded_Pointer< U, Base_Ptr >& uptr)
-        {
-            std::clog << "dynamic cast from [Ptr<" << typeid(U).name() << ">] to [Ptr<" << typeid(T).name() << ">]\n";
-            return pointer(uptr);
+            std::clog << "const cast to [Ptr<" << typeid(T).name() << ">]\n";
+            return pointer(cptr);
         }
     };
 }}
