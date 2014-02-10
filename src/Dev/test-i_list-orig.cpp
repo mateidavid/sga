@@ -103,6 +103,15 @@ int main()
     clog << "--- constructing factory\n";
     fact_type f(true);
 
+    clog << "--- constructing a holder object\n";
+    factory::Holder< A > h;
+    A& a_ref = h;
+    clog << "&h._r_start = " << &(((A&)h)._r_start) << "\n";
+    clog << "&a_ref = " << &a_ref << "\n";
+    clog << "&a_ref._r_start = " << &a_ref._r_start<< "\n";
+    const void* vp = &h;
+    clog << "vp = " << vp << "\n";
+
     clog << "--- constructing ilist\n";
     ilist_type l;
 
