@@ -110,6 +110,7 @@ namespace factory
         protected:
             typedef typename Bounded_Pointer_Types< T, Base_Ptr >::idn_type idn_type;
         public:
+            typedef typename Bounded_Pointer_Types< T, Base_Ptr >::val_type val_type;
             typedef typename Bounded_Pointer_Types< T, Base_Ptr >::unqual_val_type unqual_val_type;
             typedef typename Bounded_Pointer_Types< T, Base_Ptr >::ref_type ref_type;
             typedef typename Bounded_Pointer_Types< T, Base_Ptr >::real_ptr_type real_ptr_type;
@@ -118,6 +119,13 @@ namespace factory
             Bounded_Pointer_Base(const Bounded_Pointer_Base& rhs) : _id(rhs._id) {}
             ref_type operator * () const { return ref_type(_id); }
             real_ptr_type operator -> () const { return &_id.dereference(); }
+
+            operator typename boost::mpl::if_c<
+                std::is_same< val_type, unqual_val_type >::value,
+                void*,
+                const void* >::type () const
+            { return &_id.dereference(); }
+
         protected:
             friend class Bounded_Reference< T, Base_Ptr >;
             friend class Factory< unqual_val_type, Base_Ptr >;
@@ -125,6 +133,7 @@ namespace factory
             idn_type _id;
         };
 
+        /*
         template <class Base_Ptr>
         struct Bounded_Pointer_Base< void, Base_Ptr > : public Bounded_Pointer_Types< void, Base_Ptr >
         {
@@ -150,6 +159,7 @@ namespace factory
             Bounded_Pointer_Base(const idn_type& id) : _id(id) {}
             idn_type _id;
         };
+        */
 
         template <class T, class Base_Ptr = uint32_t>
         class Bounded_Pointer : public Bounded_Pointer_Base< T, Base_Ptr >
@@ -184,6 +194,7 @@ namespace factory
             operator const Bounded_Pointer< const unqual_val_type, Base_Ptr >& () const
             { return *reinterpret_cast<const Bounded_Pointer< const unqual_val_type, Base_Ptr >* >(this); }
 
+            /*
             // explicit conversion to anything else
             template <class U>
             explicit operator Bounded_Pointer< U, Base_Ptr >& ()
@@ -199,6 +210,7 @@ namespace factory
             template <class U>
             operator const Bounded_Pointer< const U, Base_Ptr >& () const
             { return *reinterpret_cast<const Bounded_Pointer< const U, Base_Ptr >*>(this); }
+            */
 
             operator bool() const { return this->_id; }
             Bounded_Pointer& operator ++ () { ++(this->_id)._ptr; return *this; }
