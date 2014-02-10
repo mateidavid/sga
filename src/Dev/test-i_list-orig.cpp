@@ -1,5 +1,6 @@
 #include <iostream>
 #include <boost/intrusive/list.hpp>
+#include <boost/intrusive/pointer_traits.hpp>
 #include <typeinfo>
 
 #include "common.hpp"
@@ -78,6 +79,7 @@ typedef fact_type::ptr_type ptr_type;
 typedef fact_type::const_ptr_type const_ptr_type;
 typedef fact_type::ref_type ref_type;
 typedef fact_type::const_ref_type const_ref_type;
+typedef boost::intrusive::pointer_traits< ptr_type >::rebind_pointer< void >::type void_ptr_type;
 
 typedef boost::intrusive::list< A, boost::intrusive::value_traits< Value_Traits < A > > > ilist_type;
 
@@ -100,6 +102,7 @@ int main()
          << "\nHolder< A >: " << typeid(factory::Holder< A >).name()
          << "\nValue_Traits< A >: " << typeid(Value_Traits< A >).name()
          << "\nNode_Traits< A >: " << typeid(Node_Traits< A >).name()
+         << "\npointer_traits<ptr_type>::rebind_pointer<void>::type: " << typeid(void_ptr_type).name()
          << "\nvoid: " << typeid(void).name()
          << "\nconst void: " << typeid(const void).name()
          << '\n';
