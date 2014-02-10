@@ -101,12 +101,18 @@ namespace factory
             typedef typename idn_type::fact_type fact_type;
             typedef typename boost::mpl::if_c< not is_void, Bounded_Reference< val_type, Base_Ptr >, void >::type ref_type;
 
-            // rebinder
+            /** Rebinder.
+             * Wrap pointers to T, const T, void, and const void. Anything else gets transformed into a raw pointer.
+             */
             template <class U>
             struct rebind
             {
                 typedef typename boost::mpl::if_c<
-                    std::is_same< std::remove_const< U >, std::remove_const< T > >::value,
+                    std::is_same< std::remove_const< U >, std::remove_const< T > >::value
+#ifdef WRAP_VOID
+                    or std::is_void< U >::value
+#endif
+                    ,
                     Bounded_Pointer< U, Base_Ptr >,
                     U*
                     >::type type;
@@ -123,11 +129,13 @@ namespace factory
             operator const Bounded_Pointer< const unqual_val_type, Base_Ptr >& () const
             { return *reinterpret_cast<const Bounded_Pointer< const unqual_val_type, Base_Ptr >* >(this); }
 
-            // unconst
-            explicit operator Bounded_Pointer< unqual_val_type, Base_Ptr >& ()
-            { return *reinterpret_cast<Bounded_Pointer< unqual_val_type, Base_Ptr >*>(this); }
-            explicit operator const Bounded_Pointer< unqual_val_type, Base_Ptr >& () const
-            { return *reinterpret_cast<const Bounded_Pointer< unqual_val_type, Base_Ptr >*>(this); }
+            // explicit conversion to anything else
+            template <class U>
+            explicit operator Bounded_Pointer< U, Base_Ptr >& ()
+            { return *reinterpret_cast<Bounded_Pointer< U, Base_Ptr >*>(this); }
+            template <class U>
+            explicit operator const Bounded_Pointer< U, Base_Ptr >& () const
+            { return *reinterpret_cast<const Bounded_Pointer< U, Base_Ptr >*>(this); }
 
             // conversion to void*
             operator typename boost::mpl::if_c<
