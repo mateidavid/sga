@@ -16,14 +16,14 @@ namespace factory
 {
     namespace detail
     {
-        template <class A, class B>
-        bool operator != (const A& lhs, const B& rhs)
+        template <class LHS_T, class RHS_T>
+        bool operator != (const LHS_T& lhs, const RHS_T& rhs)
         {
             return !(lhs == rhs);
         }
 
         template <class T, class Base_Ptr>
-        class Identifier;
+        struct Identifier;
         template <class T, class Base_Ptr>
         class Bounded_Pointer;
         template <class T, class Base_Ptr>
@@ -272,7 +272,7 @@ namespace factory
             { _id.dereference() = rhs._id.dereference(); return *this; }
 
         private:
-            friend class Bounded_Pointer_Base< T, Base_Ptr >;
+            friend struct Bounded_Pointer_Base< T, Base_Ptr >;
             friend std::ostream& operator << <>(std::ostream&, const Bounded_Reference&);
 
             Bounded_Reference(const idn_type& id) : _id(id) {}
@@ -378,7 +378,7 @@ namespace factory
             static Factory* get_active_ptr() { return _active_ptr; }
 
         private:
-            friend class Identifier< T, Base_Ptr >;
+            friend struct Identifier< T, Base_Ptr >;
 
             static Factory* _active_ptr;
 
