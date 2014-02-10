@@ -26,11 +26,6 @@ struct B
     : _r_start(rhs._r_start), _c_start(rhs._c_start),
     _parent(rhs._parent), _l_child(rhs._l_child), _r_child(rhs._r_child), _col(rhs._col)
     {}
-
-    B* operator -> () { return this; }
-    const B* operator -> () const { return this; }
-
-    //B& operator ++ () { ++_r_start; return *this; }
 };
 
 bool operator < (const B& lhs, const B& rhs) { return lhs._r_start < rhs._r_start; }

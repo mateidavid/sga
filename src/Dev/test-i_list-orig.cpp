@@ -21,11 +21,6 @@ struct A
     ptr_type _next;
 
     A() { clog << "constructing A at: " << (void*) this << '\n'; }
-
-    A* operator -> () { return this; }
-    const A* operator -> () const { return this; }
-
-    //A& operator ++ () { ++_r_start; return *this; }
 };
 
 ostream& operator <<(ostream& os, const A& rhs)
@@ -111,6 +106,7 @@ int main()
     clog << "&a_ref._r_start = " << &a_ref._r_start<< "\n";
     const void* vp = &h;
     clog << "vp = " << vp << "\n";
+    ASSERT(vp == &a_ref);
 
     clog << "--- constructing ilist\n";
     ilist_type l;
