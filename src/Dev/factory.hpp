@@ -194,7 +194,6 @@ namespace factory
             operator const Bounded_Pointer< const unqual_val_type, Base_Ptr >& () const
             { return *reinterpret_cast<const Bounded_Pointer< const unqual_val_type, Base_Ptr >* >(this); }
 
-            /*
             // explicit conversion to anything else
             template <class U>
             explicit operator Bounded_Pointer< U, Base_Ptr >& ()
@@ -203,6 +202,7 @@ namespace factory
             explicit operator const Bounded_Pointer< U, Base_Ptr >& () const
             { return *reinterpret_cast<const Bounded_Pointer< U, Base_Ptr >*>(this); }
 
+            /*
             // implicit conversion to any const
             template <class U>
             operator Bounded_Pointer< const U, Base_Ptr >& ()
