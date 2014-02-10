@@ -76,13 +76,19 @@ struct Value_Traits
 
     static const boost::intrusive::link_mode_type link_mode = boost::intrusive::normal_link;
 
+#ifndef NONSTATIC_VALUE_TRAITS
     static node_ptr to_node_ptr (reference value) {  return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
     static pointer to_value_ptr(node_ptr n) { return n; }
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
-
-    //Value_Traits* operator -> () { return this; }
-    //const Value_Traits* operator -> () const { return this; }
+#else
+    node_ptr to_node_ptr (reference value) const { ASSERT(_val == 42); return &value; }
+    const_node_ptr to_node_ptr (const_reference value) const { ASSERT(_val == 42); return &value; }
+    pointer to_value_ptr(node_ptr n) const { ASSERT(_val == 42); return n; }
+    const_pointer to_value_ptr(const_node_ptr n) const { ASSERT(_val == 42); return n; }
+    Value_Traits(int val) : _val(val) {}
+    int _val;
+#endif
 };
 
 typedef factory::Factory< B > fact_type;
@@ -119,7 +125,13 @@ int main()
     fact_type f(true);
 
     clog << "--- constructing itree\n";
+#ifndef NONSTATIC_VALUE_TRAITS
+    clog << "using static value traits\n";
     itree_type l;
+#else
+    clog << "using non-static value traits\n";
+    itree_type l(std::less< B >(), Value_Traits< B >(42));
+#endif
 
     size_t n = 10;
 

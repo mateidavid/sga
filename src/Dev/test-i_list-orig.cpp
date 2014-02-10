@@ -58,10 +58,19 @@ struct Value_Traits
 
     static const boost::intrusive::link_mode_type link_mode = boost::intrusive::normal_link;
 
+#ifndef NONSTATIC_VALUE_TRAITS
     static node_ptr to_node_ptr (reference value) {  return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
     static pointer to_value_ptr(node_ptr n) { return n; }
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
+#else
+    node_ptr to_node_ptr (reference value) const { ASSERT(_val == 42); return &value; }
+    const_node_ptr to_node_ptr (const_reference value) const { ASSERT(_val == 42); return &value; }
+    pointer to_value_ptr(node_ptr n) const { ASSERT(_val == 42); return n; }
+    const_pointer to_value_ptr(const_node_ptr n) const { ASSERT(_val == 42); return n; }
+    Value_Traits(int val) : _val(val) {}
+    int _val;
+#endif
 };
 
 typedef factory::Factory< A > fact_type;
@@ -109,7 +118,13 @@ int main()
     ASSERT(vp == &a_ref);
 
     clog << "--- constructing ilist\n";
+#ifndef NONSTATIC_VALUE_TRAITS
+    clog << "using static value traits\n";
     ilist_type l;
+#else
+    clog << "using non-static value traits\n";
+    ilist_type l(Value_Traits< A >(42));
+#endif
 
     size_t n = 4;
 
