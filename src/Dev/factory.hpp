@@ -108,7 +108,7 @@ namespace factory
             struct rebind
             {
                 typedef typename boost::mpl::if_c<
-                    std::is_same< std::remove_const< U >, std::remove_const< T > >::value
+                    std::is_same< typename std::remove_const< U >::type, typename std::remove_const< T >::type >::value
 #ifdef WRAP_VOID
                     or std::is_void< U >::value
 #endif
