@@ -78,12 +78,10 @@ struct Node_Traits
         }
         node->_max_end = tmp;
     }
-    /*
-    static void copy_data(node_ptr dest, const node_ptr& src)
+    static void copy_data(node_ptr dest, const_node_ptr src)
     {
         dest->_max_end = src->_max_end;
     }
-    */
 };
 
 template <class T>
@@ -248,7 +246,7 @@ int main()
         ptr_type& a = ptr_a[i];
         a = f.new_elem();
         a->_start = i;
-        a->_end = i + 1 + (i % n);
+        a->_end = i + 1 + (i % 3);
     }
 
     clog << "----- inserting elements in tree\n";
@@ -290,6 +288,7 @@ int main()
     {
         clog << *it << '\n';
     }
+    print_tree(t);
 
     clog << "----- deallocating elements\n";
     for (size_t i = 0; i < n; ++i)
