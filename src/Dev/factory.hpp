@@ -359,9 +359,10 @@ namespace factory
             }
             os << "n_free=" << n_free << '\n'
                << "next_free=" << rhs._next_free_idn << '\n';
+            size_t idx = 0;
             for (auto it = rhs._cont.begin(); it != rhs._cont.end(); ++it)
             {
-                os << "[key=" << it->_key
+                os << idx++ << ": [key=" << it->_key
                    << ",next_free_idn=" << it->_next_free_idn << "]\n";
             }
             return os;
