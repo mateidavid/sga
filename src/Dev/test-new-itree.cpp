@@ -10,7 +10,7 @@ using namespace std;
 
 struct B
 {
-    typedef factory::Factory< B > fact_type;
+    typedef Factory< B > fact_type;
     typedef fact_type::ptr_type ptr_type;
 
     size_t _start;
@@ -38,8 +38,8 @@ ostream& operator <<(ostream& os, const B& rhs)
 template <class T>
 struct Node_Traits
 {
-    typedef factory::Holder< T > node;
-    typedef factory::Factory< T > fact_type;
+    typedef Holder< T > node;
+    typedef Factory< T > fact_type;
     typedef typename fact_type::ptr_type node_ptr;
     typedef typename fact_type::const_ptr_type const_node_ptr;
     typedef int color;
@@ -93,7 +93,7 @@ struct Value_Traits
 #endif
 };
 
-typedef factory::Factory< B > fact_type;
+typedef Factory< B > fact_type;
 typedef fact_type::ptr_type ptr_type;
 typedef fact_type::const_ptr_type const_ptr_type;
 typedef fact_type::ref_type ref_type;
@@ -172,17 +172,17 @@ int main()
     clog << "----- type sizes:\n";
     clog << "sizeof(val_type)=" << sizeof(fact_type::val_type) << '\n';
     clog << "sizeof(ptr_type)=" << sizeof(ptr_type) << '\n';
-    clog << "sizeof(wrapper_type)=" << sizeof(factory::detail::Factory_Wrapper< fact_type::val_type >) << '\n';
+    clog << "sizeof(wrapper_type)=" << sizeof(detail::Factory_Wrapper< fact_type::val_type >) << '\n';
 
     clog << "----- type names:"
          << "\nB: " << typeid(B).name()
          << "\nconst B: " << typeid(const B).name()
-         << "\nFactory< B >: " << typeid(factory::Factory< B >).name()
-         << "\nBounded_Pointer< B >: " << typeid(factory::Bounded_Pointer< B >).name()
-         << "\nBounded_Pointer< const B >: " << typeid(factory::Bounded_Pointer< const B >).name()
-         << "\nBounded_Reference< B >: " << typeid(factory::Bounded_Reference< B >).name()
-         << "\nBounded_Reference< const B >: " << typeid(factory::Bounded_Reference< const B >).name()
-         << "\nHolder< B >: " << typeid(factory::Holder< B >).name()
+         << "\nFactory< B >: " << typeid(Factory< B >).name()
+         << "\nBounded_Pointer< B >: " << typeid(Bounded_Pointer< B >).name()
+         << "\nBounded_Pointer< const B >: " << typeid(Bounded_Pointer< const B >).name()
+         << "\nBounded_Reference< B >: " << typeid(Bounded_Reference< B >).name()
+         << "\nBounded_Reference< const B >: " << typeid(Bounded_Reference< const B >).name()
+         << "\nHolder< B >: " << typeid(Holder< B >).name()
          << "\nValue_Traits< B >: " << typeid(Value_Traits< B >).name()
          << "\nNode_Traits< B >: " << typeid(Node_Traits< B >).name()
          << "\nvoid: " << typeid(void).name()

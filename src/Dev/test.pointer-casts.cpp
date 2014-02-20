@@ -23,14 +23,14 @@ typedef const B* cb_ptr_type;
 struct A {};
 //struct B {};
 typedef void B;
-typedef factory::Holder< A > A_holder;
-//typedef factory::Holder< B > B_holder;
-typedef factory::Bounded_Pointer< A > a_ptr_type;
-typedef factory::Bounded_Pointer< const A > ca_ptr_type;
-typedef factory::Bounded_Pointer< B > b_ptr_type;
-typedef factory::Bounded_Pointer< const B > cb_ptr_type;
-factory::Factory< A > A_fact(true);
-//factory::Factory< B > B_fact(true);
+typedef Holder< A > A_holder;
+//typedef Holder< B > B_holder;
+typedef Bounded_Pointer< A > a_ptr_type;
+typedef Bounded_Pointer< const A > ca_ptr_type;
+typedef Bounded_Pointer< B > b_ptr_type;
+typedef Bounded_Pointer< const B > cb_ptr_type;
+Factory< A > A_fact(true);
+//Factory< B > B_fact(true);
 #define EQ_0
 #endif
 
