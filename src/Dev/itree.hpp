@@ -2,8 +2,13 @@
 #define __ITREE_HPP
 
 #include <boost/intrusive/set.hpp>
+#include "itree_algorithms.hpp"
 
 
+namespace boost
+{
+namespace intrusive
+{
 namespace detail
 {
 
@@ -91,7 +96,7 @@ struct has_mem_get_end_wrap
     template <typename T, typename T::key_type (*)(typename T::const_pointer) = &T::get_end> struct get {};
 };
 
-using boost::intrusive::detail::has_member;
+//using boost::intrusive::detail::has_member;
 
 /** Node Traits adaptor for Interval Tree.
  *
@@ -204,29 +209,52 @@ struct ITree_Compare
     }
 };
 
+}
 
 template <typename Value_Traits>
 class itree
-  : public boost::intrusive::multiset<
+  : public multiset<
         typename Value_Traits::value_type,
-        boost::intrusive::compare< ITree_Compare< Value_Traits > >,
-        boost::intrusive::value_traits< ITree_Value_Traits< Value_Traits > >
+        compare< detail::ITree_Compare< Value_Traits > >,
+        value_traits< detail::ITree_Value_Traits< Value_Traits > >
     >
 {
 public:
-    typedef boost::intrusive::multiset<
+    typedef multiset<
         typename Value_Traits::value_type,
-        boost::intrusive::compare< ITree_Compare< Value_Traits > >,
-        boost::intrusive::value_traits< ITree_Value_Traits< Value_Traits > >
+        compare< detail::ITree_Compare< Value_Traits > >,
+        value_traits< detail::ITree_Value_Traits< Value_Traits > >
     > Base;
+    typedef itree_algorithms< Value_Traits > itree_algo;
+    typedef typename Value_Traits::node_traits Node_Traits;
+    typedef typename Value_Traits::key_type key_type;
+    typedef typename Value_Traits::pointer pointer;
+    typedef typename Value_Traits::const_pointer const_pointer;
+    typedef typename Value_Traits::node_ptr node_ptr;
+    typedef typename Value_Traits::const_node_ptr const_node_ptr;
 
     // inherit multiset constructors
     using Base::Base;
+
+    std::vector< const_pointer > interval_intersect(const key_type& int_start, const key_type& int_end)
+    {
+        std::vector< const_pointer > res;
+        const_node_ptr header = this->header_ptr();
+        if (not Node_Traits::get_parent(header))
+        {
+            return res;
+        }
+        const_node_ptr crt = itree_algo::get_next_interval(int_start, int_end, Node_Traits::get_parent(header), 0);
+        while (crt != header)
+        {
+            res.push_back(Value_Traits::to_value_ptr(crt));
+            crt = itree_algo::get_next_interval(int_start, int_end, crt, 2);
+        }
+        return res;
+    }
 };
 
 }
-
-using detail::itree;
-
+}
 
 #endif
