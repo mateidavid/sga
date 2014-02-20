@@ -91,6 +91,7 @@ struct has_mem_get_end_wrap
     template <typename T, typename T::key_type (*)(typename T::const_pointer) = &T::get_end> struct get {};
 };
 
+using boost::intrusive::detail::has_member;
 
 /** Node Traits adaptor for Interval Tree.
  *
@@ -102,47 +103,59 @@ struct ITree_Node_Traits : public Value_Traits::node_traits
 {
 private:
     typedef typename Value_Traits::node_traits Base;
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_get_parent>::value, "Node Traits missing get_parent()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_set_parent>::value, "Node Traits missing set_parent()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_get_left>::value, "Node Traits missing get_left()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_set_left>::value, "Node Traits missing set_left()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_get_right>::value, "Node Traits missing get_right()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_set_right>::value, "Node Traits missing set_right()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_get_color>::value, "Node Traits missing get_color()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_set_color>::value, "Node Traits missing set_color()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_black>::value, "Node Traits missing black()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_red>::value, "Node Traits missing red()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_get_max_end>::value, "Node Traits missing get_max_end()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_set_max_end>::value, "Node Traits missing set_max_end()");
+    static_assert(has_member<Base, has_mem_get_parent>::value, "Node Traits missing get_parent()");
+    static_assert(has_member<Base, has_mem_set_parent>::value, "Node Traits missing set_parent()");
+    static_assert(has_member<Base, has_mem_get_left>::value, "Node Traits missing get_left()");
+    static_assert(has_member<Base, has_mem_set_left>::value, "Node Traits missing set_left()");
+    static_assert(has_member<Base, has_mem_get_right>::value, "Node Traits missing get_right()");
+    static_assert(has_member<Base, has_mem_set_right>::value, "Node Traits missing set_right()");
+    static_assert(has_member<Base, has_mem_get_color>::value, "Node Traits missing get_color()");
+    static_assert(has_member<Base, has_mem_set_color>::value, "Node Traits missing set_color()");
+    static_assert(has_member<Base, has_mem_black>::value, "Node Traits missing black()");
+    static_assert(has_member<Base, has_mem_red>::value, "Node Traits missing red()");
+    static_assert(has_member<Base, has_mem_get_max_end>::value, "Node Traits missing get_max_end()");
+    static_assert(has_member<Base, has_mem_set_max_end>::value, "Node Traits missing set_max_end()");
 public:
     typedef ITree_Node_Traits node_traits;
-    typedef typename Base::node node;
-    typedef typename Base::node_ptr node_ptr;
-    typedef typename Base::const_node_ptr const_node_ptr;
-    typedef typename Base::color color;
-    typedef typename Base::key_type key_type;
+    using typename Base::node;
+    using typename Base::node_ptr;
+    using typename Base::const_node_ptr;
+    using typename Base::color;
+    using typename Base::key_type;
+    using Base::get_parent;
+    using Base::set_parent;
+    using Base::get_left;
+    using Base::set_left;
+    using Base::get_right;
+    using Base::set_right;
+    using Base::get_color;
+    using Base::set_color;
+    using Base::black;
+    using Base::red;
+    using Base::get_max_end;
+    using Base::set_max_end;
 
     static void init_data(node_ptr n)
     {
-        Base::set_max_end(n, Value_Traits::get_end(Value_Traits::to_value_ptr(n)));
+        set_max_end(n, Value_Traits::get_end(Value_Traits::to_value_ptr(n)));
     }
     static void recompute_data(node_ptr n)
     {
         init_data(n);
-        key_type tmp = Base::get_max_end(n);
-        if (Base::get_left(n))
+        key_type tmp = get_max_end(n);
+        if (get_left(n))
         {
-            tmp = std::max(tmp, Base::get_max_end(Base::get_left(n)));
+            tmp = std::max(tmp, get_max_end(get_left(n)));
         }
-        if (Base::get_right(n))
+        if (get_right(n))
         {
-            tmp = std::max(tmp, Base::get_max_end(Base::get_right(n)));
+            tmp = std::max(tmp, get_max_end(get_right(n)));
         }
-        Base::set_max_end(n, tmp);
+        set_max_end(n, tmp);
     }
     static void copy_data(node_ptr dest, const_node_ptr src)
     {
-        Base::set_max_end(dest, Base::get_max_end(src));
+        set_max_end(dest, get_max_end(src));
     }
 };
 
@@ -155,23 +168,27 @@ struct ITree_Value_Traits : public Value_Traits
 {
 private:
     typedef Value_Traits Base;
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_to_node_ptr>::value, "Node Traits missing to_node_ptr()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_to_node_ptr_const>::value, "Node Traits missing to_node_ptr() const");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_to_value_ptr>::value, "Node Traits missing to_value_ptr()");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_to_value_ptr_const>::value, "Node Traits missing to_value_ptr() const");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_get_start_raw>::value, "Node Traits missing get_start() raw");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_get_start_wrap>::value, "Node Traits missing get_start() wrap");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_get_end_raw>::value, "Node Traits missing get_end() raw");
-    static_assert(boost::intrusive::detail::has_member<Base, has_mem_get_end_wrap>::value, "Node Traits missing get_end() wrap");
+    static_assert(has_member<Base, has_mem_to_node_ptr>::value, "Node Traits missing to_node_ptr()");
+    static_assert(has_member<Base, has_mem_to_node_ptr_const>::value, "Node Traits missing to_node_ptr() const");
+    static_assert(has_member<Base, has_mem_to_value_ptr>::value, "Node Traits missing to_value_ptr()");
+    static_assert(has_member<Base, has_mem_to_value_ptr_const>::value, "Node Traits missing to_value_ptr() const");
+    static_assert(has_member<Base, has_mem_get_start_raw>::value, "Node Traits missing get_start() raw");
+    static_assert(has_member<Base, has_mem_get_start_wrap>::value, "Node Traits missing get_start() wrap");
+    static_assert(has_member<Base, has_mem_get_end_raw>::value, "Node Traits missing get_end() raw");
+    static_assert(has_member<Base, has_mem_get_end_wrap>::value, "Node Traits missing get_end() wrap");
 public:
     typedef ITree_Node_Traits< Value_Traits > node_traits;
-    typedef typename Base::value_type value_type;
-    typedef typename Base::node_ptr node_ptr;
-    typedef typename Base::const_node_ptr const_node_ptr;
-    typedef typename Base::pointer pointer;
-    typedef typename Base::const_pointer const_pointer;
-    typedef typename Base::reference reference;
-    typedef typename Base::const_reference const_reference;
+    using typename Base::value_type;
+    using typename Base::node_ptr;
+    using typename Base::const_node_ptr;
+    using typename Base::pointer;
+    using typename Base::const_pointer;
+    using typename Base::reference;
+    using typename Base::const_reference;
+    using Base::to_node_ptr;
+    using Base::to_value_ptr;
+    using Base::get_start;
+    using Base::get_end;
 };
 
 /** Comparator for Interval Tree.
@@ -180,37 +197,36 @@ public:
 template <typename Value_Traits>
 struct ITree_Compare
 {
-    bool operator () (const typename Value_Traits::value_type& lhs, const typename Value_Traits::value_type& rhs) const
+    typedef typename Value_Traits::value_type value_type;
+    bool operator () (const value_type& lhs, const value_type& rhs) const
     {
         return Value_Traits::get_start(&lhs) < Value_Traits::get_start(&rhs);
     }
 };
-
-}
 
 
 template <typename Value_Traits>
 class itree
   : public boost::intrusive::multiset<
         typename Value_Traits::value_type,
-        boost::intrusive::compare< detail::ITree_Compare< Value_Traits > >,
-        boost::intrusive::value_traits< detail::ITree_Value_Traits< Value_Traits > >
+        boost::intrusive::compare< ITree_Compare< Value_Traits > >,
+        boost::intrusive::value_traits< ITree_Value_Traits< Value_Traits > >
     >
 {
 public:
     typedef boost::intrusive::multiset<
         typename Value_Traits::value_type,
-        boost::intrusive::compare<
-            detail::ITree_Compare< Value_Traits >
-        >,
-        boost::intrusive::value_traits<
-            detail::ITree_Value_Traits< Value_Traits >
-        >
+        boost::intrusive::compare< ITree_Compare< Value_Traits > >,
+        boost::intrusive::value_traits< ITree_Value_Traits< Value_Traits > >
     > Base;
 
-    template <typename... Args>
-    itree(Args&&... args) : Base(std::forward<Args>(args)...) {}
+    // inherit multiset constructors
+    using Base::Base;
 };
+
+}
+
+using detail::itree;
 
 
 #endif
