@@ -306,7 +306,7 @@ namespace detail
                 _cont.push_back(wrapper_type());
                 res._id._ptr = _cont.size() - 1;
             }
-            std::clog << "allocating element at: " << (void*)&_cont.at(res._id._ptr) << '\n';
+            //std::clog << "allocating element at: " << (void*)&_cont.at(res._id._ptr) << '\n';
             new (&_cont.at(res._id._ptr)) val_type(std::forward<Args>(args)...);
             return res;
         }
@@ -314,9 +314,23 @@ namespace detail
         /** Delete element pointed at. */
         void del_elem(const_ptr_type elem_ptr)
         {
-            std::clog << "deallocating element at: " << (void*)&_cont.at(elem_ptr._id._ptr) << '\n';
+            //std::clog << "deallocating element at: " << (void*)&_cont.at(elem_ptr._id._ptr) << '\n';
             _cont.at(elem_ptr._id._ptr)._next_free_idn = _next_free_idn;
             _next_free_idn = elem_ptr._id;
+        }
+
+        /** Get currently allocated size. */
+        size_t size() const { return _cont.size(); }
+
+        /** Get number of unused entries. */
+        size_t unused() const
+        {
+            size_t res = 0;
+            for (auto crt = _next_free_idn; crt; crt = dereference(crt)._next_free_idn)
+            {
+                ++res;
+            }
+            return res;
         }
 
         /** Use this object to resolve all managed pointers. */
@@ -427,24 +441,28 @@ struct pointer_traits< Bounded_Pointer< T, Base_Ptr > >
 
     static pointer pointer_to(reference r)
     {
+        /*
         std::clog << "pointer_to from [" << typeid(reference).name()
                   << "] to [Ptr<" << typeid(T).name() << ">]\n";
+        */
         return &r;
     }
-    static pointer pointer_to(const Holder< T, Base_Ptr >& r)
+    /*
+    static pointer pointer_toooo(const Holder< T, Base_Ptr >& r)
     {
         std::clog << "pointer_to from ["
                   << typeid(const Holder< T, Base_Ptr >&).name()
                   << "] to [Ptr<" << typeid(T).name() << ">]\n";
         return pointer(&r);
     }
+    */
 
     static pointer const_cast_from(
         const Bounded_Pointer<
         const typename Bounded_Pointer< T, Base_Ptr >::unqual_val_type,
         Base_Ptr >& cptr)
     {
-        std::clog << "const cast to [Ptr<" << typeid(T).name() << ">]\n";
+        //std::clog << "const cast to [Ptr<" << typeid(T).name() << ">]\n";
         return pointer(cptr);
     }
 };
