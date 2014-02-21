@@ -99,8 +99,8 @@ typedef fact_type::const_ptr_type const_ptr_type;
 typedef fact_type::ref_type ref_type;
 typedef fact_type::const_ref_type const_ref_type;
 
-typedef itree< Value_Traits< B > > iitree_type;
-typedef boost::intrusive::bstree_algorithms< detail::ITree_Node_Traits< Value_Traits< B > > > bstree_algorithms;
+typedef boost::intrusive::itree< Value_Traits< B > > iitree_type;
+typedef boost::intrusive::bstree_algorithms< boost::intrusive::detail::ITree_Node_Traits< Value_Traits< B > > > bstree_algorithms;
 
 ptr_type get_root(iitree_type& t)
 {
@@ -241,14 +241,11 @@ int main()
 
     clog << "----- factory:\n" << f;
     clog << "----- tree:\n";
-    auto it = t.begin();
-    auto it_end = t.end();
-    while (it != it_end)
+    for (const auto& v : t)
     {
-        clog << "--- next element\n";
-        clog << *it << '\n';
-        ++it;
+        clog << v << '\n';
     }
+    print_tree(t);
 
     clog << "----- removing even index elements from tree\n";
     for (size_t i = 0; i < n; ++i)
@@ -264,11 +261,22 @@ int main()
 
     clog << "----- factory:\n" << f;
     clog << "----- tree:\n";
-    for (it = t.begin(); it != t.end(); ++it)
+    for (const auto& v : t)
     {
-        clog << *it << '\n';
+        clog << v << '\n';
     }
     print_tree(t);
+
+    clog << "----- intresections:\n";
+    for (const auto& v : t)
+    {
+        clog << "--- interval: " << v << '\n';
+        vector< const_ptr_type > res = t.interval_intersect((&v)->_start, (&v)->_end);
+        for (const auto& p : res)
+        {
+            clog << *p << '\n';
+        }
+    }
 
     clog << "----- deallocating elements\n";
     for (size_t i = 0; i < n; ++i)
