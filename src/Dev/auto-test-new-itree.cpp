@@ -282,8 +282,30 @@ int main()
                 }
             }
             // next, count intersections using interval tree
-            size_t res_itree = t.interval_intersect(e1, e2).size();
-            if (res_list != res_itree)
+            auto tmp_v = t.interval_intersect(e1, e2);
+            size_t res_itree = tmp_v.size();
+            // count also using intersection_iterator
+            size_t res_iterator = 0;
+            auto it_crt = t.interval_intersect_begin(e1, e2);
+            auto it_end = t.interval_intersect_end();
+            while (it_crt != it_end)
+            {
+                if (&*it_crt != tmp_v[res_iterator])
+                {
+                    break;
+                }
+                clog << "[" << it_crt->_start << "," << it_crt->_end << "]\n";
+                ++it_crt;
+                ++res_iterator;
+            }
+            // count with iterator range
+            size_t res_iterator_range = 0;
+            for (const auto& r : t.interval_intersect_range(e1, e2))
+            {
+                (void)r;
+                ++res_iterator_range;
+            }
+            if (res_list != res_itree or res_list != res_iterator or res_list != res_iterator_range)
             {
                 clog << "wrong intersection with " << *a << '\n';
                 clog << "factory:\n" << f;

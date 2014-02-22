@@ -2,6 +2,9 @@
 #define __ITREE_HPP
 
 #include <boost/intrusive/set.hpp>
+#include <boost/iterator/iterator_facade.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/mpl/if.hpp>
 #include "itree_algorithms.hpp"
 
 
@@ -209,6 +212,54 @@ struct ITree_Compare
     }
 };
 
+template <typename Value_Traits, bool is_const>
+class Intersection_Iterator : public boost::iterator_facade<
+    Intersection_Iterator< Value_Traits, is_const >,
+    typename Value_Traits::value_type,
+    boost::forward_traversal_tag,
+    typename boost::mpl::if_c< is_const, typename Value_Traits::const_reference, typename Value_Traits::reference >::type
+    >
+{
+public:
+    typedef typename Value_Traits::value_type value_type;
+    typedef typename Value_Traits::key_type key_type;
+    typedef typename Value_Traits::node_ptr node_ptr;
+    typedef typename Value_Traits::reference reference;
+    typedef typename Value_Traits::const_reference const_reference;
+    typedef typename boost::mpl::if_c< is_const, const_reference, reference >::type qual_reference;
+
+    Intersection_Iterator() {}
+    explicit Intersection_Iterator(node_ptr node, key_type int_start = 0, key_type int_end = 0)
+    : _node(node), _int_start(int_start), _int_end(int_end) {}
+
+    // implicit conversion to const
+    operator Intersection_Iterator< Value_Traits, true >& ()
+    { return *reinterpret_cast< Intersection_Iterator< Value_Traits, true >* >(this); }
+    operator const Intersection_Iterator< Value_Traits, true >& () const
+    { return *reinterpret_cast< const Intersection_Iterator< Value_Traits, true >* >(this); }
+
+    // explicit conversion to non-const
+    explicit operator Intersection_Iterator< Value_Traits, false >& ()
+    { return *reinterpret_cast< Intersection_Iterator< Value_Traits, false >* >(this); }
+    explicit operator const Intersection_Iterator< Value_Traits, false >& () const
+    { return *reinterpret_cast< const Intersection_Iterator< Value_Traits, false >* >(this); }
+
+    value_type* operator -> () const { return (&dereference()).operator ->(); }
+
+private:
+    friend class boost::iterator_core_access;
+
+    typedef itree_algorithms< Value_Traits > itree_algo;
+
+    bool equal(const Intersection_Iterator& rhs) const { return _node == rhs._node; }
+    void increment() { _node = itree_algo::get_next_interval(_int_start, _int_end, _node, 2); }
+    qual_reference dereference() const { return *Value_Traits::to_value_ptr(_node); }
+
+    node_ptr _node;
+    key_type _int_start;
+    key_type _int_end;
+};
+
 }
 
 template <typename Value_Traits>
@@ -232,25 +283,51 @@ public:
     typedef typename Value_Traits::const_pointer const_pointer;
     typedef typename Value_Traits::node_ptr node_ptr;
     typedef typename Value_Traits::const_node_ptr const_node_ptr;
+    typedef detail::Intersection_Iterator< Value_Traits, false > intersection_iterator;
+    typedef detail::Intersection_Iterator< Value_Traits, true > intersection_const_iterator;
+    typedef boost::iterator_range< detail::Intersection_Iterator< Value_Traits, false > > intersection_iterator_range;
+    typedef boost::iterator_range< detail::Intersection_Iterator< Value_Traits, true > > intersection_const_iterator_range;
 
     // inherit multiset constructors
     using Base::Base;
 
-    std::vector< const_pointer > interval_intersect(const key_type& int_start, const key_type& int_end)
+    std::vector< pointer > interval_intersect(const key_type& int_start, const key_type& int_end)
     {
-        std::vector< const_pointer > res;
-        const_node_ptr header = this->header_ptr();
+        std::vector< pointer > res;
+        node_ptr header = this->header_ptr();
         if (not Node_Traits::get_parent(header))
         {
             return res;
         }
-        const_node_ptr crt = itree_algo::get_next_interval(int_start, int_end, Node_Traits::get_parent(header), 0);
+        node_ptr crt = itree_algo::get_next_interval(int_start, int_end, Node_Traits::get_parent(header), 0);
         while (crt != header)
         {
             res.push_back(Value_Traits::to_value_ptr(crt));
             crt = itree_algo::get_next_interval(int_start, int_end, crt, 2);
         }
         return res;
+    }
+
+    intersection_iterator interval_intersect_begin(const key_type& int_start, const key_type& int_end)
+    {
+        node_ptr header = this->header_ptr();
+        if (not Node_Traits::get_parent(header))
+        {
+            return intersection_iterator(interval_intersect_end());
+        }
+        return intersection_iterator(
+            itree_algo::get_next_interval(int_start, int_end, Node_Traits::get_parent(header), 0),
+            int_start, int_end);
+    }
+    intersection_const_iterator interval_intersect_end()
+    {
+        node_ptr header = this->header_ptr();
+        return intersection_const_iterator(header);
+    }
+
+    intersection_iterator_range interval_intersect_range(const key_type& int_start, const key_type& int_end)
+    {
+        return make_iterator_range<intersection_iterator>(interval_intersect_begin(int_start, int_end), intersection_iterator(interval_intersect_end()));
     }
 };
 
