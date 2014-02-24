@@ -437,9 +437,8 @@ namespace MAC
             {
                 os << mut_cptr->get_seq() << '\t' << _seq_ptr->substr(mut_cptr->get_start(), mut_cptr->get_len()) << '\t';
             }
-            os << _seq_ptr->substr(mut_cptr->get_start() - min_separation, min_separation)
-               << '\t'
-               << _seq_ptr->substr(mut_cptr->get_end(), min_separation);
+            os << _seq_ptr->substr(mut_cptr->get_start() - min_separation, min_separation) << '\t'
+               << _seq_ptr->substr(mut_cptr->get_end(), min_separation) << '\n';
         }
     }
 
