@@ -1393,6 +1393,14 @@ namespace MAC
         }
     }
 
+    void Graph::print_separated_het_mutations(ostream& os, size_t min_support_report, Size_Type min_separation) const
+    {
+        for (const auto& ce : _ce_cont)
+        {
+            ce.print_separated_het_mutations(os, min_support_report, min_separation);
+        }
+    }
+
     bool Graph::check_colours() const
     {
         for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)

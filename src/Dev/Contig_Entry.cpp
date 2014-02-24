@@ -386,7 +386,7 @@ namespace MAC
     }
 
     vector< Mutation_CPtr > Contig_Entry::get_separated_het_mutations(
-        size_t min_support_report, Size_Type min_separation)
+        size_t min_support_report, Size_Type min_separation) const
     {
         vector< Mutation_CPtr > res;
         Size_Type last_mut_end = 0;
@@ -421,6 +421,26 @@ namespace MAC
             last_mut_end = std::max(last_mut_end, mut_cptr->get_end());
         }
         return res;
+    }
+
+    void Contig_Entry::print_separated_het_mutations(
+        ostream& os, size_t min_support_report, Size_Type min_separation) const
+    {
+        vector< Mutation_CPtr > v = get_separated_het_mutations(min_support_report, min_separation);
+        for (const auto& mut_cptr : v)
+        {
+            if (mut_cptr->is_del())
+            {
+                os << _seq_ptr->substr(mut_cptr->get_start(), mut_cptr->get_len()) << "\t\t";
+            }
+            else
+            {
+                os << mut_cptr->get_seq() << '\t' << _seq_ptr->substr(mut_cptr->get_start(), mut_cptr->get_len()) << '\t';
+            }
+            os << _seq_ptr->substr(mut_cptr->get_start() - min_separation, min_separation)
+               << '\t'
+               << _seq_ptr->substr(mut_cptr->get_end(), min_separation);
+        }
     }
 
     bool Contig_Entry::check() const

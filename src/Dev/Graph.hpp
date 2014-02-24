@@ -86,6 +86,9 @@ namespace MAC
         /** Stats. */
         void dump_detailed_counts(std::ostream& os) const;
 
+        void print_separated_het_mutations(
+            std::ostream& os, size_t min_support_report, Size_Type min_separation) const;
+
         friend std::ostream& operator << (std::ostream&, const Graph&);
 
     private:

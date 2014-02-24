@@ -188,7 +188,10 @@ namespace MAC
          * @param min_separation Minimum distance to a nearby mutation or contig end.
          */
         std::vector< Mutation_CPtr > get_separated_het_mutations(
-            size_t min_support_report, Size_Type min_separation);
+            size_t min_support_report, Size_Type min_separation) const;
+
+        void print_separated_het_mutations(std::ostream& os,
+            size_t min_support_report, Size_Type min_separation) const;
 
         /** Integrity check. */
         bool check() const;
