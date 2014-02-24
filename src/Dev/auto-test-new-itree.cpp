@@ -214,6 +214,19 @@ int main()
     iitree_type t;
     ilist_type l;
 
+    iitree_type::intersection_iterator it = t.interval_intersect_end();
+    boost::iterator_range<iitree_type::intersection_iterator> r1(it, it);
+    (void)r1;
+
+    typedef boost::iterator_range<iitree_type::intersection_iterator> it_range_type;
+    it_range_type r2 = boost::make_iterator_range<iitree_type::intersection_iterator>(it, it);
+    (void)r2;
+
+    typedef boost::range_iterator< it_range_type >::type type_1;
+    type_1 obj_1;
+    typedef boost::range_difference< iitree_type::intersection_iterator >::type type_2;
+
+    /*
     const size_t max_load = 100;
     const size_t range_max = 20;
     const size_t n_ops = 1000000;
@@ -342,4 +355,5 @@ int main()
         exit(EXIT_FAILURE);
     }
     clog << "----- success\n";
+    */
 }

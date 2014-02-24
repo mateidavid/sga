@@ -319,10 +319,10 @@ public:
             itree_algo::get_next_interval(int_start, int_end, Node_Traits::get_parent(header), 0),
             int_start, int_end);
     }
-    intersection_const_iterator interval_intersect_end()
+    intersection_iterator interval_intersect_end()
     {
         node_ptr header = this->header_ptr();
-        return intersection_const_iterator(header);
+        return intersection_iterator(header);
     }
 
     intersection_iterator_range interval_intersect_range(const key_type& int_start, const key_type& int_end)
