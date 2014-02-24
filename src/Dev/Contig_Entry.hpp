@@ -183,6 +183,13 @@ namespace MAC
         std::shared_ptr< std::map< std::tuple< const Contig_Entry*, bool >, std::tuple< unsigned int, Size_Type, Size_Type > > >
         get_neighbours(bool dir, bool skip_unmappable = true, bool trim_results = true) const;
 
+        /** Get heterozygous mutations isolated from other nearby mutations.
+         * @param min_support_report Minimum read chunk support for mutation and for base.
+         * @param min_separation Minimum distance to a nearby mutation or contig end.
+         */
+        std::vector< Mutation_CPtr > get_separated_het_mutations(
+            size_t min_support_report, Size_Type min_separation);
+
         /** Integrity check. */
         bool check() const;
         bool check_colour(bool dir) const;

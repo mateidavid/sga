@@ -385,6 +385,44 @@ namespace MAC
         return res;
     }
 
+    vector< Mutation_CPtr > Contig_Entry::get_separated_het_mutations(
+        size_t min_support_report, Size_Type min_separation)
+    {
+        vector< Mutation_CPtr > res;
+        Size_Type last_mut_end = 0;
+        for (auto mut_it = _mut_cont.begin(); mut_it != _mut_cont.end(); ++mut_it)
+        {
+            Mutation_CPtr mut_cptr = &*mut_it;
+            auto next_mut_it = mut_it;
+            ++next_mut_it;
+            if (mut_cptr->get_start() >= last_mut_end + min_separation
+                and mut_cptr->get_end() + min_separation <= get_len()
+                and (next_mut_it == _mut_cont.end()
+                    or mut_cptr->get_end() + min_separation <= next_mut_it->get_start()))
+            {
+                // well separated
+                size_t n_chunks_supporting_mut[2] = { 0, 0 };
+                for (auto& rc_cptr : _chunk_cptr_cont)
+                {
+                    if (rc_cptr->get_c_start() > mut_cptr->get_start()
+                        or rc_cptr->get_c_end() < mut_cptr->get_end())
+                    {
+                        // doesn't span mutation
+                        continue;
+                    }
+                    ++n_chunks_supporting_mut[int(rc_cptr->have_mutation(mut_cptr))];
+                }
+                if (n_chunks_supporting_mut[0] >= min_support_report
+                    and n_chunks_supporting_mut[1] >= min_support_report)
+                {
+                    res.push_back(mut_cptr);
+                }
+            }
+            last_mut_end = std::max(last_mut_end, mut_cptr->get_end());
+        }
+        return res;
+    }
+
     bool Contig_Entry::check() const
     {
         // check base sequence exists
