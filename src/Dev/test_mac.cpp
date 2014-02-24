@@ -23,7 +23,8 @@ int main(int argc, char* argv[])
 {
     global::program_name = argv[0];
     char c;
-    while ((c = getopt(argc, argv, "i:x:y:segGpc:u:l:")) != -1) {
+    while ((c = getopt(argc, argv, "i:x:y:segGpc:u:l:M:")) != -1)
+    {
         istringstream optarg_s(optarg != NULL? optarg : "");
         switch (c) {
             case 'i':
@@ -58,6 +59,9 @@ int main(int argc, char* argv[])
                 break;
             case 'l':
                 global::supercontig_lengths_file = optarg;
+                break;
+            case 'M':
+                global::mutations_file = optarg;
                 break;
             default:
                 cerr << "unrecognized option: " << c << endl;
@@ -157,6 +161,11 @@ int main(int argc, char* argv[])
         ofstream lengths_file(global::supercontig_lengths_file);
         g.print_supercontig_lengths_2(lengths_file);
         ASSERT(g.check_colours());
+    }
+    if (not global::mutations_file.empty())
+    {
+        ofstream mutations_ofs(global::mutations_file);
+        g.print_separated_het_mutations(mutations_ofs, 2, 20);
     }
     if (global::print_graph)
     {

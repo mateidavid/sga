@@ -27,6 +27,7 @@ namespace global
     GLOBAL(std::string, stats_file_1);
     GLOBAL(std::string, stats_file_2);
     GLOBAL(std::string, supercontig_lengths_file);
+    GLOBAL(std::string, mutations_file);
     GLOBAL(std::string, assert_message);
     GLOBAL_INIT(bool, merge_contigs_at_each_step, false);
     GLOBAL_INIT(bool, merge_contigs_at_end, false);
