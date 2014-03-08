@@ -327,7 +327,8 @@ public:
 
     intersection_iterator_range interval_intersect_range(const key_type& int_start, const key_type& int_end)
     {
-        return make_iterator_range<intersection_iterator>(interval_intersect_begin(int_start, int_end), intersection_iterator(interval_intersect_end()));
+        return make_iterator_range(interval_intersect_begin(int_start, int_end),
+                                   interval_intersect_end());
     }
 };
 
