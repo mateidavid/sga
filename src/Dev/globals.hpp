@@ -29,6 +29,7 @@ namespace global
     GLOBAL(std::string, supercontig_lengths_file);
     GLOBAL(std::string, mutations_file);
     GLOBAL(std::string, assert_message);
+    GLOBAL(std::string, unmappable_contigs_file);
     GLOBAL_INIT(bool, merge_contigs_at_each_step, false);
     GLOBAL_INIT(bool, merge_contigs_at_end, false);
     GLOBAL_INIT(bool, print_graph, false);

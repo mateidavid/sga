@@ -1401,6 +1401,17 @@ namespace MAC
         }
     }
 
+    void Graph::print_unmappable_contigs(ostream& os) const
+    {
+        for (const auto& ce : _ce_cont)
+        {
+            if (ce.is_unmappable())
+            {
+                os << '>' << ce.get_contig_id() << '\n' << ce.get_seq() << '\n';
+            }
+        }
+    }
+
     bool Graph::check_colours() const
     {
         for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)

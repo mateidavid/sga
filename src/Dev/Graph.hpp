@@ -88,6 +88,7 @@ namespace MAC
 
         void print_separated_het_mutations(
             std::ostream& os, size_t min_support_report, Size_Type min_separation) const;
+        void print_unmappable_contigs(std::ostream& os) const;
 
         friend std::ostream& operator << (std::ostream&, const Graph&);
 

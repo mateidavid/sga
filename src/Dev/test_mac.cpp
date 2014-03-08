@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 {
     global::program_name = argv[0];
     char c;
-    while ((c = getopt(argc, argv, "i:x:y:segGpc:u:l:M:")) != -1)
+    while ((c = getopt(argc, argv, "i:x:y:segGpc:u:l:M:U:")) != -1)
     {
         istringstream optarg_s(optarg != NULL? optarg : "");
         switch (c) {
@@ -62,6 +62,9 @@ int main(int argc, char* argv[])
                 break;
             case 'M':
                 global::mutations_file = optarg;
+                break;
+            case 'U':
+                global::unmappable_contigs_file = optarg;
                 break;
             default:
                 cerr << "unrecognized option: " << c << endl;
@@ -170,6 +173,11 @@ int main(int argc, char* argv[])
     if (global::print_graph)
     {
         cout << g;
+    }
+    if (not global::unmappable_contigs_file.empty())
+    {
+        ofstream unmappable_contigs_ofs(global::unmappable_contigs_file);
+        g.print_unmappable_contigs(unmappable_contigs_ofs);
     }
     cerr << "success\n";
 
