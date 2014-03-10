@@ -3,10 +3,10 @@
 # Setting target-specific C(XX)FLAGS or LDFLAGS disables the use of the corresponding default.
 AM_CXXFLAGS += -std=c++0x
 
-noinst_PROGRAMS = bloom-filter-tool test test_mac test_read_chunk_traversal
+noinst_PROGRAMS = bloom-filter-tool test test_mac test_read_chunk_traversal test-itree
 noinst_LTLIBRARIES = libmac.la libdev.la
 
-bloom_filter_tool_LDFLAGS = $(AM_LDFLAGS) $(BOOST_IOSTREAMS_LDFLAGS)
+bloom_filter_tool_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
 bloom_filter_tool_LDADD = \
         $(top_builddir)/Util/libutil.a \
         $(top_builddir)/Thirdparty/libthirdparty.a \
@@ -44,7 +44,7 @@ libmac_la_SOURCES = \
 
 test_mac_SOURCES = test_mac.cpp
 
-test_mac_LDFLAGS = $(AM_LDFLAGS) $(BOOST_IOSTREAMS_LDFLAGS)
+test_mac_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
 test_mac_LDADD = libmac.la \
         $(top_builddir)/Util/libutil.a \
         $(top_builddir)/Thirdparty/libthirdparty.a \
@@ -55,3 +55,10 @@ test_read_chunk_traversal_SOURCES = test_read_chunk_traversal.cpp
 test_read_chunk_traversal_LDADD = libmac.la \
         $(top_builddir)/Util/libutil.a \
         $(top_builddir)/Thirdparty/libthirdparty.a
+
+test_itree_SOURCES = test-itree.cpp common.cpp globals.cpp
+
+test_itree_CPPFLAGS = -I ${HOME}/code/boost-libs/intrusive/include $(AM_CPPFLAGS)
+test_itree_CXXFLAGS = $(AM_CXXFLAGS) -Wno-ignored-qualifiers
+test_itree_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
+test_itree_LDADD = $(BOOST_PROGRAM_OPTIONS_LIBS)

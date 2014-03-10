@@ -101,7 +101,7 @@ else
 fi
 
 # Check for boost libs.
-BOOST_REQUIRE([1.46])
+BOOST_REQUIRE([1.55])
 
 # The BOOST_IOSTREAMS macro is broken: it wrongfully picks up the first version
 # it finds, even if it is an old version from a standard location, and the user
@@ -111,13 +111,16 @@ BOOST_REQUIRE([1.46])
 # BOOST_IOSTREAMS_LDFLAGS to include that path, and check that the
 # boost_iostreams library can indeed be found at that specific location.
 AC_SUBST(BOOST_IOSTREAMS_LIBS, ["-lboost_iostreams"])
+AC_SUBST(BOOST_PROGRAM_OPTIONS_LIBS, ["-lboost_program_options"])
 if test "$with_boost"; then
-    AC_SUBST(BOOST_IOSTREAMS_LDFLAGS, ["-L$with_boost/lib -Wl,--rpath -Wl,$with_boost/lib"])
+    AC_SUBST(BOOST_LDFLAGS, ["-L$with_boost/lib -Wl,--rpath -Wl,$with_boost/lib"])
     boost_iostreams_libs_test="$with_boost/lib/libboost_iostreams.so"
+    boost_program_options_libs_test="$with_boost/lib/libboost_program_options.so"
 else
     boost_iostreams_libs_test="-lboost_iostreams"
+    boost_program_options_libs_test="-lboost_program_options"
 fi
-# now check we can compile a simple program
+# check for BOOST_IOSTREAMS
 AC_MSG_CHECKING([for boost_iostreams lib])
 cat >conftest.$ac_ext <<_ACEOF
 #include <boost/iostreams/device/file_descriptor.hpp>
@@ -132,10 +135,35 @@ save_CPPFLAGS=$CPPFLAGS
 save_LDFLAGS=$LDFLAGS
 save_LIBS=$LIBS
 CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
-LDFLAGS="$LDFLAGS $BOOST_IOSTREAMS_LDFLAGS"
+LDFLAGS="$LDFLAGS $BOOST_LDFLAGS"
 LIBS="$LIBS $boost_iostreams_libs_test"
 if ac_fn_cxx_try_link "$LINENO"; then
    AC_MSG_RESULT([$boost_iostreams_libs_test])
+else
+   AC_MSG_ERROR([boost_iostreams not found])
+fi
+CPPFLAGS=$save_CPPFLAGS
+LDFLAGS=$save_LDFLAGS
+LIBS=$save_LIBS
+rm -f conftest.$ac_ext
+# check for BOOST_PROGRAM_OPTIONS
+AC_MSG_CHECKING([for boost_program_options lib])
+cat >conftest.$ac_ext <<_ACEOF
+#include <boost/program_options.hpp>
+int main ()
+{
+    boost::program_options::options_description d("test");
+    return 0;
+}
+_ACEOF
+save_CPPFLAGS=$CPPFLAGS
+save_LDFLAGS=$LDFLAGS
+save_LIBS=$LIBS
+CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
+LDFLAGS="$LDFLAGS $BOOST_LDFLAGS"
+LIBS="$LIBS $boost_program_options_libs_test"
+if ac_fn_cxx_try_link "$LINENO"; then
+   AC_MSG_RESULT([$boost_program_options_libs_test])
 else
    AC_MSG_ERROR([boost_iostreams not found])
 fi
@@ -183,7 +211,7 @@ LDFLAGS=$save_LDFLAGS
 
 # Set compiler flags.
 AC_SUBST(AM_CFLAGS, ["-Wall -Wextra -Werror -Wno-unknown-pragmas $OPENMP_CXXFLAGS"])
-AC_SUBST(AM_CXXFLAGS, ["-Wall -Wextra -Werror -Wno-unknown-pragmas $OPENMP_CXXFLAGS"])
+AC_SUBST(AM_CXXFLAGS, ["-Wall -Wextra -Werror -Wno-unknown-pragmas -Wno-unused-local-typedefs $OPENMP_CXXFLAGS"])
 AC_SUBST(AM_LDFLAGS, ["$EXTERNAL_MALLOC_LDFLAGS"])
 AC_SUBST(AM_CPPFLAGS, ['$(BOOST_CPPFLAGS) $(SPARSEHASH_CPPFLAGS) $(BAMTOOLS_CPPFLAGS) \
     -I$(top_srcdir)/Thirdparty \
