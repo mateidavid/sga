@@ -291,23 +291,18 @@ public:
     // inherit multiset constructors
     using Base::Base;
 
-    std::vector< pointer > interval_intersect(const key_type& int_start, const key_type& int_end)
+    /** Return intervals in the tree that intersect a given interval.
+     * @param int_start Interval start.
+     * @param int_end Interval end.
+     * @return An iterator range for the intersection (begin, end).
+     */
+    intersection_iterator_range interval_intersect(const key_type& int_start, const key_type& int_end)
     {
-        std::vector< pointer > res;
-        node_ptr header = this->header_ptr();
-        if (not Node_Traits::get_parent(header))
-        {
-            return res;
-        }
-        node_ptr crt = itree_algo::get_next_interval(int_start, int_end, Node_Traits::get_parent(header), 0);
-        while (crt != header)
-        {
-            res.push_back(Value_Traits::to_value_ptr(crt));
-            crt = itree_algo::get_next_interval(int_start, int_end, crt, 2);
-        }
-        return res;
+        return make_iterator_range(interval_intersect_begin(int_start, int_end),
+                                   interval_intersect_end());
     }
 
+private:
     intersection_iterator interval_intersect_begin(const key_type& int_start, const key_type& int_end)
     {
         node_ptr header = this->header_ptr();
@@ -323,12 +318,6 @@ public:
     {
         node_ptr header = this->header_ptr();
         return intersection_iterator(header);
-    }
-
-    intersection_iterator_range interval_intersect_range(const key_type& int_start, const key_type& int_end)
-    {
-        return make_iterator_range(interval_intersect_begin(int_start, int_end),
-                                   interval_intersect_end());
     }
 };
 
