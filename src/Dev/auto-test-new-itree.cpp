@@ -1,10 +1,10 @@
 #include <iostream>
-
+#include <boost/program_options.hpp>
 #include <boost/intrusive/list.hpp>
+#include <time.h>
 #include "common.hpp"
 #include "factory.hpp"
 #include "itree.hpp"
-
 
 using namespace std;
 
@@ -129,7 +129,6 @@ struct List_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
-
 typedef Factory< B > fact_type;
 typedef fact_type::ptr_type ptr_type;
 typedef fact_type::const_ptr_type const_ptr_type;
@@ -204,9 +203,23 @@ void check_max_ends(iitree_type& t, fact_type& f)
     }
 }
 
-
-int main()
+struct Program_Options
 {
+    size_t max_load;
+    size_t range_max;
+    size_t n_ops;
+    size_t seed;
+};
+
+
+void real_main(const Program_Options& po)
+{
+    clog << "----- program options:"
+         << "\nmax_load=" << po.max_load
+         << "\nrange_max=" << po.range_max
+         << "\nn_ops=" << po.n_ops
+         << "\nseed=" << po.seed << '\n';
+
     clog << "----- constructing factory\n";
     fact_type f(true);
 
@@ -214,39 +227,23 @@ int main()
     iitree_type t;
     ilist_type l;
 
-    /*
-    iitree_type::intersection_iterator it = t.interval_intersect_end();
-    boost::iterator_range<iitree_type::intersection_iterator> r1(it, it);
-    (void)r1;
-
-    typedef boost::iterator_range<iitree_type::intersection_iterator> it_range_type;
-    it_range_type r2 = boost::make_iterator_range<iitree_type::intersection_iterator>(it, it);
-    (void)r2;
-
-    typedef boost::range_iterator< it_range_type >::type type_1;
-    type_1 obj_1;
-    typedef boost::range_difference< iitree_type::intersection_iterator >::type type_2;
-    */
-
-    const size_t max_load = 100;
-    const size_t range_max = 20;
-    const size_t n_ops = 1000000;
-    srand48(88473124);
+    clog << "----- initializing random number generator\n";
+    srand48(po.seed);
 
     clog << "----- main loop\n";
-    for (size_t i = 0; i < n_ops; ++i)
+    for (size_t i = 0; i < po.n_ops; ++i)
     {
         int op = int(drand48()*3);
         if (op == 0)
         {
             // insert new element
-            if (l.size() >= max_load)
+            if (l.size() >= po.max_load)
             {
                 continue;
             }
             ptr_type a = f.new_elem();
-            size_t e1 = size_t(drand48() * range_max);
-            size_t e2 = size_t(drand48() * range_max);
+            size_t e1 = size_t(drand48() * po.range_max);
+            size_t e2 = size_t(drand48() * po.range_max);
             a->_start = min(e1, e2);
             a->_end = max(e1, e2);
             clog << "adding: " << *a << '\n';
@@ -276,8 +273,8 @@ int main()
         else if (op == 2)
         {
             // compute intersection with some interval
-            size_t e1 = size_t(drand48() * range_max);
-            size_t e2 = size_t(drand48() * range_max);
+            size_t e1 = size_t(drand48() * po.range_max);
+            size_t e2 = size_t(drand48() * po.range_max);
             if (e1 > e2)
             {
                 swap(e1, e2);
@@ -319,7 +316,9 @@ int main()
                 (void)r;
                 ++res_iterator_range;
             }
-            if (res_list != res_itree or res_list != res_iterator or res_list != res_iterator_range)
+            if (res_itree != res_list
+                or res_iterator != res_list
+                or res_iterator_range != res_list)
             {
                 clog << "wrong intersection with " << *a << '\n';
                 clog << "factory:\n" << f;
@@ -341,7 +340,6 @@ int main()
         }
     }
     clog << "----- clearing list\n";
-    // clear list
     while (l.size() > 0)
     {
         auto it = l.begin();
@@ -356,4 +354,48 @@ int main()
         exit(EXIT_FAILURE);
     }
     clog << "----- success\n";
+}
+
+int main(int argc, char* argv[])
+{
+    namespace bo = boost::program_options;
+    Program_Options po;
+    try
+    {
+        bo::options_description generic_opts_desc("Generic options");
+        bo::options_description config_opts_desc("Configuration options");
+        bo::options_description hidden_opts_desc("Hidden options");
+        bo::options_description cmdline_opts_desc;
+        bo::options_description visible_opts_desc("Allowed options");
+        generic_opts_desc.add_options()
+            ("help,h", "produce help message")
+            ;
+        config_opts_desc.add_options()
+            ("max-load", bo::value<size_t>(&po.max_load)->default_value(100), "maximum load of the interval tree")
+            ("range-max", bo::value<size_t>(&po.range_max)->default_value(20), "maximum endpoint")
+            ("n-ops", bo::value<size_t>(&po.n_ops)->default_value(1000), "number of operations")
+            ("seed", bo::value<size_t>(&po.seed)->default_value(0), "random number generator seed")
+            ;
+        cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
+        visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
+        bo::variables_map vm;
+        store(bo::command_line_parser(argc, argv).options(cmdline_opts_desc).run(), vm);
+        notify(vm);
+        if (vm.count("help"))
+        {
+            cout << visible_opts_desc;
+            exit(EXIT_SUCCESS);
+        }
+        if (po.seed == 0)
+        {
+            po.seed = time(NULL);
+        }
+    }
+    catch(exception& e)
+    {
+        cout << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
+    real_main(po);
+    return EXIT_SUCCESS;
 }
