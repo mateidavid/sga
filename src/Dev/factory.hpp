@@ -1,6 +1,7 @@
 #ifndef __FACTORY_HPP
 #define __FACTORY_HPP
 
+#include <cstddef>
 #include <iostream>
 #include <deque>
 #include <type_traits>
@@ -26,6 +27,10 @@ namespace detail
     class Bounded_Pointer;
     template <class T, class Base_Ptr>
     class Bounded_Reference;
+    template <class T, class Base_Ptr>
+    class Cloner;
+    template <class T, class Base_Ptr>
+    class Disposer;
     template <class T, class Base_Ptr>
     class Factory;
 
@@ -54,6 +59,7 @@ namespace detail
         static const bool is_void = std::is_same< T, void >::value;
 
         typedef T val_type;
+        static_assert(std::is_same< val_type, typename std::remove_const< val_type >::type >::value, "Identifier instantiated with const type");
         typedef Base_Ptr base_ptr_type;
         typedef typename boost::mpl::if_c< not is_void,
                                            Factory< T, Base_Ptr >,
@@ -117,8 +123,8 @@ namespace detail
 
     public:
         Bounded_Pointer() {}
+        Bounded_Pointer(std::nullptr_t) {}
         Bounded_Pointer(const Bounded_Pointer& rhs) : _id(rhs._id) {}
-        //explicit Bounded_Pointer(int zero) : _id() { ASSERT(zero == 0); }
 
         // implicit conversion to const
         operator Bounded_Pointer< const unqual_val_type, Base_Ptr >& ()
@@ -238,6 +244,36 @@ namespace detail
         return os;
     }
 
+    template <class T, class Base_Ptr = uint32_t>
+    struct Cloner
+    {
+        typedef T val_type;
+        static_assert(std::is_same< val_type, typename std::remove_const< val_type >::type >::value, "Cloner instantiated with const type");
+        typedef Identifier< val_type, Base_Ptr > idn_type;
+        typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
+        typedef typename idn_type::fact_type fact_type;
+
+        ptr_type operator () (const T& t)
+        {
+            return fact_type::get_active_ptr()->new_elem(t);
+        }
+    };
+
+    template <class T, class Base_Ptr = uint32_t>
+    struct Disposer
+    {
+        typedef T val_type;
+        static_assert(std::is_same< val_type, typename std::remove_const< val_type >::type >::value, "Disposer instantiated with const type");
+        typedef Identifier< val_type, Base_Ptr > idn_type;
+        typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
+        typedef typename idn_type::fact_type fact_type;
+
+        void operator () (ptr_type ptr)
+        {
+            fact_type::get_active_ptr()->del_elem(ptr);
+        }
+    };
+
     /** Wrapper type used by Factory objects to store free node list without overhead. */
     template <class T, class Base_Ptr = uint32_t>
     union Factory_Wrapper
@@ -259,6 +295,7 @@ namespace detail
     public:
         /** Type of object stored. */
         typedef T val_type;
+        static_assert(std::is_same< val_type, typename std::remove_const< val_type >::type >::value, "Factory instantiated with const type");
         typedef const T const_val_type;
         /** Non-constant pointer. */
         typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
@@ -268,6 +305,10 @@ namespace detail
         typedef Bounded_Reference< val_type, Base_Ptr > ref_type;
         /** Constant reference. */
         typedef Bounded_Reference< const_val_type, Base_Ptr > const_ref_type;
+        /** Object cloner. */
+        typedef Cloner< T, Base_Ptr > cloner;
+        /** Object disposer. */
+        typedef Disposer< T, Base_Ptr > disposer;
     private:
         typedef Identifier< T, Base_Ptr > idn_type;
         typedef Factory_Wrapper< T, Base_Ptr > wrapper_type;
