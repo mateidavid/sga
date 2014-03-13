@@ -3,7 +3,7 @@
 # Setting target-specific C(XX)FLAGS or LDFLAGS disables the use of the corresponding default.
 AM_CXXFLAGS += -std=c++0x
 
-noinst_PROGRAMS = bloom-filter-tool test test_mac test_read_chunk_traversal test-itree-and-factory
+noinst_PROGRAMS = bloom-filter-tool mac test-itree-and-factory
 noinst_LTLIBRARIES = libmac.la libdev.la
 
 bloom_filter_tool_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
@@ -27,7 +27,7 @@ test_LDADD = \
         $(top_builddir)/SQG/libsqg.a \
         $(top_builddir)/Thirdparty/libthirdparty.a
 
-test_SOURCES = test.cpp
+#test_SOURCES = test.cpp
 
 libdev_la_SOURCES = kmer_gen.cpp
 
@@ -42,19 +42,17 @@ libmac_la_SOURCES = \
         indent.cpp \
         Graph.cpp
 
-test_mac_SOURCES = test_mac.cpp
-
-test_mac_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
-test_mac_LDADD = libmac.la \
-        $(top_builddir)/Util/libutil.a \
-        $(top_builddir)/Thirdparty/libthirdparty.a \
+mac_SOURCES = mac.cpp
+mac_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
+mac_LDADD = libmac.la \
+	$(top_builddir)/Util/libutil.a \
+	$(top_builddir)/Thirdparty/libthirdparty.a \
 	$(BOOST_IOSTREAMS_LIBS)
 
-test_read_chunk_traversal_SOURCES = test_read_chunk_traversal.cpp
-
-test_read_chunk_traversal_LDADD = libmac.la \
-        $(top_builddir)/Util/libutil.a \
-        $(top_builddir)/Thirdparty/libthirdparty.a
+#test_read_chunk_traversal_SOURCES = test_read_chunk_traversal.cpp
+#test_read_chunk_traversal_LDADD = libmac.la \
+#	$(top_builddir)/Util/libutil.a \
+#	$(top_builddir)/Thirdparty/libthirdparty.a
 
 test_itree_and_factory_SOURCES = test-itree-and-factory.cpp common.cpp globals.cpp
 test_itree_and_factory_CPPFLAGS = -I$(top_srcdir)/boost-intrusive/include -I$(top_srcdir)/interval-tree/include $(AM_CPPFLAGS)
