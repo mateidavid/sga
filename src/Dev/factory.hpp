@@ -255,6 +255,7 @@ namespace detail
 
         ptr_type operator () (const T& t)
         {
+            ASSERT(fact_type::get_active_ptr());
             return fact_type::get_active_ptr()->new_elem(t);
         }
     };
@@ -270,6 +271,7 @@ namespace detail
 
         void operator () (ptr_type ptr)
         {
+            ASSERT(fact_type::get_active_ptr());
             fact_type::get_active_ptr()->del_elem(ptr);
         }
     };
@@ -432,11 +434,10 @@ namespace detail
     public:
         template <typename... Args>
         Holder(Args&&... args) { alloc(std::forward<Args>(args)...); }
-        Holder(const Holder& rhs) { alloc(rhs); }
+        Holder(const Holder& rhs) : Holder((val_type)rhs) {}
         ~Holder() { dealloc(); }
 
         Holder& operator = (const val_type& rhs) { dealloc(); alloc(rhs); return *this; }
-        Holder& operator = (const Holder& rhs) { dealloc(); alloc(rhs); return *this; }
 
         operator const_ref_type () const { return *_val_ptr; }
         operator ref_type () { return *_val_ptr; }
@@ -448,9 +449,16 @@ namespace detail
 
     private:
         template <typename... Args>
-        void alloc(Args&&... args) { _val_ptr = fact_type::get_active_ptr()->new_elem(std::forward<Args>(args)...); }
-        void alloc(const Holder& rhs) { alloc((val_type)rhs); }
-        void dealloc() { fact_type::get_active_ptr()->del_elem(_val_ptr); }
+        void alloc(Args&&... args)
+        {
+            ASSERT(fact_type::get_active_ptr());
+            _val_ptr = fact_type::get_active_ptr()->new_elem(std::forward<Args>(args)...);
+        }
+        void dealloc()
+        {
+            ASSERT(fact_type::get_active_ptr());
+            fact_type::get_active_ptr()->del_elem(_val_ptr);
+        }
 
         ptr_type _val_ptr;
     };
