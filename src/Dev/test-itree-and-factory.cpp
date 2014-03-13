@@ -256,7 +256,7 @@ void real_main(const Program_Options& po)
     clog << "----- constructing factory\n";
     fact_type f(true);
 
-    clog << "----- constructing iitree & ilist\n";
+    clog << "----- constructing itree & list\n";
     itree_type t;
     list_type l;
 
