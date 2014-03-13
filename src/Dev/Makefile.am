@@ -56,9 +56,8 @@ test_read_chunk_traversal_LDADD = libmac.la \
         $(top_builddir)/Util/libutil.a \
         $(top_builddir)/Thirdparty/libthirdparty.a
 
-test_itree_SOURCES = test-itree.cpp common.cpp globals.cpp
-
-test_itree_CPPFLAGS = -I $(top_srcdir)/boost-intrusive/include $(AM_CPPFLAGS)
-test_itree_CXXFLAGS = $(AM_CXXFLAGS) -Wno-ignored-qualifiers
-test_itree_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
-test_itree_LDADD = $(BOOST_PROGRAM_OPTIONS_LIBS)
+#test_itree_SOURCES = test-itree.cpp
+#test_itree_CPPFLAGS = -I $(top_srcdir)/boost-intrusive/include $(AM_CPPFLAGS)
+#test_itree_CXXFLAGS = $(AM_CXXFLAGS) -Wno-ignored-qualifiers
+#test_itree_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
+#test_itree_LDADD = $(BOOST_PROGRAM_OPTIONS_LIBS)
