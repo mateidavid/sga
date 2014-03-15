@@ -11,6 +11,7 @@
 #include <typeinfo>
 
 #include "common.hpp"
+#include "nonconst_methods.hpp"
 
 
 namespace detail
@@ -127,18 +128,16 @@ namespace detail
         Bounded_Pointer(const Bounded_Pointer& rhs) : _id(rhs._id) {}
 
         // implicit conversion to const
-        operator Bounded_Pointer< const unqual_val_type, Base_Ptr >& ()
-        { return *reinterpret_cast<Bounded_Pointer< const unqual_val_type, Base_Ptr >* >(this); }
         operator const Bounded_Pointer< const unqual_val_type, Base_Ptr >& () const
         { return *reinterpret_cast<const Bounded_Pointer< const unqual_val_type, Base_Ptr >* >(this); }
+        DEF_NONCONST_CONVERSION((Bounded_Pointer< const unqual_val_type, Base_Ptr >&))
+        //operator Bounded_Pointer< const unqual_val_type, Base_Ptr >& ()
+        //{ return nonconst_conversion< Bounded_Pointer< const unqual_val_type, Base_Ptr >& >(this); }
 
-        // explicit conversion to anything else
-        template <class U>
-        explicit operator Bounded_Pointer< U, Base_Ptr >& ()
-        { return *reinterpret_cast<Bounded_Pointer< U, Base_Ptr >*>(this); }
-        template <class U>
-        explicit operator const Bounded_Pointer< U, Base_Ptr >& () const
-        { return *reinterpret_cast<const Bounded_Pointer< U, Base_Ptr >*>(this); }
+        // explicit conversion to non-const
+        explicit operator const Bounded_Pointer< unqual_val_type, Base_Ptr >& () const
+        { return *reinterpret_cast< const Bounded_Pointer< unqual_val_type, Base_Ptr >* >(this); }
+        explicit DEF_NONCONST_CONVERSION((Bounded_Pointer< unqual_val_type, Base_Ptr >&))
 
         // conversion to void*
         operator typename boost::mpl::if_c< std::is_const< val_type >::value, const void*, void* >::type () const
@@ -199,16 +198,18 @@ namespace detail
         Bounded_Reference(const Bounded_Reference& rhs) : _id(rhs._id) {}
 
         // automatic conversion to const
-        operator Bounded_Reference< const unqual_val_type, Base_Ptr >& ()
-        { return *reinterpret_cast< Bounded_Reference< const unqual_val_type, Base_Ptr >* >(this); }
+        //operator Bounded_Reference< const unqual_val_type, Base_Ptr >& ()
+        //{ return *reinterpret_cast< Bounded_Reference< const unqual_val_type, Base_Ptr >* >(this); }
         operator const Bounded_Reference< const unqual_val_type, Base_Ptr >& () const
         { return *reinterpret_cast< const Bounded_Reference< const unqual_val_type, Base_Ptr >* >(this); }
+        DEF_NONCONST_CONVERSION(( Bounded_Reference< const unqual_val_type, Base_Ptr >& ))
 
-        // explicit unconst
-        explicit operator Bounded_Reference< unqual_val_type, Base_Ptr >& ()
-        { return *reinterpret_cast< Bounded_Reference< unqual_val_type, Base_Ptr >* >(this); }
+        // explicit conversion to nonconst
+        //explicit operator Bounded_Reference< unqual_val_type, Base_Ptr >& ()
+        //{ return *reinterpret_cast< Bounded_Reference< unqual_val_type, Base_Ptr >* >(this); }
         explicit operator const Bounded_Reference< unqual_val_type, Base_Ptr >& () const
         { return *reinterpret_cast< const Bounded_Reference< unqual_val_type, Base_Ptr >* >(this); }
+        explicit DEF_NONCONST_CONVERSION(( Bounded_Reference< unqual_val_type, Base_Ptr >& ))
 
         ptr_type operator & () const { return ptr_type(_id); }
 
@@ -441,8 +442,6 @@ namespace detail
 
         operator const_ref_type () const { return *_val_ptr; }
         operator ref_type () { return *_val_ptr; }
-        operator const val_type& () const { return (const val_type&)(*_val_ptr); }
-        operator val_type& () { return (val_type&)(*_val_ptr); }
 
         const_ptr_type operator & () const { return _val_ptr; }
         ptr_type operator & () { return _val_ptr; }
