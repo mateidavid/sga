@@ -28,9 +28,9 @@ namespace detail
     template <class T, class Base_Ptr>
     class Bounded_Reference;
     template <class T, class Base_Ptr>
-    class Cloner;
+    struct Cloner;
     template <class T, class Base_Ptr>
-    class Disposer;
+    struct Disposer;
     template <class T, class Base_Ptr>
     class Factory;
 
