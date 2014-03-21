@@ -67,9 +67,17 @@ namespace detail
                                            void >::type fact_type;
 
         Identifier() : _ptr(0) {}
-        Identifier(const Identifier& rhs) : _ptr(rhs._ptr) {}
+
+        // allow copy & move
+        Identifier(const Identifier&) = default;
+        Identifier(Identifier&&) = default;
+        Identifier& operator = (const Identifier&) = default;
+        Identifier& operator = (Identifier&&) = default;
+
+        /*
         template <class U>
         explicit Identifier(const Identifier< U, Base_Ptr >& rhs) : _ptr(rhs._ptr) {}
+        */
 
         operator Base_Ptr () const { return _ptr; }
 
@@ -125,7 +133,12 @@ namespace detail
     public:
         Bounded_Pointer() {}
         Bounded_Pointer(std::nullptr_t) {}
-        Bounded_Pointer(const Bounded_Pointer& rhs) : _id(rhs._id) {}
+
+        // allow copy & move
+        Bounded_Pointer(const Bounded_Pointer&) = default;
+        Bounded_Pointer(Bounded_Pointer&&) = default;
+        Bounded_Pointer& operator = (const Bounded_Pointer&) = default;
+        Bounded_Pointer& operator = (Bounded_Pointer&&) = default;
 
         // implicit conversion to const
         operator const Bounded_Pointer< const unqual_val_type, Base_Ptr >& () const
@@ -140,6 +153,9 @@ namespace detail
         // conversion to void*
         operator typename boost::mpl::if_c< std::is_const< val_type >::value, const void*, void* >::type () const
         { return &_id.dereference(); }
+
+        // get raw pointer
+        val_type* raw() const { return &_id.dereference(); }
 
         operator bool() const { return this->_id; }
         Bounded_Pointer& operator ++ () { ++(this->_id)._ptr; return *this; }
@@ -193,7 +209,11 @@ namespace detail
         typedef Identifier< unqual_val_type, Base_Ptr > idn_type;
 
     public:
-        Bounded_Reference(const Bounded_Reference& rhs) : _id(rhs._id) {}
+        // allow construction only
+        Bounded_Reference(const Bounded_Reference&) = default;
+        Bounded_Reference(Bounded_Reference&&) = default;
+        Bounded_Reference& operator = (const Bounded_Reference&) = delete;
+        Bounded_Reference& operator = (Bounded_Reference&&) = delete;
 
         // automatic conversion to const
         operator const Bounded_Reference< const unqual_val_type, Base_Ptr >& () const
@@ -314,7 +334,13 @@ namespace detail
         /** Default constructor.
          * @param activate Bool; if true, the object is used to resolve all managed pointers.
          */
-        Factory(bool activate = false) : _cont(1, wrapper_type()), _next_free_idn() { if (activate) set_active(); }
+        Factory(bool activate = true) : _cont(1, wrapper_type()), _next_free_idn() { if (activate) set_active(); }
+
+        // disable copy & move
+        Factory(const Factory&) = delete;
+        Factory(Factory&&) = delete;
+        Factory& operator = (const Factory&) = delete;
+        Factory& operator = (Factory&&) = delete;
 
     private:
         /** Dereference identifier. */
@@ -429,7 +455,13 @@ namespace detail
     public:
         template <typename... Args>
         Holder(Args&&... args) { alloc(std::forward<Args>(args)...); }
-        Holder(const Holder& rhs) : Holder((val_type)rhs) {}
+
+        // disable copy & move
+        Holder(const Holder&) = delete;
+        Holder(Holder&&) = delete;
+        Holder& operator = (const Holder&) = delete;
+        Holder& operator = (Holder&&) = delete;
+
         ~Holder() { dealloc(); }
 
         Holder& operator = (const val_type& rhs) { dealloc(); alloc(rhs); return *this; }
