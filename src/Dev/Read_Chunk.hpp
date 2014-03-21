@@ -18,6 +18,7 @@
 #include <boost/multi_index/ordered_index.hpp>
 
 #include "MAC_forward.hpp"
+#include "Read_Chunk_forward.hpp"
 #include "Mutation.hpp"
 #include "Cigar.hpp"
 

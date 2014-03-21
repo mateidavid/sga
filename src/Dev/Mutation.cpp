@@ -63,15 +63,16 @@ namespace MAC
         }
     }
 
-    bool Mutation::operator == (const Mutation& rhs) const
+    bool operator == (const Mutation& lhs, const Mutation& rhs)
     {
-        return (_start == rhs._start
-                and _len == rhs._len
-                and _seq_len == rhs._seq_len
-                and have_seq() == rhs.have_seq()
-                and (not have_seq() or _seq == rhs._seq));
+        return (lhs._start == rhs._start
+                and lhs._len == rhs._len
+                and lhs._seq_len == rhs._seq_len
+                and lhs.have_seq() == rhs.have_seq()
+                and (not lhs.have_seq() or lhs._seq == rhs._seq));
     }
 
+    /*
     shared_ptr< Mutation_Cont > make_mutations_from_cigar(const Cigar& cigar, const string& qr)
     {
         shared_ptr< Mutation_Cont > res(new Mutation_Cont());
@@ -137,6 +138,7 @@ namespace MAC
         ASSERT(success);
         return &*it;
     }
+    */
 
     ostream& operator << (ostream& os, const Mutation& rhs)
     {

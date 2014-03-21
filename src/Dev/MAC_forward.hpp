@@ -11,22 +11,51 @@
 #include <functional>
 
 #include "common.hpp"
+#include "factory.hpp"
 
 
 /** Multi-Allelic Contig namespace. */
 namespace MAC
 {
-    /** Type for absolute and relative offsets in read and contig sequences. */
-    typedef size_t Size_Type;
-    /** Type holding a read sequence. */
-    typedef std::string Seq_Type;
-    /** Type holding a single base pair. */
-    typedef Seq_Type::value_type Symb_Type;
 
-    class Mutation;
-    class Read_Chunk;
-    class Read_Entry;
-    class Contig_Entry;
+/** Type for absolute and relative offsets in read and contig sequences. */
+typedef size_t Size_Type;
+/** Type holding a read sequence. */
+typedef std::string Seq_Type;
+/** Type holding a single base pair. */
+typedef Seq_Type::value_type Symb_Type;
+
+class Mutation;
+class Mutation_Ptr_Node;
+class Read_Chunk;
+class Read_Chunk_Ptr_Node;
+class Read_Entry;
+class Contig_Entry;
+
+typedef Factory< Mutation > Mutation_Fact;
+typedef Mutation_Fact::ptr_type Mutation_BPtr;
+typedef Mutation_Fact::const_ptr_type Mutation_CBPtr;
+typedef Mutation_Fact::ref_type Mutation_BRef;
+typedef Mutation_Fact::const_ref_type Mutation_CBRef;
+
+typedef Factory< Mutation_Ptr_Node > Mutation_Ptr_Node_Fact;
+typedef Mutation_Ptr_Node_Fact::ptr_type Mutation_Ptr_Node_BPtr;
+typedef Mutation_Ptr_Node_Fact::const_ptr_type Mutation_Ptr_Node_CBPtr;
+typedef Mutation_Ptr_Node_Fact::ref_type Mutation_Ptr_Node_BRef;
+typedef Mutation_Ptr_Node_Fact::const_ref_type Mutation_Ptr_Node_CBRef;
+
+typedef Factory< Read_Chunk > Read_Chunk_Fact;
+typedef Read_Chunk_Fact::ptr_type Read_Chunk_BPtr;
+typedef Read_Chunk_Fact::const_ptr_type Read_Chunk_CBPtr;
+typedef Read_Chunk_Fact::ref_type Read_Chunk_BRef;
+typedef Read_Chunk_Fact::const_ref_type Read_Chunk_CBRef;
+
+typedef Factory< Read_Chunk_Ptr_Node > Read_Chunk_Ptr_Node_Fact;
+typedef Read_Chunk_Ptr_Node_Fact::ptr_type Read_Chunk_Ptr_Node_BPtr;
+typedef Read_Chunk_Ptr_Node_Fact::const_ptr_type Read_Chunk_Ptr_Node_CBPtr;
+typedef Read_Chunk_Ptr_Node_Fact::ref_type Read_Chunk_Ptr_Node_BRef;
+typedef Read_Chunk_Ptr_Node_Fact::const_ref_type Read_Chunk_Ptr_Node_CBRef;
+
 }
 
 
@@ -64,6 +93,12 @@ inline void modify_element(Container& cont, const typename Container::value_type
 {
     ASSERT(e_cptr != NULL);
     modify_element<Container>(cont, cont.iterator_to(*e_cptr), modifier);
+}
+
+template <class LHS_T, class RHS_T>
+bool operator != (const LHS_T& lhs, const RHS_T& rhs)
+{
+    return !(lhs == rhs);
 }
 
 
