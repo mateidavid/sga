@@ -352,7 +352,7 @@ namespace detail
     public:
         /** Allocate space for new element and return pointer to it. */
         template <typename... Args>
-        ptr_type new_elem(Args&&... args)
+        ptr_type new_elem_ns(Args&&... args)
         {
             ptr_type res;
             if (_next_free_idn)
@@ -371,9 +371,10 @@ namespace detail
         }
 
         /** Delete element pointed at. */
-        void del_elem(const_ptr_type elem_ptr)
+        void del_elem_ns(ptr_type elem_ptr)
         {
             //std::clog << "deallocating element at: " << (void*)&_cont.at(elem_ptr._id._ptr) << '\n';
+            elem_ptr->~val_type();
             _cont.at(elem_ptr._id._ptr)._next_free_idn = _next_free_idn;
             _next_free_idn = elem_ptr._id;
         }
@@ -397,6 +398,22 @@ namespace detail
 
         /** Get active factory pointer. */
         static Factory* get_active_ptr() { return _active_ptr; }
+
+        /** Static version of new_elem, using active factory. */
+        template <typename... Args>
+        static ptr_type new_elem(Args&&... args)
+        {
+            ASSERT(get_active_ptr());
+            return get_active_ptr()->new_elem_ns(std::forward< Args >(args)...);
+        }
+
+        /** Static version of del_elem, using active factory. */
+        template <typename... Args>
+        static void del_elem(Args&&... args)
+        {
+            ASSERT(get_active_ptr());
+            get_active_ptr()->del_elem_ns(std::forward< Args >(args)...);
+        }
 
     private:
         friend struct Identifier< T, Base_Ptr >;
