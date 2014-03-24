@@ -32,7 +32,10 @@ struct Mutation_ITree_Node_Traits;
  */
 class Mutation
 {
-public:
+private:
+    // Can only be created by Factory object
+    friend class Factory< Mutation >;
+
     /** Default constructor. */
     Mutation()
     : _start(0), _len(0), _seq_len(0) {}
@@ -54,11 +57,12 @@ public:
     : _start(start), _len(len), _seq_len(seq_len) {}
 
     /** No copy constructor. */
-    Mutation(const Mutation&) = delete;
-    /** No copy assignment. */
-    Mutation& operator = (const Mutation&) = delete;
+    DELETE_COPY_CTOR(Mutation)
     /** Move constructor. */
     Mutation(Mutation&& rhs) : Mutation() { *this = std::move(rhs); }
+public:
+    /** No copy assignment. */
+    DELETE_COPY_ASOP(Mutation)
     /** Move assignment. */
     Mutation& operator = (Mutation&& rhs)
     {
@@ -73,9 +77,12 @@ public:
         }
         return *this;
     }
+
+private:
     /** Destructor. */
     ~Mutation() { ASSERT(is_unlinked()); }
 
+public:
     /** @name Getters */
     /**@{*/
     Size_Type get_start() const { return _start; }
@@ -95,17 +102,16 @@ public:
     /**@}*/
 
     /** Merge with given Mutation.
-     * Pre: Mutations must be adjacent on rf.
+     * Pre: Mutations must be unlinked, adjacent on rf, and appear in the same read chunks.
      * @param rhs Next Mutation.
      */
-    void merge(const Mutation& rhs)
+    void merge(Mutation&& rhs)
     {
+        ASSERT(is_unlinked() and rhs.is_unlinked());
+        ASSERT(_rcpn_cont.size() == rhs._rcpn_cont.size());
         if (is_empty())
         {
-            _seq = rhs._seq;
-            _start = rhs._start;
-            _len = rhs._len;
-            _seq_len = rhs._seq_len;
+            *this = std::move(rhs);
         }
         else
         {
@@ -115,7 +121,6 @@ public:
             _seq_len += rhs._seq_len;
             _seq += rhs._seq;
         }
-        //TODO: merge chunk ptr lists
     }
 
     /** Cut mutation at given offsets.
@@ -214,16 +219,66 @@ struct Mutation_ITree_Value_Traits
     static key_type get_end(const value_type* n) { return n->get_end(); }
 };
 
-typedef boost::intrusive::itree< Mutation_ITree_Value_Traits > Mutation_Cont;
+class Mutation_Cont : public boost::intrusive::itree< Mutation_ITree_Value_Traits >
+{
+public:
+    typedef boost::intrusive::itree< Mutation_ITree_Value_Traits > Base;
+
+    // use base constructors
+    using Base::Base;
+
+    // allow move only
+    DELETE_COPY_CTOR(Mutation_Cont)
+    DEFAULT_MOVE_CTOR(Mutation_Cont)
+    DELETE_COPY_ASOP(Mutation_Cont)
+    DEFAULT_MOVE_ASOP(Mutation_Cont)
+
+    // check it is empty before deallocating
+    ~Mutation_Cont() { ASSERT(this->size() == 0); }
+
+    /** Create a Mutation container using mutations from a cigar string.
+     * Pre: Cigar contains no 'M' operations (use disambiguate() first).
+     * Post: Adjacent non-match operations are merged.
+     * @param cigar Cigar object describing the match.
+     * @param qr Query string; optional: if not given, Mutation objects contain alternate string lengths only.
+     */
+    Mutation_Cont(const Cigar& cigar, const std::string& qr = std::string());
+
+    /** Add Mutation to container; if an equivalent one already exists, use that one.
+     * TODO: merge read chunk lists?
+     * TODO: deallocate new one when reusing old one?
+     * @param mut_bptr Pointer to Mutation to add.
+     * @return Pointer to Mutation inside container.
+     */
+    Mutation_BPtr add_mut(Mutation_BPtr mut_bptr);
+};
+
 
 struct Mutation_Ptr_Node_Set_Node_Traits;
 
 class Mutation_Ptr_Node
 {
+private:
+    // Can only be created by Factory object
+    friend class Factory< Mutation_Ptr_Node >;
+
+    Mutation_Ptr_Node(Mutation_BPtr m_bptr = nullptr) : _m_bptr(m_bptr) {}
+
+    // allow move only
+    DELETE_COPY_CTOR(Mutation_Ptr_Node)
+    DEFAULT_MOVE_CTOR(Mutation_Ptr_Node)
 public:
-    Mutation_Ptr_Node(Mutation_BPtr m_bptr) : _m_bptr(m_bptr) {}
+    DELETE_COPY_ASOP(Mutation_Ptr_Node)
+    DEFAULT_MOVE_ASOP(Mutation_Ptr_Node)
 
     Mutation_BPtr get() const { return _m_bptr; }
+
+    /** Comparator for storage in tree. */
+    bool operator < (const Mutation_Ptr_Node& rhs) const
+    {
+        ASSERT(_m_bptr and rhs._m_bptr);
+        return _m_bptr->get_start() < rhs._m_bptr->get_start();
+    }
 
 private:
     const Mutation_BPtr _m_bptr;
@@ -274,26 +329,83 @@ struct Mutation_Ptr_Node_Set_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
-typedef boost::intrusive::set<
-    Mutation_Ptr_Node,
-    boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
-> Mutation_Ptr_Node_Cont;
+class Mutation_Ptr_Cont
+    : public boost::intrusive::set<
+                 Mutation_Ptr_Node,
+                 boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
+                 >
+{
+public:
+    typedef boost::intrusive::set<
+                Mutation_Ptr_Node,
+                boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
+                > Base;
 
-/** Create a set of mutations to a reference string based on a cigar object.
- * Pre: Cigar contains no 'M' operations (use disambiguate() first).
- * Post: Adjacent non-match operations are merged.
- * @param cigar Cigar object describing the match.
- * @param qr Query string; optional: if not given, Mutation objects contain alternate string lengths only.
- * @return Container of Mutation objects.
- */
-//std::shared_ptr< Mutation_Cont > make_mutations_from_cigar(const Cigar& cigar, const std::string& qr = std::string());
+    // use base constructors
+    using Base::Base;
 
-/** Add Mutation to container, use existing Mutation if it already exists.
- * @param mut_cont Mutation container.
- * @param mut Mutation to add.
- * @return Pointer to Mutation inside container.
- */
-//Mutation_CPtr add_mut_to_cont(Mutation_Cont& mut_cont, const Mutation& mut);
+    // allow move only
+    DELETE_COPY_CTOR(Mutation_Ptr_Cont)
+    DEFAULT_MOVE_CTOR(Mutation_Ptr_Cont)
+    DELETE_COPY_ASOP(Mutation_Ptr_Cont)
+    DEFAULT_MOVE_ASOP(Mutation_Ptr_Cont)
+
+    // check it is empty when deallocating
+    ~Mutation_Ptr_Cont() { ASSERT(this->size() == 0); }
+
+    /** Construct a Mutation_Ptr_Cont from a Mutation_Cont.
+     * Pre: Mutations may not touch in reference.
+     */
+    Mutation_Ptr_Cont(const Mutation_Cont& mut_cont)
+    {
+        Mutation_BPtr last_bptr = nullptr;
+        for (auto mut_bref : mut_cont)
+        {
+            Mutation_BPtr crt_bptr(&mut_bref); // de-const
+            if (last_bptr)
+            {
+                ASSERT(last_bptr->get_end() < crt_bptr->get_start());
+            }
+            auto tmp = insert(crt_bptr);
+            ASSERT(tmp.second);
+        }
+    }
+
+    /** Add a mutation pointer to this container.
+     * Creates Mutation_Ptr_Node holding the given pointer, and inserts it in the container.
+     */
+    std::pair< Base::iterator, bool > insert(Mutation_BPtr mut_bptr)
+    {
+        Mutation_Ptr_Node_BPtr mp_bptr = Mutation_Ptr_Node_Fact::new_elem(mut_bptr);
+        return static_cast< Base* >(this)->insert(*mp_bptr);
+    }
+
+    /** Find a given mutation pointer in this container. */
+    Base::const_iterator find(Mutation_BPtr mut_bptr) const
+    {
+        for (auto it = this->begin(); it != this->end(); ++it)
+        {
+            if (it->get() == mut_bptr)
+            {
+                return it;
+            }
+        }
+        return this->end();
+    }
+    Base::iterator find(Mutation_BPtr mut_bptr)
+    {
+        return static_cast< Base::iterator >(const_cast< Mutation_Ptr_Cont* >(this)->find(mut_bptr));
+    }
+
+    /** Add new mutation if old mutation exists. */
+    void cond_insert(Mutation_BPtr old_mut_bptr, Mutation_BPtr new_mut_bptr)
+    {
+        if (find(old_mut_bptr) != this->end())
+        {
+            insert(new_mut_bptr);
+        }
+    }
+};
 
 }
 

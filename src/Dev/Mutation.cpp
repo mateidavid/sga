@@ -72,30 +72,30 @@ namespace MAC
                 and (not lhs.have_seq() or lhs._seq == rhs._seq));
     }
 
-    /*
-    shared_ptr< Mutation_Cont > make_mutations_from_cigar(const Cigar& cigar, const string& qr)
+    Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
     {
-        shared_ptr< Mutation_Cont > res(new Mutation_Cont());
-        Mutation m(cigar.get_rf_start(), 0);
+        Mutation_BPtr m_ptr = Mutation_Fact::new_elem(cigar.get_rf_start(), 0);
         for (size_t i = 0; i <= cigar.get_n_ops(); ++i)
         {
+            ASSERT(m_ptr);
             if (i == cigar.get_n_ops() or cigar.get_op(i) == '=')
             {
                 // construct mutation and add it to container
-                if (m.get_len() > 0 or m.get_seq_len() > 0)
+                if (m_ptr->get_len() > 0 or m_ptr->get_seq_len() > 0)
                 {
-                    Mutation_Cont::iterator it;
-                    bool success;
-                    tie(it, success) = res->insert(m);
-                    ASSERT(success);
+                    this->insert(*m_ptr);
                 }
-                m = Mutation(cigar.get_rf_offset(i) + cigar.get_rf_op_len(i), 0); // ok to call even with i == n_ops
+                else
+                {
+                    Mutation_Fact::del_elem(m_ptr);
+                }
+                m_ptr = Mutation_Fact::new_elem(cigar.get_rf_offset(i) + cigar.get_rf_op_len(i), 0); // ok to call even with i == n_ops
             }
             else
             {
                 // disallow ambigous 'M' operation
                 ASSERT(cigar.get_op(i) != 'M');
-                Mutation tmp;
+                Mutation_BPtr tmp_m_ptr;
                 if (qr.size() > 0)
                 {
                     // accept either the matched part of the query (length = cigar.qr_len)
@@ -107,38 +107,37 @@ namespace MAC
                         // assume the query sequence before qr_start is missing
                         qr_offset -= cigar.get_qr_start();
                     }
-                    tmp = Mutation(cigar.get_rf_offset(i), cigar.get_rf_op_len(i),
-                                   (not cigar.is_reversed()?
-                                    qr.substr(qr_offset, cigar.get_qr_op_len(i))
-                                    : reverseComplement(qr.substr(qr_offset, cigar.get_qr_op_len(i)))));
+                    tmp_m_ptr = Mutation_Fact::new_elem(cigar.get_rf_offset(i), cigar.get_rf_op_len(i),
+                                                        (not cigar.is_reversed()?
+                                                        qr.substr(qr_offset, cigar.get_qr_op_len(i))
+                                                        : reverseComplement(qr.substr(qr_offset, cigar.get_qr_op_len(i)))));
                 }
                 else
                 {
-                    tmp = Mutation(cigar.get_rf_offset(i), cigar.get_rf_op_len(i), cigar.get_qr_op_len(i));
+                    tmp_m_ptr = Mutation_Fact::new_elem(cigar.get_rf_offset(i), cigar.get_rf_op_len(i), cigar.get_qr_op_len(i));
                 }
-                m.merge(tmp);
+                m_ptr->merge(std::move(static_cast< Mutation& >(*tmp_m_ptr)));
+                Mutation_Fact::del_elem(tmp_m_ptr);
             }
         }
-        return res;
     }
 
-    Mutation_CPtr add_mut_to_cont(Mutation_Cont& mut_cont, const Mutation& mut)
+    Mutation_BPtr Mutation_Cont::add_mut(Mutation_BPtr mut_bptr)
     {
-        Mutation_Cont::iterator it;
-        Mutation_Cont::iterator it_end;
-        for (std::tie(it, it_end) = mut_cont.equal_range(mut.get_key()); it != it_end; ++it)
+        Base::iterator it;
+        Base::iterator it_end;
+        for (std::tie(it, it_end) = this->equal_range(*mut_bptr); it != it_end; ++it)
         {
-            if (mut == *it)
+            if (*mut_bptr == *it)
             {
+                // TODO: merge read chunk lists?
+                // TODO: deallocate new mutation?
                 return &*it;
             }
         }
-        bool success;
-        tie(it, success) = mut_cont.insert(mut);
-        ASSERT(success);
-        return &*it;
+        this->insert(*mut_bptr);
+        return mut_bptr;
     }
-    */
 
     ostream& operator << (ostream& os, const Mutation& rhs)
     {
