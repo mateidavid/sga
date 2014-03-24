@@ -298,6 +298,7 @@ namespace detail
 
         Factory_Wrapper() : _next_free_idn() {}
         Factory_Wrapper(const Factory_Wrapper& rhs) : _next_free_idn(rhs._next_free_idn) {}
+        ~Factory_Wrapper() { (&(this->_next_free_idn))->~idn_type(); }
     };
 
     /** Factory class that manages storage for objects of type T. */
