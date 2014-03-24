@@ -56,6 +56,18 @@ typedef Read_Chunk_Ptr_Node_Fact::const_ptr_type Read_Chunk_Ptr_Node_CBPtr;
 typedef Read_Chunk_Ptr_Node_Fact::ref_type Read_Chunk_Ptr_Node_BRef;
 typedef Read_Chunk_Ptr_Node_Fact::const_ref_type Read_Chunk_Ptr_Node_CBRef;
 
+typedef Factory< Read_Entry > Read_Entry_Fact;
+typedef Read_Entry_Fact::ptr_type Read_Entry_BPtr;
+typedef Read_Entry_Fact::const_ptr_type Read_Entry_CBPtr;
+typedef Read_Entry_Fact::ref_type Read_Entry_BRef;
+typedef Read_Entry_Fact::const_ref_type Read_Entry_CBRef;
+
+typedef Factory< Contig_Entry > Contig_Entry_Fact;
+typedef Contig_Entry_Fact::ptr_type Contig_Entry_BPtr;
+typedef Contig_Entry_Fact::const_ptr_type Contig_Entry_CBPtr;
+typedef Contig_Entry_Fact::ref_type Contig_Entry_BRef;
+typedef Contig_Entry_Fact::const_ref_type Contig_Entry_CBRef;
+
 }
 
 
