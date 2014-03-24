@@ -69,15 +69,10 @@ namespace detail
         Identifier() : _ptr(0) {}
 
         // allow copy & move
-        Identifier(const Identifier&) = default;
-        Identifier(Identifier&&) = default;
-        Identifier& operator = (const Identifier&) = default;
-        Identifier& operator = (Identifier&&) = default;
-
-        /*
-        template <class U>
-        explicit Identifier(const Identifier< U, Base_Ptr >& rhs) : _ptr(rhs._ptr) {}
-        */
+        DEFAULT_COPY_CTOR(Identifier)
+        DEFAULT_MOVE_CTOR(Identifier)
+        DEFAULT_COPY_ASOP(Identifier)
+        DEFAULT_MOVE_ASOP(Identifier)
 
         operator Base_Ptr () const { return _ptr; }
 
@@ -135,10 +130,10 @@ namespace detail
         Bounded_Pointer(std::nullptr_t) {}
 
         // allow copy & move
-        Bounded_Pointer(const Bounded_Pointer&) = default;
-        Bounded_Pointer(Bounded_Pointer&&) = default;
-        Bounded_Pointer& operator = (const Bounded_Pointer&) = default;
-        Bounded_Pointer& operator = (Bounded_Pointer&&) = default;
+        DEFAULT_COPY_CTOR(Bounded_Pointer)
+        DEFAULT_MOVE_CTOR(Bounded_Pointer)
+        DEFAULT_COPY_ASOP(Bounded_Pointer)
+        DEFAULT_MOVE_ASOP(Bounded_Pointer)
 
         // implicit conversion to const
         operator const Bounded_Pointer< const unqual_val_type, Base_Ptr >& () const
@@ -210,10 +205,10 @@ namespace detail
 
     public:
         // allow construction only
-        Bounded_Reference(const Bounded_Reference&) = default;
-        Bounded_Reference(Bounded_Reference&&) = default;
-        Bounded_Reference& operator = (const Bounded_Reference&) = delete;
-        Bounded_Reference& operator = (Bounded_Reference&&) = delete;
+        DEFAULT_COPY_CTOR(Bounded_Reference)
+        DEFAULT_MOVE_CTOR(Bounded_Reference)
+        DELETE_COPY_ASOP(Bounded_Reference)
+        DELETE_MOVE_ASOP(Bounded_Reference)
 
         // automatic conversion to const
         operator const Bounded_Reference< const unqual_val_type, Base_Ptr >& () const
@@ -337,10 +332,10 @@ namespace detail
         Factory(bool activate = true) : _cont(1, wrapper_type()), _next_free_idn() { if (activate) set_active(); }
 
         // disable copy & move
-        Factory(const Factory&) = delete;
-        Factory(Factory&&) = delete;
-        Factory& operator = (const Factory&) = delete;
-        Factory& operator = (Factory&&) = delete;
+        DELETE_COPY_CTOR(Factory)
+        DELETE_MOVE_CTOR(Factory)
+        DELETE_COPY_ASOP(Factory)
+        DELETE_MOVE_ASOP(Factory)
 
     private:
         /** Dereference identifier. */
@@ -457,10 +452,10 @@ namespace detail
         Holder(Args&&... args) { alloc(std::forward<Args>(args)...); }
 
         // disable copy & move
-        Holder(const Holder&) = delete;
-        Holder(Holder&&) = delete;
-        Holder& operator = (const Holder&) = delete;
-        Holder& operator = (Holder&&) = delete;
+        DELETE_COPY_CTOR(Holder)
+        DELETE_MOVE_CTOR(Holder)
+        DELETE_COPY_ASOP(Holder)
+        DELETE_MOVE_ASOP(Holder)
 
         ~Holder() { dealloc(); }
 
