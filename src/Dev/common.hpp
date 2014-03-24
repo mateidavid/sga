@@ -16,5 +16,22 @@
 #define ASSERT BOOST_ASSERT
 #define ASSERT_MSG BOOST_ASSERT_MSG
 
+#define DELETE_COPY_CTOR(_type) \
+    _type(const _type&) = delete;
+#define DELETE_MOVE_CTOR(_type) \
+    _type(_type&&) = delete;
+#define DELETE_COPY_ASOP(_type) \
+    _type& operator = (const _type&) = delete;
+#define DELETE_MOVE_ASOP(_type) \
+    _type& operator = (_type&&) = delete;
+
+#define DEFAULT_COPY_CTOR(_type) \
+    _type(const _type&) = default;
+#define DEFAULT_MOVE_CTOR(_type) \
+    _type(_type&&) = default;
+#define DEFAULT_COPY_ASOP(_type) \
+    _type& operator = (const _type&) = default;
+#define DEFAULT_MOVE_ASOP(_type) \
+    _type& operator = (_type&&) = default;
 
 #endif
