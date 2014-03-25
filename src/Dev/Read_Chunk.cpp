@@ -7,8 +7,8 @@
 #include "Read_Chunk.hpp"
 
 #include "Mutation.hpp"
-//#include "Read_Entry.hpp"
-//#include "Contig_Entry.hpp"
+#include "Read_Entry.hpp"
+#include "Contig_Entry.hpp"
 #include "print_seq.hpp"
 #include "indent.hpp"
 #include "../Util/Util.h"
@@ -18,285 +18,292 @@ using namespace std;
 
 namespace MAC
 {
-    bool operator == (const Read_Chunk_Pos& lhs, const Read_Chunk_Pos& rhs)
-    {
-        return (lhs.c_pos == rhs.c_pos 
-                and lhs.r_pos == rhs.r_pos
-                and lhs.mut_ptr_node_cit == rhs.mut_ptr_node_cit
-                and lhs.mut_offset == rhs.mut_offset);
-    }
 
-    /** Check if position is past the last mutation in the read chunk. */
-    bool Read_Chunk_Pos::past_last_mut() const
+bool operator == (const Read_Chunk_Pos& lhs, const Read_Chunk_Pos& rhs)
     {
-        ASSERT(rc_cptr);
-        return mut_ptr_node_cit == rc_cptr->mut_ptr_cont().cend();
-    }
-    
-    /** Check if position is past first mutation in the read chunk. */
-    bool Read_Chunk_Pos::past_first_mut() const
-    {
-        ASSERT(rc_cptr);
-        return mut_ptr_node_cit != rc_cptr->mut_ptr_cont().cbegin();
-    }
+    return (lhs.c_pos == rhs.c_pos 
+        and lhs.r_pos == rhs.r_pos
+        and lhs.mut_ptr_node_cit == rhs.mut_ptr_node_cit
+        and lhs.mut_offset == rhs.mut_offset);
+}
 
-    bool Read_Chunk_Pos::check() const
+Size_Type Read_Chunk::get_read_len() const
+{
+    ASSERT(_re_bptr);
+    return _re_bptr->get_len();
+}
+
+/** Check if position is past the last mutation in the read chunk. */
+bool Read_Chunk_Pos::past_last_mut() const
+{
+    ASSERT(rc_cptr);
+    return mut_ptr_node_cit == rc_cptr->mut_ptr_cont().cend();
+}
+
+/** Check if position is past first mutation in the read chunk. */
+bool Read_Chunk_Pos::past_first_mut() const
+{
+    ASSERT(rc_cptr);
+    return mut_ptr_node_cit != rc_cptr->mut_ptr_cont().cbegin();
+}
+
+bool Read_Chunk_Pos::check() const
+{
+    ASSERT(rc_cptr != NULL);
+    ASSERT(rc_cptr->get_c_start() <= c_pos and c_pos <= rc_cptr->get_c_end());
+    ASSERT(rc_cptr->get_r_start() <= r_pos and r_pos <= rc_cptr->get_r_end());
+    // if offset == 0; c_pos <= mut_start (or c_end if no more mutations)
+    ASSERT(not (mut_offset == 0)
+        or c_pos <= (not past_last_mut()?
+            mut().get_start()
+          : rc_cptr->get_c_end()));
+    // if offset != 0; c_pos == mut_start + min(mut_offset, mut_len)
+    ASSERT(not (mut_offset != 0)
+        or (not past_last_mut()
+            and c_pos == mut().get_start() + min(mut_offset, mut().get_len())));
+    return true;
+}
+
+inline Size_Type Read_Chunk_Pos::get_match_len(bool forward) const
+{
+    ASSERT(check());
+    if (mut_offset != 0)
     {
-        ASSERT(rc_cptr != NULL);
-        ASSERT(rc_cptr->get_c_start() <= c_pos and c_pos <= rc_cptr->get_c_end());
-        ASSERT(rc_cptr->get_r_start() <= r_pos and r_pos <= rc_cptr->get_r_end());
-        // if offset == 0; c_pos <= mut_start (or c_end if no more mutations)
-        ASSERT(not (mut_offset == 0)
-               or c_pos <= (not past_last_mut()?
-                            mut().get_start()
-                            : rc_cptr->get_c_end()));
-        // if offset != 0; c_pos == mut_start + min(mut_offset, mut_len)
-        ASSERT(not (mut_offset != 0)
-               or (not past_last_mut()
-                   and c_pos == mut().get_start() + min(mut_offset, mut().get_len())));
+        return 0;
+    }
+    if (forward)
+    {
+        return (not past_last_mut()? mut().get_start() : rc_cptr->get_c_end()) - c_pos;
+    }
+    else
+    {
+        return c_pos - (past_first_mut()? prev_mut().get_end() : rc_cptr->get_c_start());
+    }
+}
+
+void Read_Chunk_Pos::increment(Size_Type brk, bool on_contig)
+{
+    ASSERT(check());
+    ASSERT(*this != rc_cptr->get_end_pos());
+    if (brk == 0)
+    {
+        // by default, use an unreachable breakpoint
+        on_contig = true;
+        brk = rc_cptr->get_c_end() + 1;
+    }
+    ASSERT(not on_contig or c_pos < brk);
+    ASSERT(on_contig or (not rc_cptr->get_rc()? r_pos < brk : brk < r_pos));
+    if (not past_last_mut()
+        and c_pos == mut().get_start() + min(mut_offset, mut().get_len()))
+    {
+        // at the start or inside a mutation
+        Size_Type c_leftover = (mut().get_len() > mut_offset?
+        mut().get_len() - mut_offset
+        : 0);
+        Size_Type r_leftover = (mut().get_seq_len() > mut_offset?
+        mut().get_seq_len() - mut_offset
+        : 0);
+        Size_Type skip_len = 0;
+        if (on_contig and brk < c_pos + c_leftover)
+        {
+            skip_len = brk - c_pos;
+        }
+        else if (not on_contig and (not rc_cptr->get_rc()? brk < r_pos + r_leftover : r_pos - r_leftover < brk))
+        {
+            skip_len = (not rc_cptr->get_rc()? brk - r_pos : r_pos - brk);
+        }
+        else
+        {
+            // breakpoint does not occur later in this mutation: we advance past it entirely
+            skip_len = max(c_leftover, r_leftover);
+        }
+        c_pos += min(c_leftover, skip_len);
+        r_pos = (not rc_cptr->get_rc()? r_pos + min(r_leftover, skip_len) : r_pos - min(r_leftover, skip_len));
+        mut_offset += skip_len;
+        if (mut_offset >= mut().get_len() and mut_offset >= mut().get_seq_len())
+        {
+            mut_offset = 0;
+            ++mut_ptr_node_cit;
+        }
+    }
+    else
+    {
+        // a match stretch follows
+        Size_Type match_len = get_match_len(true);
+        ASSERT(match_len > 0);
+        Size_Type skip_len = 0;
+        if (on_contig and brk < c_pos + match_len)
+        {
+            skip_len = brk - c_pos;
+        }
+        else if (not on_contig and (not rc_cptr->get_rc()? brk < r_pos + match_len : r_pos - match_len < brk))
+        {
+            skip_len = (not rc_cptr->get_rc()? brk - r_pos : r_pos - brk);
+        }
+        else
+        {
+            skip_len = match_len;
+        }
+        c_pos += skip_len;
+        r_pos = (not rc_cptr->get_rc()? r_pos + skip_len : r_pos - skip_len);
+    }
+}
+
+void Read_Chunk_Pos::decrement(Size_Type brk, bool on_contig)
+{
+    ASSERT(check());
+    ASSERT(*this != rc_cptr->get_start_pos());
+    if (brk == 0)
+    {
+        on_contig = true;
+    }
+    ASSERT(on_contig? brk <= c_pos : (not rc_cptr->get_rc()? brk < r_pos : r_pos < brk));
+    if (mut_offset != 0
+        or (mut_offset == 0 and past_first_mut()
+        and c_pos == prev_mut().get_end()))
+    {
+        // at the end or inside a mutation
+        if (mut_offset == 0)
+        {
+            --mut_ptr_node_cit;
+            mut_offset = max(mut().get_len(), mut().get_seq_len());
+        }
+        ASSERT(mut_offset > 0);
+        Size_Type c_leftover = min(mut().get_len(), mut_offset);
+        Size_Type r_leftover = min(mut().get_seq_len(), mut_offset);
+        Size_Type c_skip_len = 0;
+        Size_Type r_skip_len = 0;
+        if (on_contig and c_pos - c_leftover < brk)
+        {
+            c_skip_len = c_pos - brk;
+            r_skip_len = (r_leftover > c_leftover - c_skip_len? r_leftover - (c_leftover - c_skip_len) : 0);
+        }
+        else if (not on_contig and (not rc_cptr->get_rc()? r_pos - r_leftover < brk : brk < r_pos + r_leftover))
+        {
+            r_skip_len = (not rc_cptr->get_rc()? r_pos - brk : brk - r_pos);
+            c_skip_len = (c_leftover > r_leftover - r_skip_len? c_leftover - (r_leftover - r_skip_len) : 0);
+        }
+        else
+        {
+            // breakpoint does not occur earlier in this mutation: we advance past it entirely
+            c_skip_len = c_leftover;
+            r_skip_len = r_leftover;
+        }
+        c_pos -= c_skip_len;
+        r_pos = (not rc_cptr->get_rc()? r_pos - r_skip_len : r_pos + r_skip_len);
+        mut_offset = max(c_leftover - c_skip_len, r_leftover - r_skip_len);
+    }
+    else
+    {
+        // a match stretch follows
+        Size_Type match_len = get_match_len(false);
+        ASSERT(match_len > 0);
+        Size_Type skip_len = 0;
+        if (on_contig and c_pos - match_len < brk)
+        {
+            skip_len = c_pos - brk;
+        }
+        else if (not on_contig and (not rc_cptr->get_rc()? r_pos - match_len < brk : brk < r_pos + match_len))
+        {
+            skip_len = (not rc_cptr->get_rc()? r_pos - brk : brk - r_pos);
+        }
+        else
+        {
+            skip_len = match_len;
+        }
+        c_pos -= skip_len;
+        r_pos = (not rc_cptr->get_rc()? r_pos - skip_len : r_pos + skip_len);
+    }
+}
+
+void Read_Chunk_Pos::jump_to_brk(Size_Type brk, bool on_contig)
+{
+    ASSERT(check());
+    ASSERT(not on_contig or (rc_cptr->get_c_start() <= brk and brk <= rc_cptr->get_c_end()));
+    ASSERT(on_contig or (rc_cptr->get_r_start() <= brk and brk <= rc_cptr->get_r_end()));
+    bool forward = (on_contig?
+    c_pos <= brk
+    : (not rc_cptr->get_rc()) == (r_pos <= brk));
+    while ((on_contig and c_pos != brk) or (not on_contig and r_pos != brk))
+    {
+        advance(forward, brk, on_contig);
+    }
+}
+
+bool Read_Chunk_Pos::advance_til_mut(const Mutation& mut, bool forward)
+{
+    Size_Type mut_first;
+    Size_Type mut_second;
+    if (forward == not rc_cptr->get_rc())
+    {
+        mut_first = mut.get_start();
+        mut_second = mut.get_end();
+        ASSERT(r_pos <= mut_first);
+    }
+    else
+    {
+        mut_first = mut.get_end();
+        mut_second = mut.get_start();
+        ASSERT(mut_first <= r_pos);
+    }
+    if (r_pos != mut_first)
+    {
+        // there are still mapping stretches before the read Mutation
+        // advance using mut_first as read breakpoint
+        advance(forward, mut_first, false);
+        return false;
+    }
+    else
+    {
+        // r_pos == mut_first
+        // at this point, we produce the stretch corresponding to the read Mutation
+        jump_to_brk(mut_second, false);
         return true;
     }
+}
 
-    inline Size_Type Read_Chunk_Pos::get_match_len(bool forward) const
+void Read_Chunk_Pos::advance_past_del(bool forward)
+{
+    Read_Chunk_Pos tmp_pos = *this;
+    while ((forward and *this != rc_cptr->get_end_pos()) or (not forward and *this != rc_cptr->get_start_pos()))
     {
-        ASSERT(check());
-        if (mut_offset != 0)
-        {
-            return 0;
-        }
-        if (forward)
-        {
-            return (not past_last_mut()? mut().get_start() : rc_cptr->get_c_end()) - c_pos;
-        }
-        else
-        {
-            return c_pos - (past_first_mut()? prev_mut().get_end() : rc_cptr->get_c_start());
-        }
+        tmp_pos.advance(forward);
+        if (tmp_pos.r_pos != r_pos)
+            break;
+        *this = tmp_pos;
     }
+}
 
-    void Read_Chunk_Pos::increment(Size_Type brk, bool on_contig)
-    {
-        ASSERT(check());
-        ASSERT(*this != rc_cptr->get_end_pos());
-        if (brk == 0)
-        {
-            // by default, use an unreachable breakpoint
-            on_contig = true;
-            brk = rc_cptr->get_c_end() + 1;
-        }
-        ASSERT(not on_contig or c_pos < brk);
-        ASSERT(on_contig or (not rc_cptr->get_rc()? r_pos < brk : brk < r_pos));
-        if (not past_last_mut()
-            and c_pos == mut().get_start() + min(mut_offset, mut().get_len()))
-        {
-            // at the start or inside a mutation
-            Size_Type c_leftover = (mut().get_len() > mut_offset?
-                                    mut().get_len() - mut_offset
-                                    : 0);
-            Size_Type r_leftover = (mut().get_seq_len() > mut_offset?
-                                    mut().get_seq_len() - mut_offset
-                                    : 0);
-            Size_Type skip_len = 0;
-            if (on_contig and brk < c_pos + c_leftover)
-            {
-                skip_len = brk - c_pos;
-            }
-            else if (not on_contig and (not rc_cptr->get_rc()? brk < r_pos + r_leftover : r_pos - r_leftover < brk))
-            {
-                skip_len = (not rc_cptr->get_rc()? brk - r_pos : r_pos - brk);
-            }
-            else
-            {
-                // breakpoint does not occur later in this mutation: we advance past it entirely
-                skip_len = max(c_leftover, r_leftover);
-            }
-            c_pos += min(c_leftover, skip_len);
-            r_pos = (not rc_cptr->get_rc()? r_pos + min(r_leftover, skip_len) : r_pos - min(r_leftover, skip_len));
-            mut_offset += skip_len;
-            if (mut_offset >= mut().get_len() and mut_offset >= mut().get_seq_len())
-            {
-                mut_offset = 0;
-                ++mut_ptr_node_cit;
-            }
-        }
-        else
-        {
-            // a match stretch follows
-            Size_Type match_len = get_match_len(true);
-            ASSERT(match_len > 0);
-            Size_Type skip_len = 0;
-            if (on_contig and brk < c_pos + match_len)
-            {
-                skip_len = brk - c_pos;
-            }
-            else if (not on_contig and (not rc_cptr->get_rc()? brk < r_pos + match_len : r_pos - match_len < brk))
-            {
-                skip_len = (not rc_cptr->get_rc()? brk - r_pos : r_pos - brk);
-            }
-            else
-            {
-                skip_len = match_len;
-            }
-            c_pos += skip_len;
-            r_pos = (not rc_cptr->get_rc()? r_pos + skip_len : r_pos - skip_len);
-        }
-    }
-
-    void Read_Chunk_Pos::decrement(Size_Type brk, bool on_contig)
-    {
-        ASSERT(check());
-        ASSERT(*this != rc_cptr->get_start_pos());
-        if (brk == 0)
-        {
-            on_contig = true;
-        }
-        ASSERT(on_contig? brk <= c_pos : (not rc_cptr->get_rc()? brk < r_pos : r_pos < brk));
-        if (mut_offset != 0
-            or (mut_offset == 0 and past_first_mut()
-                and c_pos == prev_mut().get_end()))
-        {
-            // at the end or inside a mutation
-            if (mut_offset == 0)
-            {
-                --mut_ptr_node_cit;
-                mut_offset = max(mut().get_len(), mut().get_seq_len());
-            }
-            ASSERT(mut_offset > 0);
-            Size_Type c_leftover = min(mut().get_len(), mut_offset);
-            Size_Type r_leftover = min(mut().get_seq_len(), mut_offset);
-            Size_Type c_skip_len = 0;
-            Size_Type r_skip_len = 0;
-            if (on_contig and c_pos - c_leftover < brk)
-            {
-                c_skip_len = c_pos - brk;
-                r_skip_len = (r_leftover > c_leftover - c_skip_len? r_leftover - (c_leftover - c_skip_len) : 0);
-            }
-            else if (not on_contig and (not rc_cptr->get_rc()? r_pos - r_leftover < brk : brk < r_pos + r_leftover))
-            {
-                r_skip_len = (not rc_cptr->get_rc()? r_pos - brk : brk - r_pos);
-                c_skip_len = (c_leftover > r_leftover - r_skip_len? c_leftover - (r_leftover - r_skip_len) : 0);
-            }
-            else
-            {
-                // breakpoint does not occur earlier in this mutation: we advance past it entirely
-                c_skip_len = c_leftover;
-                r_skip_len = r_leftover;
-            }
-            c_pos -= c_skip_len;
-            r_pos = (not rc_cptr->get_rc()? r_pos - r_skip_len : r_pos + r_skip_len);
-            mut_offset = max(c_leftover - c_skip_len, r_leftover - r_skip_len);
-        }
-        else
-        {
-            // a match stretch follows
-            Size_Type match_len = get_match_len(false);
-            ASSERT(match_len > 0);
-            Size_Type skip_len = 0;
-            if (on_contig and c_pos - match_len < brk)
-            {
-                skip_len = c_pos - brk;
-            }
-            else if (not on_contig and (not rc_cptr->get_rc()? r_pos - match_len < brk : brk < r_pos + match_len))
-            {
-                skip_len = (not rc_cptr->get_rc()? r_pos - brk : brk - r_pos);
-            }
-            else
-            {
-                skip_len = match_len;
-            }
-            c_pos -= skip_len;
-            r_pos = (not rc_cptr->get_rc()? r_pos - skip_len : r_pos + skip_len);
-        }
-    }
-
-    void Read_Chunk_Pos::jump_to_brk(Size_Type brk, bool on_contig)
-    {
-        ASSERT(check());
-        ASSERT(not on_contig or (rc_cptr->get_c_start() <= brk and brk <= rc_cptr->get_c_end()));
-        ASSERT(on_contig or (rc_cptr->get_r_start() <= brk and brk <= rc_cptr->get_r_end()));
-        bool forward = (on_contig?
-                        c_pos <= brk
-                        : (not rc_cptr->get_rc()) == (r_pos <= brk));
-        while ((on_contig and c_pos != brk) or (not on_contig and r_pos != brk))
-        {
-            advance(forward, brk, on_contig);
-        }
-    }
-
-    bool Read_Chunk_Pos::advance_til_mut(const Mutation& mut, bool forward)
-    {
-        Size_Type mut_first;
-        Size_Type mut_second;
-        if (forward == not rc_cptr->get_rc())
-        {
-            mut_first = mut.get_start();
-            mut_second = mut.get_end();
-            ASSERT(r_pos <= mut_first);
-        }
-        else
-        {
-            mut_first = mut.get_end();
-            mut_second = mut.get_start();
-            ASSERT(mut_first <= r_pos);
-        }
-        if (r_pos != mut_first)
-        {
-            // there are still mapping stretches before the read Mutation
-            // advance using mut_first as read breakpoint
-            advance(forward, mut_first, false);
-            return false;
-        }
-        else
-        {
-            // r_pos == mut_first
-            // at this point, we produce the stretch corresponding to the read Mutation
-            jump_to_brk(mut_second, false);
-            return true;
-        }
-    }
-
-    void Read_Chunk_Pos::advance_past_del(bool forward)
-    {
-        Read_Chunk_Pos tmp_pos = *this;
-        while ((forward and *this != rc_cptr->get_end_pos()) or (not forward and *this != rc_cptr->get_start_pos()))
-        {
-            tmp_pos.advance(forward);
-            if (tmp_pos.r_pos != r_pos)
-                break;
-            *this = tmp_pos;
-        }
-    }
-
-    Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* rf_ptr, const Seq_Type& qr)
-    {
-        ASSERT(rf_ptr->size() == cigar.get_rf_len() or rf_ptr->size() >= cigar.get_rf_start() + cigar.get_rf_len());
-        ASSERT(qr.size() == cigar.get_qr_len() or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
-
-        // create objects with default constructor
-        //shared_ptr< Read_Chunk > chunk_sptr(new Read_Chunk());
-        //shared_ptr< Contig_Entry > ce_sptr(new Contig_Entry(rf_ptr, (rf_ptr->size() == cigar.get_rf_len()? cigar.get_rf_start() : 0)));
-        Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem();
-        Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(rf_ptr, (rf_ptr->size() == cigar.get_rf_len()? cigar.get_rf_start() : 0));
-
-        // fix lengths and rc flags
-        rc_bptr->_c_start = cigar.get_rf_start();
-        rc_bptr->_c_len = cigar.get_rf_len();
-        rc_bptr->_r_start = cigar.get_qr_start();
-        rc_bptr->_r_len = cigar.get_qr_len();
-        rc_bptr->_rc = cigar.is_reversed();
-
-        // fix cross-pointers
-        rc_bptr->_ce_bptr = ce_bptr;
-        ce_bptr->add_chunk(rc_bptr);
-
-        // construct mutations and store them in Contig_Entry object
-        ce_bptr->mut_cont() = Mutation_Cont(cigar, qr);
-
-        // store pointers in the Read_Chunk object
-        rc_bptr->_mut_ptr_cont = Mutation_Ptr_Cont(ce_bptr->mut_cont());
-
-        return rc_bptr;
-    }
+Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* rf_ptr, const Seq_Type& qr)
+{
+    ASSERT(rf_ptr->size() == cigar.get_rf_len() or rf_ptr->size() >= cigar.get_rf_start() + cigar.get_rf_len());
+    ASSERT(qr.size() == cigar.get_qr_len() or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
+    
+    // create objects with default constructor
+    //shared_ptr< Read_Chunk > chunk_sptr(new Read_Chunk());
+    //shared_ptr< Contig_Entry > ce_sptr(new Contig_Entry(rf_ptr, (rf_ptr->size() == cigar.get_rf_len()? cigar.get_rf_start() : 0)));
+    Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem();
+    Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(rf_ptr, (rf_ptr->size() == cigar.get_rf_len()? cigar.get_rf_start() : 0));
+    
+    // fix lengths and rc flags
+    rc_bptr->_c_start = cigar.get_rf_start();
+    rc_bptr->_c_len = cigar.get_rf_len();
+    rc_bptr->_r_start = cigar.get_qr_start();
+    rc_bptr->_r_len = cigar.get_qr_len();
+    rc_bptr->_rc = cigar.is_reversed();
+    
+    // fix cross-pointers
+    rc_bptr->_ce_bptr = ce_bptr;
+    ce_bptr->add_chunk(rc_bptr);
+    
+    // construct mutations and store them in Contig_Entry object
+    ce_bptr->mut_cont() = Mutation_Cont(cigar, qr);
+    
+    // store pointers in the Read_Chunk object
+    rc_bptr->_mut_ptr_cont = Mutation_Ptr_Cont(ce_bptr->mut_cont());
+    
+    return rc_bptr;
+}
 
     /*
     tuple< shared_ptr< Read_Chunk >, shared_ptr< Contig_Entry > >
@@ -364,7 +371,7 @@ namespace MAC
                     _c_start += _mut_ptr_cont[0]->get_len();
                     _c_len -= _mut_ptr_cont[0]->get_len();
                 }
-                */
+                *
                 // fix mutation pointers
                 vector< const Mutation* > tmp(_mut_ptr_cont.begin() + pos.mut_idx, _mut_ptr_cont.end()); // drop initial deletion, if any
                 _mut_ptr_cont.clear();
@@ -616,7 +623,7 @@ namespace MAC
                         res->mut_ptr_cont().push_back(c_muts[0]);
                     }
                     else
-                    */
+                    *
                     {
                         // new metamutation
                         // add it to extra Mutation container if it doesn't exist

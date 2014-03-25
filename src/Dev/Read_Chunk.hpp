@@ -174,12 +174,28 @@ private:
     : _re_bptr(re_bptr), _ce_bptr(NULL), _mut_ptr_cont(), _r_start(0), _r_len(len), _c_start(0), _c_len(len), _rc(false), _is_unmappable(false) {}
     /**@}*/
 
-    // allow move only
+    // allow move only when unlinked
     DELETE_COPY_CTOR(Read_Chunk)
-    DEFAULT_MOVE_CTOR(Read_Chunk)
+    Read_Chunk(Read_Chunk&& rhs) { *this = std::move(rhs); }
 public:
     DELETE_COPY_ASOP(Read_Chunk)
-    DEFAULT_MOVE_ASOP(Read_Chunk)
+    Read_Chunk& operator = (Read_Chunk&& rhs)
+    {
+        if (this != &rhs)
+        {
+            ASSERT(is_unlinked() and rhs.is_unlinked());
+            _re_bptr = std::move(rhs._re_bptr);
+            _ce_bptr = std::move(rhs._ce_bptr);
+            _mut_ptr_cont = std::move(rhs._mut_ptr_cont);
+            _r_start = std::move(rhs._r_start);
+            _r_len = std::move(rhs._r_len);
+            _c_start = std::move(rhs._c_start);
+            _c_len = std::move(rhs._c_len);
+            _rc = std::move(rhs._rc);
+            _is_unmappable = std::move(rhs._is_unmappable);
+        }
+        return *this;
+    }
     
     /** @name Getters */
     /**@{*/
@@ -201,6 +217,7 @@ public:
     Seq_Type substr(Size_Type start, Size_Type len) const;
     bool is_unmappable() const { return _is_unmappable; }
     void set_unmappable() { _is_unmappable = true; }
+    Size_Type get_read_len() const;
     /**@}*/
     
     /** Set of coordinates used to traverse a Read_Chunk mapping. */
@@ -214,6 +231,32 @@ public:
     Read_Chunk_Pos get_end_pos() const
     {
         return Read_Chunk_Pos(get_c_end(), (not _rc? get_r_end() : get_r_start()), --_mut_ptr_cont.end(), 0, this);
+    }
+
+    /** Find bounded pointer to this object.
+     * Pre: Must be linked.
+     */
+    Read_Chunk_CBPtr bptr_to() const
+    {
+        ASSERT(not is_unlinked());
+        if (_re_parent->_re_l_child.raw() == this)
+        {
+            return _re_parent->_re_l_child;
+        }
+        if (_re_parent->_re_r_child.raw() == this)
+        {
+            return _re_parent->_re_r_child;
+        }
+        if (_re_parent->_re_parent.raw() == this)
+        {
+            return _re_parent->_re_parent;
+        }
+        ASSERT(false);
+        return nullptr;
+    }
+    Read_Chunk_BPtr bptr_to()
+    {
+        return static_cast< Read_Chunk_BPtr >(const_cast< const Read_Chunk* >(this)->bptr_to());
     }
 
     /** Assign read chunk to contig.
@@ -326,6 +369,7 @@ private:
     Size_Type _ce_max_end;
     bool _ce_col;
     bool _re_col;
+    bool is_unlinked() const { return not(_ce_parent or _ce_l_child or _ce_r_child or _re_parent or _re_l_child or _re_r_child); }
 }; // class Read_Chunk
 
 struct Read_Chunk_ITree_Node_Traits
@@ -416,10 +460,111 @@ struct Read_Chunk_Set_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
-typedef boost::intrusive::set<
-    Read_Chunk,
-    boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
-> Read_Chunk_RE_Cont;
+/** Comparator for storage in RE Cont. */
+struct Read_Chunk_Set_Comparator
+{
+    bool operator () (const Read_Chunk& lhs, const Read_Chunk& rhs) const
+    {
+        return lhs.get_r_start() < rhs.get_r_start();
+    }
+};
+
+class Read_Chunk_RE_Cont
+    : boost::intrusive::set<
+          Read_Chunk,
+          boost::intrusive::compare< Read_Chunk_Set_Comparator >,
+          boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
+          >
+{
+public:
+    typedef boost::intrusive::set<
+                Read_Chunk,
+                boost::intrusive::compare< Read_Chunk_Set_Comparator >,
+                boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
+                > Base;
+
+    // use base constructors
+    using Base::Base;
+
+    // allow move only
+    DEFAULT_DEF_CTOR(Read_Chunk_RE_Cont)
+    DELETE_COPY_CTOR(Read_Chunk_RE_Cont)
+    DEFAULT_MOVE_CTOR(Read_Chunk_RE_Cont)
+    DELETE_COPY_ASOP(Read_Chunk_RE_Cont)
+    DEFAULT_MOVE_ASOP(Read_Chunk_RE_Cont)
+
+    // check it is empty when deallocating
+    ~Read_Chunk_RE_Cont() { ASSERT(this->size() == 0); }
+
+    /** Insert read chunk in this container. */
+    void insert(Read_Chunk_BPtr rc_bptr)
+    {
+        Base::iterator it;
+        bool success;
+        std::tie(it, success) = static_cast< Base* >(this)->insert(*rc_bptr);
+        ASSERT(success);
+    }
+
+    /** Find chunk which contains given read position.
+     * @param r_pos Read position, 0-based.
+     * @return Pointer to Read Chunk object, or NULL if no chunk contains r_pos.
+     */
+    Read_Chunk_CBPtr get_chunk_with_pos(Size_Type r_pos) const
+    {
+        ASSERT(this->size() > 0);
+        ASSERT(this->begin()->re_bptr());
+        if (r_pos >= this->begin()->get_read_len())
+        {
+            return nullptr;
+        }
+        Base::const_iterator cit = this->lower_bound(r_pos, Base::value_compare());
+        if (cit != this->cend() and cit->get_r_start() == r_pos)
+        {
+            return &*cit;
+        }
+        else
+        {
+            ASSERT(cit != this->cbegin());
+            return &*(--cit);
+        }
+    }
+
+    Read_Chunk_BPtr get_chunk_with_pos(Size_Type r_pos)
+    {
+        return static_cast< Read_Chunk_BPtr >(const_cast< const Read_Chunk_RE_Cont* >(this)->get_chunk_with_pos(r_pos));
+    }
+
+    /** Get the sibling of the given read chunk.
+     * @param next Bool: if true, get next chunk; if false, get previous chunk.
+     * @return Pointer to sibling chunk, or NULL if no sibling exists.
+     */
+    Read_Chunk_CBPtr get_next(Read_Chunk_CBPtr rc_cbptr, bool next) const
+    {
+        Base::const_iterator rc_cit = this->iterator_to(*rc_cbptr);
+        if (next)
+        {
+            ++rc_cit;
+            if (rc_cit == this->cend())
+            {
+                return nullptr;
+            }
+        }
+        else
+        {
+            if (rc_cit == this->cbegin())
+            {
+                return nullptr;
+            }
+            --rc_cit;
+        }
+        return &*rc_cit;
+    }
+    Read_Chunk_BPtr get_next(Read_Chunk_CBPtr rc_cbptr, bool next)
+    {
+        return static_cast< Read_Chunk_BPtr >(const_cast< const Read_Chunk_RE_Cont* >(this)->get_next(rc_cbptr, next));
+    }
+
+};
 
 } // namespace MAC
 

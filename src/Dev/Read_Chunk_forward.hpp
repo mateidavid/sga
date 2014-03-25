@@ -38,12 +38,26 @@ public:
 
     Read_Chunk_BPtr get() const { return _rc_bptr; }
 
+    /** Find bounded pointer to this object.
+     * Pre: Must be linked.
+     */
+    Read_Chunk_Ptr_Node_CBPtr bptr_to() const
+    {
+        ASSERT(not is_unlinked());
+        return _next->_previous;
+    }
+    Read_Chunk_Ptr_Node_BPtr bptr_to()
+    {
+        return static_cast< Read_Chunk_Ptr_Node_BPtr >(const_cast< const Read_Chunk_Ptr_Node* >(this)->bptr_to());
+    }
+
 private:
     const Read_Chunk_BPtr _rc_bptr;
 
     friend struct Read_Chunk_Ptr_Node_List_Node_Traits;
     Read_Chunk_Ptr_Node_BPtr _previous;
     Read_Chunk_Ptr_Node_BPtr _next;
+    bool is_unlinked() const { return not(_previous or _next); }
 };
 
 struct Read_Chunk_Ptr_Node_List_Node_Traits

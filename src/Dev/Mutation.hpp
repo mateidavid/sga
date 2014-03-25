@@ -63,7 +63,7 @@ private:
 public:
     /** No copy assignment. */
     DELETE_COPY_ASOP(Mutation)
-    /** Move assignment. */
+    /** Move assignment: allow move only when unlinked. */
     Mutation& operator = (Mutation&& rhs)
     {
         if (this != &rhs)
@@ -92,6 +92,32 @@ public:
     bool have_seq() const { return _seq.size() == _seq_len; }
     const Seq_Type& get_seq() const { return _seq; }
     /**@}*/
+
+    /** Find bounded pointer to this object.
+     * Pre: Must be linked.
+     */
+    Mutation_CBPtr bptr_to() const
+    {
+        ASSERT(not is_unlinked());
+        if (_parent->_l_child.raw() == this)
+        {
+            return _parent->_l_child;
+        }
+        if (_parent->_r_child.raw() == this)
+        {
+            return _parent->_r_child;
+        }
+        if (_parent->_parent.raw() == this)
+        {
+            return _parent->_parent;
+        }
+        ASSERT(false);
+        return nullptr;
+    }
+    Mutation_BPtr bptr_to()
+    {
+        return static_cast< Mutation_BPtr >(const_cast< const Mutation* >(this)->bptr_to());
+    }
 
     /** @name Basic queries */
     /**@{*/
@@ -169,7 +195,7 @@ private:
     Mutation_BPtr _r_child;
     Size_Type _max_end;
     int _col;
-    bool is_unlinked() const { return _parent or _l_child or _r_child; }
+    bool is_unlinked() const { return not(_parent or _l_child or _r_child); }
 };
 
 struct Mutation_ITree_Node_Traits
@@ -264,20 +290,39 @@ private:
 
     Mutation_Ptr_Node(Mutation_BPtr m_bptr = nullptr) : _m_bptr(m_bptr) {}
 
-    // allow move only
+    // no copy or move
     DELETE_COPY_CTOR(Mutation_Ptr_Node)
-    DEFAULT_MOVE_CTOR(Mutation_Ptr_Node)
+    DELETE_MOVE_CTOR(Mutation_Ptr_Node)
 public:
     DELETE_COPY_ASOP(Mutation_Ptr_Node)
-    DEFAULT_MOVE_ASOP(Mutation_Ptr_Node)
+    DELETE_MOVE_ASOP(Mutation_Ptr_Node)
 
     Mutation_BPtr get() const { return _m_bptr; }
 
-    /** Comparator for storage in tree. */
-    bool operator < (const Mutation_Ptr_Node& rhs) const
+    /** Find bounded pointer to this object.
+     * Pre: Must be linked.
+     */
+    Mutation_Ptr_Node_CBPtr bptr_to() const
     {
-        ASSERT(_m_bptr and rhs._m_bptr);
-        return _m_bptr->get_start() < rhs._m_bptr->get_start();
+        ASSERT(not is_unlinked());
+        if (_parent->_l_child.raw() == this)
+        {
+            return _parent->_l_child;
+        }
+        if (_parent->_r_child.raw() == this)
+        {
+            return _parent->_r_child;
+        }
+        if (_parent->_parent.raw() == this)
+        {
+            return _parent->_parent;
+        }
+        ASSERT(false);
+        return nullptr;
+    }
+    Mutation_Ptr_Node_BPtr bptr_to()
+    {
+        return static_cast< Mutation_Ptr_Node_BPtr >(const_cast< const Mutation_Ptr_Node* >(this)->bptr_to());
     }
 
 private:
@@ -288,6 +333,17 @@ private:
     Mutation_Ptr_Node_BPtr _l_child;
     Mutation_Ptr_Node_BPtr _r_child;
     int _col;
+    bool is_unlinked() const { return not( _parent or _l_child or _r_child); }
+};
+
+/** Comparator for storage in tree. */
+struct Mutation_Ptr_Node_Compare
+{
+    bool operator () (const Mutation_Ptr_Node& lhs, const Mutation_Ptr_Node& rhs) const
+    {
+        ASSERT(lhs.get() and rhs.get());
+        return lhs.get()->get_start() < rhs.get()->get_start();
+    }
 };
 
 struct Mutation_Ptr_Node_Set_Node_Traits
@@ -332,12 +388,14 @@ struct Mutation_Ptr_Node_Set_Value_Traits
 class Mutation_Ptr_Cont
     : public boost::intrusive::set<
                  Mutation_Ptr_Node,
+                 boost::intrusive::compare< Mutation_Ptr_Node_Compare >,
                  boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
                  >
 {
 public:
     typedef boost::intrusive::set<
                 Mutation_Ptr_Node,
+                boost::intrusive::compare< Mutation_Ptr_Node_Compare >,
                 boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
                 > Base;
 
@@ -345,6 +403,7 @@ public:
     using Base::Base;
 
     // allow move only
+    DEFAULT_DEF_CTOR(Mutation_Ptr_Cont)
     DELETE_COPY_CTOR(Mutation_Ptr_Cont)
     DEFAULT_MOVE_CTOR(Mutation_Ptr_Cont)
     DELETE_COPY_ASOP(Mutation_Ptr_Cont)
