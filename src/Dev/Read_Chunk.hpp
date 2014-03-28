@@ -58,7 +58,7 @@ private:
     mut_ptr_node_cit(_mut_ptr_node_cit),
     mut_offset(_mut_offset),
     rc_cptr(_rc_cptr) {}
-  
+
     // allow copy and move
     DEFAULT_COPY_CTOR(Read_Chunk_Pos)
     DEFAULT_MOVE_CTOR(Read_Chunk_Pos)
@@ -69,7 +69,7 @@ public:
 public:
     /** Check if position is past the last mutation in the read chunk. */
     bool past_last_mut() const;
-    
+
     /** Check if position is past first mutation in the read chunk. */
     bool past_first_mut() const;
 
@@ -149,7 +149,7 @@ struct Read_Chunk_ITree_Node_Traits;
 struct Read_Chunk_Set_Node_Traits;
 
 /** Holds information about a read chunk.
- * 
+ *
  * Reads will be partitioned into chunks of non-zero size as they are mapped to contigs.
  * Each read chunk object contains information about the read it comes from (start, span),
  * the contig it is mapped to (start, span, orientation), and the contig mutations it observes.
@@ -165,7 +165,7 @@ private:
     /** Empty constructor. */
     Read_Chunk()
     : _re_bptr(NULL), _ce_bptr(NULL), _mut_ptr_cont(), _r_start(0), _r_len(0), _c_start(0), _c_len(0), _rc(false), _is_unmappable(false) {}
-    
+
     /** Constructs a single read chunk from a read, and maps it to a new contig.
      * @param re_ptr Pointer to read entry where this chunk comes from.
      * @param len Length of the read.
@@ -196,7 +196,7 @@ public:
         }
         return *this;
     }
-    
+
     /** @name Getters */
     /**@{*/
     const Read_Entry_BPtr& re_bptr() const { return _re_bptr; }
@@ -219,14 +219,14 @@ public:
     void set_unmappable() { _is_unmappable = true; }
     Size_Type get_read_len() const;
     /**@}*/
-    
+
     /** Set of coordinates used to traverse a Read_Chunk mapping. */
     /** Get mapping start position. */
     Read_Chunk_Pos get_start_pos() const
     {
         return Read_Chunk_Pos(get_c_start(), (not _rc? get_r_start() : get_r_end()), _mut_ptr_cont.begin(), 0, this);
     }
-    
+
     /** Get mapping end position. */
     Read_Chunk_Pos get_end_pos() const
     {
@@ -291,7 +291,7 @@ public:
      * @param qr Query string (either whole, or just mapped portion).
      */
     Read_Chunk_BPtr make_chunk_from_cigar(const Cigar& cigar, Seq_Type* rf_ptr, const Seq_Type& qr = std::string());
-    
+
     /** Create Read_Chunk object and corresponding Mutation container from a cigar string and 2 existing Read_Chunk objects.
      * @param cigar Cigar string.
      * @param rc1 Read_Chunk corresponding to rf.
@@ -300,14 +300,14 @@ public:
      */
     //static std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry > > make_chunk_from_cigar_and_chunks(
     //    const Cigar& cigar, const Read_Chunk& rc1, const Read_Chunk& rc2);
-    
+
     /** Construct a Read_Chunk corresponding to the read->contig mapping.
      * @return New Read_Chunk object and Contig_Entry objects;
      * and a Mutation translation object from original to reversed Mutations.
      */
     //std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry >, std::shared_ptr< Mutation_Trans_Cont > >
     //reverse() const;
-    
+
     /** Collapse mutations corresponding to 2 mappings.
      * @param lhs Read_Chunk object corresponding to contig->read1 mapping.
      * @param lhs_me Container of Mutation_Extra objects from lhs.
@@ -321,28 +321,28 @@ public:
      *             const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2);
      */
     //std::shared_ptr< Read_Chunk > collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const;
-    
+
     /** Reverse the contig mapping (assumes mutations are reverse by contig entry). */
     //void reverse();
-    
+
     /** Merge this read chunk with the next chunk of the same read.
      * Pre: Chunks must be mapped to the same contig, in the same orientation, continuously.
      * @param rc_next_cptr CPtr to next chunk.
      * @param add_mut_mod Modifier that allows chunk object to add mutations to contig.
      */
     //void merge_next(const Read_Chunk* rc_next_cptr, Mutation::add_mut_mod_type add_mut_mod);
-    
+
     /** Rebase this chunk into another contig.
      * @param ce_cptr New contig.
      * @param mut_map Mutation translation map.
      * @param prefix_len Length of prefix by which new contig is larger than the old one.
      */
     //void rebase(const Contig_Entry* ce_cptr, const Mutation_Trans_Cont& mut_map, Size_Type prefix_len);
-    
+
     bool check() const;
-    
+
     friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
-    
+
 private:
     Read_Entry_BPtr _re_bptr;
     Contig_Entry_BPtr _ce_bptr;
@@ -419,7 +419,36 @@ struct Read_Chunk_ITree_Value_Traits
     static key_type get_end(const value_type* n) { return n->get_c_end(); }
 };
 
-typedef boost::intrusive::itree< Read_Chunk_ITree_Value_Traits > Read_Chunk_CE_Cont;
+class Read_Chunk_CE_Cont
+    : private boost::intrusive::itree< Read_Chunk_ITree_Value_Traits >
+{
+private:
+    typedef boost::intrusive::itree< Read_Chunk_ITree_Value_Traits > Base;
+
+public:
+    // use base constructors
+    //using Base::Base;
+
+    // allow move only
+    DEFAULT_DEF_CTOR(Read_Chunk_CE_Cont)
+    DELETE_COPY_CTOR(Read_Chunk_CE_Cont)
+    DEFAULT_MOVE_CTOR(Read_Chunk_CE_Cont)
+    DELETE_COPY_ASOP(Read_Chunk_CE_Cont)
+    DEFAULT_MOVE_ASOP(Read_Chunk_CE_Cont)
+
+    // check it is empty when deallocating
+    ~Read_Chunk_CE_Cont() { ASSERT(this->size() == 0); }
+
+    using Base::size;
+    using Base::begin;
+    using Base::end;
+
+    /** Insert read chunk in this container. */
+    void insert(Read_Chunk_BPtr rc_bptr)
+    {
+        static_cast< Base* >(this)->insert(*rc_bptr);
+    }
+};
 
 struct Read_Chunk_Set_Node_Traits
 {

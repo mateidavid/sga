@@ -16,6 +16,7 @@ using namespace std;
 
 namespace MAC
 {
+    /*
     void Contig_Entry::remove_chunk(Read_Chunk_CPtr rc_cptr)
     {
         Read_Chunk_CPtr_Cont::iterator it, it_end;
@@ -366,7 +367,7 @@ namespace MAC
             {
                 if (get<0>(it->second) == 1)
                 {
-                    /*
+                    / *
                     const Contig_Entry* ce_next_cptr;
                     bool flip;
                     std::tie(ce_next_cptr, flip) = it->first;
@@ -377,7 +378,7 @@ namespace MAC
                     {
                         neighbour_support += it2->second;
                     }
-                    */
+                    * /
                     res->erase(it);
                 }
             }
@@ -441,34 +442,35 @@ namespace MAC
                << _seq_ptr->substr(mut_cptr->get_end(), min_separation) << '\n';
         }
     }
+    */
 
     bool Contig_Entry::check() const
     {
         // check base sequence exists
         ASSERT(_seq_ptr);
-        ASSERT(_chunk_cptr_cont.size() > 0);
+        ASSERT(_chunk_cont.size() > 0);
         // mutations:
-        for (auto mut_it = _mut_cont.begin(); mut_it != _mut_cont.end(); ++mut_it)
+        for (auto mut : _mut_cont)
         {
-            Mutation_CPtr mut_cptr = &*mut_it;
             // check base coordinates
-            ASSERT(mut_cptr->get_start() <= _seq_ptr->size() and mut_cptr->get_end() <= _seq_ptr->size());
+            ASSERT(mut.get_start() <= _seq_ptr->size() and mut.get_end() <= _seq_ptr->size());
             // no empty mutations
-            ASSERT(not mut_cptr->is_empty());
+            ASSERT(not mut.is_empty());
         }
         // read chunks:
-        for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
+        auto ce_bptr = bptr_to();
+        for (auto& rc : _chunk_cont)
         {
             // check contig pointers
-            ASSERT((*rc_cptr_it)->get_ce_ptr() == this);
+            ASSERT(rc.get_ce_bptr() == ce_bptr);
             // check contig coordinates
-            ASSERT((*rc_cptr_it)->get_c_end() <= _seq_ptr->size());
+            ASSERT(rc.get_c_end() <= _seq_ptr->size());
             // mutation pointers:
-            for (auto mut_cptr_it = (*rc_cptr_it)->get_mut_ptr_cont().begin(); mut_cptr_it != (*rc_cptr_it)->get_mut_ptr_cont().end(); ++mut_cptr_it)
+            for (auto mpn : rc._mut_ptr_cont)
             {
                 // check they point inside mutation container
                 auto mut_it = _mut_cont.begin();
-                while (mut_it != _mut_cont.end() and *mut_cptr_it != &(*mut_it))
+                while (mut_it != _mut_cont.end() and mpn.get() != &(*mut_it))
                 {
                     ++mut_it;
                 }
@@ -478,6 +480,7 @@ namespace MAC
         return true;
     }
 
+    /*
     bool Contig_Entry::check_colour(bool dir) const
     {
         if (is_unmappable())
@@ -495,8 +498,9 @@ namespace MAC
         }
         return true;
     }
+    */
 
-    std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs)
+    ostream& operator << (ostream& os, const Contig_Entry& rhs)
     {
         os << indent::tab << "(Contig_Entry &=" << (void*)&rhs
            << indent::inc << indent::nl << "seq=\"" << rhs.get_seq() << "\",len=" << rhs.get_len()
@@ -506,7 +510,7 @@ namespace MAC
         print_seq(os, rhs._mut_cont, indent::nl, indent::tab, '\n');
         os << indent::dec << indent::tab << "chunk_cptr_cont:"
            << indent::inc << '\n';
-        print_seq(os, rhs._chunk_cptr_cont, indent::nl, indent::tab, '\n');
+        print_seq(os, rhs._chunk_cont, indent::nl, indent::tab, '\n');
         os << indent::dec << indent::dec << indent::tab << ")" << '\n';
         return os;
     }

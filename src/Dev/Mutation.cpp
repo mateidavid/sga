@@ -19,10 +19,10 @@ namespace MAC
 Mutation Mutation::cut(Size_Type base_offset, Size_Type alt_offset)
 {
     Mutation res;
-    
+
     ASSERT(base_offset <= _len);
     ASSERT(alt_offset <= _seq_len);
-    
+
     if (have_seq())
     {
         res = Mutation(_start + base_offset, _len - base_offset, _seq.substr(alt_offset));
@@ -131,8 +131,6 @@ Mutation_BPtr Mutation_Cont::add_mut(Mutation_BPtr mut_bptr)
     {
         if (*mut_bptr == *it)
         {
-            // TODO: merge read chunk lists?
-            // TODO: deallocate new mutation?
             return &*it;
         }
     }

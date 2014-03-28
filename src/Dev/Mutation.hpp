@@ -245,22 +245,27 @@ struct Mutation_ITree_Value_Traits
     static key_type get_end(const value_type* n) { return n->get_end(); }
 };
 
-class Mutation_Cont : public boost::intrusive::itree< Mutation_ITree_Value_Traits >
+class Mutation_Cont
+ : private boost::intrusive::itree< Mutation_ITree_Value_Traits >
 {
-public:
+private:
     typedef boost::intrusive::itree< Mutation_ITree_Value_Traits > Base;
-
-    // use base constructors
-    using Base::Base;
-
+public:
     // allow move only
+    DEFAULT_DEF_CTOR(Mutation_Cont)
     DELETE_COPY_CTOR(Mutation_Cont)
     DEFAULT_MOVE_CTOR(Mutation_Cont)
     DELETE_COPY_ASOP(Mutation_Cont)
     DEFAULT_MOVE_ASOP(Mutation_Cont)
 
+    using Base::iterator;
+    using Base::const_iterator;
+    using Base::size;
+    using Base::begin;
+    using Base::end;
+
     // check it is empty before deallocating
-    ~Mutation_Cont() { ASSERT(this->size() == 0); }
+    ~Mutation_Cont() { ASSERT(size() == 0); }
 
     /** Create a Mutation container using mutations from a cigar string.
      * Pre: Cigar contains no 'M' operations (use disambiguate() first).
@@ -270,9 +275,11 @@ public:
      */
     Mutation_Cont(const Cigar& cigar, const std::string& qr = std::string());
 
+    /** Insert Mutation in container. */
+    iterator insert(Mutation_BPtr mut_bptr) { return Base::insert(*mut_bptr); }
+
     /** Add Mutation to container; if an equivalent one already exists, use that one.
-     * TODO: merge read chunk lists?
-     * TODO: deallocate new one when reusing old one?
+     * Note: Does not deallocate new Mutation when reusing old one.
      * @param mut_bptr Pointer to Mutation to add.
      * @return Pointer to Mutation inside container.
      */

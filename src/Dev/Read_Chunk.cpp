@@ -21,7 +21,7 @@ namespace MAC
 
 bool operator == (const Read_Chunk_Pos& lhs, const Read_Chunk_Pos& rhs)
     {
-    return (lhs.c_pos == rhs.c_pos 
+    return (lhs.c_pos == rhs.c_pos
         and lhs.r_pos == rhs.r_pos
         and lhs.mut_ptr_node_cit == rhs.mut_ptr_node_cit
         and lhs.mut_offset == rhs.mut_offset);
@@ -278,30 +278,30 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* 
 {
     ASSERT(rf_ptr->size() == cigar.get_rf_len() or rf_ptr->size() >= cigar.get_rf_start() + cigar.get_rf_len());
     ASSERT(qr.size() == cigar.get_qr_len() or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
-    
+
     // create objects with default constructor
     //shared_ptr< Read_Chunk > chunk_sptr(new Read_Chunk());
     //shared_ptr< Contig_Entry > ce_sptr(new Contig_Entry(rf_ptr, (rf_ptr->size() == cigar.get_rf_len()? cigar.get_rf_start() : 0)));
     Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem();
     Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(rf_ptr, (rf_ptr->size() == cigar.get_rf_len()? cigar.get_rf_start() : 0));
-    
+
     // fix lengths and rc flags
     rc_bptr->_c_start = cigar.get_rf_start();
     rc_bptr->_c_len = cigar.get_rf_len();
     rc_bptr->_r_start = cigar.get_qr_start();
     rc_bptr->_r_len = cigar.get_qr_len();
     rc_bptr->_rc = cigar.is_reversed();
-    
+
     // fix cross-pointers
     rc_bptr->_ce_bptr = ce_bptr;
     ce_bptr->add_chunk(rc_bptr);
-    
+
     // construct mutations and store them in Contig_Entry object
     ce_bptr->mut_cont() = Mutation_Cont(cigar, qr);
-    
+
     // store pointers in the Read_Chunk object
     rc_bptr->_mut_ptr_cont = Mutation_Ptr_Cont(ce_bptr->mut_cont());
-    
+
     return rc_bptr;
 }
 
@@ -364,14 +364,14 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* 
                 // fix contig coordinates
                 _c_len = (c_brk <= _c_start? _c_len : _c_len - (c_brk - _c_start));
                 _c_start = (c_brk <= _c_start? _c_start - c_brk : 0);
-                /*
+                / *
                 if (pos.mut_idx == 1)
                 {
                     // skip initial deletion
                     _c_start += _mut_ptr_cont[0]->get_len();
                     _c_len -= _mut_ptr_cont[0]->get_len();
                 }
-                *
+                * /
                 // fix mutation pointers
                 vector< const Mutation* > tmp(_mut_ptr_cont.begin() + pos.mut_idx, _mut_ptr_cont.end()); // drop initial deletion, if any
                 _mut_ptr_cont.clear();
@@ -528,10 +528,10 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* 
         vector< Mutation_CPtr > r_muts;
         while (true)
         {
-            size_t r_mut_idx = (not get_rc()? r_mut_cnt : rc2.get_mut_ptr_cont().size() - 1 - r_mut_cnt); // next new mutation to look for
+            size_t r_mut_idx = (not get_rc()? r_mut_cnt : rc2.mut_ptr_cont().size() - 1 - r_mut_cnt); // next new mutation to look for
             const Mutation& r_mut = (r_mut_cnt == 0 and not past_start?
                                      fake_mut_start :
-                                     r_mut_cnt < rc2.get_mut_ptr_cont().size()? *rc2.get_mut_ptr_cont()[r_mut_idx] : fake_mut_end);
+                                     r_mut_cnt < rc2.mut_ptr_cont().size()? *rc2.mut_ptr_cont()[r_mut_idx] : fake_mut_end);
 
             Pos pos_next = pos;
             bool got_r_mut = pos_next.advance_til_mut(r_mut);
@@ -588,7 +588,7 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* 
                 }
             }
             else if ((not got_r_mut and pos.get_match_len() > 0)
-                or (got_r_mut and r_mut_cnt == rc2.get_mut_ptr_cont().size()))
+                or (got_r_mut and r_mut_cnt == rc2.mut_ptr_cont().size()))
             {
                 ASSERT(not got_r_mut or pos_next == pos);
                 if (got_r_mut and pos_next.r_pos == get_end_pos().r_pos)
@@ -612,10 +612,10 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* 
                 }
                 // the stretch pos->pos_next is a match, or we are at the end;
                 // consolidate any outstanding mutations
-                m.simplify(get_ce_ptr()->substr(m.get_start(), m.get_len()));
+                m.simplify(ce_bptr()->substr(m.get_start(), m.get_len()));
                 if (not m.is_empty())
                 {
-                    /*
+                    / *
                     if (r_muts.size() == 0)
                     {
                         // no adjacent contig mutations
@@ -623,7 +623,7 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* 
                         res->mut_ptr_cont().push_back(c_muts[0]);
                     }
                     else
-                    *
+                    * /
                     {
                         // new metamutation
                         // add it to extra Mutation container if it doesn't exist
@@ -690,7 +690,7 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* 
     {
         ASSERT(rc_next_cptr != NULL);
         ASSERT(rc_next_cptr->get_re_ptr() == get_re_ptr());
-        ASSERT(rc_next_cptr->get_ce_ptr() == get_ce_ptr());
+        ASSERT(rc_next_cptr->ce_bptr() == ce_bptr());
         ASSERT(rc_next_cptr->get_rc() == get_rc());
         ASSERT(rc_next_cptr->get_r_start() == get_r_end());
         ASSERT(get_rc() or rc_next_cptr->get_c_start() == get_c_end());
@@ -802,22 +802,22 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* 
         ASSERT(get_r_len() > 0);
         // contigs coordinates
         ASSERT(get_c_start() <= get_c_end());
-        ASSERT(get_c_start() <= get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len());
-        ASSERT(get_c_end() <= get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len());
+        ASSERT(get_c_start() <= ce_bptr()->get_seq_offset() + ce_bptr()->get_len());
+        ASSERT(get_c_end() <= ce_bptr()->get_seq_offset() + ce_bptr()->get_len());
         // mapped length
         Size_Type c_len = get_c_end() - get_c_start();
         Size_Type r_len = get_r_end() - get_r_start();
         long long delta = 0;
-        for (size_t i = 0; i < get_mut_ptr_cont().size(); ++i)
+        for (auto& mpn : _mut_ptr_cont)
         {
             // no empty mutations
-            ASSERT(not get_mut_ptr_cont()[i]->is_empty());
+            ASSERT(not mpn.get()->is_empty());
             // mutations must be in contig order
-            ASSERT(i == 0 or get_mut_ptr_cont()[i - 1]->get_end() <= get_mut_ptr_cont()[i]->get_start());
+            ASSERT(i == 0 or mut_ptr_cont()[i - 1]->get_end() <= mut_ptr_cont()[i]->get_start());
 #ifndef ALLOW_CONSECUTIVE_MUTATIONS
-            ASSERT(i == 0 or get_mut_ptr_cont()[i - 1]->get_end() < get_mut_ptr_cont()[i]->get_start());
+            ASSERT(i == 0 or mut_ptr_cont()[i - 1]->get_end() < mut_ptr_cont()[i]->get_start());
 #endif
-            delta += (long long)get_mut_ptr_cont()[i]->get_seq_len() - (long long)get_mut_ptr_cont()[i]->get_len();
+            delta += (long long)mut_ptr_cont()[i]->get_seq_len() - (long long)mut_ptr_cont()[i]->get_len();
         }
         ASSERT((long long)c_len + delta == (long long)r_len);
 #ifndef ALLOW_PART_MAPPED_INNER_CHUNKS
@@ -825,10 +825,10 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* 
         ASSERT(get_r_start() == 0
                or (not get_rc()?
                    get_c_start() == 0
-                   : get_c_end() == get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len()));
+                   : get_c_end() == ce_bptr()->get_seq_offset() + ce_bptr()->get_len()));
         ASSERT(get_r_end() == get_re_ptr()->get_len()
                or (not get_rc()?
-                   get_c_end() == get_ce_ptr()->get_seq_offset() + get_ce_ptr()->get_len()
+                   get_c_end() == ce_bptr()->get_seq_offset() + ce_bptr()->get_len()
                    : get_c_start() == 0));
 #endif
         // unmappable contigs have no mutations and a single chunk

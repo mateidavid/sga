@@ -25,7 +25,7 @@ namespace MAC
 struct Read_Entry_Set_Node_Traits;
 
 /** Holds information about a read.
- * 
+ *
  * The read sequence gets assigned to various contigs. The Read_Entry object holds the read name,
  * as well as the (order) sequence of read chunks which are mapped to contigs.
  */
@@ -97,7 +97,7 @@ public:
     Seq_Type get_seq() const;
     /**@}*/
 
-    /** Check if this read ends the last contig where it is mapped. 
+    /** Check if this read ends the last contig where it is mapped.
      * @param check_start True to check read start, false to check read end.
      * @return True if there are no more bases in the contig past the read end.
      */
@@ -105,14 +105,14 @@ public:
 
     /** Integrity check. */
     bool check() const;
-    
+
     friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);
-    
+
 private:
     std::shared_ptr< const std::string > _name_ptr;
     Read_Chunk_RE_Cont _chunk_cont;
     Size_Type _len;
-    
+
     /** Hooks for storage in intrusive set inside Graph object. */
     friend struct Read_Entry_Set_Node_Traits;
     Read_Entry_BPtr _parent;
