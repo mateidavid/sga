@@ -48,10 +48,17 @@ namespace detail
     {
         return const_cast< Return >(obj->operator typename const_referred_type< Return >::type ());
     }
+
+    template < typename T >
+    const T* const_this(T* ptr)
+    {
+        return const_cast< const T* >(ptr);
+    }
 }
 
 using detail::nonconst_method;
 using detail::nonconst_conversion;
+using detail::const_this;
 
 #define DEF_NONCONST_METHOD_T(_type, _function) \
     template < typename... Args > \
