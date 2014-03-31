@@ -263,6 +263,7 @@ public:
     using Base::size;
     using Base::begin;
     using Base::end;
+    using Base::iterator_to;
 
     // check it is empty before deallocating
     ~Mutation_Cont() { ASSERT(size() == 0); }
@@ -278,12 +279,38 @@ public:
     /** Insert Mutation in container. */
     iterator insert(Mutation_BPtr mut_bptr) { return Base::insert(*mut_bptr); }
 
+    /** Get iterator to Mutation inside container. */
+    const_iterator iterator_to(Mutation_CBPtr mut_cbptr) const { return Base::iterator_to(*mut_cbptr); }
+    iterator iterator_to(Mutation_BPtr mut_bptr) { return Base::iterator_to(*mut_bptr); }
+
+    /** Find an equivalent Mutation in container. */
+    const_iterator find(Mutation_CBPtr mut_cbptr) const
+    {
+        const_iterator it;
+        const_iterator it_end;
+        for (std::tie(it, it_end) = this->equal_range(*mut_cbptr); it != it_end; ++it)
+        {
+            if (*mut_cbptr == *it)
+            {
+                return it;
+            }
+        }
+        return end();
+    }
+    iterator find(Mutation_BPtr mut_bptr)
+    {
+        return iterator_to(static_cast< Mutation_BRef >(*const_this(this)->find(mut_bptr)));
+    }
+
+    /** Erase Mutation from container. */
+    void erase(Mutation_BPtr mut_bptr) { Base::erase(*mut_bptr); }
+
     /** Add Mutation to container; if an equivalent one already exists, use that one.
      * Note: Does not deallocate new Mutation when reusing old one.
      * @param mut_bptr Pointer to Mutation to add.
      * @return Pointer to Mutation inside container.
      */
-    Mutation_BPtr add_mut(Mutation_BPtr mut_bptr);
+    //Mutation_BPtr add_mut(Mutation_BPtr mut_bptr);
 };
 
 
@@ -304,7 +331,8 @@ public:
     DELETE_COPY_ASOP(Mutation_Ptr_Node)
     DELETE_MOVE_ASOP(Mutation_Ptr_Node)
 
-    Mutation_BPtr get() const { return _m_bptr; }
+    //Mutation_BPtr get() const { return _m_bptr; }
+    operator Mutation_BPtr () const { return _m_bptr; }
 
     /** Find bounded pointer to this object.
      * Pre: Must be linked.
@@ -329,12 +357,13 @@ public:
     }
     Mutation_Ptr_Node_BPtr bptr_to()
     {
-        return static_cast< Mutation_Ptr_Node_BPtr >(const_cast< const Mutation_Ptr_Node* >(this)->bptr_to());
+        return static_cast< Mutation_Ptr_Node_BPtr >(const_this(this)->bptr_to());
     }
 
 private:
     const Mutation_BPtr _m_bptr;
 
+    /** Hooks for storage in intrusive set inside Read_Chunk objects. */
     friend struct Mutation_Ptr_Node_Set_Node_Traits;
     Mutation_Ptr_Node_BPtr _parent;
     Mutation_Ptr_Node_BPtr _l_child;
@@ -348,8 +377,10 @@ struct Mutation_Ptr_Node_Compare
 {
     bool operator () (const Mutation_Ptr_Node& lhs, const Mutation_Ptr_Node& rhs) const
     {
-        ASSERT(lhs.get() and rhs.get());
-        return lhs.get()->get_start() < rhs.get()->get_start();
+        Mutation_BPtr lhs_ptr(lhs);
+        Mutation_BPtr rhs_ptr(rhs);
+        ASSERT(lhs_ptr and rhs_ptr);
+        return lhs_ptr->get_start() < rhs_ptr->get_start();
     }
 };
 
@@ -393,22 +424,19 @@ struct Mutation_Ptr_Node_Set_Value_Traits
 };
 
 class Mutation_Ptr_Cont
-    : public boost::intrusive::set<
-                 Mutation_Ptr_Node,
-                 boost::intrusive::compare< Mutation_Ptr_Node_Compare >,
-                 boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
-                 >
+    : private boost::intrusive::set<
+                Mutation_Ptr_Node,
+                boost::intrusive::compare< Mutation_Ptr_Node_Compare >,
+                boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
+                >
 {
-public:
+private:
     typedef boost::intrusive::set<
                 Mutation_Ptr_Node,
                 boost::intrusive::compare< Mutation_Ptr_Node_Compare >,
                 boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
                 > Base;
-
-    // use base constructors
-    using Base::Base;
-
+public:
     // allow move only
     DEFAULT_DEF_CTOR(Mutation_Ptr_Cont)
     DELETE_COPY_CTOR(Mutation_Ptr_Cont)
@@ -416,8 +444,14 @@ public:
     DELETE_COPY_ASOP(Mutation_Ptr_Cont)
     DEFAULT_MOVE_ASOP(Mutation_Ptr_Cont)
 
+    using Base::iterator;
+    using Base::const_iterator;
+    using Base::size;
+    using Base::begin;
+    using Base::end;
+
     // check it is empty when deallocating
-    ~Mutation_Ptr_Cont() { ASSERT(this->size() == 0); }
+    ~Mutation_Ptr_Cont() { ASSERT(size() == 0); }
 
     /** Construct a Mutation_Ptr_Cont from a Mutation_Cont.
      * Pre: Mutations may not touch in reference.
@@ -425,7 +459,7 @@ public:
     Mutation_Ptr_Cont(const Mutation_Cont& mut_cont)
     {
         Mutation_BPtr last_bptr = nullptr;
-        for (auto mut_bref : mut_cont)
+        for (const auto& mut_bref : mut_cont)
         {
             Mutation_BPtr crt_bptr(&mut_bref); // de-const
             if (last_bptr)
@@ -443,30 +477,31 @@ public:
     std::pair< Base::iterator, bool > insert(Mutation_BPtr mut_bptr)
     {
         Mutation_Ptr_Node_BPtr mp_bptr = Mutation_Ptr_Node_Fact::new_elem(mut_bptr);
-        return static_cast< Base* >(this)->insert(*mp_bptr);
+        return Base::insert(*mp_bptr);
     }
 
     /** Find a given mutation pointer in this container. */
     Base::const_iterator find(Mutation_BPtr mut_bptr) const
     {
-        for (auto it = this->begin(); it != this->end(); ++it)
+        for (const auto& mpn : *static_cast< const Base* >(this))
         {
-            if (it->get() == mut_bptr)
+            if (Mutation_BPtr(static_cast< const Mutation_Ptr_Node& >(mpn)) == mut_bptr)
             {
-                return it;
+                return Base::iterator_to(mpn);
             }
         }
-        return this->end();
+        return end();
     }
     Base::iterator find(Mutation_BPtr mut_bptr)
     {
-        return static_cast< Base::iterator >(const_cast< Mutation_Ptr_Cont* >(this)->find(mut_bptr));
+        auto cit = const_this(this)->find(mut_bptr);
+        return cit != end() ? Base::iterator_to(static_cast< Mutation_Ptr_Node_BRef >(*cit)) : end();
     }
 
     /** Add new mutation if old mutation exists. */
     void cond_insert(Mutation_BPtr old_mut_bptr, Mutation_BPtr new_mut_bptr)
     {
-        if (find(old_mut_bptr) != this->end())
+        if (find(old_mut_bptr) != end())
         {
             insert(new_mut_bptr);
         }

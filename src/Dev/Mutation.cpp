@@ -84,7 +84,7 @@ Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
             // construct mutation and add it to container
             if (m_ptr->get_len() > 0 or m_ptr->get_seq_len() > 0)
             {
-                this->insert(*m_ptr);
+                insert(m_ptr);
             }
             else
             {
@@ -123,6 +123,7 @@ Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
     }
 }
 
+/*
 Mutation_BPtr Mutation_Cont::add_mut(Mutation_BPtr mut_bptr)
 {
     Base::iterator it;
@@ -137,6 +138,7 @@ Mutation_BPtr Mutation_Cont::add_mut(Mutation_BPtr mut_bptr)
     this->insert(*mut_bptr);
     return mut_bptr;
 }
+*/
 
 ostream& operator << (ostream& os, const Mutation& rhs)
 {

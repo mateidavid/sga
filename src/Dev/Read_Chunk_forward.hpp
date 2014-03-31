@@ -31,12 +31,12 @@ private:
 
     // allow move only
     DELETE_COPY_CTOR(Read_Chunk_Ptr_Node)
-    DEFAULT_MOVE_CTOR(Read_Chunk_Ptr_Node)
+    DELETE_MOVE_CTOR(Read_Chunk_Ptr_Node)
 public:
     DELETE_COPY_ASOP(Read_Chunk_Ptr_Node)
-    DEFAULT_MOVE_ASOP(Read_Chunk_Ptr_Node)
+    DELETE_MOVE_ASOP(Read_Chunk_Ptr_Node)
 
-    Read_Chunk_BPtr get() const { return _rc_bptr; }
+    //Read_Chunk_BPtr get() const { return _rc_bptr; }
     operator Read_Chunk_BPtr () const { return _rc_bptr; }
 
     /** Find bounded pointer to this object.
@@ -49,12 +49,13 @@ public:
     }
     Read_Chunk_Ptr_Node_BPtr bptr_to()
     {
-        return static_cast< Read_Chunk_Ptr_Node_BPtr >(const_cast< const Read_Chunk_Ptr_Node* >(this)->bptr_to());
+        return static_cast< Read_Chunk_Ptr_Node_BPtr >(const_this(this)->bptr_to());
     }
 
 private:
     const Read_Chunk_BPtr _rc_bptr;
 
+    /** Hooks for storage in intrusive list inside Mutation objects. */
     friend struct Read_Chunk_Ptr_Node_List_Node_Traits;
     Read_Chunk_Ptr_Node_BPtr _previous;
     Read_Chunk_Ptr_Node_BPtr _next;
@@ -123,7 +124,6 @@ public:
     /** Insert read chunk in this container. */
     void insert(Read_Chunk_BPtr rc_bptr)
     {
-        //static_cast< Base* >(this)->insert(*rc_bptr);
         auto rcpn_bptr = Read_Chunk_Ptr_Node_Fact::new_elem(rc_bptr);
         Base::push_back(*rcpn_bptr);
     }
