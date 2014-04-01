@@ -38,7 +38,7 @@ private:
 
     /** Default constructor. */
     Mutation()
-    : _start(0), _len(0), _seq_len(0) {}
+        : _start(0), _len(0), _seq_len(0) {}
 
     /** Constructor.
      * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
@@ -46,7 +46,7 @@ private:
      * @param seq Alternate sequence.
      */
     Mutation(Size_Type start, Size_Type len, const Seq_Type& seq = Seq_Type())
-    : _seq(seq), _start(start), _len(len), _seq_len(seq.size()) {}
+        : _seq(seq), _start(start), _len(len), _seq_len(seq.size()) {}
 
     /** Constructor.
      * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
@@ -54,7 +54,7 @@ private:
      * @param seq_len Length of alternate sequence.
      */
     Mutation(Size_Type start, Size_Type len, Size_Type seq_len)
-    : _start(start), _len(len), _seq_len(seq_len) {}
+        : _start(start), _len(len), _seq_len(seq_len) {}
 
     /** No copy constructor. */
     DELETE_COPY_CTOR(Mutation)
@@ -168,7 +168,9 @@ public:
     {
         _start = c_len - (_start + _len);
         if (have_seq())
+        {
             _seq = reverseComplement(_seq);
+        }
     }
 
     /** Change Mutation base by adding a prefix of the given length. */
@@ -246,7 +248,7 @@ struct Mutation_ITree_Value_Traits
 };
 
 class Mutation_Cont
- : private boost::intrusive::itree< Mutation_ITree_Value_Traits >
+    : private boost::intrusive::itree< Mutation_ITree_Value_Traits >
 {
 private:
     typedef boost::intrusive::itree< Mutation_ITree_Value_Traits > Base;
@@ -331,8 +333,7 @@ public:
     DELETE_COPY_ASOP(Mutation_Ptr_Node)
     DELETE_MOVE_ASOP(Mutation_Ptr_Node)
 
-    //Mutation_BPtr get() const { return _m_bptr; }
-    operator Mutation_BPtr () const { return _m_bptr; }
+    Mutation_BPtr get() const { return _m_bptr; }
 
     /** Find bounded pointer to this object.
      * Pre: Must be linked.
@@ -360,6 +361,8 @@ public:
         return static_cast< Mutation_Ptr_Node_BPtr >(const_this(this)->bptr_to());
     }
 
+    friend std::ostream& operator << (std::ostream&, const Mutation_Ptr_Node&);
+
 private:
     const Mutation_BPtr _m_bptr;
 
@@ -377,10 +380,8 @@ struct Mutation_Ptr_Node_Compare
 {
     bool operator () (const Mutation_Ptr_Node& lhs, const Mutation_Ptr_Node& rhs) const
     {
-        Mutation_BPtr lhs_ptr(lhs);
-        Mutation_BPtr rhs_ptr(rhs);
-        ASSERT(lhs_ptr and rhs_ptr);
-        return lhs_ptr->get_start() < rhs_ptr->get_start();
+        ASSERT(lhs.get() and rhs.get());
+        return lhs.get()->get_start() < rhs.get()->get_start();
     }
 };
 
@@ -424,18 +425,16 @@ struct Mutation_Ptr_Node_Set_Value_Traits
 };
 
 class Mutation_Ptr_Cont
-    : private boost::intrusive::set<
-                Mutation_Ptr_Node,
-                boost::intrusive::compare< Mutation_Ptr_Node_Compare >,
-                boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
-                >
+    : private boost::intrusive::set< Mutation_Ptr_Node,
+                                     boost::intrusive::compare< Mutation_Ptr_Node_Compare >,
+                                     boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
+                                   >
 {
 private:
-    typedef boost::intrusive::set<
-                Mutation_Ptr_Node,
-                boost::intrusive::compare< Mutation_Ptr_Node_Compare >,
-                boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
-                > Base;
+    typedef boost::intrusive::set< Mutation_Ptr_Node,
+                                   boost::intrusive::compare< Mutation_Ptr_Node_Compare >,
+                                   boost::intrusive::value_traits< Mutation_Ptr_Node_Set_Value_Traits >
+                                 > Base;
 public:
     // allow move only
     DEFAULT_DEF_CTOR(Mutation_Ptr_Cont)
@@ -485,7 +484,7 @@ public:
     {
         for (const auto& mpn : *static_cast< const Base* >(this))
         {
-            if (Mutation_BPtr(static_cast< const Mutation_Ptr_Node& >(mpn)) == mut_bptr)
+            if (mpn.raw().get() == mut_bptr)
             {
                 return Base::iterator_to(mpn);
             }

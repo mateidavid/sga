@@ -53,11 +53,11 @@ private:
                    Mutation_Ptr_Cont::const_iterator _mut_ptr_node_cit = Mutation_Ptr_Cont::const_iterator(),
                    Size_Type _mut_offset = 0,
                    const Read_Chunk* _rc_cptr = NULL)
-    : c_pos(_c_pos),
-    r_pos(_r_pos),
-    mut_ptr_node_cit(_mut_ptr_node_cit),
-    mut_offset(_mut_offset),
-    rc_cptr(_rc_cptr) {}
+        : c_pos(_c_pos),
+          r_pos(_r_pos),
+          mut_ptr_node_cit(_mut_ptr_node_cit),
+          mut_offset(_mut_offset),
+          rc_cptr(_rc_cptr) {}
 
     // allow copy and move
     DEFAULT_COPY_CTOR(Read_Chunk_Pos)
@@ -114,7 +114,7 @@ public:
      * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
      */
     void advance(bool forward, Size_Type brk = 0, bool on_contig = true)
-    { if (forward) increment(brk, on_contig); else decrement(brk, on_contig); }
+    { if (forward) { increment(brk, on_contig); } else { decrement(brk, on_contig); } }
 
     /** Get position corresponding to given breakpoint.
      * @param brk Breakpoint location.
@@ -164,14 +164,14 @@ private:
     /**@{*/
     /** Empty constructor. */
     Read_Chunk()
-    : _re_bptr(NULL), _ce_bptr(NULL), _mut_ptr_cont(), _r_start(0), _r_len(0), _c_start(0), _c_len(0), _rc(false), _is_unmappable(false) {}
+        : _re_bptr(NULL), _ce_bptr(NULL), _mut_ptr_cont(), _r_start(0), _r_len(0), _c_start(0), _c_len(0), _rc(false), _is_unmappable(false) {}
 
     /** Constructs a single read chunk from a read, and maps it to a new contig.
      * @param re_ptr Pointer to read entry where this chunk comes from.
      * @param len Length of the read.
      */
     Read_Chunk(Read_Entry_BPtr re_bptr, Size_Type len)
-    : _re_bptr(re_bptr), _ce_bptr(NULL), _mut_ptr_cont(), _r_start(0), _r_len(len), _c_start(0), _c_len(len), _rc(false), _is_unmappable(false) {}
+        : _re_bptr(re_bptr), _ce_bptr(NULL), _mut_ptr_cont(), _r_start(0), _r_len(len), _c_start(0), _c_len(len), _rc(false), _is_unmappable(false) {}
     /**@}*/
 
     // allow move only when unlinked
@@ -496,25 +496,23 @@ struct Read_Chunk_Set_Comparator
     {
         return lhs.get_r_start() < rhs.get_r_start();
     }
+    bool operator () (const Read_Chunk& lhs, size_t rhs_val) const
+    {
+        return lhs.get_r_start() < rhs_val;
+    }
 };
 
 class Read_Chunk_RE_Cont
-    : boost::intrusive::set<
-          Read_Chunk,
-          boost::intrusive::compare< Read_Chunk_Set_Comparator >,
-          boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
-          >
+    : boost::intrusive::set< Read_Chunk,
+                             boost::intrusive::compare< Read_Chunk_Set_Comparator >,
+                             boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
+                           >
 {
 public:
-    typedef boost::intrusive::set<
-                Read_Chunk,
-                boost::intrusive::compare< Read_Chunk_Set_Comparator >,
-                boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
-                > Base;
-
-    // use base constructors
-    using Base::Base;
-
+    typedef boost::intrusive::set< Read_Chunk,
+                                   boost::intrusive::compare< Read_Chunk_Set_Comparator >,
+                                   boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
+                                 > Base;
     // allow move only
     DEFAULT_DEF_CTOR(Read_Chunk_RE_Cont)
     DELETE_COPY_CTOR(Read_Chunk_RE_Cont)

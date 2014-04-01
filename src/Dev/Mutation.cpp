@@ -43,7 +43,9 @@ void Mutation::simplify(const Seq_Type& rf)
 {
     ASSERT(rf.size() == _len);
     if (not have_seq())
+    {
         return;
+    }
     while (_len > 0 and _seq_len > 0 and rf[_len - 1] == _seq[_seq_len - 1])
     {
         --_len;
@@ -67,10 +69,10 @@ void Mutation::simplify(const Seq_Type& rf)
 bool operator == (const Mutation& lhs, const Mutation& rhs)
 {
     return (lhs._start == rhs._start
-    and lhs._len == rhs._len
-    and lhs._seq_len == rhs._seq_len
-    and lhs.have_seq() == rhs.have_seq()
-    and (not lhs.have_seq() or lhs._seq == rhs._seq));
+            and lhs._len == rhs._len
+            and lhs._seq_len == rhs._seq_len
+            and lhs.have_seq() == rhs.have_seq()
+            and (not lhs.have_seq() or lhs._seq == rhs._seq));
 }
 
 Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
@@ -110,8 +112,8 @@ Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
                 }
                 tmp_m_ptr = Mutation_Fact::new_elem(cigar.get_rf_offset(i), cigar.get_rf_op_len(i),
                                                     (not cigar.is_reversed()?
-                                                    qr.substr(qr_offset, cigar.get_qr_op_len(i))
-                                                    : reverseComplement(qr.substr(qr_offset, cigar.get_qr_op_len(i)))));
+                                                     qr.substr(qr_offset, cigar.get_qr_op_len(i))
+                                                     : reverseComplement(qr.substr(qr_offset, cigar.get_qr_op_len(i)))));
             }
             else
             {
@@ -143,7 +145,13 @@ Mutation_BPtr Mutation_Cont::add_mut(Mutation_BPtr mut_bptr)
 ostream& operator << (ostream& os, const Mutation& rhs)
 {
     os << "(Mutation &=" << (void*)&rhs << ", start=" << (size_t)rhs.get_start() << ",len=" << (size_t)rhs.get_len()
-    << ",seq_len=" << rhs.get_seq_len() << ",seq=" << rhs.get_seq() << ")";
+       << ",seq_len=" << rhs.get_seq_len() << ",seq=" << rhs.get_seq() << ")";
+    return os;
+}
+
+ostream& operator << (ostream& os, const Mutation_Ptr_Node& rhs)
+{
+    os << "(Mutation_Ptr_Node &=" << (void*)&rhs << ", _m_bptr=" << rhs._m_bptr << ")";
     return os;
 }
 

@@ -36,8 +36,7 @@ public:
     DELETE_COPY_ASOP(Read_Chunk_Ptr_Node)
     DELETE_MOVE_ASOP(Read_Chunk_Ptr_Node)
 
-    //Read_Chunk_BPtr get() const { return _rc_bptr; }
-    operator Read_Chunk_BPtr () const { return _rc_bptr; }
+    Read_Chunk_BPtr get() const { return _rc_bptr; }
 
     /** Find bounded pointer to this object.
      * Pre: Must be linked.
@@ -95,16 +94,14 @@ struct Read_Chunk_Ptr_Node_List_Value_Traits
 };
 
 class Read_Chunk_Ptr_Node_Cont
- : private boost::intrusive::list<
-            Read_Chunk_Ptr_Node,
-            boost::intrusive::value_traits< Read_Chunk_Ptr_Node_List_Value_Traits >
-            >
+    : private boost::intrusive::list< Read_Chunk_Ptr_Node,
+                                      boost::intrusive::value_traits< Read_Chunk_Ptr_Node_List_Value_Traits >
+                                    >
 {
 private:
-    typedef boost::intrusive::list<
-                Read_Chunk_Ptr_Node,
-                boost::intrusive::value_traits< Read_Chunk_Ptr_Node_List_Value_Traits >
-                > Base;
+    typedef boost::intrusive::list< Read_Chunk_Ptr_Node,
+                                    boost::intrusive::value_traits< Read_Chunk_Ptr_Node_List_Value_Traits >
+                                  > Base;
 public:
     // allow move only
     DEFAULT_DEF_CTOR(Read_Chunk_Ptr_Node_Cont)

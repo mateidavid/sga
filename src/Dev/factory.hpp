@@ -63,9 +63,7 @@ public:
     typedef T val_type;
     static_assert(std::is_same< val_type, typename std::remove_const< val_type >::type >::value, "Identifier instantiated with const type");
     typedef Base_Ptr base_ptr_type;
-    typedef typename boost::mpl::if_c< not is_void,
-    Factory< T, Base_Ptr >,
-    void >::type fact_type;
+    typedef typename boost::mpl::if_c< not is_void, Factory< T, Base_Ptr >, void >::type fact_type;
 
     Identifier() : _ptr(0) {}
 
@@ -80,12 +78,12 @@ public:
     template <bool _unused = true>
     typename boost::mpl::if_c< not is_void, val_type, enabler >::type& dereference(
         typename boost::enable_if_c< _unused and not is_void, enabler >::type = enabler()) const
-        {
-            ASSERT(fact_type::get_active_ptr());
-            return fact_type::get_active_ptr()->get_elem(*this);
-        }
+    {
+        ASSERT(fact_type::get_active_ptr());
+        return fact_type::get_active_ptr()->get_elem(*this);
+    }
 
-        Base_Ptr _ptr;
+    Base_Ptr _ptr;
 };
 
 template <class T, class Base_Ptr>
@@ -117,9 +115,9 @@ public:
     {
         typedef typename boost::mpl::if_c<
         std::is_same< typename std::remove_const< U >::type, typename std::remove_const< T >::type >::value
-        #ifdef WRAP_VOID
+#ifdef WRAP_VOID
         or std::is_void< U >::value
-        #endif
+#endif
         ,
         Bounded_Pointer< U, Base_Ptr >,
         U*
@@ -185,7 +183,7 @@ template <class T, class Base_Ptr>
 std::ostream& operator <<(std::ostream& os, const Bounded_Pointer< T, Base_Ptr >& rhs)
 {
     os << "[Bounded_Pointer:&=" << (void*)&rhs
-    << ",_ptr=" << rhs._id._ptr << "]";
+       << ",_ptr=" << rhs._id._ptr << "]";
     return os;
 }
 
@@ -214,28 +212,32 @@ public:
     // automatic conversion to const
     operator const Bounded_Reference< const unqual_val_type, Base_Ptr >& () const
     { return *reinterpret_cast< const Bounded_Reference< const unqual_val_type, Base_Ptr >* >(this); }
-    DEF_NONCONST_CONVERSION(( Bounded_Reference< const unqual_val_type, Base_Ptr >& ))
+    DEF_NONCONST_CONVERSION(( Bounded_Reference< const unqual_val_type, Base_Ptr >&))
 
     // explicit conversion to nonconst
     explicit operator const Bounded_Reference< unqual_val_type, Base_Ptr >& () const
     { return *reinterpret_cast< const Bounded_Reference< unqual_val_type, Base_Ptr >* >(this); }
-    explicit DEF_NONCONST_CONVERSION(( Bounded_Reference< unqual_val_type, Base_Ptr >& ))
+    explicit DEF_NONCONST_CONVERSION(( Bounded_Reference< unqual_val_type, Base_Ptr >&))
 
     ptr_type operator & () const { return ptr_type(_id); }
 
-    operator real_ref_type () const { return _id.dereference(); }
+    // get raw reference
+    real_ref_type raw() const { return _id.dereference(); }
+    operator real_ref_type () const { return raw(); }
 
     const Bounded_Reference& operator = (
         typename boost::mpl::if_c< std::is_same< val_type, unqual_val_type>::value,
-        const val_type&,
-        enabler<0>& >::type rhs) const
-        { _id.dereference() = rhs; return *this; }
+                                   const val_type&,
+                                   enabler<0>&
+                                 >::type rhs) const
+    { _id.dereference() = rhs; return *this; }
 
-        const Bounded_Reference& operator = (
-            typename boost::mpl::if_c< std::is_same< val_type, unqual_val_type>::value,
-            const Bounded_Reference&,
-            enabler<1>& >::type rhs) const
-            { _id.dereference() = rhs._id.dereference(); return *this; }
+    const Bounded_Reference& operator = (
+        typename boost::mpl::if_c< std::is_same< val_type, unqual_val_type>::value,
+                                   const Bounded_Reference&,
+                                   enabler<1>&
+                                 >::type rhs) const
+    { _id.dereference() = rhs._id.dereference(); return *this; }
 
 private:
     friend class Bounded_Pointer< T, Base_Ptr >;
@@ -250,8 +252,8 @@ template <class T, class Base_Ptr>
 std::ostream& operator <<(std::ostream& os, const Bounded_Reference< T, Base_Ptr >& rhs)
 {
     os << "[Bounded_Reference:&=" << (void*)&rhs._id
-    << ",_ptr=" << rhs._id._ptr
-    << ",deref=" << rhs._id.dereference() << "]";
+       << ",_ptr=" << rhs._id._ptr
+       << ",deref=" << rhs._id.dereference() << "]";
     return os;
 }
 
@@ -331,7 +333,7 @@ public:
     /** Default constructor.
      * @param activate Bool; if true, the object is used to resolve all managed pointers.
      */
-    Factory(bool activate = true) : _cont(1, wrapper_type()), _next_free_idn() { if (activate) set_active(); }
+    Factory(bool activate = true) : _cont(1, wrapper_type()), _next_free_idn() { if (activate) { set_active(); } }
 
     // disable copy & move
     DELETE_COPY_CTOR(Factory)
@@ -354,7 +356,7 @@ private:
 public:
     /** Allocate space for new element and return pointer to it. */
     template <typename... Args>
-    ptr_type new_elem_ns(Args&&... args)
+    ptr_type new_elem_ns(Args&& ... args)
     {
         ptr_type res;
         if (_next_free_idn)
@@ -403,7 +405,7 @@ public:
 
     /** Static version of new_elem, using active factory. */
     template <typename... Args>
-    static ptr_type new_elem(Args&&... args)
+    static ptr_type new_elem(Args&& ... args)
     {
         ASSERT(get_active_ptr());
         return get_active_ptr()->new_elem_ns(std::forward< Args >(args)...);
@@ -411,7 +413,7 @@ public:
 
     /** Static version of del_elem, using active factory. */
     template <typename... Args>
-    static void del_elem(Args&&... args)
+    static void del_elem(Args&& ... args)
     {
         ASSERT(get_active_ptr());
         get_active_ptr()->del_elem_ns(std::forward< Args >(args)...);
@@ -441,12 +443,12 @@ std::ostream& operator << (std::ostream& os, const Factory< T, Base_Ptr >& f)
         ++n_free;
     }
     os << "n_free=" << n_free << '\n'
-    << "next_free=" << f._next_free_idn << '\n';
+       << "next_free=" << f._next_free_idn << '\n';
     size_t idx = 0;
     for (const auto& w : f._cont)
     {
         os << idx++ << ": [key=" << w._key
-        << ",next_free_idn=" << w._next_free_idn << "]\n";
+           << ",next_free_idn=" << w._next_free_idn << "]\n";
     }
     return os;
 }
@@ -468,7 +470,7 @@ public:
 
 public:
     template <typename... Args>
-    Holder(Args&&... args) { alloc(std::forward<Args>(args)...); }
+    Holder(Args&& ... args) { alloc(std::forward<Args>(args)...); }
 
     // disable copy & move
     DELETE_COPY_CTOR(Holder)
@@ -488,7 +490,7 @@ public:
 
 private:
     template <typename... Args>
-    void alloc(Args&&... args)
+    void alloc(Args&& ... args)
     {
         ASSERT(fact_type::get_active_ptr());
         _val_ptr = fact_type::get_active_ptr()->new_elem(std::forward<Args>(args)...);
