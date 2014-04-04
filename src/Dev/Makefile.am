@@ -32,8 +32,10 @@ libdev_la_SOURCES = kmer_gen.cpp
 
 libmac_la_SOURCES = \
 	globals.cpp \
-	common.cpp \
+	global_assert.cpp \
+        Mutation_Chunk_Adapter.cpp \
         Mutation.cpp \
+        Mutation_Cont.cpp \
         Read_Chunk.cpp \
         Read_Entry.cpp \
         Contig_Entry.cpp \
@@ -56,7 +58,7 @@ mac_LDADD = libmac.la \
 #	$(top_builddir)/Util/libutil.a \
 #	$(top_builddir)/Thirdparty/libthirdparty.a
 
-test_itree_and_factory_SOURCES = test-itree-and-factory.cpp common.cpp globals.cpp
+test_itree_and_factory_SOURCES = test-itree-and-factory.cpp globals.cpp global_assert.cpp
 test_itree_and_factory_CPPFLAGS = -I$(top_srcdir)/boost-intrusive/include -I$(top_srcdir)/interval-tree/include $(AM_CPPFLAGS)
 test_itree_and_factory_CXXFLAGS = $(AM_CXXFLAGS) -Wno-ignored-qualifiers
 test_itree_and_factory_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)

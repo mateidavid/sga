@@ -23,7 +23,7 @@ bool operator == (const Read_Chunk_Pos& lhs, const Read_Chunk_Pos& rhs)
 {
     return (lhs.c_pos == rhs.c_pos
             and lhs.r_pos == rhs.r_pos
-            and lhs.mut_ptr_node_cit == rhs.mut_ptr_node_cit
+            and lhs.mca_cit == rhs.mca_cit
             and lhs.mut_offset == rhs.mut_offset);
 }
 
@@ -37,14 +37,14 @@ Size_Type Read_Chunk::get_read_len() const
 bool Read_Chunk_Pos::past_last_mut() const
 {
     ASSERT(rc_cptr);
-    return mut_ptr_node_cit == rc_cptr->mut_ptr_cont().end();
+    return mca_cit == rc_cptr->mut_ptr_cont().end();
 }
 
 /** Check if position is past first mutation in the read chunk. */
 bool Read_Chunk_Pos::past_first_mut() const
 {
     ASSERT(rc_cptr);
-    return mut_ptr_node_cit != rc_cptr->mut_ptr_cont().begin();
+    return mca_cit != rc_cptr->mut_ptr_cont().begin();
 }
 
 bool Read_Chunk_Pos::check() const
@@ -123,7 +123,7 @@ void Read_Chunk_Pos::increment(Size_Type brk, bool on_contig)
         if (mut_offset >= mut().get_len() and mut_offset >= mut().get_seq_len())
         {
             mut_offset = 0;
-            ++mut_ptr_node_cit;
+            ++mca_cit;
         }
     }
     else
@@ -165,7 +165,7 @@ void Read_Chunk_Pos::decrement(Size_Type brk, bool on_contig)
         // at the end or inside a mutation
         if (mut_offset == 0)
         {
-            --mut_ptr_node_cit;
+            --mca_cit;
             mut_offset = max(mut().get_len(), mut().get_seq_len());
         }
         ASSERT(mut_offset > 0);
@@ -302,7 +302,7 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* 
     ce_bptr->mut_cont() = Mutation_Cont(cigar, qr);
 
     // store pointers in the Read_Chunk object
-    rc_bptr->_mut_ptr_cont = Mutation_Ptr_Cont(ce_bptr->mut_cont());
+    rc_bptr->_mut_ptr_cont = Mutation_Ptr_Cont(ce_bptr->mut_cont(), rc_bptr);
 
     return rc_bptr;
 }
@@ -811,9 +811,9 @@ bool Read_Chunk::check() const
     Size_Type r_len = get_r_end() - get_r_start();
     long long delta = 0;
     Mutation_CBPtr last_mut_cbptr = nullptr;
-    for (const auto& mpn : _mut_ptr_cont)
+    for (const auto& mca_cbref : _mut_ptr_cont)
     {
-        Mutation_CBPtr mut_cbptr = mpn.raw().get();
+        Mutation_CBPtr mut_cbptr = mca_cbref.raw().mut_cbptr();
         // no empty mutations
         ASSERT(not mut_cbptr->is_empty());
         // mutations must be in contig order
@@ -849,7 +849,7 @@ bool Read_Chunk::check() const
 ostream& operator << (ostream& os, const Read_Chunk_Pos& pos)
 {
     os << "(c_pos=" << (size_t)pos.c_pos << ",r_pos=" << (size_t)pos.r_pos
-       << ",mut=" << *(pos.mut_ptr_node_cit->get()) << ",mut_offset=" << (size_t)pos.mut_offset << ")";
+       << ",mut=" << pos.mut() << ",mut_offset=" << (size_t)pos.mut_offset << ")";
     return os;
 }
 

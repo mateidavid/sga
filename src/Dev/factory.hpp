@@ -10,18 +10,13 @@
 #include <boost/utility/enable_if.hpp>
 #include <typeinfo>
 
-#include "common.hpp"
+#include "shortcuts.hpp"
+#include "global_assert.hpp"
 #include "nonconst_methods.hpp"
 
 
 namespace detail
 {
-
-template <class LHS_T, class RHS_T>
-bool operator != (const LHS_T& lhs, const RHS_T& rhs)
-{
-    return !(lhs == rhs);
-}
 
 template <class T, class Base_Ptr>
 struct Identifier;
