@@ -18,7 +18,9 @@
 
 #include "MAC_forward.hpp"
 #include "Mutation.hpp"
+#include "Mutation_Cont.hpp"
 #include "Read_Chunk.hpp"
+#include "Read_Chunk_Cont.hpp"
 
 
 namespace MAC

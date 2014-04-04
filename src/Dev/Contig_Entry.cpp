@@ -448,33 +448,32 @@ namespace MAC
     {
         // check base sequence exists
         ASSERT(_seq_ptr);
+        // check there are chunks mapped to this contig
         ASSERT(_chunk_cont.size() > 0);
         // mutations:
-        for (auto mut : _mut_cont)
+        for (const auto& mut_cbref : _mut_cont)
         {
+            const Mutation& mut = mut_cbref.raw();
             // check base coordinates
             ASSERT(mut.get_start() <= _seq_ptr->size() and mut.get_end() <= _seq_ptr->size());
-            // no empty mutations
+            // check no empty mutations
             ASSERT(not mut.is_empty());
         }
         // read chunks:
         auto ce_bptr = bptr_to();
-        for (auto& rc : _chunk_cont)
+        for (const auto& rc_cbref : _chunk_cont)
         {
-            // check contig pointers
-            ASSERT(rc.get_ce_bptr() == ce_bptr);
+            const Read_Chunk& rc = rc_cbref.raw();
+            // check contig entry pointers
+            ASSERT(rc.ce_bptr() == ce_bptr);
             // check contig coordinates
             ASSERT(rc.get_c_end() <= _seq_ptr->size());
             // mutation pointers:
-            for (auto mpn : rc._mut_ptr_cont)
+            for (const auto& mca_cbref : rc.mut_ptr_cont())
             {
+                Mutation_CBPtr mut_cbptr = mca_cbref.raw().mut_cbptr();
                 // check they point inside mutation container
-                auto mut_it = _mut_cont.begin();
-                while (mut_it != _mut_cont.end() and mpn.get() != &(*mut_it))
-                {
-                    ++mut_it;
-                }
-                ASSERT(mut_it != _mut_cont.end());
+                ASSERT(_mut_cont.find(mut_cbptr) != _mut_cont.end());
             }
         }
         return true;
@@ -504,7 +503,7 @@ namespace MAC
     {
         os << indent::tab << "(Contig_Entry &=" << (void*)&rhs
            << indent::inc << indent::nl << "seq=\"" << rhs.get_seq() << "\",len=" << rhs.get_len()
-           << ",col=" << rhs.get_colour() << ",is_unmappable=" << (int)rhs.is_unmappable()
+           << ",col=" << rhs.colour() << ",is_unmappable=" << (int)rhs.is_unmappable()
            << indent::nl << "mut_cont:"
            << indent::inc << '\n';
         print_seq(os, rhs._mut_cont, indent::nl, indent::tab, '\n');

@@ -225,10 +225,10 @@ namespace MAC
         for (size_t i = 0; i < _op_vect.size(); ++i)
         {
             // check rf_offset
-            ASSERT(not i == 0 or get_rf_offset(i) == get_rf_start());
+            ASSERT(not (i == 0) or get_rf_offset(i) == get_rf_start());
             ASSERT(i == 0 or get_rf_offset(i) == get_rf_offset(i-1) + get_rf_op_len(i-1));
             // check qr_offset
-            ASSERT(not i == 0 or get_qr_offset(i) == (not _reversed? get_qr_start() : get_qr_start() + get_qr_len()));
+            ASSERT(not (i == 0) or get_qr_offset(i) == (not _reversed? get_qr_start() : get_qr_start() + get_qr_len()));
             ASSERT(i == 0 or get_qr_offset(i) == (not _reversed? get_qr_offset(i-1) + get_qr_op_len(i-1) : get_qr_offset(i-1) - get_qr_op_len(i-1)));
             // recompute lengths
             check_rf_len += get_rf_op_len(i);

@@ -9,6 +9,7 @@
 
 #include <string>
 #include <functional>
+#include <utility>
 
 #include "shortcuts.hpp"
 #include "global_assert.hpp"
@@ -61,6 +62,8 @@ typedef Contig_Entry_Fact::ptr_type Contig_Entry_BPtr;
 typedef Contig_Entry_Fact::const_ptr_type Contig_Entry_CBPtr;
 typedef Contig_Entry_Fact::ref_type Contig_Entry_BRef;
 typedef Contig_Entry_Fact::const_ref_type Contig_Entry_CBRef;
+
+using namespace std::rel_ops;
 
 } // namespace MAC
 

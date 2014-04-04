@@ -95,23 +95,21 @@ public:
     const_iterator iterator_to(Mutation_CBPtr mut_cbptr) const { return Base::iterator_to(*mut_cbptr); }
     iterator iterator_to(Mutation_BPtr mut_bptr) { return Base::iterator_to(*mut_bptr); }
 
-    /** Find an equivalent Mutation in container. */
-    const_iterator find(Mutation_CBPtr mut_cbptr) const
+    /** Find an equivalent Mutation in container.
+     * @param find_exact Bool; if true, look for that Mutation only; if false, look for equivalent Mutations as well.
+     */
+    const_iterator find(Mutation_CBPtr mut_cbptr, bool find_exact = false) const
     {
         const_iterator it;
         const_iterator it_end;
-        for (std::tie(it, it_end) = this->equal_range(*mut_cbptr); it != it_end; ++it)
+        for (std::tie(it, it_end) = Base::equal_range(*mut_cbptr); it != it_end; ++it)
         {
-            if (*mut_cbptr == *it)
+            if (&*it == mut_cbptr or (not find_exact and *mut_cbptr == *it))
             {
                 return it;
             }
         }
         return end();
-    }
-    iterator find(Mutation_BPtr mut_bptr)
-    {
-        return Base::iterator_to(static_cast< Mutation_BRef >(*const_this(this)->find(mut_bptr)));
     }
 
     /** Erase Mutation from container. */
