@@ -14,161 +14,215 @@
 
 namespace MAC
 {
-    struct Cigar_Op
+
+struct Cigar_Op
+{
+    Size_Type len;
+    Size_Type rf_offset;
+    Size_Type qr_offset;
+    char op;
+};
+
+/** Cigar string holder. */
+class Cigar
+{
+public:
+    /** Constructor from string object.
+     * @param cigar Cigar in string form.
+     * @param rev Flag indicating coordinates are reversed on the query string.
+     */
+    Cigar(const std::string& cigar, bool reversed = false, Size_Type rf_start = 0, Size_Type qr_start = 0);
+    Cigar() : _rf_start(0), _qr_start(0), _rf_len(0), _qr_len(0), _reversed(false) {}
+
+    bool is_reversed() const { return _reversed; }
+    size_t get_n_ops() const { return _op_vect.size(); }
+    Size_Type get_rf_len() const { return _rf_len; }
+    Size_Type get_qr_len() const { return _qr_len; }
+    Size_Type get_rf_start() const { return _rf_start; }
+    Size_Type get_qr_start() const { return _qr_start; }
+
+    /** Get operation struct, by index. */
+    const Cigar_Op& get_op_struct(size_t i) const
     {
-        Size_Type len;
-        Size_Type rf_offset;
-        Size_Type qr_offset;
-        char op;
-    };
+        return _op_vect[i];
+    }
 
-    /** Cigar string holder. */
-    class Cigar
+    /** Get operation. */
+    char get_op(size_t i) const
     {
-    public:
-        /** Constructor from string object.
-         * @param cigar Cigar in string form.
-         * @param rev Flag indicating coordinates are reversed on the query string.
-         */
-        Cigar(const std::string& cigar, bool reversed = false, Size_Type rf_start = 0, Size_Type qr_start = 0);
-        Cigar() : _rf_start(0), _qr_start(0), _rf_len(0), _qr_len(0), _reversed(false) {}
+        ASSERT(i < get_n_ops());
+        return _op_vect[i].op;
+    }
 
-        bool is_reversed() const { return _reversed; }
-        size_t get_n_ops() const { return _op_vect.size(); }
-        Size_Type get_rf_len() const { return _rf_len; }
-        Size_Type get_qr_len() const { return _qr_len; }
-        Size_Type get_rf_start() const { return _rf_start; }
-        Size_Type get_qr_start() const { return _qr_start; }
+    /** Get operation length, by index. */
+    Size_Type get_op_len(size_t i) const
+    {
+        ASSERT(i < get_n_ops());
+        return _op_vect[i].len;
+    }
 
-        /** Get operation struct, by index. */
-        const Cigar_Op& get_op_struct(size_t i) const { return _op_vect[i]; }
+    /** Get reference length of operation, by index. */
+    Size_Type get_rf_op_len(size_t i) const
+    {
+        ASSERT(i <= get_n_ops());
+        return (i < get_n_ops() and (is_match(i) or is_deletion(i)) ? _op_vect[i].len : 0);
+    }
 
-        /** Get operation. */
-        char get_op(size_t i) const { ASSERT(i < get_n_ops()); return _op_vect[i].op; }
+    /** Get query length of operation, by index. */
+    Size_Type get_qr_op_len(size_t i) const
+    {
+        ASSERT(i <= get_n_ops());
+        return (i < get_n_ops() and (is_match(i) or is_insertion(i)) ? _op_vect[i].len : 0);
+    }
 
-        /** Get operation length, by index. */
-        Size_Type get_op_len(size_t i) const { ASSERT(i < get_n_ops()); return _op_vect[i].len; }
+    /** Get rf length spanned by cigar ops [start...end-1]. */
+    Size_Type get_rf_sub_len(size_t start, size_t end) const
+    {
+        ASSERT(start <= end and end <= get_n_ops());
+        return get_rf_offset(end) - get_rf_offset(start);
+    }
 
-        /** Get reference length of operation, by index. */
-        Size_Type get_rf_op_len(size_t i) const
-        { ASSERT(i <= get_n_ops()); return (i < get_n_ops() and (is_match(i) or is_deletion(i))? _op_vect[i].len : 0); }
+    /** Get qr length spanned by cigar ops [start...end-1]. */
+    Size_Type get_qr_sub_len(size_t start, size_t end) const
+    {
+        ASSERT(start <= end and end <= get_n_ops());
+        return (not _reversed? get_qr_offset(end) - get_qr_offset(start) : get_qr_offset(start) - get_qr_offset(end));
+    }
 
-        /** Get query length of operation, by index. */
-        Size_Type get_qr_op_len(size_t i) const
-        { ASSERT(i <= get_n_ops()); return (i < get_n_ops() and (is_match(i) or is_insertion(i))? _op_vect[i].len : 0); }
+    /** Get reference offset of operation, by index. */
+    Size_Type get_rf_offset(size_t i) const
+    {
+        ASSERT(i <= get_n_ops());
+        return _rf_start + (i < get_n_ops() ? _op_vect[i].rf_offset : _rf_len);
+    }
 
-        /** Get rf length spanned by cigar ops [start...end-1]. */
-        Size_Type get_rf_sub_len(size_t start, size_t end) const
+    /** Get query offset of operation, by index. */
+    Size_Type get_qr_offset(size_t i) const
+    {
+        ASSERT(i <= get_n_ops());
+        return _qr_start + (i < get_n_ops() ? _op_vect[i].qr_offset : (not _reversed? _qr_len : 0));
+    }
+
+    /** Get length of the op before given rf position.
+     * @param i Index of the op to consider.
+     * @param pos Absolute rf position where to stop.
+     */
+    Size_Type get_rf_op_prefix_len(size_t i, Size_Type pos) const
+    {
+        ASSERT(i < get_n_ops());
+        ASSERT(get_rf_offset(i) <= pos and pos <= get_rf_offset(i + 1));
+        return pos - get_rf_offset(i);
+    }
+
+    /** Get length of the op before given qr position.
+     * @param i Index of the op to consider.
+     * @param pos Absolute qr position where to stop.
+     */
+    Size_Type get_qr_op_prefix_len(size_t i, Size_Type pos) const
+    {
+        ASSERT(i < get_n_ops());
+        if (not _reversed)
         {
-            ASSERT(start <= end and end <= get_n_ops());
-            return get_rf_offset(end) - get_rf_offset(start);
+            ASSERT(get_qr_offset(i) <= pos and pos <= get_qr_offset(i + 1));
+            return pos - get_qr_offset(i);
         }
-
-        /** Get qr length spanned by cigar ops [start...end-1]. */
-        Size_Type get_qr_sub_len(size_t start, size_t end) const
+        else // _reversed
         {
-            ASSERT(start <= end and end <= get_n_ops());
-            return (not _reversed? get_qr_offset(end) - get_qr_offset(start) : get_qr_offset(start) - get_qr_offset(end));
+            ASSERT(get_qr_offset(i + 1) <= pos and pos <= get_qr_offset(i));
+            return get_qr_offset(i) - pos;
         }
+    }
 
-        /** Get reference offset of operation, by index. */
-        Size_Type get_rf_offset(size_t i) const { ASSERT(i <= get_n_ops()); return _rf_start + (i < get_n_ops()? _op_vect[i].rf_offset : _rf_len); }
+    void set_rf_start(Size_Type rf_start)
+    {
+        _rf_start = rf_start;
+    }
+    void set_qr_start(Size_Type qr_start)
+    {
+        _qr_start = qr_start;
+    }
 
-        /** Get query offset of operation, by index. */
-        Size_Type get_qr_offset(size_t i) const { ASSERT(i <= get_n_ops()); return _qr_start + (i < get_n_ops()? _op_vect[i].qr_offset : (not _reversed? _qr_len : 0)); }
+    bool is_match(size_t i) const
+    {
+        ASSERT(i < get_n_ops());
+        return Cigar::is_match_op(_op_vect[i].op);
+    }
+    bool is_deletion(size_t i) const
+    {
+        ASSERT(i < get_n_ops());
+        return Cigar::is_deletion_op(_op_vect[i].op);
+    }
+    bool is_insertion(size_t i) const
+    {
+        ASSERT(i < get_n_ops());
+        return Cigar::is_insertion_op(_op_vect[i].op);
+    }
 
-        /** Get length of the op before given rf position.
-         * @param i Index of the op to consider.
-         * @param pos Absolute rf position where to stop.
-         */
-        Size_Type get_rf_op_prefix_len(size_t i, Size_Type pos) const
-        {
-            ASSERT(i < get_n_ops());
-            ASSERT(get_rf_offset(i) <= pos and pos <= get_rf_offset(i + 1));
-            return pos - get_rf_offset(i);
-        }
+    /** Get complementary cigar (qr->rf). */
+    Cigar complement() const;
 
-        /** Get length of the op before given qr position.
-         * @param i Index of the op to consider.
-         * @param pos Absolute qr position where to stop.
-         */
-        Size_Type get_qr_op_prefix_len(size_t i, Size_Type pos) const
-        {
-            ASSERT(i < get_n_ops());
-            if (not _reversed)
-            {
-                ASSERT(get_qr_offset(i) <= pos and pos <= get_qr_offset(i + 1));
-                return pos - get_qr_offset(i);
-            }
-            else // _reversed
-            {
-                ASSERT(get_qr_offset(i + 1) <= pos and pos <= get_qr_offset(i));
-                return get_qr_offset(i) - pos;
-            }
-        }
+    /** Compute sub-cigar.
+     * @param start Start op.
+     * @param end First op to leave out.
+     */
+    Cigar substring(size_t start, size_t end);
 
-        void set_rf_start(Size_Type rf_start) { _rf_start = rf_start; }
-        void set_qr_start(Size_Type qr_start) { _qr_start = qr_start; }
+    /** Cut op.
+     * @param idx Index of the op to cut.
+     * @param len Op length before the cut.
+     */
+    void cut_op(size_t idx, Size_Type len);
 
-        bool is_match(size_t i) const { ASSERT(i < get_n_ops()); return Cigar::is_match_op(_op_vect[i].op); }
-        bool is_deletion(size_t i) const { ASSERT(i < get_n_ops()); return Cigar::is_deletion_op(_op_vect[i].op); }
-        bool is_insertion(size_t i) const { ASSERT(i < get_n_ops()); return Cigar::is_insertion_op(_op_vect[i].op); }
+    /** Disambiguate M operations. */
+    void disambiguate(const std::string& rf_seq, const std::string& qr_seq);
 
-        /** Get complementary cigar (qr->rf). */
-        Cigar complement() const;
+    /** Check Cigar. */
+    bool check(const std::string& rf_seq, const std::string& qr_seq) const;
 
-        /** Compute sub-cigar.
-         * @param start Start op.
-         * @param end First op to leave out.
-         */
-        Cigar substring(size_t start, size_t end);
+    /** Get string representation. */
+    std::string to_string() const;
 
-        /** Cut op.
-         * @param idx Index of the op to cut.
-         * @param len Op length before the cut.
-         */
-        void cut_op(size_t idx, Size_Type len);
+    /** Equality comparison. */
+    bool operator == (const Cigar& rhs);
 
-        /** Disambiguate M operations. */
-        void disambiguate(const std::string& rf_seq, const std::string& qr_seq);
+    friend std::ostream& operator << (std::ostream& os, const Cigar& rhs);
 
-        /** Check Cigar. */
-        bool check(const std::string& rf_seq, const std::string& qr_seq) const;
+private:
+    std::vector< Cigar_Op > _op_vect;
+    Size_Type _rf_start;
+    Size_Type _qr_start;
+    Size_Type _rf_len;
+    Size_Type _qr_len;
+    bool _reversed;
 
-        /** Get string representation. */
-        std::string to_string() const;
+    void set_qr_offsets();
 
-        /** Equality comparison. */
-        bool operator == (const Cigar& rhs);
+    static char complement_op(char op);
 
-        friend std::ostream& operator << (std::ostream& os, const Cigar& rhs);
+    /** Is it a match operation. */
+    static bool is_match_op(char op)
+    {
+        return match_ops.find_first_of(op) != std::string::npos;
+    }
 
-    private:
-        std::vector< Cigar_Op > _op_vect;
-        Size_Type _rf_start;
-        Size_Type _qr_start;
-        Size_Type _rf_len;
-        Size_Type _qr_len;
-        bool _reversed;
+    /** Is it a deletion operation. */
+    static bool is_deletion_op(char op)
+    {
+        return deletion_ops.find_first_of(op) != std::string::npos;
+    }
 
-        void set_qr_offsets();
+    /** Is it an insertion operation. */
+    static bool is_insertion_op(char op)
+    {
+        return insertion_ops.find_first_of(op) != std::string::npos;
+    }
 
-        static char complement_op(char op);
+    static std::string const match_ops;
+    static std::string const deletion_ops;
+    static std::string const insertion_ops;
+}; // class Cigar
 
-        /** Is it a match operation. */
-        static bool is_match_op(char op) { return match_ops.find_first_of(op) != std::string::npos; }
-
-        /** Is it a deletion operation. */
-        static bool is_deletion_op(char op) { return deletion_ops.find_first_of(op) != std::string::npos; }
-
-        /** Is it an insertion operation. */
-        static bool is_insertion_op(char op) { return insertion_ops.find_first_of(op) != std::string::npos; }
-
-        static std::string const match_ops;
-        static std::string const deletion_ops;
-        static std::string const insertion_ops;
-    };
-}
+} // namespace MAC
 
 
 #endif
