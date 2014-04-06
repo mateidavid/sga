@@ -49,6 +49,7 @@ private:
     */
 
     // allow move only when unlinked
+    DEFAULT_DEF_CTOR(Contig_Entry)
     DELETE_COPY_CTOR(Contig_Entry)
     Contig_Entry(Contig_Entry&& rhs) { *this = std::move(rhs); }
 public:

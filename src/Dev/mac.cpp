@@ -5,7 +5,8 @@
 #include <list>
 
 #include "globals.hpp"
-#include "common.hpp"
+#include "global_assert.hpp"
+#include "shortcuts.hpp"
 #include "Graph.hpp"
 #include "indent.hpp"
 #include "ixstream.hpp"

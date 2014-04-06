@@ -45,6 +45,7 @@ private:
     }
 
     // allow move only
+    DEFAULT_DEF_CTOR(Read_Entry)
     DELETE_COPY_CTOR(Read_Entry)
     Read_Entry(Read_Entry&& rhs) { *this = std::move(rhs); }
 public:
@@ -122,11 +123,19 @@ private:
 }; // class Read_Entry
 
 /** Comparator for storage in tree. */
-struct Read_Entry_Compare
+struct Read_Entry_Comparator
 {
     bool operator () (const Read_Entry& lhs, const Read_Entry& rhs) const
     {
         return lhs.get_name() < rhs.get_name();
+    }
+    bool operator () (const Read_Entry& lhs, const std::string& rhs_name) const
+    {
+        return lhs.get_name() < rhs_name;
+    }
+    bool operator () (const std::string& lhs_name, const Read_Entry& rhs) const
+    {
+        return lhs_name < rhs.get_name();
     }
 };
 

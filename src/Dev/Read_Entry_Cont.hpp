@@ -54,11 +54,10 @@ struct Read_Entry_Set_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
-typedef boost::intrusive::set<
-            Read_Entry,
-            boost::intrusive::compare< Read_Entry_Compare >,
-            boost::intrusive::value_traits< Read_Entry_Set_Value_Traits >
-            > Read_Entry_Cont;
+typedef boost::intrusive::set< Read_Entry,
+                               boost::intrusive::compare< Read_Entry_Comparator >,
+                               boost::intrusive::value_traits< Read_Entry_Set_Value_Traits >
+                             > Read_Entry_Cont;
 
 } // namespace MAC
 

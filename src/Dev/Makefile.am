@@ -47,6 +47,8 @@ libmac_la_CXXFLAGS = $(AM_CXXFLAGS) -Wno-ignored-qualifiers
 libmac_la_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
 
 mac_SOURCES = mac.cpp
+mac_CPPFLAGS = -I$(top_srcdir)/boost-intrusive/include -I$(top_srcdir)/interval-tree/include $(AM_CPPFLAGS)
+mac_CXXFLAGS = $(AM_CXXFLAGS) -Wno-ignored-qualifiers
 mac_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
 mac_LDADD = libmac.la \
 	$(top_builddir)/Util/libutil.a \
