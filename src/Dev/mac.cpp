@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
             ++r1_end;
             ++r2_end;
             global::assert_message = string("ED ") + r1_id + " " + r2_id;
-            g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
+            //g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
         }
         if (global::print_graph_each_step)
         {
@@ -142,34 +142,34 @@ int main(int argc, char* argv[])
         }
         //ASSERT(g.check_all());
     }
-    g.unmap_single_chunks();
-    g.set_contig_ids();
+    //g.unmap_single_chunks();
+    //g.set_contig_ids();
     ASSERT(g.check_all());
     if (global::merge_contigs_at_end)
     {
         if (not global::stats_file_2.empty())
         {
             ofstream stats_2_ofs(global::stats_file_2);
-            g.dump_detailed_counts(stats_2_ofs);
+            //g.dump_detailed_counts(stats_2_ofs);
         }
-        g.merge_all_read_contigs();
+        //g.merge_all_read_contigs();
         ASSERT(g.check_all());
     }
     if (not global::stats_file_1.empty())
     {
         ofstream stats_1_ofs(global::stats_file_1);
-        g.dump_detailed_counts(stats_1_ofs);
+        //g.dump_detailed_counts(stats_1_ofs);
     }
     if (not global::supercontig_lengths_file.empty())
     {
         ofstream lengths_file(global::supercontig_lengths_file);
-        g.print_supercontig_lengths_2(lengths_file);
-        ASSERT(g.check_colours());
+        //g.print_supercontig_lengths_2(lengths_file);
+        //ASSERT(g.check_colours());
     }
     if (not global::mutations_file.empty())
     {
         ofstream mutations_ofs(global::mutations_file);
-        g.print_separated_het_mutations(mutations_ofs, 2, 20);
+        //g.print_separated_het_mutations(mutations_ofs, 2, 20);
     }
     if (global::print_graph)
     {
@@ -178,7 +178,7 @@ int main(int argc, char* argv[])
     if (not global::unmappable_contigs_file.empty())
     {
         ofstream unmappable_contigs_ofs(global::unmappable_contigs_file);
-        g.print_unmappable_contigs(unmappable_contigs_ofs);
+        //g.print_unmappable_contigs(unmappable_contigs_ofs);
     }
     cerr << "success\n";
 

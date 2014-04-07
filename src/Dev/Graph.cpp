@@ -52,7 +52,7 @@ void Graph::add_read(const string* name_ptr, Seq_Type* seq_ptr)
     // fix initial rc: assing it to contig entry
     re_bptr->chunk_cont().begin()->assign_to_contig(ce_bptr, 0, seq_ptr->size(), false, Mutation_Ptr_Cont());
 
-    //ASSERT(check(set< const Read_Entry* >( { re_cptr })));
+    ASSERT(check(set< Read_Entry_CBPtr >( { re_bptr })));
 }
 
 /*
@@ -1490,86 +1490,87 @@ bool Graph::check_colours() const
     }
     return true;
 }
+*/
 
 bool Graph::check_all() const
 {
     size_t chunks_count_1 = 0;
     size_t chunks_count_2 = 0;
     // check read entry objects
-    for (auto re_it = _re_cont.begin(); re_it != _re_cont.end(); ++re_it)
+    for (const auto& re_cbref : _re_cont)
     {
-        ASSERT(re_it->check());
-        chunks_count_1 += re_it->get_chunk_cont().size();
+        Read_Entry_CBPtr re_cbptr = &re_cbref;
+        ASSERT(re_cbptr->check());
+        chunks_count_1 += re_cbptr->chunk_cont().size();
     }
     // check contig entry objects
-    for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
+    for (const auto& ce_cbref : _ce_cont)
     {
-        ASSERT(ce_it->check());
-        chunks_count_2 += ce_it->get_chunk_cptr_cont().size();
+        Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
+        ASSERT(ce_cbptr->check());
+        chunks_count_2 += ce_cbptr->chunk_cont().size();
     }
     ASSERT(chunks_count_1 == chunks_count_2);
     return true;
 }
 
-bool Graph::check(const set< const Read_Entry* >& re_set, const set< const Contig_Entry* >& ce_set) const
+bool Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry_CBPtr >& ce_set) const
 {
 #ifdef NO_GRAPH_CHECKS
     return true;
 #endif
-    // compute contig entries referenced by read entries
-    set< const Contig_Entry* > ce_extra_set;
-    for (auto re_cptr_it = re_set.begin(); re_cptr_it != re_set.end(); ++re_cptr_it)
+    // compute contig entries referenced by the selected read entries
+    set< Contig_Entry_CBPtr > ce_extra_set;
+    for (const auto& re_cbptr : re_set)
     {
-        const Read_Entry* re_cptr = *re_cptr_it;
-        for (auto rc_it = re_cptr->get_chunk_cont().begin(); rc_it != re_cptr->get_chunk_cont().end(); ++rc_it)
+        for (const auto& rc_cbref : re_cbptr->chunk_cont())
         {
-            ce_extra_set.insert(rc_it->get_ce_ptr());
+            ce_extra_set.insert(rc_cbref.raw().ce_bptr());
         }
     }
 
-    // compute read entries referenced by contig entries
-    set< const Read_Entry* > re_extra_set;
-    for (auto ce_cptr_it = ce_set.begin(); ce_cptr_it != ce_set.end(); ++ce_cptr_it)
+    // compute read entries referenced by selected contig entries
+    set< Read_Entry_CBPtr > re_extra_set;
+    for (const auto& ce_cbptr : ce_set)
     {
-        const Contig_Entry* ce_cptr = *ce_cptr_it;
-        for (auto rc_cptr_it = ce_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
+        for (const auto& rc_cbref : ce_cbptr->chunk_cont())
         {
-            Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
-            re_extra_set.insert(rc_cptr->get_re_ptr());
+            re_extra_set.insert(rc_cbref.raw().re_bptr());
         }
     }
 
     // check read entry objects
-    for (auto re_cptr_it = re_set.begin(); re_cptr_it != re_set.end(); ++re_cptr_it)
+    for (const auto& re_cbptr : re_set)
     {
-        const Read_Entry* re_cptr = *re_cptr_it;
-        ASSERT(re_cptr->check());
+        ASSERT(re_cbptr->check());
     }
-    for (auto re_cptr_it = re_extra_set.begin(); re_cptr_it != re_extra_set.end(); ++re_cptr_it)
+    for (const auto& re_cbptr : re_extra_set)
     {
-        const Read_Entry* re_cptr = *re_cptr_it;
-        if (re_set.count(re_cptr) > 0)
+        if (re_set.count(re_cbptr) > 0)
+        {
             continue;
-        ASSERT(re_cptr->check());
+        }
+        ASSERT(re_cbptr->check());
     }
 
     // check contig entry objects
-    for (auto ce_cptr_it = ce_set.begin(); ce_cptr_it != ce_set.end(); ++ce_cptr_it)
+    for (const auto& ce_cbptr : ce_set)
     {
-        const Contig_Entry* ce_cptr = *ce_cptr_it;
-        ASSERT(ce_cptr->check());
+        ASSERT(ce_cbptr->check());
     }
-    for (auto ce_cptr_it = ce_extra_set.begin(); ce_cptr_it != ce_extra_set.end(); ++ce_cptr_it)
+    for (const auto& ce_cbptr : ce_extra_set)
     {
-        const Contig_Entry* ce_cptr = *ce_cptr_it;
-        if (ce_set.count(ce_cptr) > 0)
+        if (ce_set.count(ce_cbptr) > 0)
+        {
             continue;
-        ASSERT(ce_cptr->check());
+        }
+        ASSERT(ce_cbptr->check());
     }
 
     return true;
 }
 
+/*
 void Graph::dump_detailed_counts(ostream& os) const
 {
     // First read stats

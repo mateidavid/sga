@@ -760,37 +760,41 @@ void Read_Chunk::rebase(const Contig_Entry* ce_cptr, const Mutation_Trans_Cont& 
         _mut_ptr_cont.push_back(it->new_mut_cptr);
     }
 }
+*/
 
 Seq_Type Read_Chunk::get_seq() const
 {
     Seq_Type res;
-    Pos pos = (not _rc? get_start_pos() : get_end_pos());
+    // start with start_pos iff not rc
+    Read_Chunk_Pos pos = (not _rc? get_start_pos() : get_end_pos());
     while (pos != (not _rc? get_end_pos() : get_start_pos()))
     {
-        Pos next_pos = pos;
+        Read_Chunk_Pos next_pos = pos;
         next_pos.advance(not _rc);
         Size_Type match_len = pos.get_match_len(not _rc);
         if (match_len > 0)
         {
-            string tmp = _ce_ptr->substr((not _rc? pos.c_pos : next_pos.c_pos) - _ce_ptr->get_seq_offset(), match_len);
+            // match stretch follows
+            string tmp = _ce_bptr->substr((not _rc? pos.c_pos : next_pos.c_pos) - _ce_bptr->get_seq_offset(), match_len);
             res += (not _rc? tmp : reverseComplement(tmp));
         }
         else if (pos.r_pos != next_pos.r_pos)
         {
+            // mutation follows
             if (not _rc)
             {
-                res += _mut_ptr_cont[pos.mut_idx]->get_seq().substr(pos.mut_offset, next_pos.r_pos - pos.r_pos);
+                ASSERT(not pos.past_last_mut());
+                res += pos.mut().get_seq().substr(pos.mut_offset, next_pos.r_pos - pos.r_pos);
             }
             else
             {
-                res += reverseComplement(_mut_ptr_cont[next_pos.mut_idx]->get_seq().substr(next_pos.mut_offset, pos.r_pos - next_pos.r_pos));
+                res += reverseComplement(pos.mut().get_seq().substr(next_pos.mut_offset, pos.r_pos - next_pos.r_pos));
             }
         }
         pos = next_pos;
     }
     return res;
 }
-*/
 
 Seq_Type Read_Chunk::substr(Size_Type start, Size_Type len) const
 {

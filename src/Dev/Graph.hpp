@@ -98,12 +98,10 @@ public:
     */
     
     /** Integrity checks. */
-    /*
     bool check_all() const;
-    bool check(const std::set< const Read_Entry* >& re_set, const std::set< const Contig_Entry* >& ce_set = std::set< const Contig_Entry* >()) const;
-    bool check(const std::set< const Contig_Entry* >& ce_set) const { return check(std::set< const Read_Entry* >(), ce_set); }
-    bool check_colours() const;
-    */
+    bool check(const std::set< Read_Entry_CBPtr >& re_set, const std::set< Contig_Entry_CBPtr >& ce_set = std::set< Contig_Entry_CBPtr >()) const;
+    bool check(const std::set< Contig_Entry_CBPtr >& ce_set) const { return check(std::set< Read_Entry_CBPtr >(), ce_set); }
+    //bool check_colours() const;
     
     /** Stats. */
     //void dump_detailed_counts(std::ostream& os) const;
