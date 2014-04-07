@@ -38,6 +38,9 @@ bool operator == (const Identifier< T, Base_Ptr >&,
 template <class LHS_T, class RHS_T, class Base_Ptr>
 bool operator == (const Bounded_Pointer< LHS_T, Base_Ptr >&,
                   const Bounded_Pointer< RHS_T, Base_Ptr >&);
+template <class LHS_T, class RHS_T, class Base_Ptr>
+bool operator < (const Bounded_Pointer< LHS_T, Base_Ptr >&,
+                 const Bounded_Pointer< RHS_T, Base_Ptr >&);
 template <class T, class Base_Ptr>
 std::ostream& operator << (std::ostream&, const Bounded_Pointer< T, Base_Ptr >&);
 
@@ -86,6 +89,12 @@ bool operator == (const Identifier< T, Base_Ptr >& lhs,
                   const Identifier< T, Base_Ptr >& rhs)
 {
     return lhs._ptr == rhs._ptr;
+}
+template <class T, class Base_Ptr>
+bool operator < (const Identifier< T, Base_Ptr >& lhs,
+                 const Identifier< T, Base_Ptr >& rhs)
+{
+    return lhs._ptr < rhs._ptr;
 }
 template <class T, class Base_Ptr>
 bool operator != (const Identifier< T, Base_Ptr >& lhs,
@@ -167,6 +176,9 @@ private:
     template <class LHS_T, class RHS_T, class Other_Base_Ptr>
     friend bool operator == (const Bounded_Pointer< LHS_T, Other_Base_Ptr >&,
                              const Bounded_Pointer< RHS_T, Other_Base_Ptr >&);
+    template <class LHS_T, class RHS_T, class Other_Base_Ptr>
+    friend bool operator < (const Bounded_Pointer< LHS_T, Other_Base_Ptr >&,
+                            const Bounded_Pointer< RHS_T, Other_Base_Ptr >&);
     friend std::ostream& operator << <>(std::ostream&, const Bounded_Pointer&);
 
     Bounded_Pointer(const idn_type& id) : _id(id) {}
@@ -179,6 +191,12 @@ bool operator == (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs,
                   const Bounded_Pointer< RHS_T, Other_Base_Ptr >& rhs)
 {
     return lhs._id == rhs._id;
+}
+template <class LHS_T, class RHS_T, class Other_Base_Ptr>
+bool operator < (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs,
+                 const Bounded_Pointer< RHS_T, Other_Base_Ptr >& rhs)
+{
+    return lhs._id < rhs._id;
 }
 template <class LHS_T, class RHS_T, class Other_Base_Ptr>
 bool operator != (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs,
