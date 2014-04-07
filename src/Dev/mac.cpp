@@ -122,8 +122,12 @@ int main(int argc, char* argv[])
             int rc, tmp;
             string sam_cigar;
             string sam_pi;
-            iss >> r1_id >> r2_id >> r1_start >> r1_end >> r1_len >> r2_start >> r2_end >> r2_len >> rc >> tmp >> sam_cigar >> sam_pi;
+            iss >> r1_id >> r2_id
+                >> r1_start >> r1_end >> r1_len
+                >> r2_start >> r2_end >> r2_len
+                >> rc >> tmp >> sam_cigar >> sam_pi;
             ASSERT(not iss.eof());
+            // switch to open interval ends
             ++r1_end;
             ++r2_end;
             global::assert_message = string("ED ") + r1_id + " " + r2_id;

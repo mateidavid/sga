@@ -12,17 +12,6 @@ using namespace std;
 namespace MAC
 {
 
-void Graph::insert_read_entry(Read_Entry_BPtr re_bptr)
-{
-    auto res = _re_cont.insert(*re_bptr);
-    ASSERT(res.second);
-}
-
-void Graph::insert_contig_entry(Contig_Entry_BPtr ce_bptr)
-{
-    _ce_cont.push_back(*ce_bptr);
-}
-
 /*
 void Graph::erase_contig_entry(const Contig_Entry* ce_cptr)
 {
@@ -40,14 +29,14 @@ void Graph::add_read(const string* name_ptr, Seq_Type* seq_ptr)
     // first, create read entry and place it in container
     Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(name_ptr, seq_ptr->size());
     //cerr << indent::tab << "re:\n" << indent::inc << re << indent::dec;
-    insert_read_entry(re_bptr);
+    _re_cont.insert(re_bptr);
 
     // create contig entry and place it in container
     Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(seq_ptr);
     //cerr << indent::tab << "ce:\n" << indent::inc << ce << indent::dec;
     ce_bptr->add_chunk(&*re_bptr->chunk_cont().begin());
     //cerr << indent::tab << "ce with chunk:\n" << indent::inc << ce << indent::dec;
-    insert_contig_entry(ce_bptr);
+    _ce_cont.insert(ce_bptr);
 
     // fix initial rc: assing it to contig entry
     re_bptr->chunk_cont().begin()->assign_to_contig(ce_bptr, 0, seq_ptr->size(), false, Mutation_Ptr_Cont());

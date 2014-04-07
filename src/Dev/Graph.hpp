@@ -44,25 +44,21 @@ public:
      */
     Read_Entry_CBPtr get_read_entry(const std::string& name) const
     {
-        Read_Entry_Cont::const_iterator cit = _re_cont.find(name, Read_Entry_Comparator());
+        Read_Entry_Cont::const_iterator cit = _re_cont.find(name);
         return (cit != _re_cont.end()? &*cit : nullptr);
     }
     
     /** Add a read.
-     * 
      * Create basic Read_Entry, Read_Chunk, and Contig_Entry objects,
      * initialize them, and place them in their respective containers.
-     *
      * @param name_ptr Pointer to string with read name. (Read container takes ownership.)
      * @param seq_ptr Pointer to container with read sequence. (Contig container takes ownership.)
      */
     void add_read(const std::string* name_ptr, Seq_Type* seq_ptr);
     
     /** Add an overlap between 2 reads.
-     * 
      * The contigs holding overlapping chunks of each read are collapsed into one.
      * In the process, reads and contigs are first fragmented into matching chunks.
-     *
      * @param r1_name Name of read 1.
      * @param r2_name Name of read 2.
      * @param r1_start Overlap start in r1, 0-based. Equivalently, length of r1 before the overlap.
@@ -72,12 +68,10 @@ public:
      * @param r2_rc True iff r2 is reverse complemented.
      * @param cigar Cigar string (r1:reference, r2:query).
      */
-    /*
     void add_overlap(const std::string& r1_name, const std::string& r2_name,
                      Size_Type r1_start, Size_Type r1_len,
                      Size_Type r2_start, Size_Type r2_len, bool r2_rc,
                      const std::string& cigar);
-    */
     
     /** Merge all contigs. */
     //void merge_all_read_contigs();
@@ -124,8 +118,6 @@ private:
     Read_Entry_Cont _re_cont;
     Contig_Entry_Cont _ce_cont;
 
-    void insert_read_entry(Read_Entry_BPtr re_bptr);
-    void insert_contig_entry(Contig_Entry_BPtr ce_bptr);
     /*
     void erase_contig_entry(const Contig_Entry* ce_cptr);
     bool cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk, bool force = false);

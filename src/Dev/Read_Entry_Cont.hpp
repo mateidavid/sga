@@ -54,10 +54,42 @@ struct Read_Entry_Set_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
-typedef boost::intrusive::set< Read_Entry,
-                               boost::intrusive::compare< Read_Entry_Comparator >,
-                               boost::intrusive::value_traits< Read_Entry_Set_Value_Traits >
-                             > Read_Entry_Cont;
+class Read_Entry_Cont
+    : private boost::intrusive::set< Read_Entry,
+                                     boost::intrusive::compare< Read_Entry_Comparator >,
+                                     boost::intrusive::value_traits< Read_Entry_Set_Value_Traits >
+                                   >
+{
+private:
+    typedef boost::intrusive::set< Read_Entry,
+                                   boost::intrusive::compare< Read_Entry_Comparator >,
+                                   boost::intrusive::value_traits< Read_Entry_Set_Value_Traits >
+                                 > Base;
+public:
+    DEFAULT_DEF_CTOR(Read_Entry_Cont)
+    DELETE_COPY_CTOR(Read_Entry_Cont)
+    DEFAULT_MOVE_CTOR(Read_Entry_Cont)
+    DELETE_COPY_ASOP(Read_Entry_Cont)
+    DEFAULT_MOVE_ASOP(Read_Entry_Cont)
+    // check it is empty when deallocating
+    ~Read_Entry_Cont() { ASSERT(size() == 0); }
+
+    USING_ITERATORS(Base)
+
+    /** Insert Read_Entry into container.
+     * @param re_bptr Pointer to Read_Entry object.
+     */
+    void insert(Read_Entry_BPtr re_bptr)
+    {
+        auto res = Base::insert(*re_bptr);
+        ASSERT(res.second);
+    }
+
+    const_iterator find(const std::string& name) const
+    {
+        return Base::find(name, Read_Entry_Comparator());
+    }
+};
 
 } // namespace MAC
 

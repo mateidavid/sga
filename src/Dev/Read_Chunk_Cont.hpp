@@ -75,7 +75,7 @@ public:
     DEFAULT_MOVE_ASOP(Read_Chunk_CE_Cont)
 
     // check it is empty when deallocating
-    ~Read_Chunk_CE_Cont() { ASSERT(this->size() == 0); }
+    ~Read_Chunk_CE_Cont() { ASSERT(size() == 0); }
 
     USING_ITERATORS(Base)
 
@@ -139,16 +139,17 @@ struct Read_Chunk_Set_Comparator
 };
 
 class Read_Chunk_RE_Cont
-    : boost::intrusive::set< Read_Chunk,
-                             boost::intrusive::compare< Read_Chunk_Set_Comparator >,
-                             boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
-                           >
+    : private boost::intrusive::set< Read_Chunk,
+                                     boost::intrusive::compare< Read_Chunk_Set_Comparator >,
+                                     boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
+                                   >
 {
-public:
+private:
     typedef boost::intrusive::set< Read_Chunk,
                                    boost::intrusive::compare< Read_Chunk_Set_Comparator >,
                                    boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
                                  > Base;
+public:
     // allow move only
     DEFAULT_DEF_CTOR(Read_Chunk_RE_Cont)
     DELETE_COPY_CTOR(Read_Chunk_RE_Cont)
@@ -157,7 +158,7 @@ public:
     DEFAULT_MOVE_ASOP(Read_Chunk_RE_Cont)
 
     // check it is empty when deallocating
-    ~Read_Chunk_RE_Cont() { ASSERT(this->size() == 0); }
+    ~Read_Chunk_RE_Cont() { ASSERT(size() == 0); }
 
     USING_ITERATORS(Base)
 

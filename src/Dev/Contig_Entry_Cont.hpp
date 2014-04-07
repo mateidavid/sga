@@ -12,6 +12,7 @@
 #include "MAC_forward.hpp"
 #include "Contig_Entry.hpp"
 
+class B;
 
 namespace MAC
 {
@@ -48,9 +49,34 @@ struct Contig_Entry_List_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
-typedef boost::intrusive::list< Contig_Entry,
-                                boost::intrusive::value_traits< Contig_Entry_List_Value_Traits >
-                              > Contig_Entry_Cont;
+class Contig_Entry_Cont
+    : private boost::intrusive::list< Contig_Entry,
+                                      boost::intrusive::value_traits< Contig_Entry_List_Value_Traits >
+                                    >
+{
+private:
+    typedef boost::intrusive::list< Contig_Entry,
+                                    boost::intrusive::value_traits< Contig_Entry_List_Value_Traits >
+                                  > Base;
+public:
+    DEFAULT_DEF_CTOR(Contig_Entry_Cont)
+    DELETE_COPY_CTOR(Contig_Entry_Cont)
+    DEFAULT_MOVE_CTOR(Contig_Entry_Cont)
+    DELETE_COPY_ASOP(Contig_Entry_Cont)
+    DEFAULT_MOVE_ASOP(Contig_Entry_Cont)
+    // check it is empty when deallocating
+    ~Contig_Entry_Cont() { ASSERT(size() == 0); }
+
+    USING_ITERATORS(Base)
+
+    /** Insert Contig_Entry into container.
+     * @param ce_bptr Pointer to Contig_Entry object.
+     */
+    void insert(Contig_Entry_BPtr ce_bptr)
+    {
+        Base::push_back(*ce_bptr);
+    }
+};
 
 } // namespace MAC
 
