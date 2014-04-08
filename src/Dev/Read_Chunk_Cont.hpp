@@ -136,6 +136,10 @@ struct Read_Chunk_Set_Comparator
     {
         return lhs.get_r_start() < rhs_val;
     }
+    bool operator () (size_t lhs_val, const Read_Chunk& rhs) const
+    {
+        return lhs_val < rhs.get_r_start();
+    }
 };
 
 class Read_Chunk_RE_Cont
@@ -177,27 +181,19 @@ public:
      */
     Read_Chunk_CBPtr get_chunk_with_pos(Size_Type r_pos) const
     {
-        ASSERT(this->size() > 0);
-        ASSERT(this->begin()->re_bptr());
-        if (r_pos >= this->begin()->get_read_len())
+        ASSERT(size() > 0);
+        ASSERT(begin()->re_bptr());
+        if (r_pos >= begin()->get_read_len())
         {
             return nullptr;
         }
-        const_iterator cit = this->lower_bound(r_pos, Base::value_compare());
-        if (cit != this->cend() and cit->get_r_start() == r_pos)
+        auto cit = Base::lower_bound(r_pos, Base::value_compare());
+        if (cit == end() or cit->get_r_start() != r_pos)
         {
-            return &*cit;
+            ASSERT(cit != begin());
+            --cit;
         }
-        else
-        {
-            ASSERT(cit != this->cbegin());
-            return &*(--cit);
-        }
-    }
-
-    Read_Chunk_BPtr get_chunk_with_pos(Size_Type r_pos)
-    {
-        return static_cast< Read_Chunk_BPtr >(const_cast< const Read_Chunk_RE_Cont* >(this)->get_chunk_with_pos(r_pos));
+        return &*cit;
     }
 
     /** Get the sibling of the given read chunk.

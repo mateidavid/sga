@@ -54,6 +54,23 @@ struct Read_Entry_Set_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
+/** Comparator for storage in tree. */
+struct Read_Entry_Comparator
+{
+    bool operator () (const Read_Entry& lhs, const Read_Entry& rhs) const
+    {
+        return lhs.get_name() < rhs.get_name();
+    }
+    bool operator () (const Read_Entry& lhs, const std::string& rhs_name) const
+    {
+        return lhs.get_name() < rhs_name;
+    }
+    bool operator () (const std::string& lhs_name, const Read_Entry& rhs) const
+    {
+        return lhs_name < rhs.get_name();
+    }
+};
+
 class Read_Entry_Cont
     : private boost::intrusive::set< Read_Entry,
                                      boost::intrusive::compare< Read_Entry_Comparator >,
@@ -85,9 +102,14 @@ public:
         ASSERT(res.second);
     }
 
-    const_iterator find(const std::string& name) const
+    /** Search for Read_Entry.
+     * @param name Name of read to look for.
+     * @return Read_Entry pointer, or nullptr if not found.
+     */
+    Read_Entry_CBPtr find(const std::string& name) const
     {
-        return Base::find(name, Read_Entry_Comparator());
+        auto cit = Base::find(name, Base::value_compare());
+        return cit != end()? &*cit : nullptr;
     }
 };
 

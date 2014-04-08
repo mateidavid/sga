@@ -173,11 +173,11 @@ void Cigar::disambiguate(const string& rf_seq, const string& qr_seq)
 {
     ASSERT(rf_seq.size() == _rf_len);
     ASSERT(qr_seq.size() == _qr_len);
-    /*
-    cerr << indent::tab << "disambiguating cigar:\n" << indent::inc << *this << indent::dec
-         << indent::tab << "rf_seq= " << rf_seq
-         << indent::nl << "qr_seq= " << (not is_reversed()? qr_seq : reverseComplement(qr_seq)) << '\n';
-    */
+
+    //cerr << indent::tab << "disambiguating cigar:\n" << indent::inc << *this << indent::dec
+    //     << indent::tab << "rf_seq= " << rf_seq
+    //     << indent::nl << "qr_seq= " << (not is_reversed()? qr_seq : reverseComplement(qr_seq)) << '\n';
+
     auto get_qr_pos = [&] (Size_Type pos) -> char {
         ASSERT(_reversed or pos < _qr_len);
         ASSERT(not _reversed or (0 < pos and pos <= _qr_len));
@@ -219,9 +219,7 @@ void Cigar::disambiguate(const string& rf_seq, const string& qr_seq)
             i += v.size() - 1;
         }
     }
-    /*
-    cerr << indent::tab << "result:\n" << indent::inc << *this << indent::dec;
-    */
+    //cerr << indent::tab << "result:\n" << indent::inc << *this << indent::dec;
 }
 
 bool Cigar::check(const string& rf_seq, const string& qr_seq) const

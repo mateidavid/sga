@@ -154,6 +154,9 @@ public:
     { return *reinterpret_cast< const Bounded_Pointer< unqual_val_type, Base_Ptr >* >(this); }
     explicit DEF_NONCONST_CONVERSION((Bounded_Pointer< unqual_val_type, Base_Ptr >&))
 
+    Bounded_Pointer< unqual_val_type, Base_Ptr > unconst()
+    { return *reinterpret_cast< Bounded_Pointer< unqual_val_type, Base_Ptr >* >(this); }
+
     // conversion to void*
     operator typename boost::mpl::if_c< std::is_const< val_type >::value, const void*, void* >::type () const
     { return &_id.dereference(); }
@@ -347,9 +350,9 @@ public:
     /** Constant reference. */
     typedef Bounded_Reference< const_val_type, Base_Ptr > const_ref_type;
     /** Object cloner. */
-    typedef Cloner< T, Base_Ptr > cloner;
+    typedef Cloner< T, Base_Ptr > cloner_type;
     /** Object disposer. */
-    typedef Disposer< T, Base_Ptr > disposer;
+    typedef Disposer< T, Base_Ptr > disposer_type;
 private:
     typedef Identifier< T, Base_Ptr > idn_type;
     typedef Factory_Wrapper< T, Base_Ptr > wrapper_type;

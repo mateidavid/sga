@@ -16,23 +16,21 @@ using namespace std;
 namespace MAC
 {
 
-Mutation Mutation::cut(Size_Type base_offset, Size_Type alt_offset)
+Mutation_BPtr Mutation::cut(Size_Type base_offset, Size_Type alt_offset)
 {
-    Mutation res;
-
+    Mutation_BPtr res;
     ASSERT(base_offset <= _len);
     ASSERT(alt_offset <= _seq_len);
-
     if (have_seq())
     {
-        res = Mutation(_start + base_offset, _len - base_offset, _seq.substr(alt_offset));
+        res = Mutation_Fact::new_elem(_start + base_offset, _len - base_offset, _seq.substr(alt_offset));
         _len = base_offset;
         _seq_len = alt_offset;
         _seq.erase(alt_offset);
     }
     else
     {
-        res = Mutation(_start + base_offset, _len - base_offset, _seq_len - alt_offset);
+        res = Mutation_Fact::new_elem(_start + base_offset, _len - base_offset, _seq_len - alt_offset);
         _len = base_offset;
         _seq_len = alt_offset;
     }

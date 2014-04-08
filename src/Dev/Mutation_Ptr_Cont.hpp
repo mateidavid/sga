@@ -18,6 +18,25 @@
 namespace MAC
 {
 
+namespace detail
+{
+
+/** MCA Cloner: copy Mutation pointers, use new Read_Chunk pointer. */
+class MCA_Mutation_Ptr_Cloner
+{
+public:
+    MCA_Mutation_Ptr_Cloner(Read_Chunk_CBPtr chunk_cbptr) : _chunk_cbptr(chunk_cbptr) {}
+
+    Mutation_Chunk_Adapter_BPtr operator () (const Mutation_Chunk_Adapter& mca)
+    {
+        return Mutation_Chunk_Adapter_Fact::new_elem(mca.mut_cbptr(), _chunk_cbptr);
+    }
+
+private:
+    const Read_Chunk_BPtr _chunk_cbptr;
+};
+
+
 struct Mutation_Ptr_List_Node_Traits
 {
     typedef Holder< Mutation_Chunk_Adapter > node;
@@ -50,15 +69,19 @@ struct Mutation_Ptr_List_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
+} // namespace detail
+
 class Mutation_Ptr_Cont
     : private boost::intrusive::list< Mutation_Chunk_Adapter,
-                                      boost::intrusive::value_traits< Mutation_Ptr_List_Value_Traits >
+                                      boost::intrusive::value_traits< detail::Mutation_Ptr_List_Value_Traits >
                                     >
 {
 private:
     typedef boost::intrusive::list< Mutation_Chunk_Adapter,
-                                    boost::intrusive::value_traits< Mutation_Ptr_List_Value_Traits >
+                                    boost::intrusive::value_traits< detail::Mutation_Ptr_List_Value_Traits >
                                   > Base;
+public:
+    typedef detail::MCA_Mutation_Ptr_Cloner Cloner;
 public:
     // allow move only
     DEFAULT_DEF_CTOR(Mutation_Ptr_Cont)
@@ -99,12 +122,23 @@ public:
         }
     }
 
+    /** Get iterator to MCA object in this container. */
+    const_iterator iterator_to(Mutation_Chunk_Adapter_CBPtr mca_cbptr) const
+    {
+        return Base::iterator_to(*mca_cbptr);
+    }
+    iterator iterator_to(Mutation_Chunk_Adapter_BPtr mca_bptr)
+    {
+        return Base::iterator_to(*mca_bptr);
+    }
+
     /** Insert MCA before element pointed to by iterator. */
     void insert_before(const_iterator cit, Mutation_Chunk_Adapter_BPtr mca_bptr)
     {
         ASSERT(cit != begin());
         Base::insert(cit, *mca_bptr);
     }
+    /** Insert MCA after element pointed to by iterator. */
     void insert_after(const_iterator cit, Mutation_Chunk_Adapter_BPtr mca_bptr)
     {
         ASSERT(cit != end());

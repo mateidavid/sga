@@ -59,10 +59,10 @@ private:
           mut_offset(_mut_offset),
           rc_cptr(_rc_cptr) {}
 
+public:
     // allow copy and move
     DEFAULT_COPY_CTOR(Read_Chunk_Pos)
     DEFAULT_MOVE_CTOR(Read_Chunk_Pos)
-public:
     DEFAULT_COPY_ASOP(Read_Chunk_Pos)
     DEFAULT_MOVE_ASOP(Read_Chunk_Pos)
 
@@ -118,7 +118,7 @@ public:
 
     /** Get position corresponding to given breakpoint.
      * @param brk Breakpoint location.
-     * @param on_contig Bool; true iff this is a contig breakpoint.
+     * @param on_contig True: contig position; False: read position.
      */
     void jump_to_brk(Size_Type brk, bool on_contig);
 
@@ -156,6 +156,8 @@ struct Read_Chunk_Set_Node_Traits;
  */
 class Read_Chunk
 {
+public:
+    typedef Read_Chunk_Pos Pos;
 private:
     // Can only be constructed by Factory object
     friend class Factory< Read_Chunk >;
@@ -222,15 +224,15 @@ public:
 
     /** Set of coordinates used to traverse a Read_Chunk mapping. */
     /** Get mapping start position. */
-    Read_Chunk_Pos get_start_pos() const
+    Pos get_start_pos() const
     {
-        return Read_Chunk_Pos(get_c_start(), (not _rc? get_r_start() : get_r_end()), _mut_ptr_cont.begin(), 0, this);
+        return Pos(get_c_start(), (not _rc? get_r_start() : get_r_end()), _mut_ptr_cont.begin(), 0, this);
     }
 
     /** Get mapping end position. */
-    Read_Chunk_Pos get_end_pos() const
+    Pos get_end_pos() const
     {
-        return Read_Chunk_Pos(get_c_end(), (not _rc? get_r_end() : get_r_start()), --_mut_ptr_cont.end(), 0, this);
+        return Pos(get_c_end(), (not _rc? get_r_end() : get_r_start()), --_mut_ptr_cont.end(), 0, this);
     }
 
     /** Find bounded pointer to this object.

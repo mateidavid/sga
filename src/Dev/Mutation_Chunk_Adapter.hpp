@@ -13,8 +13,13 @@
 namespace MAC
 {
 
+namespace detail
+{
+
 struct Mutation_Ptr_List_Node_Traits;
 struct Read_Chunk_Ptr_List_Node_Traits;
+
+};
 
 class Mutation_Chunk_Adapter
 {
@@ -51,12 +56,12 @@ private:
     const Read_Chunk_CBPtr _chunk_cbptr;
 
     /** Hooks for storage in intrusive list inside Read_Chunk objects. */
-    friend struct Mutation_Ptr_List_Node_Traits;
+    friend struct detail::Mutation_Ptr_List_Node_Traits;
     Mutation_Chunk_Adapter_BPtr _mut_ptr_previous;
     Mutation_Chunk_Adapter_BPtr _mut_ptr_next;
 
     /** Hooks for storage in intrusive list inside Mutation objects. */
-    friend struct Read_Chunk_Ptr_List_Node_Traits;
+    friend struct detail::Read_Chunk_Ptr_List_Node_Traits;
     Mutation_Chunk_Adapter_BPtr _chunk_ptr_previous;
     Mutation_Chunk_Adapter_BPtr _chunk_ptr_next;
 

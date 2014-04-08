@@ -37,17 +37,7 @@ public:
 
     const Read_Entry_Cont& re_cont() const { return _re_cont; }
     const Contig_Entry_Cont& ce_cont() const { return _ce_cont; }
-    
-    /** Retrieve Read_Entry corresponding to a given read.
-     * @param name Read name.
-     * @return CPtr to Read_Entry object, or NULL if not found.
-     */
-    Read_Entry_CBPtr get_read_entry(const std::string& name) const
-    {
-        Read_Entry_Cont::const_iterator cit = _re_cont.find(name);
-        return (cit != _re_cont.end()? &*cit : nullptr);
-    }
-    
+
     /** Add a read.
      * Create basic Read_Entry, Read_Chunk, and Contig_Entry objects,
      * initialize them, and place them in their respective containers.
@@ -118,13 +108,34 @@ private:
     Read_Entry_Cont _re_cont;
     Contig_Entry_Cont _ce_cont;
 
+    /** Cut Read_Entry at given read coordinate.
+     * NOTE: A cut must be forced iff it is at the edge of a read.
+     * @param re_bptr Read_Entry to cut.
+     * @param r_brk Cut coordinate in read.
+     * @param force False: enough to cut Read_Chunk only; True: always cut underlying Contrig_Entry.
+     * @return True iff a cut was made.
+     */
+    bool cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk, bool force);
+
+    /** Cut Read_Chunk at given read coordinate.
+     * NOTE: A cut must be forced iff it is at the edge of a read chunk.
+     * @param rc_bptr Read_Chunk to cut.
+     * @param r_brk Cut coordinate in read.
+     * @param force True: always cut underlying Contrig_Entry.
+     * @return True iff a cut was made.
+     */
+    bool cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk, bool force);
+
+    /** Cut Contig_Entry object.
+     * @param ce_bptr Contig_Entry to cut.
+     * @param c_brk Contig position of the cut.
+     * @param mut_left_cbptr If not NULL, single insertion at breakpoint
+     * to be kept on the LHS (others are moved to RHS).
+     */
+    bool cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
+
     /*
     void erase_contig_entry(const Contig_Entry* ce_cptr);
-    bool cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk, bool force = false);
-    bool cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk, bool force = false);
-    void cut_mutation(const Contig_Entry* ce_cptr, const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset);
-    bool cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr);
-    
     void remap_chunks(std::map< Read_Chunk_CPtr, std::shared_ptr< Read_Chunk > >& rc_map, Mutation_Cont& extra_mut_cont);
     void merge_read_chunks(Read_Chunk_CPtr c1rc1_chunk_cptr, Read_Chunk_CPtr c2rc2_chunk_cptr, Cigar& rc1rc2_cigar);
     std::shared_ptr< std::vector< std::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > > chunker(

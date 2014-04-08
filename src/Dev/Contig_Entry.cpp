@@ -43,27 +43,45 @@ void Contig_Entry::remove_chunks(const set< Read_Chunk_CPtr >& rc_cptr_set)
             ++i;
     }
 }
+*/
 
-const Mutation* Contig_Entry::cut_mutation(const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset)
+void Contig_Entry::cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size_Type r_offset)
 {
-    // construct modifier that cuts existing mutation, saving remaining part
-    Mutation m_new;
-    auto mut_modifier = [&] (Mutation& m) {
-        m_new = m.cut(c_offset, r_offset);
-    };
+    // Mutation must be in this container
+    ASSERT(mut_cont().find(mut_bptr, true) != mut_cont().end());
 
-    // apply it
-    modify_element<Mutation_Cont>(_mut_cont, mut_cptr, mut_modifier);
+    // unlink the Mutation from its container
+    mut_cont().erase(mut_bptr);
 
-    // insert remaining part
-    Mutation_Cont::iterator it_new;
-    bool success;
-    tie(it_new, success) = _mut_cont.insert(m_new);
-    ASSERT(success);
+    // cut mutation, save second part
+    Mutation_BPtr new_mut_bptr = mut_bptr->cut(c_offset, r_offset);
 
-    return &(*it_new);
+    // clone Read_Chunk_Ptr container from original Mutation
+    ASSERT(new_mut_bptr->chunk_ptr_cont().size() == 0);
+    new_mut_bptr->chunk_ptr_cont().clone_from(mut_bptr->chunk_ptr_cont(), new_mut_bptr);
+
+    // insert new Mutation in the Mutation_Ptr containers of the affected Read_Chunk objects
+    {
+        auto mca_it = mut_bptr->chunk_ptr_cont().begin();
+        auto new_mca_it = new_mut_bptr->chunk_ptr_cont().begin();
+        while (mca_it != mut_bptr->chunk_ptr_cont().end())
+        {
+            ASSERT(new_mca_it != new_mut_bptr->chunk_ptr_cont().end());
+            Read_Chunk_BPtr rc_bptr = mca_it->chunk_cbptr().unconst();
+            Mutation_Chunk_Adapter_BPtr new_mca_bptr = &*new_mca_it;
+
+            rc_bptr->mut_ptr_cont().insert_after(rc_bptr->mut_ptr_cont().iterator_to(&*mca_it), new_mca_bptr);
+
+            ++mca_it;
+            ++new_mca_it;
+        }
+        ASSERT(new_mca_it == new_mut_bptr->chunk_ptr_cont().end());
+    }
+
+    ASSERT(check());
 }
 
+/*
 vector< Read_Chunk_CPtr > Contig_Entry::get_chunks_with_mutation(const Mutation* mut_cptr) const
 {
     vector< Read_Chunk_CPtr > res;
@@ -468,17 +486,19 @@ bool Contig_Entry::check() const
     auto ce_bptr = bptr_to();
     for (const auto& rc_cbref : _chunk_cont)
     {
-        const Read_Chunk& rc = rc_cbref.raw();
+        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         // check contig entry pointers
-        ASSERT(rc.ce_bptr() == ce_bptr);
+        ASSERT(rc_cbptr->ce_bptr() == ce_bptr);
         // check contig coordinates
-        ASSERT(rc.get_c_end() <= _seq_ptr->size());
+        ASSERT(rc_cbptr->get_c_end() <= _seq_ptr->size());
         // mutation pointers:
-        for (const auto& mca_cbref : rc.mut_ptr_cont())
+        for (const auto& mca_cbref : rc_cbptr->mut_ptr_cont())
         {
-            Mutation_CBPtr mut_cbptr = mca_cbref.raw().mut_cbptr();
-            // check they point inside mutation container
-            ASSERT(_mut_cont.find(mut_cbptr) != _mut_cont.end());
+            Mutation_Chunk_Adapter_CBPtr mca_cbptr = &mca_cbref;
+            // check back Read_Chunk pointers
+            ASSERT(mca_cbptr->chunk_cbptr() == rc_cbptr);
+            // check Mutation pointers point inside Mutation container
+            ASSERT(_mut_cont.find(mca_cbptr->mut_cbptr(), true) != _mut_cont.end());
         }
     }
     return true;

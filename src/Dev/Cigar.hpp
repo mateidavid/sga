@@ -27,25 +27,26 @@ struct Cigar_Op
 class Cigar
 {
 public:
+    // allow move only
+    DELETE_COPY_CTOR(Cigar)
+    DEFAULT_MOVE_CTOR(Cigar)
+    DELETE_COPY_ASOP(Cigar)
+    DEFAULT_MOVE_ASOP(Cigar)
+
     /** Constructor from string object.
      * @param cigar Cigar in string form.
      * @param rev Flag indicating coordinates are reversed on the query string.
+     * @param rf_start Start of match in reference.
+     * @param qr_start Start of match in query.
      */
-    Cigar(const std::string& cigar, bool reversed = false, Size_Type rf_start = 0, Size_Type qr_start = 0);
-    Cigar() : _rf_start(0), _qr_start(0), _rf_len(0), _qr_len(0), _reversed(false) {}
+    Cigar(const std::string& cigar = "", bool reversed = false, Size_Type rf_start = 0, Size_Type qr_start = 0);
 
     bool is_reversed() const { return _reversed; }
     size_t get_n_ops() const { return _op_vect.size(); }
-    Size_Type get_rf_len() const { return _rf_len; }
-    Size_Type get_qr_len() const { return _qr_len; }
     Size_Type get_rf_start() const { return _rf_start; }
+    Size_Type get_rf_len() const { return _rf_len; }
     Size_Type get_qr_start() const { return _qr_start; }
-
-    /** Get operation struct, by index. */
-    const Cigar_Op& get_op_struct(size_t i) const
-    {
-        return _op_vect[i];
-    }
+    Size_Type get_qr_len() const { return _qr_len; }
 
     /** Get operation. */
     char get_op(size_t i) const

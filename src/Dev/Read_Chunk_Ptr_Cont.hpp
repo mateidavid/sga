@@ -15,6 +15,24 @@
 namespace MAC
 {
 
+namespace detail
+{
+
+/** MCA Cloner: copy Read_Chunk pointers, use new Mutation pointer. */
+class MCA_Read_Chunk_Ptr_Cloner
+{
+public:
+    MCA_Read_Chunk_Ptr_Cloner(Mutation_CBPtr mut_cbptr) : _mut_cbptr(mut_cbptr) {}
+
+    Mutation_Chunk_Adapter_BPtr operator () (const Mutation_Chunk_Adapter& mca)
+    {
+        return Mutation_Chunk_Adapter_Fact::new_elem(_mut_cbptr, mca.chunk_cbptr());
+    }
+
+private:
+    const Mutation_CBPtr _mut_cbptr;
+};
+
 struct Read_Chunk_Ptr_List_Node_Traits
 {
     typedef Holder< Mutation_Chunk_Adapter > node;
@@ -47,15 +65,18 @@ struct Read_Chunk_Ptr_List_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
+} // namespace detail
+
 class Read_Chunk_Ptr_Cont
     : private boost::intrusive::list< Mutation_Chunk_Adapter,
-                                      boost::intrusive::value_traits< Read_Chunk_Ptr_List_Value_Traits >
+                                      boost::intrusive::value_traits< detail::Read_Chunk_Ptr_List_Value_Traits >
                                     >
 {
 private:
     typedef boost::intrusive::list< Mutation_Chunk_Adapter,
-                                    boost::intrusive::value_traits< Read_Chunk_Ptr_List_Value_Traits >
+                                    boost::intrusive::value_traits< detail::Read_Chunk_Ptr_List_Value_Traits >
                                   > Base;
+    typedef detail::MCA_Read_Chunk_Ptr_Cloner Cloner;
 public:
     // allow move only
     DEFAULT_DEF_CTOR(Read_Chunk_Ptr_Cont)
@@ -74,6 +95,15 @@ public:
     void insert(Mutation_Chunk_Adapter_BPtr mca_bptr)
     {
         Base::push_back(*mca_bptr);
+    }
+
+    /** Clone from another Read_Chunk_Ptr_Cont.
+     * @param src Source container.
+     * @param new_mut_cbptr New Mutation pointer to use.
+     */
+    void clone_from(const Read_Chunk_Ptr_Cont& src, Mutation_CBPtr new_mut_cbptr)
+    {
+        Base::clone_from(src, Read_Chunk_Ptr_Cont::Cloner(new_mut_cbptr), Mutation_Chunk_Adapter_Fact::disposer_type());
     }
 };
 

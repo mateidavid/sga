@@ -363,7 +363,7 @@ void real_main(const Program_Options& po)
             // clon tree and check
             clog << "cloning tree of size: " << t.size() << '\n';
             itree_type t2;
-            t2.clone_from(t, fact_type::cloner(), fact_type::disposer());
+            t2.clone_from(t, fact_type::cloner_type(), fact_type::disposer_type());
             clog << "checking max_end fields in clone of size: " << t2.size() << '\n';
             check_max_ends(t2, f);
             clog << "destroying clone\n";

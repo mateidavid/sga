@@ -91,6 +91,7 @@ public:
     /** Find bounded pointer to this object.
      * Pre: Must be linked.
      */
+    /*
     Mutation_CBPtr bptr_to() const
     {
         ASSERT(not is_unlinked());
@@ -113,6 +114,7 @@ public:
     {
         return static_cast< Mutation_BPtr >(const_cast< const Mutation* >(this)->bptr_to());
     }
+    */
 
     /** @name Basic queries */
     /**@{*/
@@ -144,12 +146,12 @@ public:
         }
     }
 
-    /** Cut mutation at given offsets.
+    /** Cut mutation at given offsets, allocate new Mutation to keep leftover.
      * @param base_offset Base offset, 0-based.
      * @param alt_offset Alternate sequence offset, 0-based.
-     * @return The part of the original mutation that was cut from this object.
+     * @return The second part of the Mutation that was cut.
      */
-    Mutation cut(Size_Type base_offset, Size_Type alt_offset);
+    Mutation_BPtr cut(Size_Type base_offset, Size_Type alt_offset);
 
     /** Simplify Mutation by dropping the ends of rf and qr if they match.
      * @param rf Reference sequence spanned by the mutation.

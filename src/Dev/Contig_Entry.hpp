@@ -116,12 +116,12 @@ public:
     //void remove_chunks(const std::set< Read_Chunk_CPtr >& rc_cptr_set);
 
     /** Cut mutation at given offsets.
-     * @param mut_cptr Pointer to mutation to cut.
+     * Read chunks containing the original Mutation will get instead 2 adjacent mutations.
+     * @param mut_bptr Mutation to cut.
      * @param c_offset Contig offset inside mutation where to cut.
      * @param r_offset Read offset inside mutation where to cut.
-     * @return Pointer to mutation object containing leftover part of the original mutation.
      */
-    //const Mutation* cut_mutation(const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset);
+    void cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size_Type r_offset);
 
     /** Add mutation to container if it doesn't already exists.
      * @param m Mutation to look for.

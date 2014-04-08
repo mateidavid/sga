@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
             ++r1_end;
             ++r2_end;
             global::assert_message = string("ED ") + r1_id + " " + r2_id;
-            //g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
+            g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
         }
         if (global::print_graph_each_step)
         {

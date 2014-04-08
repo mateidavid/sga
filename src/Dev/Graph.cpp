@@ -44,33 +44,12 @@ void Graph::add_read(const string* name_ptr, Seq_Type* seq_ptr)
     ASSERT(check(set< Read_Entry_CBPtr >( { re_bptr })));
 }
 
+bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
+{
+    (void)ce_bptr;
+    (void)c_brk;
+    (void)mut_left_cbptr;
 /*
-void Graph::cut_mutation(const Contig_Entry* ce_cptr, const Mutation* mut_cptr, Size_Type c_offset, Size_Type r_offset)
-{
-    // construct & apply contig entry modifier which:
-    // - cuts given mutation
-    // - inserts the remaing part in its container
-    // - returns pointer to new mutation
-    const Mutation* m_new_cptr;
-    modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) {
-        m_new_cptr = ce.cut_mutation(mut_cptr, c_offset, r_offset);
-    });
-
-    // construct read chunk modifier which adds new mutation if original one was present
-    auto rc_modifier = [&] (Read_Chunk& rc) {
-        rc.cond_add_mutation(mut_cptr, m_new_cptr);
-    };
-
-    // fetch read chunks which need to change, and apply modifier to each of them
-    vector< Read_Chunk_CPtr > v = ce_cptr->get_chunks_with_mutation(mut_cptr);
-    for (size_t i = 0; i < v.size(); ++i)
-    {
-        modify_read_chunk(v[i], rc_modifier);
-    }
-}
-
-bool Graph::cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr)
-{
     if ((c_brk == 0 and mut_left_cptr == NULL)
             or (c_brk == ce_cptr->get_len() and (ce_cptr->get_mut_cont().size() == 0
                     or not ce_cptr->get_mut_cont().rbegin()->is_ins()
@@ -181,30 +160,29 @@ bool Graph::cut_contig_entry(const Contig_Entry* ce_cptr, Size_Type c_brk, const
         //cerr << "after cutting contig entry: " << (void*)ce_cptr << '\n' << *this;
         ASSERT(check(set< const Contig_Entry* >( { ce_cptr, ce_new_cptr })));
     }
+*/
     return true;
 }
 
-bool Graph::cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk, bool force)
+bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk, bool force)
 {
-    ASSERT(rc_cptr->get_r_len() > 0);
-    ASSERT(rc_cptr->get_r_start() <= r_brk and r_brk <= rc_cptr->get_r_end());
-    if (rc_cptr->is_unmappable())
+    ASSERT(rc_bptr->get_r_len() > 0);
+    ASSERT(rc_bptr->get_r_start() <= r_brk and r_brk <= rc_bptr->get_r_end());
+    if (rc_bptr->is_unmappable())
     {
         // never cut unmappable chunks
         return false;
     }
-    if (r_brk == rc_cptr->get_r_start() or r_brk == rc_cptr->get_r_end())
+    if (r_brk == rc_bptr->get_r_start() or r_brk == rc_bptr->get_r_end())
     {
-        if (not force)
-        {
-            return false;
-        }
-        if ((r_brk == rc_cptr->get_r_start()) == (not rc_cptr->get_rc()))
+        // cut is at the edge; it must be forced
+        ASSERT(force);
+        if ((r_brk == rc_bptr->get_r_start()) == (not rc_bptr->get_rc()))
         {
             // cut if mapping doesn't start on contig start
-            if (rc_cptr->get_c_start() != 0)
+            if (rc_bptr->get_c_start() != 0)
             {
-                return cut_contig_entry(rc_cptr->get_ce_ptr(), rc_cptr->get_c_start(), NULL);
+                return cut_contig_entry(rc_bptr->ce_bptr(), rc_bptr->get_c_start(), nullptr);
             }
             else
             {
@@ -214,17 +192,17 @@ bool Graph::cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk, bool force)
         else
         {
             // cut if mapping doesn't end on contig end
-            if (rc_cptr->get_c_end() != rc_cptr->get_ce_ptr()->get_len())
+            if (rc_bptr->get_c_end() != rc_bptr->ce_bptr()->get_len())
             {
                 // if chunk ends in insertion, keep it on lhs, along with the rest of the chunk
-                Mutation_CPtr mut_left_cptr = NULL;
-                if (rc_cptr->get_mut_ptr_cont().size() > 0
-                        and rc_cptr->get_mut_ptr_cont()[rc_cptr->get_mut_ptr_cont().size() - 1]->get_start() == rc_cptr->get_c_end())
+                Mutation_CBPtr mut_left_cbptr = nullptr;
+                if (rc_bptr->mut_ptr_cont().size() > 0
+                    and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->get_start() == rc_bptr->get_c_end())
                 {
-                    mut_left_cptr = rc_cptr->get_mut_ptr_cont()[rc_cptr->get_mut_ptr_cont().size() - 1];
-                    ASSERT(mut_left_cptr->is_ins());
+                    mut_left_cbptr = rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr();
+                    ASSERT(mut_left_cbptr->is_ins());
                 }
-                return cut_contig_entry(rc_cptr->get_ce_ptr(), rc_cptr->get_c_end(), mut_left_cptr);
+                return cut_contig_entry(rc_bptr->ce_bptr(), rc_bptr->get_c_end(), mut_left_cbptr);
             }
             else
             {
@@ -234,19 +212,25 @@ bool Graph::cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk, bool force)
     }
     else
     {
-        ASSERT(rc_cptr->get_r_start() < r_brk and r_brk < rc_cptr->get_r_end());
+        // cut is inside the read chunk; it must not be forced
+        ASSERT(not force);
+        ASSERT(rc_bptr->get_r_start() < r_brk and r_brk < rc_bptr->get_r_end());
         bool cut_made = false;
-        Read_Chunk::Pos pos = rc_cptr->get_start_pos();
+        Read_Chunk::Pos pos = rc_bptr->get_start_pos();
         pos.jump_to_brk(r_brk, false);
 
         if (pos.mut_offset > 0)
         {
-            // must cut a mutation
-            ASSERT(pos.mut_idx < rc_cptr->get_mut_ptr_cont().size());
-            Mutation_CPtr mut_cptr = rc_cptr->get_mut_ptr_cont()[pos.mut_idx];
-            cut_mutation(rc_cptr->get_ce_ptr(), mut_cptr, min(pos.mut_offset, mut_cptr->get_len()), min(pos.mut_offset, mut_cptr->get_seq_len()));
+            // in the middle of a mutation; must cut it
+            ASSERT(not pos.past_last_mut());
+            Mutation_BPtr mut_bptr = pos.mca_cit->mut_cbptr().unconst();
+            Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
+            ce_bptr->cut_mutation(mut_bptr,
+                                  min(pos.mut_offset, mut_bptr->get_len()),
+                                  min(pos.mut_offset, mut_bptr->get_seq_len()));
             cut_made = true;
-            pos = rc_cptr->get_start_pos();
+            // redo the jump
+            pos = rc_bptr->get_start_pos();
             pos.jump_to_brk(r_brk, false);
         }
         // now we are certain the breakpoint no longer falls inside a mutation (insertion/mnp)
@@ -254,49 +238,42 @@ bool Graph::cut_read_chunk(Read_Chunk_CPtr rc_cptr, Size_Type r_brk, bool force)
         ASSERT(pos.mut_offset == 0);
 
         // check if an insertion at c_pos has to remain on the left of the cut
-        Mutation_CPtr mut_left_cptr = NULL;
-        if (pos.mut_idx > 0
-                and rc_cptr->get_mut_ptr_cont()[pos.mut_idx - 1]->get_start() == pos.c_pos)
+        Mutation_CBPtr mut_left_cbptr = nullptr;
+        if (pos.past_first_mut()
+            and pos.prev_mut().get_start() == pos.c_pos)
         {
-            mut_left_cptr = rc_cptr->get_mut_ptr_cont()[pos.mut_idx - 1];
-            ASSERT(mut_left_cptr->is_ins());
+            auto tmp = pos.mca_cit;
+            mut_left_cbptr = (--tmp)->mut_cbptr();
+            ASSERT(mut_left_cbptr->is_ins());
         }
 
         // cut contig at given c_offset
         // all insertions at c_pos go to the right except for at most one, passed as argument
-        return cut_contig_entry(rc_cptr->get_ce_ptr(), pos.c_pos, mut_left_cptr) or cut_made;
+        return cut_contig_entry(rc_bptr->ce_bptr(), pos.c_pos, mut_left_cbptr) or cut_made;
     }
 }
 
-bool Graph::cut_read_entry(const Read_Entry* re_cptr, Size_Type r_brk, bool force)
+bool Graph::cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk, bool force)
 {
-    if (r_brk == 0)
+    if (r_brk == 0 or r_brk == re_bptr->get_len())
     {
-        Read_Chunk_CPtr rc_cptr = &*re_cptr->get_chunk_cont().begin();
-        return cut_read_chunk(rc_cptr, r_brk, force);
-    }
-    else if (r_brk == re_cptr->get_len())
-    {
-        Read_Chunk_CPtr rc_cptr = &*re_cptr->get_chunk_cont().rbegin();
-        return cut_read_chunk(rc_cptr, r_brk, force);
+        // cut is on the edge of the read; it must be forced
+        ASSERT(force);
+        Read_Chunk_BPtr rc_bptr = (r_brk == 0? &*re_bptr->chunk_cont().begin() : &*re_bptr->chunk_cont().rbegin());
+        return cut_read_chunk(rc_bptr, r_brk, true);
     }
     else
     {
-        Read_Chunk_CPtr rc_cptr = re_cptr->get_chunk_with_pos(r_brk);
-        ASSERT(rc_cptr->get_r_start() <= r_brk and r_brk < rc_cptr->get_r_end());
-        if (r_brk == rc_cptr->get_r_start())
-        {
-            // we might have to cut the previous chunk as well
-            // we only ever cut 1 chunk at a time, if if first call returns true, the second cut is not performed
-            return cut_read_chunk(re_cptr->get_sibling(rc_cptr, false), r_brk, force) or cut_read_chunk(rc_cptr, r_brk, force);
-        }
-        else
-        {
-            return cut_read_chunk(rc_cptr, r_brk, force);
-        }
+        // cut is inside the read, it must not be forced
+        ASSERT(not force);
+        Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(r_brk).unconst();
+        // the chunk to be cut must exist
+        ASSERT(rc_bptr->get_r_start() <= r_brk and r_brk < rc_bptr->get_r_end());
+        return cut_read_chunk(rc_bptr, r_brk, false);
     }
 }
 
+/*
 void Graph::remap_chunks(map< Read_Chunk_CPtr, shared_ptr< Read_Chunk > >& rc_map,
                          Mutation_Cont& extra_mut_cont)
 {
@@ -660,6 +637,7 @@ shared_ptr< vector< std::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > > Gr
     }
     return rc_mapping_sptr;
 }
+*/
 
 void Graph::add_overlap(const string& r1_name, const string& r2_name,
                         Size_Type r1_start, Size_Type r1_len,
@@ -687,31 +665,34 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
 
     // if no match is left, nothing to do
     if (r1_len == 0)
+    {
         return;
+    }
 
-    const Read_Entry* re1_cptr = get_read_entry(r1_name);
-    ASSERT(re1_cptr != NULL);
-    const Read_Entry* re2_cptr = get_read_entry(r2_name);
-    ASSERT(re2_cptr != NULL);
+    Read_Entry_BPtr re1_bptr = re_cont().find(r1_name).unconst();
+    ASSERT(re1_bptr != nullptr);
+    Read_Entry_BPtr re2_bptr = re_cont().find(r2_name).unconst();
+    ASSERT(re2_bptr != nullptr);
 
-    string r1_seq = re1_cptr->get_seq();
-    string r2_seq = re2_cptr->get_seq();
-    / *
+    string r1_seq = re1_bptr->get_seq();
+    string r2_seq = re2_bptr->get_seq();
+    /*
     cerr << indent::tab << "adding overlap:" << indent::inc
          << indent::nl << "re1: " << r1_seq.substr(r1_start, r1_len)
          << indent::nl << "re2: " << (not cigar.is_reversed()? r2_seq.substr(r2_start, r2_len) : reverseComplement(r2_seq.substr(r2_start, r2_len)))
          << indent::nl << "initial cigar:\n" << indent::inc << cigar << indent::dec;
-    * /
+    */
     cigar.disambiguate(r1_seq.substr(r1_start, r1_len), r2_seq.substr(r2_start, r2_len));
     //cerr << indent::tab << "disambiguated cigar:\n" << indent::inc << cigar << indent::dec << indent::dec;
 
     // cut r1 & r2 at the ends of the match region
     // NOTE: unmappable chunks are never cut
-    cut_read_entry(re1_cptr, r1_start, true);
-    cut_read_entry(re1_cptr, r1_start + r1_len, true);
-    cut_read_entry(re2_cptr, r2_start, true);
-    cut_read_entry(re2_cptr, r2_start + r2_len, true);
+    cut_read_entry(re1_bptr, r1_start, true);
+    cut_read_entry(re1_bptr, r1_start + r1_len, true);
+    cut_read_entry(re2_bptr, r2_start, true);
+    cut_read_entry(re2_bptr, r2_start + r2_len, true);
 
+    /*
     shared_ptr< vector< std::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > >
     rc_mapping_sptr = chunker(re1_cptr, re2_cptr, cigar);
 
@@ -737,8 +718,10 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
         //cerr << "after merging:\n" << *this;
         ASSERT(check(set< const Read_Entry* >( { re1_cptr, re2_cptr })));
     }
+    */
 }
 
+/*
 void Graph::reverse_contig(const Contig_Entry* ce_cptr)
 {
     // construct read chunk modifier that applies reverse()

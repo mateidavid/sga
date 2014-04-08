@@ -122,23 +122,6 @@ private:
     bool is_unlinked() const { return not(_parent or _l_child or _r_child); }
 }; // class Read_Entry
 
-/** Comparator for storage in tree. */
-struct Read_Entry_Comparator
-{
-    bool operator () (const Read_Entry& lhs, const Read_Entry& rhs) const
-    {
-        return lhs.get_name() < rhs.get_name();
-    }
-    bool operator () (const Read_Entry& lhs, const std::string& rhs_name) const
-    {
-        return lhs.get_name() < rhs_name;
-    }
-    bool operator () (const std::string& lhs_name, const Read_Entry& rhs) const
-    {
-        return lhs_name < rhs.get_name();
-    }
-};
-
 } // namespace MAC
 
 

@@ -27,12 +27,6 @@ bool operator == (const Read_Chunk_Pos& lhs, const Read_Chunk_Pos& rhs)
             and lhs.mut_offset == rhs.mut_offset);
 }
 
-Size_Type Read_Chunk::get_read_len() const
-{
-    ASSERT(_re_bptr);
-    return _re_bptr->get_len();
-}
-
 /** Check if position is past the last mutation in the read chunk. */
 bool Read_Chunk_Pos::past_last_mut() const
 {
@@ -274,6 +268,12 @@ void Read_Chunk_Pos::advance_past_del(bool forward)
         }
         *this = tmp_pos;
     }
+}
+
+Size_Type Read_Chunk::get_read_len() const
+{
+    ASSERT(re_bptr());
+    return re_bptr()->get_len();
 }
 
 Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type* rf_ptr, const Seq_Type& qr)
@@ -548,7 +548,7 @@ shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mut
                 if (pos == get_start_pos())
                 {
                     // if rc2 starts on contig break, incorporate initial deletions
-                    Read_Chunk_Pos tmp_pos = pos_next;
+                    Pos tmp_pos = pos_next;
                     while (tmp_pos != get_end_pos())
                     {
                         tmp_pos.increment();
@@ -569,7 +569,7 @@ shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mut
                 else
                 {
                     // if rc2 doesn't start on contig break, skip initial deletions
-                    Read_Chunk_Pos tmp_pos = pos_next;
+                    Pos tmp_pos = pos_next;
                     tmp_pos.advance_past_del();
                     // FIX: notorious situation:
                     // do not skip deletions if we can reach the contig end on deletins only,
@@ -596,7 +596,7 @@ shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mut
             if (got_r_mut and pos_next.r_pos == get_end_pos().r_pos)
             {
                 // if rc2 ends on contig end, incorporate remaining deletions
-                Read_Chunk_Pos tmp_pos = pos_next;
+                Pos tmp_pos = pos_next;
                 while (tmp_pos != get_end_pos())
                 {
                     tmp_pos.increment();
@@ -766,10 +766,10 @@ Seq_Type Read_Chunk::get_seq() const
 {
     Seq_Type res;
     // start with start_pos iff not rc
-    Read_Chunk_Pos pos = (not _rc? get_start_pos() : get_end_pos());
+    Pos pos = (not _rc? get_start_pos() : get_end_pos());
     while (pos != (not _rc? get_end_pos() : get_start_pos()))
     {
-        Read_Chunk_Pos next_pos = pos;
+        Pos next_pos = pos;
         next_pos.advance(not _rc);
         Size_Type match_len = pos.get_match_len(not _rc);
         if (match_len > 0)
