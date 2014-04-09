@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <boost/intrusive/pointer_traits.hpp>
 #include <boost/mpl/if.hpp>
+#include <boost/mpl/logical.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <typeinfo>
 
@@ -53,15 +54,13 @@ std::ostream& operator << (std::ostream& os, const Factory< T, Base_Ptr >&);
 template <class T, class Base_Ptr = uint32_t>
 struct Identifier
 {
-private:
-    struct enabler {};
-public:
-    static const bool is_void = std::is_same< T, void >::value;
+    static_assert(std::is_same< T, typename std::remove_const< T >::type >::value, "Identifier instantiated with const type");
+    typedef typename std::is_void< T > is_void_t;
 
     typedef T val_type;
-    static_assert(std::is_same< val_type, typename std::remove_const< val_type >::type >::value, "Identifier instantiated with const type");
     typedef Base_Ptr base_ptr_type;
-    typedef typename boost::mpl::if_c< not is_void, Factory< T, Base_Ptr >, void >::type fact_type;
+    typedef typename std::add_lvalue_reference< val_type >::type raw_ref_type; // void if T==void
+    typedef typename boost::mpl::if_< is_void_t, void, Factory< T, Base_Ptr > >::type fact_type; // void if T==void
 
     Identifier() : _ptr(0) {}
 
@@ -73,9 +72,9 @@ public:
 
     operator Base_Ptr () const { return _ptr; }
 
-    template <bool _unused = true>
-    typename boost::mpl::if_c< not is_void, val_type, enabler >::type& dereference(
-        typename boost::enable_if_c< _unused and not is_void, enabler >::type = enabler()) const
+    /** Dereferencing operator (non-void types only). */
+    template < bool _unused = true, typename boost::enable_if_c< _unused and not is_void_t::value, int >::type = 0 >
+    raw_ref_type dereference() const
     {
         ASSERT(fact_type::get_active_ptr());
         return fact_type::get_active_ptr()->get_elem(*this);
@@ -107,6 +106,8 @@ template <class T, class Base_Ptr = uint32_t>
 class Bounded_Pointer
 {
 public:
+    typedef typename std::is_void< T > is_void_t; // true_type iff T is (cv-) void
+    typedef typename std::is_const< T > is_const_t; // true_type iff T is const-qualified
     typedef T val_type;
     typedef Base_Ptr base_ptr_type;
     typedef val_type* real_ptr_type;
@@ -115,7 +116,7 @@ private:
     typedef Identifier< unqual_val_type, Base_Ptr > idn_type;
 public:
     typedef typename idn_type::fact_type fact_type;
-    typedef typename boost::mpl::if_c< not idn_type::is_void, Bounded_Reference< val_type, Base_Ptr >, void >::type ref_type;
+    typedef typename boost::mpl::if_< is_void_t, void, Bounded_Reference< val_type, Base_Ptr > >::type ref_type;
 
     /** Rebinder.
      * Wrap pointers to T, const T, void, and const void. Anything else gets transformed into a raw pointer.
@@ -123,15 +124,13 @@ public:
     template <class U>
     struct rebind
     {
-        typedef typename boost::mpl::if_c<
-        std::is_same< typename std::remove_const< U >::type, typename std::remove_const< T >::type >::value
-#ifdef WRAP_VOID
-        or std::is_void< U >::value
-#endif
-        ,
-        Bounded_Pointer< U, Base_Ptr >,
-        U*
-        >::type type;
+        typedef typename boost::mpl::if_<
+                std::is_same< typename std::remove_const< U >::type,
+                              typename std::remove_const< T >::type
+                            >,
+                Bounded_Pointer< U, Base_Ptr >,
+                U*
+            >::type type;
     };
 
 public:
@@ -146,19 +145,18 @@ public:
 
     // implicit conversion to const
     operator const Bounded_Pointer< const unqual_val_type, Base_Ptr >& () const
-    { return *reinterpret_cast<const Bounded_Pointer< const unqual_val_type, Base_Ptr >* >(this); }
-    DEF_NONCONST_CONVERSION((Bounded_Pointer< const unqual_val_type, Base_Ptr >&))
+    { return *reinterpret_cast< const Bounded_Pointer< const unqual_val_type, Base_Ptr >* >(this); }
+    operator Bounded_Pointer< const unqual_val_type, Base_Ptr >& ()
+    { return *reinterpret_cast< Bounded_Pointer< const unqual_val_type, Base_Ptr >* >(this); }
 
     // explicit conversion to non-const
-    explicit operator const Bounded_Pointer< unqual_val_type, Base_Ptr >& () const
+    const Bounded_Pointer< unqual_val_type, Base_Ptr >& unconst() const
     { return *reinterpret_cast< const Bounded_Pointer< unqual_val_type, Base_Ptr >* >(this); }
-    explicit DEF_NONCONST_CONVERSION((Bounded_Pointer< unqual_val_type, Base_Ptr >&))
-
-    Bounded_Pointer< unqual_val_type, Base_Ptr > unconst()
+    Bounded_Pointer< unqual_val_type, Base_Ptr >& unconst()
     { return *reinterpret_cast< Bounded_Pointer< unqual_val_type, Base_Ptr >* >(this); }
 
     // conversion to void*
-    operator typename boost::mpl::if_c< std::is_const< val_type >::value, const void*, void* >::type () const
+    operator typename boost::mpl::if_< is_const_t, const void*, void* >::type () const
     { return &_id.dereference(); }
 
     // get raw pointer
@@ -225,6 +223,7 @@ public:
     typedef T val_type;
     typedef Base_Ptr base_ptr_type;
     typedef val_type& real_ref_type;
+    typedef const val_type& real_const_ref_type;
     typedef typename std::remove_const< val_type >::type unqual_val_type;
     typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
 private:
@@ -240,28 +239,34 @@ public:
     // automatic conversion to const
     operator const Bounded_Reference< const unqual_val_type, Base_Ptr >& () const
     { return *reinterpret_cast< const Bounded_Reference< const unqual_val_type, Base_Ptr >* >(this); }
-    DEF_NONCONST_CONVERSION(( Bounded_Reference< const unqual_val_type, Base_Ptr >&))
+    operator Bounded_Reference< const unqual_val_type, Base_Ptr >& ()
+    { return *reinterpret_cast< Bounded_Reference< const unqual_val_type, Base_Ptr >* >(this); }
 
     // explicit conversion to nonconst
-    explicit operator const Bounded_Reference< unqual_val_type, Base_Ptr >& () const
+    const Bounded_Reference< unqual_val_type, Base_Ptr >& unconst() const
     { return *reinterpret_cast< const Bounded_Reference< unqual_val_type, Base_Ptr >* >(this); }
-    explicit DEF_NONCONST_CONVERSION(( Bounded_Reference< unqual_val_type, Base_Ptr >&))
+    Bounded_Reference< unqual_val_type, Base_Ptr >& unconst()
+    { return *reinterpret_cast< Bounded_Reference< unqual_val_type, Base_Ptr >* >(this); }
 
+    // address-of operator returns bounded pointer
     ptr_type operator & () const { return ptr_type(_id); }
 
     // get raw reference
     real_ref_type raw() const { return _id.dereference(); }
+
+    // implicit conversion to raw reference
     operator real_ref_type () const { return raw(); }
 
+    // allow referred element assignment
     const Bounded_Reference& operator = (
-        typename boost::mpl::if_c< std::is_same< val_type, unqual_val_type>::value,
+        typename boost::mpl::if_c< std::is_same< val_type, unqual_val_type >::value,
                                    const val_type&,
                                    enabler<0>&
                                  >::type rhs) const
     { _id.dereference() = rhs; return *this; }
 
     const Bounded_Reference& operator = (
-        typename boost::mpl::if_c< std::is_same< val_type, unqual_val_type>::value,
+        typename boost::mpl::if_c< std::is_same< val_type, unqual_val_type >::value,
                                    const Bounded_Reference&,
                                    enabler<1>&
                                  >::type rhs) const
@@ -566,7 +571,7 @@ struct pointer_traits< Bounded_Pointer< T, Base_Ptr > >
 
     static pointer const_cast_from(const const_pointer& cptr)
     {
-        return pointer(cptr);
+        return cptr.unconst();
     }
 };
 
