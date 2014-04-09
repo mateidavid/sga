@@ -79,11 +79,23 @@ public:
 
     USING_ITERATORS(Base)
 
-    /** Insert read chunk in this container. */
-    void insert(Read_Chunk_BPtr rc_bptr)
-    {
-        static_cast< Base* >(this)->insert(*rc_bptr);
-    }
+    /** Insert Read_Chunk in this container. */
+    void insert(Read_Chunk_BPtr rc_bptr) { Base::insert(*rc_bptr); }
+
+    /** Erase Read_Chunk from container. */
+    void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(*rc_cbptr); }
+
+    /** Split container and its Read_Chunk objects at a contig breakpoint.
+     * Pre: No Mutations may span c_pos.
+     * Pre: Chunks must be unlinked from their RE container.
+     * NOTE: Chunks that do not span the break stay unchanged;
+     * For Chunks that get split, we also fix Chunk back pointers
+     * in their Mutation ptr containers.
+     * @param c_brk Contig position of the breakpoint.
+     * @param mut_left_cbptr Insertion at c_pos to remain on the left of the cut, if any.
+     * @return New Read_Chunk_CE_Cont containing rhs.
+     */
+    Read_Chunk_CE_Cont split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
 }; // class Read_Chunk_CE_Cont
 
 struct Read_Chunk_Set_Node_Traits
@@ -174,6 +186,9 @@ public:
         std::tie(it, success) = static_cast< Base* >(this)->insert(*rc_bptr);
         ASSERT(success);
     }
+
+    /** Erase Read_Chunk from container. */
+    void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(*rc_cbptr); }
 
     /** Find chunk which contains given read position.
      * @param r_pos Read position, 0-based.

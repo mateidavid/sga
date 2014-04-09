@@ -277,6 +277,19 @@ public:
         _mut_ptr_cont = std::move(mut_ptr_cont);
     }
 
+    /** Split Read_Chunk based on contig position.
+     * Pre: No Mutation may span c_brk.
+     * Pre: Read_Chunk must be unlinked from all containers.
+     * Post: If a split is not required, one component is the original pointer, and the other is NULL.
+     * If a split is required, a new Read_Chunk is allocated, and backpointers in Mutation_Ptr_Cont are updated.
+     * @param rc_bptr Chunk to split.
+     * @param c_brk Contig breakpoint.
+     * @param mut_left_cbptr Insertion at c_pos to remain on the left of the cut, if any.
+     * @return Pair of Read_Chunk pointers that go on left&right of the cut.
+     */
+    static std::pair< Read_Chunk_BPtr, Read_Chunk_BPtr >
+    split(Mutation_BPtr mut_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
+
     /** Split read chunk based on contig position and mutation map.
      * @param c_brk Contig breakpoint.
      * @param mut_cptr_map Map of mutations which go to the right side.

@@ -16,7 +16,7 @@ using namespace std;
 namespace MAC
 {
 
-Mutation_BPtr Mutation::cut(Size_Type base_offset, Size_Type alt_offset)
+Mutation_CBPtr Mutation::cut(Size_Type base_offset, Size_Type alt_offset)
 {
     Mutation_BPtr res;
     ASSERT(base_offset <= _len);

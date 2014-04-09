@@ -29,14 +29,14 @@ void Graph::add_read(const string* name_ptr, Seq_Type* seq_ptr)
     // first, create read entry and place it in container
     Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(name_ptr, seq_ptr->size());
     //cerr << indent::tab << "re:\n" << indent::inc << re << indent::dec;
-    _re_cont.insert(re_bptr);
+    re_cont().insert(re_bptr);
 
     // create contig entry and place it in container
     Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(seq_ptr);
     //cerr << indent::tab << "ce:\n" << indent::inc << ce << indent::dec;
     ce_bptr->add_chunk(&*re_bptr->chunk_cont().begin());
     //cerr << indent::tab << "ce with chunk:\n" << indent::inc << ce << indent::dec;
-    _ce_cont.insert(ce_bptr);
+    ce_cont().insert(ce_bptr);
 
     // fix initial rc: assing it to contig entry
     re_bptr->chunk_cont().begin()->assign_to_contig(ce_bptr, 0, seq_ptr->size(), false, Mutation_Ptr_Cont());
@@ -49,39 +49,66 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     (void)ce_bptr;
     (void)c_brk;
     (void)mut_left_cbptr;
-/*
-    if ((c_brk == 0 and mut_left_cptr == NULL)
-            or (c_brk == ce_cptr->get_len() and (ce_cptr->get_mut_cont().size() == 0
-                    or not ce_cptr->get_mut_cont().rbegin()->is_ins()
-                    or ce_cptr->get_mut_cont().rbegin()->get_start() < ce_cptr->get_len())))
+
+    // there is nothing to cut if:
+    if (// cut is at the start, and no insertion goes to the left
+        (c_brk == 0 and mut_left_cbptr == nullptr)
+        // cut is at the end, and:
+        or (c_brk == ce_bptr->get_len()
+            and (// there are no mutations
+                ce_bptr->mut_cont().size() == 0
+                // or the last one is not an insertion
+                or not ce_bptr->mut_cont().rbegin()->is_ins()
+                // or the last insertion is not at the end
+                or ce_bptr->mut_cont().rbegin()->get_start() < ce_bptr->get_len())))
     {
         return false;
     }
 
-    //cerr << "before cutting contig entry: " << (void*)ce_cptr << " at " << c_brk << " mut_left_cptr=" << (void*)mut_left_cptr << '\n' << *this;
+    //cerr << "before cutting contig entry: " << (void*)ce_bptr << " at " << c_brk << " mut_left_cbptr=" << (void*)mut_left_cbptr << '\n' << *this;
 
-    // first, split any mutations that span c_pos
-    vector< const Mutation* > v = ce_cptr->get_mutations_spanning_pos(c_brk);
-    for (size_t i = 0; i < v.size(); ++i)
+    // split any mutations that span c_pos
     {
-        ASSERT(v[i]->get_start() < c_brk and c_brk < v[i]->get_end());
-        ASSERT(v[i] != mut_left_cptr);
-        cut_mutation(ce_cptr, v[i], c_brk - v[i]->get_start(), 0);
+        Mutation_BPtr mut_bptr;
+        while ((mut_bptr = ce_bptr->mut_cont().find_span_pos(c_brk).unconst()) != nullptr)
+        {
+            ASSERT(mut_bptr->get_start() < c_brk and c_brk < mut_bptr->get_end());
+            ASSERT(mut_bptr != mut_left_cbptr);
+            ce_bptr->cut_mutation(mut_bptr, c_brk - mut_bptr->get_start(), 0);
+        }
     }
 
     // create new contig entry object; set string; add it to container
-    const Contig_Entry* ce_new_cptr;
-    ce_new_cptr = insert_contig_entry(Contig_Entry(new string(ce_cptr->get_seq().substr(c_brk))));
+    Contig_Entry_BPtr ce_new_bptr = Contig_Entry_Fact::new_elem(new string(ce_bptr->get_seq().substr(c_brk));
+    ce_cont().insert(ce_new_bptr);
 
+    // split Mutation_Cont, save rhs in new Contig_Entry
+    ce_new_bptr->mut_cont() = ce_bptr->mut_cont().split(c_brk, mut_left_cbptr);
+
+    // unlink Read_Chunk objects from their RE containers
+    for (auto& rc_bref : ce_bptr->chunk_cont())
+    {
+        Read_Chunk_BPtr rc_bptr = &rc_bref;
+        Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
+        re_bptr->chunk_cont().erase(rc_bptr);
+    }
+
+    // split Read_Chunk_Cont, save rhs in new Contig_Entry
+    ce_new_bptr->chunk_cont() = ce_bptr->chunk_cont().split(c_brk, mut_left_cbptr);
+    
+    //TODO
+    
+    
+    
     // aquire second-half mutations from original contig entry object into the new one; compute mutation pointer map
     map< const Mutation*, const Mutation* > mut_cptr_map;
     auto ce_modifier = [&] (Contig_Entry& ce) {
-        mut_cptr_map = ce.acquire_second_half_mutations(ce_cptr, c_brk, mut_left_cptr);
+        mut_cptr_map = ce.acquire_second_half_mutations(ce_bptr, c_brk, mut_left_cbptr);
     };
     modify_contig_entry(ce_new_cptr, ce_modifier);
 
     // save the list of read chunk objects that must be modified
-    Read_Chunk_CPtr_Cont chunk_cptr_cont = ce_cptr->get_chunk_cptr_cont();
+    Read_Chunk_CPtr_Cont chunk_cptr_cont = ce_bptr->get_chunk_cptr_cont();
 
     for (auto rc_cptr_it = chunk_cptr_cont.begin(); rc_cptr_it != chunk_cptr_cont.end(); ++rc_cptr_it)
     {
@@ -106,7 +133,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
         // if the rc must move to the rhs ce, remove it from lhs ce
         else if (move_to_rhs)
         {
-            modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) {
+            modify_contig_entry(ce_bptr, [&] (Contig_Entry& ce) {
                 ce.remove_chunk(rc_cptr);
             });
             rc_rhs_cptr = rc_cptr;
@@ -122,23 +149,23 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     }
 
     // drop mapped mutations from first part
-    modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) {
+    modify_contig_entry(ce_bptr, [&] (Contig_Entry& ce) {
         ce.drop_mutations(mut_cptr_map);
     });
     // drop the second part of the base sequence from the first part
-    modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) {
+    modify_contig_entry(ce_bptr, [&] (Contig_Entry& ce) {
         ce.drop_base_seq(c_brk);
     });
     // fix contig length for chunks left on LHS
     / * NOOO
-    for (auto rc_cptr_it = ce_cptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_cptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
+    for (auto rc_cptr_it = ce_bptr->get_chunk_cptr_cont().begin(); rc_cptr_it != ce_bptr->get_chunk_cptr_cont().end(); ++rc_cptr_it)
     {
-        modify_read_chunk(*rc_cptr_it, [&] (Read_Chunk& rc) { rc.c_len() = ce_cptr->get_len(); });
+        modify_read_chunk(*rc_cptr_it, [&] (Read_Chunk& rc) { rc.c_len() = ce_bptr->get_len(); });
     }
     * /
 
     // drop unused mutations from either contig
-    modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) {
+    modify_contig_entry(ce_bptr, [] (Contig_Entry& ce) {
         ce.drop_unused_mutations();
     });
     modify_contig_entry(ce_new_cptr, [] (Contig_Entry& ce) {
@@ -148,19 +175,18 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     if (ce_new_cptr->get_chunk_cptr_cont().size() == 0)
     {
         erase_contig_entry(ce_new_cptr);
-        ASSERT(check(set< const Contig_Entry* >( { ce_cptr })));
+        ASSERT(check(set< const Contig_Entry* >( { ce_bptr })));
     }
-    else if (ce_cptr->get_chunk_cptr_cont().size() == 0)
+    else if (ce_bptr->get_chunk_cptr_cont().size() == 0)
     {
-        erase_contig_entry(ce_cptr);
+        erase_contig_entry(ce_bptr);
         ASSERT(check(set< const Contig_Entry* >( { ce_new_cptr })));
     }
     else
     {
-        //cerr << "after cutting contig entry: " << (void*)ce_cptr << '\n' << *this;
-        ASSERT(check(set< const Contig_Entry* >( { ce_cptr, ce_new_cptr })));
+        //cerr << "after cutting contig entry: " << (void*)ce_bptr << '\n' << *this;
+        ASSERT(check(set< const Contig_Entry* >( { ce_bptr, ce_new_cptr })));
     }
-*/
     return true;
 }
 

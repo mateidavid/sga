@@ -54,7 +54,11 @@ void Contig_Entry::cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size
     mut_cont().erase(mut_bptr);
 
     // cut mutation, save second part
-    Mutation_BPtr new_mut_bptr = mut_bptr->cut(c_offset, r_offset);
+    Mutation_BPtr new_mut_bptr = mut_bptr->cut(c_offset, r_offset).unconst();
+
+    // add both new and old to container
+    mut_cont().insert(mut_bptr);
+    mut_cont().insert(new_mut_bptr);
 
     // clone Read_Chunk_Ptr container from original Mutation
     ASSERT(new_mut_bptr->chunk_ptr_cont().size() == 0);
@@ -89,17 +93,6 @@ vector< Read_Chunk_CPtr > Contig_Entry::get_chunks_with_mutation(const Mutation*
     {
         if ((*it)->have_mutation(mut_cptr))
             res.push_back(*it);
-    }
-    return res;
-}
-
-vector< const Mutation* > Contig_Entry::get_mutations_spanning_pos(Size_Type c_pos) const
-{
-    vector< const Mutation* > res;
-    for (auto it = _mut_cont.begin(); it != _mut_cont.end() and it->get_start() < c_pos; ++it)
-    {
-        if (c_pos < it->get_end())
-            res.push_back(&(*it));
     }
     return res;
 }

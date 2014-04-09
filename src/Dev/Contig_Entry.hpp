@@ -135,21 +135,6 @@ public:
      */
     //std::vector< Read_Chunk_CPtr > get_chunks_with_mutation(const Mutation* mut_cptr) const;
 
-    /** Get mutations that completely span a given contig position.
-     * @param c_pos Contig position, 0-based.
-     * @return Vector of pointers to Mutation objects completely spanning c_pos.
-     */
-    //std::vector< const Mutation* > get_mutations_spanning_pos(Size_Type c_pos) const;
-
-    /** Get mutations from the second half of a given Contig Entry object that is being cut in 2.
-     * @param ce_cptr Contig_Entry being cut.
-     * @param c_brk Position of the cut.
-     * @param mut_left_cptr Pointer to insertion at c_pos that must appear on the left of the cut, if any.
-     * @return Map with (key=old mutation cptr; value=new mutation cptr).
-     */
-    //std::map< const Mutation*, const Mutation* > acquire_second_half_mutations(
-     //   const Contig_Entry* ce_cptr, Size_Type c_brk, const Mutation* mut_left_cptr);
-
     /** Drop mutations that appear in the map.
      * @param mut_cptr_map Map produced by acquire_second_half_mutations().
      */

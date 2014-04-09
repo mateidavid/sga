@@ -36,7 +36,9 @@ public:
     DELETE_MOVE_ASOP(Graph)
 
     const Read_Entry_Cont& re_cont() const { return _re_cont; }
+    Read_Entry_Cont& re_cont() { return _re_cont; }
     const Contig_Entry_Cont& ce_cont() const { return _ce_cont; }
+    Contig_Entry_Cont& ce_cont() { return _ce_cont; }
 
     /** Add a read.
      * Create basic Read_Entry, Read_Chunk, and Contig_Entry objects,

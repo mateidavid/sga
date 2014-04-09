@@ -151,7 +151,7 @@ public:
      * @param alt_offset Alternate sequence offset, 0-based.
      * @return The second part of the Mutation that was cut.
      */
-    Mutation_BPtr cut(Size_Type base_offset, Size_Type alt_offset);
+    Mutation_CBPtr cut(Size_Type base_offset, Size_Type alt_offset);
 
     /** Simplify Mutation by dropping the ends of rf and qr if they match.
      * @param rf Reference sequence spanned by the mutation.

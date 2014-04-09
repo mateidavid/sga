@@ -79,4 +79,36 @@ Mutation_BPtr Mutation_Cont::add_mut(Mutation_BPtr mut_bptr)
 }
 */
 
+Mutation_CBPtr Mutation_Cont::find_span_pos(Size_Type c_pos) const
+{
+    auto it_range = Base::interval_intersect(c_pos, c_pos);
+    for (auto it = it_range.begin(); it != it_range.end(); ++it)
+    {
+        if (it->get_start() < c_pos and c_pos < it->get_end())
+        {
+            return &*it;
+        }
+    }
+    return nullptr;
+}
+
+Mutation_Cont Mutation_Cont::split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
+{
+    ASSERT(mut_left_cbptr == nullptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
+    Mutation_Cont rhs_cont;
+    for (auto it = begin(); it != end(); ++it)
+    {
+        Mutation_BPtr mut_bptr = &*it;
+        // no Mutation may span c_brk
+        ASSERT(not (mut_bptr->get_start() < c_brk and c_brk < mut_bptr->get_end()));
+        // move the ones starting at or past the break, except possibly for mut_left_cbptr
+        if (mut_bptr->get_start() >= c_brk and mut_bptr != mut_left_cbptr)
+        {
+            erase(mut_bptr);
+            rhs_cont.insert(mut_bptr);
+        }
+    }
+    return rhs_cont;
+}
+
 } // namespace MAC

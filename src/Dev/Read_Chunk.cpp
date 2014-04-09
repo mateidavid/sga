@@ -318,7 +318,19 @@ Read_Chunk::make_chunk_from_cigar_and_chunks(const Cigar& cigar, const Read_Chun
     chunk_sptr->_re_ptr = rc2._re_ptr;
     return std::make_tuple(chunk_sptr, ce_sptr);
 }
+*/
 
+std::pair< Read_Chunk_BPtr, Read_Chunk_BPtr >
+Read_Chunk::split(Mutation_BPtr mut_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
+{
+    ASSERT(mut_left_cbptr == nullptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
+    (void)mut_bptr;
+    (void)c_brk;
+    (void)mut_left_cbptr;
+    return std::make_tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >(nullptr, nullptr);
+}
+
+/*
 std::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::split(
     Size_Type c_brk, const map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr)
 {
@@ -366,14 +378,6 @@ std::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::split(
             // fix contig coordinates
             _c_len = (c_brk <= _c_start? _c_len : _c_len - (c_brk - _c_start));
             _c_start = (c_brk <= _c_start? _c_start - c_brk : 0);
-            / *
-            if (pos.mut_idx == 1)
-            {
-                // skip initial deletion
-                _c_start += _mut_ptr_cont[0]->get_len();
-                _c_len -= _mut_ptr_cont[0]->get_len();
-            }
-            * /
             // fix mutation pointers
             vector< const Mutation* > tmp(_mut_ptr_cont.begin() + pos.mut_idx, _mut_ptr_cont.end()); // drop initial deletion, if any
             _mut_ptr_cont.clear();

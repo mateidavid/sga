@@ -88,12 +88,12 @@ public:
      */
     Mutation_Cont(const Cigar& cigar, const std::string& qr = std::string());
 
-    /** Insert Mutation in container. */
-    iterator insert(Mutation_BPtr mut_bptr) { return Base::insert(*mut_bptr); }
-
     /** Get iterator to Mutation inside container. */
     const_iterator iterator_to(Mutation_CBPtr mut_cbptr) const { return Base::iterator_to(*mut_cbptr); }
     iterator iterator_to(Mutation_BPtr mut_bptr) { return Base::iterator_to(*mut_bptr); }
+
+    /** Insert Mutation in container. */
+    iterator insert(Mutation_BPtr mut_bptr) { return Base::insert(*mut_bptr); }
 
     /** Find an equivalent Mutation in container.
      * @param find_exact Bool; if true, look for that Mutation only; if false, look for equivalent Mutations as well.
@@ -121,6 +121,20 @@ public:
      * @return Pointer to Mutation inside container.
      */
     //Mutation_BPtr add_mut(Mutation_BPtr mut_bptr);
+
+    /** Search for a Mutation that completely spans a given contig position.
+     * @param c_pos Contig position, 0-based.
+     * @return Pointer to Mutation, or NULL if none exists.
+     */
+    Mutation_CBPtr find_span_pos(Size_Type c_pos) const;
+
+    /** Extract second half mutations, place them in new container.
+     * Pre: No Mutation objects cross the cut.
+     * @param c_brk Position of the cut.
+     * @param mut_left_cbptr Insertion at c_pos to remain on the left of the cut, if any.
+     * @return New Mutation_Cont.
+     */
+    Mutation_Cont split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
 };
 
 } // namespace MAC
