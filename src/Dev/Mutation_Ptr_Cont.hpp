@@ -159,6 +159,7 @@ public:
     }
 
     /** Add new MCA if old mutation exists. */
+    /*
     void cond_insert_after(Mutation_CBPtr old_mut_cbptr, Mutation_Chunk_Adapter_BPtr new_mca_bptr)
     {
         auto cit = find(old_mut_cbptr);
@@ -167,6 +168,10 @@ public:
             insert_after(cit, new_mca_bptr);
         }
     }
+    */
+
+    /** Erase MCA from container. */
+    void erase(Mutation_Chunk_Adapter_CBPtr mca_cbptr) { Base::erase(Base::iterator_to(*mca_cbptr)); }
 };
 
 } // namespace MAC

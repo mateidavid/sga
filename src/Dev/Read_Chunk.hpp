@@ -139,11 +139,12 @@ public:
     /** Asserts that Pos object is valid. */
     bool check() const;
 
-    /** Comparison operator. */
-    friend bool operator == (const Read_Chunk_Pos&, const Read_Chunk_Pos&);
     /** To stream. */
     friend std::ostream& operator << (std::ostream&, const Read_Chunk_Pos&);
 };
+
+bool operator == (const Read_Chunk_Pos&, const Read_Chunk_Pos&);
+bool operator != (const Read_Chunk_Pos&, const Read_Chunk_Pos&);
 
 struct Read_Chunk_ITree_Node_Traits;
 struct Read_Chunk_Set_Node_Traits;
@@ -286,10 +287,10 @@ public:
      * @param rc_bptr Chunk to split.
      * @param c_brk Contig breakpoint.
      * @param mut_left_cbptr Insertion at c_pos to remain on the left of the cut, if any.
-     * @return Pair of Read_Chunk pointers that go on left&right of the cut.
+     * @return Tuple of Read_Chunk pointers that go on left&right of the cut.
      */
     static std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >
-    split(Mutation_BPtr mut_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
+    split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
 
     /** Split read chunk based on contig position and mutation map.
      * @param c_brk Contig breakpoint.

@@ -86,7 +86,6 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     ce_new_bptr->mut_cont() = ce_bptr->mut_cont().split(c_brk, mut_left_cbptr);
 
     // unlink Read_Chunk objects from their RE containers
-    //TODO: why not auto&
     for (auto rc_bref : ce_bptr->chunk_cont())
     {
         Read_Chunk_BPtr rc_bptr = &rc_bref;

@@ -20,11 +20,13 @@ Read_Chunk_CE_Cont Read_Chunk_CE_Cont::split(Size_Type c_brk, Mutation_CBPtr mut
     
     while (size() > 0)
     {
+        Read_Chunk_BPtr left_rc_bptr;
+        Read_Chunk_BPtr right_rc_bptr;
         Read_Chunk_BPtr rc_bptr = &*begin();
         erase(rc_bptr);
-        auto rc_pair = Read_Chunk::split(rc_bptr, c_brk, mut_left_cbptr);
-        lhs_cont.insert(rc_pair.first);
-        rhs_cont.insert(rc_pair.second);
+        std::tie(left_rc_bptr, right_rc_bptr) = Read_Chunk::split(rc_bptr, c_brk, mut_left_cbptr);
+        lhs_cont.insert(left_rc_bptr);
+        rhs_cont.insert(right_rc_bptr);
     }
 
     *this = std::move(lhs_cont);

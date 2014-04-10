@@ -26,6 +26,10 @@ bool operator == (const Read_Chunk_Pos& lhs, const Read_Chunk_Pos& rhs)
             and lhs.mca_cit == rhs.mca_cit
             and lhs.mut_offset == rhs.mut_offset);
 }
+bool operator != (const Read_Chunk_Pos& lhs, const Read_Chunk_Pos& rhs)
+{
+    return !(lhs == rhs);
+}
 
 /** Check if position is past the last mutation in the read chunk. */
 bool Read_Chunk_Pos::past_last_mut() const
@@ -321,15 +325,94 @@ Read_Chunk::make_chunk_from_cigar_and_chunks(const Cigar& cigar, const Read_Chun
 */
 
 std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >
-Read_Chunk::split(Mutation_BPtr mut_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
+Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
+    ASSERT(rc_bptr->is_unlinked());
     ASSERT(mut_left_cbptr == nullptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
-    (void)mut_bptr;
-    (void)c_brk;
-    (void)mut_left_cbptr;
     Read_Chunk_BPtr left_rc_bptr = nullptr;
     Read_Chunk_BPtr right_rc_bptr = nullptr;
-    return std::make_tuple(left_rc_bptr, right_rc_bptr);
+
+    // chunk stays intact on the lhs of the cut if:
+    if (// endpoint is before c_brk
+        rc_bptr->get_c_end() < c_brk
+        // or at c_brk, and:
+        or (rc_bptr->get_c_end() == c_brk
+            and (// there are no mutations
+                 rc_bptr->mut_ptr_cont().size() == 0
+                 // or last mutation is not an insertion
+                 or not rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->is_ins()
+                 // or last insertion is not at c_brk
+                 or rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->get_start() < c_brk
+                 // or last insertion at c_brk is selected to stay on lhs
+                 or rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr() == mut_left_cbptr)))
+    {
+        return std::make_tuple(rc_bptr, right_rc_bptr);
+    }
+
+    // chunk stays intact on the rhs of the cut if:
+    else if (// startpoint is after c_brk
+             c_brk < rc_bptr->get_c_start()
+             // or at c_brk, and:
+             or (c_brk == rc_bptr->get_c_start()
+                 and (// there are no mutations
+                      rc_bptr->mut_ptr_cont().size() == 0
+                      // or first mutation is not the insertion selected to stay on lhs
+                      or rc_bptr->mut_ptr_cont().begin()->mut_cbptr() != mut_left_cbptr)))
+    {
+        return std::make_tuple(left_rc_bptr, rc_bptr);
+    }
+
+    else
+    {
+        // the chunk gets altered
+        ASSERT(rc_bptr->get_c_start() <= c_brk and c_brk <= rc_bptr->get_c_end());
+
+        // first compute the cut position
+        Pos pos = rc_bptr->get_start_pos();
+        pos.jump_to_brk(c_brk, true);
+        // we are guaranteed no mutations span the break
+        ASSERT(pos.c_pos == c_brk);
+        ASSERT(pos.mut_offset == 0);
+        // advance past an insertion at c_brk that is selected to stay on the lhs
+        if (not pos.past_last_mut() and pos.mca_cit->mut_cbptr() == mut_left_cbptr)
+        {
+            pos.increment();
+        }
+
+        if (pos.r_pos == rc_bptr->get_r_start() or pos.r_pos == rc_bptr->get_r_end())
+        {
+            // the chunk stays in one piece
+            if ((not rc_bptr->get_rc() and pos.r_pos == rc_bptr->get_r_start())
+                or (rc_bptr->get_rc() and pos.r_pos == rc_bptr->get_r_end()))
+            {
+                // chunk goes on the rhs
+                ASSERT((rc_bptr->get_c_start() == c_brk
+                        and pos.mca_cit == rc_bptr->mut_ptr_cont().begin())
+                       or (rc_bptr->get_c_start() < c_brk
+                           and pos.mca_cit == ++(rc_bptr->mut_ptr_cont().begin())
+                           and rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->is_del()));
+                // remove initial deletion if any
+                if (rc_bptr->get_c_start() < c_brk)
+                {
+                    Mutation_Chunk_Adapter_BPtr mca_bptr = &*rc_bptr->mut_ptr_cont().begin();
+                    rc_bptr->mut_ptr_cont().erase(mca_bptr);
+                }
+                return std::make_tuple(left_rc_bptr, rc_bptr);
+            }
+            else
+            {
+                // chunk goes on the lhs
+                //TODO
+                return std::make_tuple(rc_bptr, right_rc_bptr);
+            }
+        }
+        else
+        {
+            // chunk gets cut
+            //TODO
+            return std::make_tuple(left_rc_bptr, right_rc_bptr);
+        }
+    }
 }
 
 /*
@@ -337,33 +420,6 @@ std::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::split(
     Size_Type c_brk, const map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr)
 {
     // compute read chunk position corresponding to a contig cut at c_brk
-    Pos pos;
-    if (get_c_end() < c_brk)
-    {
-        pos = get_end_pos();
-    }
-    else if (c_brk < get_c_start())
-    {
-        pos = get_start_pos();
-    }
-    else // c_start <= c_brk <= c_end
-    {
-        pos = get_start_pos();
-        pos.jump_to_brk(c_brk, true);
-        ASSERT(pos.c_pos == c_brk);
-        // any mutations spanning the break must be cut prior to calling this method
-        ASSERT(pos.mut_offset == 0);
-        // if there exists an insertion at c_brk that is not in the map, it will stay on the left side of the break
-        while (pos.mut_idx < _mut_ptr_cont.size()
-            and _mut_ptr_cont[pos.mut_idx]->get_start() == c_brk
-            and _mut_ptr_cont[pos.mut_idx]->is_ins()
-            and mut_cptr_map.count(_mut_ptr_cont[pos.mut_idx]) == 0)
-        {
-            pos.increment();
-            ASSERT(pos.c_pos == c_brk);
-        }
-        ASSERT(pos.mut_idx == _mut_ptr_cont.size() or mut_cptr_map.count(_mut_ptr_cont[pos.mut_idx]) > 0);
-    }
 
     if (pos.r_pos == get_r_start() or pos.r_pos == get_r_end())
     {

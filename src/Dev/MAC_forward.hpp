@@ -63,7 +63,7 @@ typedef Contig_Entry_Fact::const_ptr_type Contig_Entry_CBPtr;
 typedef Contig_Entry_Fact::ref_type Contig_Entry_BRef;
 typedef Contig_Entry_Fact::const_ref_type Contig_Entry_CBRef;
 
-using namespace std::rel_ops;
+//using namespace std::rel_ops;
 
 } // namespace MAC
 

@@ -7,9 +7,13 @@
 #ifndef __SHORTCUTS_HPP
 #define __SHORTCUTS_HPP
 
+#include <cassert>
 
+
+//#define DELETE_COPY_CTOR(_type)
+//    _type(const _type&) = delete;
 #define DELETE_COPY_CTOR(_type) \
-    _type(const _type&) = delete;
+    _type(const _type&) { assert(false); }
 #define DELETE_MOVE_CTOR(_type) \
     _type(_type&&) = delete;
 #define DELETE_DEF_CTOR(_type) \

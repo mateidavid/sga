@@ -37,6 +37,7 @@ libmac_la_SOURCES = \
         Mutation.cpp \
         Mutation_Cont.cpp \
         Read_Chunk.cpp \
+        Read_Chunk_Cont.cpp \
         Read_Entry.cpp \
         Contig_Entry.cpp \
         Cigar.cpp \
