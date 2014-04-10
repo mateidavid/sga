@@ -54,8 +54,9 @@ std::ostream& operator << (std::ostream& os, const Factory< T, Base_Ptr >&);
 template <class T, class Base_Ptr = uint32_t>
 struct Identifier
 {
-    static_assert(std::is_same< T, typename std::remove_const< T >::type >::value, "Identifier instantiated with const type");
-    typedef typename std::is_void< T > is_void_t;
+    typedef typename std::is_void< T > is_void_t; // true_type iff T is (cv-) void
+    typedef typename std::is_const< T > is_const_t; // true_type iff T is const-qualified
+    static_assert(not is_const_t::value, "Identifier instantiated with const type");
 
     typedef T val_type;
     typedef Base_Ptr base_ptr_type;
@@ -105,9 +106,10 @@ bool operator != (const Identifier< T, Base_Ptr >& lhs,
 template <class T, class Base_Ptr = uint32_t>
 class Bounded_Pointer
 {
-public:
+private:
     typedef typename std::is_void< T > is_void_t; // true_type iff T is (cv-) void
     typedef typename std::is_const< T > is_const_t; // true_type iff T is const-qualified
+public:
     typedef T val_type;
     typedef Base_Ptr base_ptr_type;
     typedef val_type* real_ptr_type;
@@ -218,7 +220,10 @@ template <class T, class Base_Ptr = uint32_t>
 class Bounded_Reference
 {
 private:
-    template <int val> struct enabler {};
+    typedef typename std::is_void< T > is_void_t; // true_type iff T is (cv-) void
+    typedef typename std::is_const< T > is_const_t; // true_type iff T is const-qualified
+    static_assert(not is_void_t::value, "Bounded_Reference instantiated with void type");
+    //template <int val> struct enabler {};
 public:
     typedef T val_type;
     typedef Base_Ptr base_ptr_type;
@@ -257,19 +262,25 @@ public:
     // implicit conversion to raw reference
     operator real_ref_type () const { return raw(); }
 
-    // allow referred element assignment
-    const Bounded_Reference& operator = (
+    // allow referred element assignment (non-const only)
+    template < bool _unused = true, typename boost::enable_if_c< _unused and not is_const_t::value, int >::type = 0 >
+    const Bounded_Reference& operator = (const val_type& rhs) const
+    /*
         typename boost::mpl::if_c< std::is_same< val_type, unqual_val_type >::value,
                                    const val_type&,
                                    enabler<0>&
                                  >::type rhs) const
+    */
     { _id.dereference() = rhs; return *this; }
 
-    const Bounded_Reference& operator = (
+    template < bool _unused = true, typename boost::enable_if_c< _unused and not is_const_t::value, int >::type = 0 >
+    const Bounded_Reference& operator = (const Bounded_Reference& rhs) const
+    /*
         typename boost::mpl::if_c< std::is_same< val_type, unqual_val_type >::value,
                                    const Bounded_Reference&,
                                    enabler<1>&
                                  >::type rhs) const
+    */
     { _id.dereference() = rhs._id.dereference(); return *this; }
 
 private:
@@ -279,7 +290,7 @@ private:
     Bounded_Reference(const idn_type& id) : _id(id) {}
 
     const idn_type _id;
-};
+}; // class Bounded_Reference
 
 template <class T, class Base_Ptr>
 std::ostream& operator <<(std::ostream& os, const Bounded_Reference< T, Base_Ptr >& rhs)
@@ -294,7 +305,7 @@ template <class T, class Base_Ptr = uint32_t>
 struct Cloner
 {
     typedef T val_type;
-    static_assert(std::is_same< val_type, typename std::remove_const< val_type >::type >::value, "Cloner instantiated with const type");
+    static_assert(not std::is_const< val_type >::value, "Cloner instantiated with const type");
     typedef Identifier< val_type, Base_Ptr > idn_type;
     typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
     typedef typename idn_type::fact_type fact_type;
@@ -310,7 +321,7 @@ template <class T, class Base_Ptr = uint32_t>
 struct Disposer
 {
     typedef T val_type;
-    static_assert(std::is_same< val_type, typename std::remove_const< val_type >::type >::value, "Disposer instantiated with const type");
+    static_assert(not std::is_const< val_type >::value, "Disposer instantiated with const type");
     typedef Identifier< val_type, Base_Ptr > idn_type;
     typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
     typedef typename idn_type::fact_type fact_type;
@@ -344,7 +355,7 @@ class Factory
 public:
     /** Type of object stored. */
     typedef T val_type;
-    static_assert(std::is_same< val_type, typename std::remove_const< val_type >::type >::value, "Factory instantiated with const type");
+    static_assert(not std::is_const< val_type >::value, "Factory instantiated with const type");
     typedef const T const_val_type;
     /** Non-constant pointer. */
     typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
@@ -461,7 +472,7 @@ private:
 
     std::deque< wrapper_type > _cont;
     idn_type _next_free_idn;
-};
+}; // class Factory
 
 template <class T, class Base_Ptr>
 Factory< T, Base_Ptr >* Factory< T, Base_Ptr >::_active_ptr = NULL;
@@ -535,7 +546,7 @@ private:
     }
 
     ptr_type _val_ptr;
-};
+}; // class Holder
 
 } // namespace detail
 
