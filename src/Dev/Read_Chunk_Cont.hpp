@@ -238,7 +238,8 @@ public:
     }
     Read_Chunk_BPtr get_next(Read_Chunk_CBPtr rc_cbptr, bool next)
     {
-        return static_cast< Read_Chunk_BPtr >(const_cast< const Read_Chunk_RE_Cont* >(this)->get_next(rc_cbptr, next));
+        return boost::intrusive::pointer_traits< Read_Chunk_BPtr >::const_cast_from(
+            const_cast< const Read_Chunk_RE_Cont* >(this)->get_next(rc_cbptr, next));
     }
 }; // class Read_Chunk_RE_Cont
 

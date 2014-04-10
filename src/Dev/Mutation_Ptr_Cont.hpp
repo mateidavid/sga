@@ -33,7 +33,7 @@ public:
     }
 
 private:
-    const Read_Chunk_BPtr _chunk_cbptr;
+    const Read_Chunk_CBPtr _chunk_cbptr;
 };
 
 

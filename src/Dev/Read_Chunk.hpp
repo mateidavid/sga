@@ -258,7 +258,8 @@ public:
     }
     Read_Chunk_BPtr bptr_to()
     {
-        return static_cast< Read_Chunk_BPtr >(const_cast< const Read_Chunk* >(this)->bptr_to());
+        return boost::intrusive::pointer_traits< Read_Chunk_BPtr >::const_cast_from(
+            const_cast< const Read_Chunk* >(this)->bptr_to());
     }
 
     /** Assign read chunk to contig.
@@ -287,7 +288,7 @@ public:
      * @param mut_left_cbptr Insertion at c_pos to remain on the left of the cut, if any.
      * @return Pair of Read_Chunk pointers that go on left&right of the cut.
      */
-    static std::pair< Read_Chunk_BPtr, Read_Chunk_BPtr >
+    static std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >
     split(Mutation_BPtr mut_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
 
     /** Split read chunk based on contig position and mutation map.

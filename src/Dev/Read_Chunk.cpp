@@ -320,14 +320,16 @@ Read_Chunk::make_chunk_from_cigar_and_chunks(const Cigar& cigar, const Read_Chun
 }
 */
 
-std::pair< Read_Chunk_BPtr, Read_Chunk_BPtr >
+std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >
 Read_Chunk::split(Mutation_BPtr mut_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
     ASSERT(mut_left_cbptr == nullptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
     (void)mut_bptr;
     (void)c_brk;
     (void)mut_left_cbptr;
-    return std::make_tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >(nullptr, nullptr);
+    Read_Chunk_BPtr left_rc_bptr = nullptr;
+    Read_Chunk_BPtr right_rc_bptr = nullptr;
+    return std::make_tuple(left_rc_bptr, right_rc_bptr);
 }
 
 /*

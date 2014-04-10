@@ -79,14 +79,15 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     }
 
     // create new contig entry object; set string; add it to container
-    Contig_Entry_BPtr ce_new_bptr = Contig_Entry_Fact::new_elem(new string(ce_bptr->get_seq().substr(c_brk));
+    Contig_Entry_BPtr ce_new_bptr = Contig_Entry_Fact::new_elem(new string(ce_bptr->get_seq().substr(c_brk)));
     ce_cont().insert(ce_new_bptr);
 
     // split Mutation_Cont, save rhs in new Contig_Entry
     ce_new_bptr->mut_cont() = ce_bptr->mut_cont().split(c_brk, mut_left_cbptr);
 
     // unlink Read_Chunk objects from their RE containers
-    for (auto& rc_bref : ce_bptr->chunk_cont())
+    //TODO: why not auto&
+    for (auto rc_bref : ce_bptr->chunk_cont())
     {
         Read_Chunk_BPtr rc_bptr = &rc_bref;
         Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
@@ -99,7 +100,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     //TODO
     
     
-    
+    /*
     // aquire second-half mutations from original contig entry object into the new one; compute mutation pointer map
     map< const Mutation*, const Mutation* > mut_cptr_map;
     auto ce_modifier = [&] (Contig_Entry& ce) {
@@ -187,6 +188,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
         //cerr << "after cutting contig entry: " << (void*)ce_bptr << '\n' << *this;
         ASSERT(check(set< const Contig_Entry* >( { ce_bptr, ce_new_cptr })));
     }
+    */
     return true;
 }
 

@@ -85,7 +85,8 @@ public:
     }
     Read_Entry_BPtr bptr_to()
     {
-        return static_cast< Read_Entry_BPtr >(const_cast< const Read_Entry* >(this)->bptr_to());
+        return boost::intrusive::pointer_traits< Read_Entry_BPtr >::const_cast_from(
+            const_cast< const Read_Entry* >(this)->bptr_to());
     }
 
     /** @name Getters */

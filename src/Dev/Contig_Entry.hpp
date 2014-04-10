@@ -97,7 +97,8 @@ public:
     }
     Contig_Entry_BPtr bptr_to()
     {
-        return static_cast< Contig_Entry_BPtr >(const_cast< const Contig_Entry* >(this)->bptr_to());
+        return boost::intrusive::pointer_traits< Contig_Entry_BPtr >::const_cast_from(
+            const_cast< const Contig_Entry* >(this)->bptr_to());
     }
 
     /** Add to the list of read chunks.
