@@ -7,13 +7,15 @@
 #ifndef __SHORTCUTS_HPP
 #define __SHORTCUTS_HPP
 
-#include <cassert>
+#include <type_traits>
+#include <boost/type_traits/intrinsics.hpp>
+#ifndef BOOST_IS_CONVERTIBLE
+#define BOOST_IS_CONVERTIBLE(T, U) (std::is_convertible<T, U>::value)
+#endif
 
 
-//#define DELETE_COPY_CTOR(_type)
-//    _type(const _type&) = delete;
 #define DELETE_COPY_CTOR(_type) \
-    _type(const _type&) { assert(false); }
+    _type(const _type&) = delete;
 #define DELETE_MOVE_CTOR(_type) \
     _type(_type&&) = delete;
 #define DELETE_DEF_CTOR(_type) \

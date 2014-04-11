@@ -1,3 +1,4 @@
+#include "shortcuts.hpp"
 #include <iostream>
 #include <time.h>
 #include <boost/program_options.hpp>
