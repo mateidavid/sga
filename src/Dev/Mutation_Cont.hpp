@@ -136,6 +136,22 @@ public:
      * @return New Mutation_Cont.
      */
     Mutation_Cont split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
+
+    /** Shift all Mutations in this container.
+     * @param delta Signed integer value to add to all start points.
+     */
+    void shift(int delta)
+    {
+        for (auto mut_bref : *this)
+        {
+            Mutation_BPtr mut_bptr = &mut_bref;
+            mut_bptr->shift(delta);
+        }
+        Base::implement_shift(delta);
+    }
+
+    /** Drop unused Mutation objects. */
+    void drop_unused();
 };
 
 } // namespace MAC

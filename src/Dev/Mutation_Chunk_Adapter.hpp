@@ -46,14 +46,16 @@ private:
 
     /** Getters. */
 public:
-    Mutation_CBPtr mut_cbptr() const { return _mut_cbptr; }
-    Read_Chunk_CBPtr chunk_cbptr() const { return _chunk_cbptr; }
+    const Mutation_CBPtr& mut_cbptr() const { return _mut_cbptr; }
+    Mutation_CBPtr& mut_cbptr() { return _mut_cbptr; }
+    const Read_Chunk_CBPtr& chunk_cbptr() const { return _chunk_cbptr; }
+    Read_Chunk_CBPtr& chunk_cbptr() { return _chunk_cbptr; }
 
     friend std::ostream& operator << (std::ostream& os, const Mutation_Chunk_Adapter&);
 
 private:
-    const Mutation_CBPtr _mut_cbptr;
-    const Read_Chunk_CBPtr _chunk_cbptr;
+    Mutation_CBPtr _mut_cbptr;
+    Read_Chunk_CBPtr _chunk_cbptr;
 
     /** Hooks for storage in intrusive list inside Read_Chunk objects. */
     friend struct detail::Mutation_Ptr_List_Node_Traits;

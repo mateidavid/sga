@@ -106,12 +106,12 @@ int main(int argc, char* argv[])
         }
         else if (rec_type == "VT")
         {
-            string* r_id_ptr = new string();
-            string* r_seq_ptr = new string();
-            iss >> *r_id_ptr >> *r_seq_ptr;
+            string r_id;
+            string r_seq;
+            iss >> r_id >> r_seq;
             ASSERT(not iss.eof());
-            global::assert_message = string("VT ") + *r_id_ptr;
-            g.add_read(r_id_ptr, r_seq_ptr);
+            global::assert_message = string("VT ") + r_id;
+            g.add_read(std::move(r_id), std::move(r_seq));
         }
         else if (rec_type == "ED")
         {

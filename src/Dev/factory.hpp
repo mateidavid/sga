@@ -306,6 +306,7 @@ struct Cloner
 {
     typedef T val_type;
     static_assert(not std::is_const< val_type >::value, "Cloner instantiated with const type");
+    static_assert(std::is_copy_constructible< val_type >::value, "Cloner instantiated with non-copy-construtible type");
     typedef Identifier< val_type, Base_Ptr > idn_type;
     typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
     typedef typename idn_type::fact_type fact_type;
@@ -456,11 +457,10 @@ public:
     }
 
     /** Static version of del_elem, using active factory. */
-    template <typename... Args>
-    static void del_elem(Args&& ... args)
+    static void del_elem(ptr_type elem_ptr)
     {
         ASSERT(get_active_ptr());
-        get_active_ptr()->del_elem_ns(std::forward< Args >(args)...);
+        get_active_ptr()->del_elem_ns(elem_ptr);
     }
 
 private:

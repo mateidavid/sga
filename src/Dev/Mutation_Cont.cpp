@@ -111,4 +111,21 @@ Mutation_Cont Mutation_Cont::split(Size_Type c_brk, Mutation_CBPtr mut_left_cbpt
     return rhs_cont;
 }
 
+void Mutation_Cont::drop_unused()
+{
+    auto mut_it = begin();
+    while (mut_it != end())
+    {
+        auto mut_next_it = mut_it;
+        ++mut_next_it;
+        Mutation_BPtr mut_bptr = &*mut_it;
+        if (mut_bptr->chunk_ptr_cont().size() == 0)
+        {
+            erase(mut_bptr);
+            Mutation_Fact::del_elem(mut_bptr);
+        }
+        mut_it = mut_next_it;
+    }
+}
+
 } // namespace MAC

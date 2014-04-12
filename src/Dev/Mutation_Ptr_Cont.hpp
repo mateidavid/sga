@@ -171,7 +171,33 @@ public:
     */
 
     /** Erase MCA from container. */
-    void erase(Mutation_Chunk_Adapter_CBPtr mca_cbptr) { Base::erase(Base::iterator_to(*mca_cbptr)); }
+    void erase(Mutation_Chunk_Adapter_CBPtr mca_cbptr)
+    {
+        Base::erase(Base::iterator_to(*mca_cbptr));
+    }
+
+    /** Extract all elements starting with and beyond the given one,
+     * and insert them in a new container.
+     * Post: Read_Chunk back pointers of the moved elements are also updated.
+     * @param cit First element to move.
+     * @param rc_cbptr Read_Chunk back pointer to use for moved elements.
+     * @return New container.
+     */
+    Mutation_Ptr_Cont split(const_iterator cit, Read_Chunk_CBPtr rc_cbptr)
+    {
+        Mutation_Ptr_Cont new_cont;
+        while (cit != end())
+        {
+            const_iterator next_cit = cit;
+            ++next_cit;
+            Mutation_Chunk_Adapter_BPtr mca_bptr = (&*cit).unconst();
+            erase(mca_bptr);
+            mca_bptr->chunk_cbptr() = rc_cbptr;
+            new_cont.insert_before(new_cont.end(), mca_bptr);
+            cit = next_cit;
+        }
+        return new_cont;
+    }
 };
 
 } // namespace MAC

@@ -170,8 +170,14 @@ public:
         }
     }
 
-    /** Change Mutation base by adding a prefix of the given length. */
-    void add_base_prefix(Size_Type len) { _start += len; }
+    /** Shift Mutation.
+     * @param delta Signed integer value to add to start point.
+     */
+    void shift(int delta)
+    {
+        ASSERT(int(_start) + delta >= 0);
+        _start = Size_Type(int(_start) + delta);
+    }
 
     const Read_Chunk_Ptr_Cont& chunk_ptr_cont() const { return _rcpn_cont; }
     Read_Chunk_Ptr_Cont& chunk_ptr_cont() { return _rcpn_cont; }

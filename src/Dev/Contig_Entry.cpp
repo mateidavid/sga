@@ -133,27 +133,6 @@ void Contig_Entry::drop_mutations(const map< const Mutation*, const Mutation* >&
     }
 }
 
-void Contig_Entry::drop_unused_mutations()
-{
-    set< Mutation_CPtr > used_mut;
-    for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
-    {
-        Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
-        for (auto mut_cptr_it = rc_cptr->get_mut_ptr_cont().begin(); mut_cptr_it != rc_cptr->get_mut_ptr_cont().end(); ++mut_cptr_it)
-        {
-            Mutation_CPtr mut_cptr = *mut_cptr_it;
-            used_mut.insert(mut_cptr);
-        }
-    }
-    for (auto mut_it = _mut_cont.begin(); mut_it != _mut_cont.end(); ++mut_it)
-    {
-        if (used_mut.count(&*mut_it) == 0)
-        {
-            _mut_cont.erase(mut_it);
-        }
-    }
-}
-
 void Contig_Entry::reverse(const Read_Chunk::ext_mod_type& rc_reverse_mod)
 {
     // only reverse full contigs
@@ -462,8 +441,6 @@ void Contig_Entry::print_separated_het_mutations(
 
 bool Contig_Entry::check() const
 {
-    // check base sequence exists
-    ASSERT(_seq_ptr);
     // check there are chunks mapped to this contig
     ASSERT(_chunk_cont.size() > 0);
     // mutations:
@@ -471,7 +448,7 @@ bool Contig_Entry::check() const
     {
         const Mutation& mut = mut_cbref.raw();
         // check base coordinates
-        ASSERT(mut.get_start() <= _seq_ptr->size() and mut.get_end() <= _seq_ptr->size());
+        ASSERT(mut.get_start() <= _seq.size() and mut.get_end() <= _seq.size());
         // check no empty mutations
         ASSERT(not mut.is_empty());
     }
@@ -483,7 +460,7 @@ bool Contig_Entry::check() const
         // check contig entry pointers
         ASSERT(rc_cbptr->ce_bptr() == ce_bptr);
         // check contig coordinates
-        ASSERT(rc_cbptr->get_c_end() <= _seq_ptr->size());
+        ASSERT(rc_cbptr->get_c_end() <= _seq.size());
         // mutation pointers:
         for (const auto& mca_cbref : rc_cbptr->mut_ptr_cont())
         {
@@ -520,7 +497,7 @@ bool Contig_Entry::check_colour(bool dir) const
 ostream& operator << (ostream& os, const Contig_Entry& rhs)
 {
     os << indent::tab << "(Contig_Entry &=" << (void*)&rhs
-       << indent::inc << indent::nl << "seq=\"" << rhs.get_seq() << "\",len=" << rhs.get_len()
+       << indent::inc << indent::nl << "seq=\"" << rhs.seq() << "\",len=" << rhs.get_len()
        << ",col=" << rhs.colour() << ",is_unmappable=" << (int)rhs.is_unmappable()
        << indent::nl << "mut_cont:"
        << indent::inc << '\n';

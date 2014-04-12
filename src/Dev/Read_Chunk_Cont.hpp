@@ -78,6 +78,7 @@ public:
     ~Read_Chunk_CE_Cont() { ASSERT(size() == 0); }
 
     USING_ITERATORS(Base)
+    using Base::max_end;
 
     /** Insert Read_Chunk in this container. */
     void insert(Read_Chunk_BPtr rc_bptr) { Base::insert(*rc_bptr); }
@@ -96,6 +97,24 @@ public:
      * @return New Read_Chunk_CE_Cont containing rhs.
      */
     Read_Chunk_CE_Cont split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
+
+    /** Erase all Chunks from their respective RE container. */
+    void erase_from_re_cont() const;
+    /** Insert all Chunks into their respective RE container. */
+    void insert_into_re_cont() const;
+
+    /** Shift contig coordinates of all Read_Chunk objects in this container.
+     * @param delta Signed integer value to add to all contig start points.
+     */
+    void shift(int delta)
+    {
+        for (auto rc_bref : *this)
+        {
+            Read_Chunk_BPtr rc_bptr = &rc_bref;
+            rc_bptr->shift(delta);
+        }
+        Base::implement_shift(delta);
+    }
 }; // class Read_Chunk_CE_Cont
 
 struct Read_Chunk_Set_Node_Traits

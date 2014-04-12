@@ -105,6 +105,12 @@ public:
     {
         Base::clone_from(src, Read_Chunk_Ptr_Cont::Cloner(new_mut_cbptr), Mutation_Chunk_Adapter_Fact::disposer_type());
     }
+
+    /** Erase MCA from container. */
+    void erase(Mutation_Chunk_Adapter_CBPtr mca_cbptr)
+    {
+        Base::erase(Base::iterator_to(*mca_cbptr));
+    }
 };
 
 } // namespace MAC

@@ -38,10 +38,8 @@ Seq_Type Read_Entry::get_seq() const
 
 bool Read_Entry::check() const
 {
-    // name is set
-    ASSERT(_name_ptr);
     // name not empty
-    ASSERT(_name_ptr->size() > 0);
+    ASSERT(_name.size() > 0);
     for (auto rc_cit = _chunk_cont.begin(); rc_cit != _chunk_cont.end(); ++rc_cit)
     {
         Read_Chunk_CBPtr rc_cbptr = &*rc_cit;

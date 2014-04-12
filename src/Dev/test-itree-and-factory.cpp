@@ -17,12 +17,12 @@ namespace detail
 
 struct Value
 {
-private:
-    friend class Factory< Value >;
+//private:
+//    friend class Factory< Value >;
     Value() = default;
-    Value(const Value &) = delete;
+    Value(const Value &) = default;
     Value(Value&&) = delete;
-public:
+//public:
     typedef Factory< Value > fact_type;
     typedef fact_type::ptr_type ptr_type;
 
@@ -368,7 +368,6 @@ void real_main(const Program_Options& po)
         else if (op == 4)
         {
             // clone tree and check
-            /*
             clog << "cloning tree of size: " << t.size() << '\n';
             itree_type t2;
             t2.clone_from(t, fact_type::cloner_type(), fact_type::disposer_type());
@@ -380,7 +379,6 @@ void real_main(const Program_Options& po)
             {
                 f.del_elem(tmp);
             }
-            */
         }
         if (po.print_tree_each_op)
         {

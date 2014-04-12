@@ -304,10 +304,10 @@ public:
     /** Create Read_Chunk object from a cigar string.
      * Also creates a corresponding Contig_Entry object.
      * @param cigar Cigar string.
-     * @param rf_ptr Reference string pointer (either whole, or just mapped portion); Contig_Entry object takes ownership.
+     * @param rf_ptr Reference string (either whole, or just mapped portion); Contig_Entry object takes ownership.
      * @param qr Query string (either whole, or just mapped portion).
      */
-    static Read_Chunk_BPtr make_chunk_from_cigar(const Cigar& cigar, Seq_Type* rf_ptr, const Seq_Type& qr = std::string());
+    static Read_Chunk_BPtr make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf_ptr, const Seq_Type& qr = std::string());
 
     /** Create Read_Chunk object and corresponding Mutation container from a cigar string and 2 existing Read_Chunk objects.
      * @param cigar Cigar string.
@@ -355,6 +355,15 @@ public:
      * @param prefix_len Length of prefix by which new contig is larger than the old one.
      */
     //void rebase(const Contig_Entry* ce_cptr, const Mutation_Trans_Cont& mut_map, Size_Type prefix_len);
+
+    /** Shift contig coordinates of this Read_Chunk object.
+     * @param delta Signed integer value to add to contig start point.
+     */
+    void shift(int delta)
+    {
+        ASSERT(int(_c_start) + delta >= 0);
+        _c_start = Size_Type(int(_c_start) + delta);
+    }
 
     bool check() const;
 

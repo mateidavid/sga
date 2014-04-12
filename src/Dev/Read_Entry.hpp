@@ -34,12 +34,11 @@ private:
     friend class Factory< Read_Entry >;
 
     /** Constructor.
-     * @param name_ptr Pointer to string containing read name.
+     * @param name String containing read name; (take ownership).
      * @param len Length of the read.
      */
-    Read_Entry(const std::string* name_ptr, Size_Type len) : _name_ptr(name_ptr), _len(len)
+    Read_Entry(std::string&& name, Size_Type len) : _name(std::move(name)), _len(len)
     {
-        ASSERT(name_ptr != NULL);
         Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem(nullptr, len);
         _chunk_cont.insert(rc_bptr);
     }
@@ -55,7 +54,7 @@ public:
         if (this != &rhs)
         {
             ASSERT(is_unlinked() and rhs.is_unlinked());
-            _name_ptr = std::move(rhs._name_ptr);
+            _name = std::move(rhs._name);
             _chunk_cont = std::move(rhs._chunk_cont);
             _len = std::move(rhs._len);
         }
@@ -91,7 +90,7 @@ public:
 
     /** @name Getters */
     /**@{*/
-    const std::string& get_name() const { return *_name_ptr; }
+    const std::string& get_name() const { return _name; }
     Size_Type get_len() const { return _len; }
     const Read_Chunk_RE_Cont& chunk_cont() const { return _chunk_cont; }
     Read_Chunk_RE_Cont& chunk_cont() { return _chunk_cont; }
@@ -110,7 +109,7 @@ public:
     friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);
 
 private:
-    std::shared_ptr< const std::string > _name_ptr;
+    std::string _name;
     Read_Chunk_RE_Cont _chunk_cont;
     Size_Type _len;
 

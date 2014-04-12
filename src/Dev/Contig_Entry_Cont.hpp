@@ -76,6 +76,12 @@ public:
     {
         Base::push_back(*ce_bptr);
     }
+
+    /** Erase Contig_Entry from container. */
+    void erase(Contig_Entry_CBPtr ce_cbptr)
+    {
+        Base::erase(Base::iterator_to(*ce_cbptr));
+    }
 };
 
 } // namespace MAC

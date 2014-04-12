@@ -43,10 +43,10 @@ public:
     /** Add a read.
      * Create basic Read_Entry, Read_Chunk, and Contig_Entry objects,
      * initialize them, and place them in their respective containers.
-     * @param name_ptr Pointer to string with read name. (Read container takes ownership.)
-     * @param seq_ptr Pointer to container with read sequence. (Contig container takes ownership.)
+     * @param name_ptr String with read name. (Read container takes ownership.)
+     * @param seq_ptr Read sequence. (Contig container takes ownership.)
      */
-    void add_read(const std::string* name_ptr, Seq_Type* seq_ptr);
+    void add_read(std::string&& name, Seq_Type&& seq);
     
     /** Add an overlap between 2 reads.
      * The contigs holding overlapping chunks of each read are collapsed into one.

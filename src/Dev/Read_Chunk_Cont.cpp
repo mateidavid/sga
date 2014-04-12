@@ -5,6 +5,7 @@
 //-----------------------------------------------
 
 #include "Read_Chunk_Cont.hpp"
+#include "Read_Entry.hpp"
 
 using namespace std;
 
@@ -31,6 +32,26 @@ Read_Chunk_CE_Cont Read_Chunk_CE_Cont::split(Size_Type c_brk, Mutation_CBPtr mut
 
     *this = std::move(lhs_cont);
     return rhs_cont;
+}
+
+void Read_Chunk_CE_Cont::erase_from_re_cont() const
+{
+    for (auto rc_bref : *this)
+    {
+        Read_Chunk_BPtr rc_bptr = (&rc_bref).unconst();
+        Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
+        re_bptr->chunk_cont().erase(rc_bptr);
+    }
+}
+
+void Read_Chunk_CE_Cont::insert_into_re_cont() const
+{
+    for (auto rc_bref : *this)
+    {
+        Read_Chunk_BPtr rc_bptr = (&rc_bref).unconst();
+        Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
+        re_bptr->chunk_cont().insert(rc_bptr);
+    }
 }
 
 } // namespace MAC

@@ -37,9 +37,9 @@ private:
     friend class Factory< Contig_Entry >;
 
     /** Constructor.
-     * @param seq_ptr Pointer to read sequence (assume ownership).
+     * @param seq RVR to read sequence (assume ownership).
      */
-    Contig_Entry(Seq_Type* seq_ptr, Size_Type seq_offset = 0) : _seq_ptr(seq_ptr), _seq_offset(seq_offset), _colour(0) {}
+    Contig_Entry(Seq_Type&& seq, Size_Type seq_offset = 0) : _seq(std::move(seq)), _seq_offset(seq_offset), _colour(0) {}
 
     /** Constructor out of a Read_Chunk. * /
     Contig_Entry(Read_Chunk_CPtr rc_cptr) : _seq_ptr(new Seq_Type(rc_cptr->get_seq())), _seq_offset(0), _colour(0)
@@ -59,7 +59,7 @@ public:
         if (this != &rhs)
         {
             ASSERT(is_unlinked());
-            _seq_ptr = std::move(rhs._seq_ptr);
+            _seq = std::move(rhs._seq);
             _mut_cont = std::move(rhs._mut_cont);
             _chunk_cont = std::move(rhs._chunk_cont);
             _seq_offset = std::move(rhs._seq_offset);
@@ -71,11 +71,12 @@ public:
 
     /** @name Getters */
     /**@{*/
-    const Seq_Type& get_seq() const { return *_seq_ptr; }
+    const Seq_Type& seq() const { return _seq; }
+    Seq_Type& seq() { return _seq; }
     Size_Type get_seq_offset() const { return _seq_offset; }
     Seq_Type substr(Size_Type start, Size_Type len) const
-    { ASSERT(start >= _seq_offset and start + len <= _seq_offset + _seq_ptr->size()); return _seq_ptr->substr(start - _seq_offset, len); }
-    Size_Type get_len() const { return _seq_ptr->size(); }
+    { ASSERT(start >= _seq_offset and start + len <= _seq_offset + _seq.size()); return _seq.substr(start - _seq_offset, len); }
+    Size_Type get_len() const { return _seq.size(); }
     const Mutation_Cont& mut_cont() const { return _mut_cont; }
     Mutation_Cont& mut_cont() { return _mut_cont; }
     const Read_Chunk_CE_Cont& chunk_cont() const { return _chunk_cont; }
@@ -135,19 +136,6 @@ public:
      * @return Vector of pointers to chunks that have this mutation.
      */
     //std::vector< Read_Chunk_CPtr > get_chunks_with_mutation(const Mutation* mut_cptr) const;
-
-    /** Drop mutations that appear in the map.
-     * @param mut_cptr_map Map produced by acquire_second_half_mutations().
-     */
-    //void drop_mutations(const std::map< const Mutation*, const Mutation* >& mut_cptr_map);
-
-    /** Drop unused mutations. */
-    //void drop_unused_mutations();
-
-    /** Drop base sequence suffix.
-     * @param c_brk Prefix length to keep.
-     */
-    //void drop_base_seq(Size_Type c_brk) { _seq_ptr->resize(c_brk); }
 
     /** Reverse the contig. */
     //void reverse(const Read_Chunk::ext_mod_type& rc_reverse_mod);
@@ -224,7 +212,7 @@ public:
     friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
 
 private:
-    std::shared_ptr< Seq_Type > _seq_ptr;
+    Seq_Type _seq;
     Mutation_Cont _mut_cont;
     Read_Chunk_CE_Cont _chunk_cont;
     Size_Type _seq_offset;
