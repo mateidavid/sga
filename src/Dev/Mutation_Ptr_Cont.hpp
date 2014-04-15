@@ -21,7 +21,9 @@ namespace MAC
 namespace detail
 {
 
-/** MCA Cloner: copy Mutation pointers, use new Read_Chunk pointer. */
+/** MCA Mutation_Ptr Cloner.
+ * Copy Mutation pointer, use new Read_Chunk pointer.
+ */
 class MCA_Mutation_Ptr_Cloner
 {
 public:
@@ -35,7 +37,6 @@ public:
 private:
     const Read_Chunk_CBPtr _chunk_cbptr;
 };
-
 
 struct Mutation_Ptr_List_Node_Traits
 {
@@ -81,7 +82,7 @@ private:
                                     boost::intrusive::value_traits< detail::Mutation_Ptr_List_Value_Traits >
                                   > Base;
 public:
-    typedef detail::MCA_Mutation_Ptr_Cloner Cloner;
+    //typedef detail::MCA_Mutation_Ptr_Cloner Cloner;
 public:
     // allow move only
     DEFAULT_DEF_CTOR(Mutation_Ptr_Cont)
@@ -100,6 +101,7 @@ public:
     */
 
     USING_ITERATORS(Base)
+    using Base::reverse;
 
     // check it is empty when deallocating
     ~Mutation_Ptr_Cont() { ASSERT(size() == 0); }
@@ -197,6 +199,19 @@ public:
             cit = next_cit;
         }
         return new_cont;
+    }
+
+    /** Clear the container.
+     * MCAs are removed from this container & and their corresponding Read_Chunk_Ptr_Cont, then deallocated.
+     */
+    void clear_and_dispose()
+    {
+        Base::clear_and_dispose([] (Mutation_Chunk_Adapter_BPtr mca_bptr)
+        {
+            Mutation_BPtr mut_bptr = mca_bptr->mut_cbptr().unconst();
+            mut_bptr->chunk_ptr_cont().erase(mca_bptr);
+            Mutation_Chunk_Adapter_Fact::del_elem(mca_bptr);
+        });
     }
 };
 

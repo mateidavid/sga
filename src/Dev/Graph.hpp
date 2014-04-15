@@ -136,19 +136,43 @@ private:
      */
     bool cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
 
+    /** Repeatedly cut read entries and match as described in the cigar string.
+     * @param re1_bptr Read_Entry reference.
+     * @param re2_bptr Read_Entry query.
+     * @param cigar Cigar string describing the mapping.
+     * @return Vector of tuples of the form (chunk, chunk, cigar).
+     */
+    std::vector< std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr, Cigar > >
+    chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar);
+
+    /** Set chunk as unmappable. */
+    void unmap_chunk(Read_Chunk_BPtr rc_bptr);
+
+    /** Try to extend an unmappable read region in both directions.
+     * @param re_bptr Read_Entry object.
+     * @param rc_start Extend left of this position on read.
+     * @param rc_end Extend right of this position on read.
+     */
+    void extend_unmapped_chunk(Read_Entry_BPtr re_bptr, Size_Type rc_start, Size_Type rc_end);
+
+    /** Extend an unmappable read region in the given direction.
+     * @param re_bptr Read_Entry object.
+     * @param pos Read position where to extend from.
+     * @param r_right Bool; true: extend right on read; false: extend left on read.
+     */
+    void extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bool r_right);
+
+    /** Attempt to catenate contig with neighbour in given direction.
+     * @param ce_bptr Contig_Entry to consider.
+     * @param c_right Bool; true: merge past contig end; false: merge past contig start.
+     * @return True iff the merge was successful.
+     */
+    bool catenate_contigs(Contig_Entry_BPtr ce_bptr, bool c_right);
+
     /*
-    void erase_contig_entry(const Contig_Entry* ce_cptr);
     void remap_chunks(std::map< Read_Chunk_CPtr, std::shared_ptr< Read_Chunk > >& rc_map, Mutation_Cont& extra_mut_cont);
     void merge_read_chunks(Read_Chunk_CPtr c1rc1_chunk_cptr, Read_Chunk_CPtr c2rc2_chunk_cptr, Cigar& rc1rc2_cigar);
-    std::shared_ptr< std::vector< std::tuple< Read_Chunk_CPtr, Read_Chunk_CPtr, Cigar > > > chunker(
-        const Read_Entry* re1_cptr, const Read_Entry* re2_cptr, Cigar& cigar);
-    void reverse_contig(const Contig_Entry* ce_cptr);
-    bool try_merge_contig(const Contig_Entry* ce_cptr, bool forward);
     void merge_read_contigs(const Read_Entry* re_cptr);
-    void unmap_chunk(Read_Chunk_CPtr rc_cptr);
-    void extend_unmapped_chunk(const Read_Entry* re_cptr, Size_Type rc_start, Size_Type rc_end);
-    void extend_unmapped_chunk_dir(const Read_Entry* re_cptr, Size_Type pos, bool dir);
-    void merge_unmappable_chunks(Read_Chunk_CPtr rc1_cptr, Read_Chunk_CPtr rc2_cptr);
     void scan_read_for_unmappable_chunks(const Read_Entry* re_cptr, Size_Type rc_start, Size_Type rc_end);
     void scan_contig_for_unmappable_chunks(const Contig_Entry* ce_cptr);
     */

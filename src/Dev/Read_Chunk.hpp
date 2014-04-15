@@ -318,13 +318,6 @@ public:
     //static std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry > > make_chunk_from_cigar_and_chunks(
     //    const Cigar& cigar, const Read_Chunk& rc1, const Read_Chunk& rc2);
 
-    /** Construct a Read_Chunk corresponding to the read->contig mapping.
-     * @return New Read_Chunk object and Contig_Entry objects;
-     * and a Mutation translation object from original to reversed Mutations.
-     */
-    //std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry >, std::shared_ptr< Mutation_Trans_Cont > >
-    //reverse() const;
-
     /** Collapse mutations corresponding to 2 mappings.
      * @param lhs Read_Chunk object corresponding to contig->read1 mapping.
      * @param lhs_me Container of Mutation_Extra objects from lhs.
@@ -339,8 +332,8 @@ public:
      */
     //std::shared_ptr< Read_Chunk > collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const;
 
-    /** Reverse the contig mapping (assumes mutations are reverse by contig entry). */
-    //void reverse();
+    /** Reverse the contig mapping; Mutations and their container must be reversed externally. */
+    void reverse();
 
     /** Merge this read chunk with the next chunk of the same read.
      * Pre: Chunks must be mapped to the same contig, in the same orientation, continuously.

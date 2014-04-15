@@ -301,7 +301,7 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&&
 
     // fix cross-pointers
     rc_bptr->_ce_bptr = ce_bptr;
-    ce_bptr->add_chunk(rc_bptr);
+    ce_bptr->chunk_cont().insert(rc_bptr);
 
     // construct mutations and store them in Contig_Entry object
     ce_bptr->mut_cont() = Mutation_Cont(cigar, qr);
@@ -484,70 +484,6 @@ std::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::split(
     }
 }
 
-std::tuple< shared_ptr< Read_Chunk >, shared_ptr< Contig_Entry >, shared_ptr< Mutation_Trans_Cont > >
-Read_Chunk::reverse() const
-{
-    shared_ptr< Read_Chunk > rc_sptr(new Read_Chunk());
-    shared_ptr< Contig_Entry > ce_sptr(new Contig_Entry(new string(get_seq()), _r_start));
-    shared_ptr< Mutation_Trans_Cont > mut_trans_cont_sptr(new Mutation_Trans_Cont());
-
-    rc_sptr->_r_start = _c_start;
-    rc_sptr->_r_len = _c_len;
-    rc_sptr->_c_start = _r_start;
-    rc_sptr->_c_len = _r_len;
-    rc_sptr->_rc = _rc;
-
-    // add cross-pointers
-    rc_sptr->set_ce_ptr(ce_sptr.get());
-    ce_sptr->add_chunk(rc_sptr.get());
-
-    Pos pos = get_start_pos();
-    while (pos != get_end_pos())
-    {
-        // ignore matched stretches
-        while (pos.get_match_len() > 0)
-        {
-            pos.increment();
-        }
-        if (pos == get_end_pos())
-        {
-            break;
-        }
-
-        Pos pos_next = pos;
-        pos_next.increment();
-
-        // create reversed Mutation
-        Mutation rev_mut((not _rc? pos.r_pos : pos_next.r_pos),
-                         (not _rc? pos_next.r_pos - pos.r_pos : pos.r_pos - pos_next.r_pos),
-                         (not _rc? _ce_ptr->substr(pos.c_pos, pos_next.c_pos - pos.c_pos)
-                          : reverseComplement(_ce_ptr->substr(pos.c_pos, pos_next.c_pos - pos.c_pos))));
-
-        // save it in Mutation container
-        Mutation_Cont::iterator rev_mut_it;
-        bool success;
-        tie(rev_mut_it, success) = ce_sptr->mut_cont().insert(rev_mut);
-        ASSERT(success);
-
-        // save the pair in the Mutation translation container
-        Mutation_Trans trans;
-        trans.old_mut_cptr = _mut_ptr_cont[pos.mut_idx];
-        trans.new_mut_cptr = &*rev_mut_it;
-        Mutation_Trans_Cont::iterator it;
-        tie(it, success) = mut_trans_cont_sptr->insert(trans);
-        ASSERT(success);
-        pos = pos_next;
-    }
-
-    // save mutation pointers in the Read_Chunk object
-    for (Mutation_Cont::iterator rev_mut_it = ce_sptr->get_mut_cont().begin(); rev_mut_it != ce_sptr->get_mut_cont().end(); ++rev_mut_it)
-    {
-        rc_sptr->_mut_ptr_cont.push_back(&*rev_mut_it);
-    }
-
-    return std::make_tuple(rc_sptr, ce_sptr, mut_trans_cont_sptr);
-}
-
 shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const
 {
     ASSERT(get_r_start() <= rc2.get_c_start() and rc2.get_c_end() <= get_r_end());
@@ -717,17 +653,15 @@ shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mut
            or (not get_rc()? res->get_c_end() == get_c_end() : res->get_c_start() == get_c_start()));
     return res;
 }
+*/
 
 void Read_Chunk::reverse()
 {
     _rc = not _rc;
-    _c_start = _ce_ptr->get_len() - (_c_start + _c_len);
-    for (size_t i = 0; i < _mut_ptr_cont.size() / 2; ++i)
-    {
-        swap(_mut_ptr_cont[i], _mut_ptr_cont[_mut_ptr_cont.size() - 1 - i]);
-    }
+    _c_start = _ce_bptr->get_len() - (_c_start + _c_len);
 }
 
+/*
 void Read_Chunk::merge_next(Read_Chunk_CPtr rc_next_cptr, Mutation::add_mut_mod_type add_mut_mod)
 {
     ASSERT(rc_next_cptr != NULL);

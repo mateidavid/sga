@@ -15,6 +15,16 @@
 namespace MAC
 {
 
+/** Deallocate Mutation. */
+class Mutation_Disposer
+{
+public:
+    void operator () (Mutation_BPtr mut_bptr)
+    {
+        Mutation_Fact::del_elem(mut_bptr);
+    }
+};
+
 struct Mutation_ITree_Node_Traits
 {
     typedef Holder< Mutation > node;
@@ -152,6 +162,26 @@ public:
 
     /** Drop unused Mutation objects. */
     void drop_unused();
+
+    /** Clear the container. */
+    void clear_and_dispose()
+    {
+        Base::clear_and_dispose(Mutation_Disposer());
+    }
+
+    /** Reverse Mutations in this container.
+     * @param ce_len Length of the Contig_Entry.
+     */
+    void reverse_mutations(Size_Type ce_len)
+    {
+        Mutation_Cont new_mut_cont;
+        Base::clear_and_dispose([&] (Mutation_BPtr mut_bptr)
+        {
+            mut_bptr->reverse(ce_len);
+            new_mut_cont.insert(mut_bptr);
+        });
+        *this = std::move(new_mut_cont);
+    }
 };
 
 } // namespace MAC

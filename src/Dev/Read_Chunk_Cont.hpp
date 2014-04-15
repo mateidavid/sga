@@ -78,7 +78,11 @@ public:
     ~Read_Chunk_CE_Cont() { ASSERT(size() == 0); }
 
     USING_ITERATORS(Base)
+    using typename Base::intersection_const_iterator;
+    using typename Base::intersection_const_iterator_range;
+    using Base::interval_intersect;
     using Base::max_end;
+    using Base::clear_and_dispose;
 
     /** Insert Read_Chunk in this container. */
     void insert(Read_Chunk_BPtr rc_bptr) { Base::insert(*rc_bptr); }
@@ -231,34 +235,32 @@ public:
     }
 
     /** Get the sibling of the given read chunk.
-     * @param next Bool: if true, get next chunk; if false, get previous chunk.
+     * @param rc_cbptr Original Read_Chunk.
+     * @param read Bool; true: right/left wrt to read; false: right/left wrt to contig.
+     * @param right Bool; true: get chunk to the right; false: get chunk to the left.
      * @return Pointer to sibling chunk, or NULL if no sibling exists.
      */
-    Read_Chunk_CBPtr get_next(Read_Chunk_CBPtr rc_cbptr, bool next) const
+    Read_Chunk_CBPtr get_sibling(Read_Chunk_CBPtr rc_cbptr, bool read, bool right) const
     {
         const_iterator rc_cit = this->iterator_to(*rc_cbptr);
-        if (next)
+        bool r_right = (read? right : right != rc_cbptr->get_rc());
+        if (r_right)
         {
             ++rc_cit;
-            if (rc_cit == this->cend())
+            if (rc_cit == this->end())
             {
                 return nullptr;
             }
         }
         else
         {
-            if (rc_cit == this->cbegin())
+            if (rc_cit == this->begin())
             {
                 return nullptr;
             }
             --rc_cit;
         }
         return &*rc_cit;
-    }
-    Read_Chunk_BPtr get_next(Read_Chunk_CBPtr rc_cbptr, bool next)
-    {
-        return boost::intrusive::pointer_traits< Read_Chunk_BPtr >::const_cast_from(
-            const_cast< const Read_Chunk_RE_Cont* >(this)->get_next(rc_cbptr, next));
     }
 }; // class Read_Chunk_RE_Cont
 

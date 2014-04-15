@@ -41,17 +41,11 @@ private:
      */
     Contig_Entry(Seq_Type&& seq, Size_Type seq_offset = 0) : _seq(std::move(seq)), _seq_offset(seq_offset), _colour(0) {}
 
-    /** Constructor out of a Read_Chunk. * /
-    Contig_Entry(Read_Chunk_CPtr rc_cptr) : _seq_ptr(new Seq_Type(rc_cptr->get_seq())), _seq_offset(0), _colour(0)
-    {
-        _chunk_cptr_cont.push_back(rc_cptr);
-    }
-    */
-
     // allow move only when unlinked
     DEFAULT_DEF_CTOR(Contig_Entry)
     DELETE_COPY_CTOR(Contig_Entry)
     Contig_Entry(Contig_Entry&& rhs) { *this = std::move(rhs); }
+    ~Contig_Entry() { ASSERT(is_unlinked()); }
 public:
     DELETE_COPY_ASOP(Contig_Entry)
     Contig_Entry& operator = (Contig_Entry&& rhs)
@@ -102,21 +96,6 @@ public:
             const_cast< const Contig_Entry* >(this)->bptr_to());
     }
 
-    /** Add to the list of read chunks.
-     * @param rc_bptr Pointer to read chunk to add.
-     */
-    void add_chunk(Read_Chunk_BPtr rc_bptr) { _chunk_cont.insert(rc_bptr); }
-
-    /** Remove read chunk.
-     * @param rc_cptr Pointer to read chunk to remove.
-     */
-    //void remove_chunk(Read_Chunk_CPtr rc_cptr);
-
-    /** Remove read chunks.
-     * @param rc_cptr_set Set of read chunks to remove.
-     */
-    //void remove_chunks(const std::set< Read_Chunk_CPtr >& rc_cptr_set);
-
     /** Cut mutation at given offsets.
      * Read chunks containing the original Mutation will get instead 2 adjacent mutations.
      * @param mut_bptr Mutation to cut.
@@ -138,7 +117,7 @@ public:
     //std::vector< Read_Chunk_CPtr > get_chunks_with_mutation(const Mutation* mut_cptr) const;
 
     /** Reverse the contig. */
-    //void reverse(const Read_Chunk::ext_mod_type& rc_reverse_mod);
+    void reverse();
 
     /** Get out-edges counts.
      * @return A tuple (cnt_left, uniq_left, cnt_right, uniq_right), where cnt is the number
@@ -153,33 +132,24 @@ public:
      */
     //std::shared_ptr< std::vector< Read_Chunk_CPtr > > get_chunks_spanning_pos(Size_Type start, Size_Type end) const;
 
-    /** Given a chunk mapped to this contig, retreive the next chunk in the same read
-     * in the given contig direction.
-     * @param dir Bool; true: past contig end; false: past contig start.
-     * @param rc_cptr Chunk whose sibling to look for.
-     * @return Next chunk in that direction, or NULL if none exists.
-     */
-    //Read_Chunk_CPtr get_next_chunk(bool dir, Read_Chunk_CPtr rc_cptr) const;
-
     /** Retrieve chunks leaving contig.
-     * @param dir Bool; true: spanning right of c_end, false: spanning left of 0.
+     * @param c_right Bool; true: spanning past contig end, false: spanning past contig start.
      * @param skip_next_unmappable Bool; true: ignore chunks whose next chunk is unmappable.
+     * @return A map containing, for each Contig_Entry and orientation,
+     * a list of Read_Chunk objects whose sibling is in that Contig_Entry and has the same orientation;
+     * two chunks have the same orientation if they are both mapped to the positive or negative
+     * strand of their respective contigs.
      */
-    //std::shared_ptr< std::vector< Read_Chunk_CPtr > > get_chunks_out(bool dir, bool skip_next_unmappable = true) const;
+    std::map< std::tuple< Contig_Entry_CBPtr, bool >, std::vector< Read_Chunk_CBPtr > >
+    out_chunks_dir(bool c_right, bool skip_next_unmappable = true) const;
 
-    /** Check if contig has a unique neighbour in the given direction.
-     * @param dir Bool; true: past contig end, false: past contig start.
-     * @return NULL if not; otherwise, a list of read chunks spanning past contig end
-     * into another unique contig.
+    /** Check if contig is catenable with a single other contig in the given direction.
+     * @param c_right Bool; true: merge past contig end, false: merge past contig start.
+     * @return A tuple (Contig_Entry, same_orientation, Read_Chunk list);
+     * if the chunk is not catenable, the first coordinate is NULL.
      */
-    //std::shared_ptr< std::vector< Read_Chunk_CPtr > > is_mergeable_one_way(bool forward) const;
-
-    /** Check if contig is mergeable with a single other contig in the given direction.
-     * @param dir Bool; true: merge past contig end, false: merge past contig start.
-     * @return NULL if not mergeable; otherwise, a list of read chunks spanning past contig end
-     * into another unique contig.
-     */
-    //std::shared_ptr< std::vector< Read_Chunk_CPtr > > is_mergeable(bool dir) const;
+    std::tuple< Contig_Entry_CBPtr, bool, std::vector< Read_Chunk_CBPtr > >
+    is_catenable_dir(bool c_right) const;
 
     /** Merge the given contig into this one.
      * @param ce_next_cptr Contig to be merged into this one.

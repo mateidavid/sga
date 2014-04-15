@@ -132,40 +132,25 @@ void Contig_Entry::drop_mutations(const map< const Mutation*, const Mutation* >&
         _mut_cont.erase(_mut_cont.iterator_to(*(it->first)));
     }
 }
+*/
 
-void Contig_Entry::reverse(const Read_Chunk::ext_mod_type& rc_reverse_mod)
+void Contig_Entry::reverse()
 {
     // only reverse full contigs
     ASSERT(_seq_offset == 0);
-
-    // reverse the string
-    std::shared_ptr< Seq_Type > old_seq_ptr = _seq_ptr;
-    _seq_ptr.reset(new string(reverseComplement(*old_seq_ptr)));
-
-    // save mutation pointers
-    vector< Mutation_CPtr > mut_cptr_cont;
-    for (auto mut_it = _mut_cont.begin(); mut_it != _mut_cont.end(); ++mut_it)
+    // reverse the base sequence
+    _seq = reverseComplement(_seq);
+    // reverse Mutation objects in their container
+    mut_cont().reverse_mutations(get_len());
+    for (auto rc_bref : chunk_cont())
     {
-        mut_cptr_cont.push_back(&*mut_it);
-    }
-
-    // using saved pointers, change mutations in place (incudes re-keying)
-    for (auto mut_cptr_it = mut_cptr_cont.begin(); mut_cptr_it != mut_cptr_cont.end(); ++mut_cptr_it)
-    {
-        Mutation_CPtr mut_cptr = *mut_cptr_it;
-        modify_element<Mutation_Cont>(_mut_cont, mut_cptr, [&] (Mutation& mut) {
-            mut.reverse(get_len());
-        });
-    }
-
-    // apply external modifier to reverse read chunks in-place
-    for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
-    {
-        Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
-        rc_reverse_mod(rc_cptr);
+        Read_Chunk_BPtr rc_bptr = &rc_bref;
+        rc_bptr->mut_ptr_cont().reverse();
+        rc_bptr->reverse();
     }
 }
 
+/*
 tuple< size_t, size_t, size_t, size_t > Contig_Entry::get_out_degrees() const
 {
     size_t cnt_0 = 0;
@@ -208,82 +193,54 @@ shared_ptr< vector< Read_Chunk_CPtr > > Contig_Entry::get_chunks_spanning_pos(Si
     }
     return res;
 }
+*/
 
-Read_Chunk_CPtr Contig_Entry::get_next_chunk(bool dir, Read_Chunk_CPtr rc_cptr) const
+map< std::tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > >
+Contig_Entry::out_chunks_dir(bool c_right, bool skip_next_unmappable) const
 {
-    return rc_cptr->get_re_ptr()->get_sibling(rc_cptr, dir != rc_cptr->get_rc());
-}
-
-shared_ptr< vector< Read_Chunk_CPtr > > Contig_Entry::get_chunks_out(bool dir, bool skip_next_unmappable) const
-{
-    shared_ptr< vector< Read_Chunk_CPtr > > res(new vector< Read_Chunk_CPtr >());
-    for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
+    map< std::tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > > res;
+    bool c_left = not c_right;
+    Size_Type endpoint = (c_left? 0 : get_len());
+    for (auto rc_cbref : chunk_cont().interval_intersect(endpoint, endpoint))
     {
-        Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
-        if ((not dir and not rc_cptr->get_c_start() == 0)
-                or (dir and not rc_cptr->get_c_end() == get_len()))
+        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
+        Read_Chunk_CBPtr rc_next_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, false, c_right);
+        if (not rc_next_cbptr or (skip_next_unmappable and rc_next_cbptr->is_unmappable()))
         {
             continue;
         }
-        Read_Chunk_CPtr rc_next_cptr = rc_cptr->get_re_ptr()->get_sibling(rc_cptr, dir != rc_cptr->get_rc());
-        if (rc_next_cptr == NULL or (skip_next_unmappable and rc_next_cptr->is_unmappable()))
-        {
-            continue;
-        }
-        res->push_back(rc_cptr);
+        Contig_Entry_CBPtr ce_next_cbptr = rc_next_cbptr->ce_bptr();
+        bool same_orientation = (rc_cbptr->get_rc() == rc_next_cbptr->get_rc());
+        res[std::make_tuple(ce_next_cbptr, same_orientation)].push_back(rc_cbptr);
     }
     return res;
 }
 
-shared_ptr< vector< Read_Chunk_CPtr > > Contig_Entry::is_mergeable_one_way(bool dir) const
+std::tuple< Contig_Entry_CBPtr, bool, vector< Read_Chunk_CBPtr > >
+Contig_Entry::is_catenable_dir(bool c_right) const
 {
-    auto chunks_out_cont_sptr = get_chunks_out(dir, false);
-    if (chunks_out_cont_sptr->size() == 0)
-        return NULL;
-    // check all chunks leaving go to the same (different) contig, in the same orientation
-    const Contig_Entry* candidate_ce_cptr = NULL;
-    bool candidate_orientation;
-    for (auto rc_cptr_it = chunks_out_cont_sptr->begin(); rc_cptr_it != chunks_out_cont_sptr->end(); ++rc_cptr_it)
+    auto res = out_chunks_dir(c_right, false);
+    if (res.size() != 1)
     {
-        Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
-        Read_Chunk_CPtr rc_next_cptr = get_next_chunk(dir, rc_cptr);
-        ASSERT(rc_next_cptr != NULL);
-        //ASSERT(not rc_next_cptr->is_unmappable());
-        const Contig_Entry* tmp_ce_cptr = rc_next_cptr->get_ce_ptr();
-        bool tmp_orientation = (rc_cptr->get_rc() == rc_next_cptr->get_rc());
-        if (tmp_ce_cptr == this) // multiple chunks of the same read mapped across this boundary: unmergeable
-            return NULL;
-        if (candidate_ce_cptr == NULL)
-        {
-            candidate_ce_cptr = tmp_ce_cptr;
-            candidate_orientation = tmp_orientation;
-        }
-        else
-        {
-            if (tmp_ce_cptr != candidate_ce_cptr or tmp_orientation != candidate_orientation)
-                return NULL;
-        }
+        return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
     }
-    ASSERT(candidate_ce_cptr != NULL);
-    return chunks_out_cont_sptr;
+    ASSERT(not res.begin()->second.empty());
+    Contig_Entry_CBPtr ce_next_cbptr;
+    bool same_orientation;
+    vector< Read_Chunk_CBPtr > rc_cbptr_cont = std::move(res.begin()->second);
+    std::tie(ce_next_cbptr, same_orientation) = res.begin()->first;
+    auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation);
+    if (tmp.size() != 1)
+    {
+        return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
+    }
+    ASSERT(not tmp.begin()->second.empty());
+    ASSERT(tmp.begin()->first == std::make_tuple(Contig_Entry_CBPtr(rc_cbptr_cont.front()->ce_bptr()), same_orientation));
+    ASSERT(tmp.begin()->second.size() == rc_cbptr_cont.size());
+    return std::make_tuple(ce_next_cbptr, same_orientation, std::move(rc_cbptr_cont));
 }
 
-shared_ptr< vector< Read_Chunk_CPtr > > Contig_Entry::is_mergeable(bool dir) const
-{
-    auto chunks_out_cont_sptr = is_mergeable_one_way(dir);
-    if (not chunks_out_cont_sptr)
-        return NULL;
-    Read_Chunk_CPtr rc_cptr = *chunks_out_cont_sptr->begin();
-    Read_Chunk_CPtr rc_next_cptr = get_next_chunk(dir, rc_cptr);
-    const Contig_Entry* ce_next_cptr = rc_next_cptr->get_ce_ptr();
-    bool same_orientation = (rc_cptr->get_rc() == rc_next_cptr->get_rc());
-    auto chunks_in_cont_sptr = ce_next_cptr->is_mergeable_one_way(dir != same_orientation);
-    if (not chunks_in_cont_sptr)
-        return NULL;
-    ASSERT(chunks_out_cont_sptr->size() == chunks_in_cont_sptr->size());
-    return chunks_out_cont_sptr;
-}
-
+/*
 void Contig_Entry::merge_forward(const Contig_Entry* ce_next_cptr, const Read_Chunk::ext_mod_with_map_type& rc_rebase_mod)
 {
     ASSERT(_seq_offset == 0 and ce_next_cptr->_seq_offset == 0);
