@@ -15,16 +15,6 @@
 namespace MAC
 {
 
-/** Deallocate Mutation. */
-class Mutation_Disposer
-{
-public:
-    void operator () (Mutation_BPtr mut_bptr)
-    {
-        Mutation_Fact::del_elem(mut_bptr);
-    }
-};
-
 struct Mutation_ITree_Node_Traits
 {
     typedef Holder< Mutation > node;
@@ -123,6 +113,30 @@ public:
         return nullptr;
     }
 
+    /** Get equivalent Mutation from container;
+     * if one exists, the given Mutation is deallocated;
+     * if one doesn't exist, the given Mutation is added and returned.
+     * Pre: Mutation is unlinked.
+     * Pre: Mutation has no chunk pointers.
+     */
+    Mutation_CBPtr find_equiv_or_add(Mutation_BPtr mut_bptr)
+    {
+        ASSERT(mut_bptr->chunk_ptr_cont().empty());
+        Mutation_CBPtr equiv_mut_cbptr = find(mut_bptr, false);
+        if (equiv_mut_cbptr)
+        {
+            // an equivalent Mutation exists; we deallocate new one
+            Mutation_Fact::del_elem(mut_bptr);
+            return equiv_mut_cbptr;
+        }
+        else
+        {
+            // an equivalent Mutation does not exist; we add and return this one
+            insert(mut_bptr);
+            return mut_bptr;
+        }
+    }
+
     /** Erase Mutation from container. */
     void erase(Mutation_BPtr mut_bptr) { Base::erase(*mut_bptr); }
 
@@ -167,7 +181,10 @@ public:
     /** Clear the container. */
     void clear_and_dispose()
     {
-        Base::clear_and_dispose(Mutation_Disposer());
+        Base::clear_and_dispose([] (Mutation_BPtr mut_bptr)
+        {
+            Mutation_Fact::del_elem(mut_bptr);
+        });
     }
 
     /** Reverse Mutations in this container.

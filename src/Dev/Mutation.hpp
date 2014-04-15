@@ -128,6 +128,7 @@ public:
      * Pre: Mutations must be unlinked, adjacent on rf, and appear in the same read chunks.
      * @param rhs Next Mutation.
      */
+    /*
     void merge(Mutation&& rhs)
     {
         ASSERT(is_unlinked() and rhs.is_unlinked());
@@ -145,17 +146,45 @@ public:
             _seq += rhs._seq;
         }
     }
+    */
 
     /** Extend Mutation.
+     * Pre: This Mutation is unlinked.
+     * Pre: Mutation contains its alternate sequence.
+     * @param start Reference position.
      * @param extra_len Extra reference length.
      * @param extra_seq Extra alternate sequence.
      */
-    void extend(Size_Type extra_len, const Seq_Type& extra_seq)
+    void extend(Size_Type start, Size_Type extra_len, const Seq_Type& extra_seq)
     {
+        ASSERT(is_unlinked());
         ASSERT(have_seq());
+        if (is_empty())
+        {
+            _start = start;
+        }
+        ASSERT(get_end() == start);
         _len += extra_len;
         _seq += extra_seq;
         _seq_len += extra_seq.size();
+    }
+    /** Extend Mutation; if empty, copy the given Mutation.
+     * Pre: This Mutation is unlinked.
+     * Pre: Both Mutations contain alternate sequences.
+     * @param extra_mut_cbptr Extra mutation.
+     */
+    void extend(Mutation_CBPtr extra_mut_cbptr)
+    {
+        ASSERT(is_unlinked());
+        ASSERT(have_seq() and extra_mut_cbptr->have_seq());
+        if (is_empty())
+        {
+            _start = extra_mut_cbptr->get_start();
+        }
+        ASSERT(get_end() == extra_mut_cbptr->get_start());
+        _len += extra_mut_cbptr->get_len();
+        _seq += extra_mut_cbptr->get_seq();
+        _seq_len += extra_mut_cbptr->get_seq_len();
     }
 
     /** Cut mutation at given offsets, allocate new Mutation to keep leftover.

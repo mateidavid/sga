@@ -56,7 +56,7 @@ Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
             {
                 tmp_m_ptr = Mutation_Fact::new_elem(cigar.get_rf_offset(i), cigar.get_rf_op_len(i), cigar.get_qr_op_len(i));
             }
-            m_ptr->merge(std::move(static_cast< Mutation& >(*tmp_m_ptr)));
+            m_ptr->extend(tmp_m_ptr);
             Mutation_Fact::del_elem(tmp_m_ptr);
         }
     }
@@ -119,7 +119,7 @@ void Mutation_Cont::drop_unused()
         auto mut_next_it = mut_it;
         ++mut_next_it;
         Mutation_BPtr mut_bptr = &*mut_it;
-        if (mut_bptr->chunk_ptr_cont().size() == 0)
+        if (mut_bptr->chunk_ptr_cont().empty())
         {
             erase(mut_bptr);
             Mutation_Fact::del_elem(mut_bptr);

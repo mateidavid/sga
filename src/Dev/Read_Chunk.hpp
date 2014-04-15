@@ -167,14 +167,37 @@ private:
     /**@{*/
     /** Empty constructor. */
     Read_Chunk()
-        : _re_bptr(NULL), _ce_bptr(NULL), _mut_ptr_cont(), _r_start(0), _r_len(0), _c_start(0), _c_len(0), _rc(false), _is_unmappable(false) {}
+        : _re_bptr(nullptr),
+          _ce_bptr(nullptr),
+          _mut_ptr_cont(),
+          _r_start(0),
+          _r_len(0),
+          _c_start(0),
+          _c_len(0),
+          _rc(false),
+          _is_unmappable(false) {}
 
     /** Constructs a single read chunk from a read, and maps it to a new contig.
      * @param re_ptr Pointer to read entry where this chunk comes from.
      * @param len Length of the read.
      */
     Read_Chunk(Read_Entry_BPtr re_bptr, Size_Type len)
-        : _re_bptr(re_bptr), _ce_bptr(NULL), _mut_ptr_cont(), _r_start(0), _r_len(len), _c_start(0), _c_len(len), _rc(false), _is_unmappable(false) {}
+        : _re_bptr(re_bptr),
+          _ce_bptr(NULL),
+          _mut_ptr_cont(),
+          _r_start(0),
+          _r_len(len),
+          _c_start(0),
+          _c_len(len),
+          _rc(false),
+          _is_unmappable(false) {}
+
+    /** Construct chunk mapping full read to single contig.
+     * Pre: Read and contig must be of the same length.
+     * @param re_bptr Read entry.
+     * @param ce_bptr Contig entry.
+     */
+    Read_Chunk(Read_Entry_BPtr re_bptr, Contig_Entry_BPtr ce_bptr);
     /**@}*/
 
     // allow move only when unlinked
@@ -263,22 +286,6 @@ public:
             const_cast< const Read_Chunk* >(this)->bptr_to());
     }
 
-    /** Assign read chunk to contig.
-     * @param ce_cptr Pointer to contig entry object.
-     * @param c_start Start of contig base sequence this chunk is mapped to.
-     * @param c_len Length of contig base sequence this chunk is mapped to.
-     * @param rc Orientation of the mapping.
-     * @param mut_ptr_cont Contig mutations observed by this chunk; container is taken over.
-     */
-    void assign_to_contig(Contig_Entry_BPtr ce_bptr, Size_Type c_start, Size_Type c_len, bool rc, Mutation_Ptr_Cont&& mut_ptr_cont)
-    {
-        _ce_bptr = ce_bptr;
-        _c_start = c_start;
-        _c_len = c_len;
-        _rc = rc;
-        _mut_ptr_cont = std::move(mut_ptr_cont);
-    }
-
     /** Split Read_Chunk based on contig position.
      * Pre: No Mutation may span c_brk.
      * Pre: Read_Chunk must be unlinked from all containers.
@@ -307,30 +314,42 @@ public:
      * @param rf_ptr Reference string (either whole, or just mapped portion); Contig_Entry object takes ownership.
      * @param qr Query string (either whole, or just mapped portion).
      */
-    static Read_Chunk_BPtr make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf_ptr, const Seq_Type& qr = std::string());
+    static Read_Chunk_BPtr
+    make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf_ptr, const Seq_Type& qr = std::string());
 
-    /** Create Read_Chunk object and corresponding Mutation container from a cigar string and 2 existing Read_Chunk objects.
+    /** Create Read_Chunk and Contig_Entry objects from a cigar string and 2 existing Read_Chunk objects.
+     * @param rc1_cbptr Read_Chunk corresponding to rf.
+     * @param rc2_cbptr Read_Chunk corresponding to qr.
      * @param cigar Cigar string.
-     * @param rc1 Read_Chunk corresponding to rf.
-     * @param rc2 Read_Chunk corresponding to qr.
      * @return A read chunk corresponding to the query in the cigar object, and a Contig_Entry corresponding to the rf.
      */
-    //static std::tuple< std::shared_ptr< Read_Chunk >, std::shared_ptr< Contig_Entry > > make_chunk_from_cigar_and_chunks(
-    //    const Cigar& cigar, const Read_Chunk& rc1, const Read_Chunk& rc2);
+    static Read_Chunk_BPtr
+    make_relative_chunk(Read_Chunk_CBPtr rc1_cbptr, Read_Chunk_CBPtr rc2_cbptr,
+                        const Cigar& cigar);
 
-    /** Collapse mutations corresponding to 2 mappings.
-     * @param lhs Read_Chunk object corresponding to contig->read1 mapping.
-     * @param lhs_me Container of Mutation_Extra objects from lhs.
-     * @param rhs Read_Chunk object corresponding to read1->read2 mapping.
-     * @return vector of contig->read2 mutations; for each:
-     * a bool specifying if it is a contig mutation (true) or a read1 mutation (false);
-     * pointer to the mutation object;
-     * and a mutation start&length.
-     *
-     *         static std::vector< std::tuple< bool, Read_Chunk_CPtr, Size_Type, Size_Type > > collapse_mutations(
-     *             const Read_Chunk& rc1, const Mutation_Extra_Cont& rc1_me_cont, const Read_Chunk& rc2);
+    /** Collapse mappings: from c1<-rc1 and rc1<-rc2, compute c1<-rc2.
+     * Pre: Entire rc1 part where rc2 is mapped must in turn be mapped to c1.
+     * Post: New Mutation objects are created and linked;
+     * if equivalent Mutations exist in the container, they are used instead.
+     * Post: If an rc2 endpoint is mapped to an rc1 endpoint,
+     * no c1 deletions will be omitted when the former is mapped to c1.
+     * @param c1rc1_cbptr Mapping of rc1 on c1.
+     * @param rc1rc2_cbptr Mapping of rc2 on rc1.
+     * @param mut_cont Container of c1 mutations.
+     * @return New Read_Chunk corresponding to mapping of rc2 on c1.
      */
-    //std::shared_ptr< Read_Chunk > collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const;
+    static Read_Chunk_BPtr
+    collapse_mapping(Read_Chunk_BPtr c1rc1_cbptr, Read_Chunk_BPtr rc1rc2_cbptr,
+                     Mutation_Cont& mut_cont);
+
+    /** Invert mapping; from contig<-chunk, compute chunk<-contig.
+     * Post: New Read_Chunk and Contig_Entry objects are allocated.
+     * Post: Contig_Entry only has the sequence in the original chunk;
+     * several methods are unavailable in this case.
+     * @param rc_bptr Chunk to invert.
+     */
+    static Read_Chunk_BPtr
+    invert_mapping(Read_Chunk_CBPtr rc_cbptr);
 
     /** Reverse the contig mapping; Mutations and their container must be reversed externally. */
     void reverse();

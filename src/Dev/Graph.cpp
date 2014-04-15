@@ -14,7 +14,7 @@ namespace MAC
 
 void Graph::add_read(string&& name, Seq_Type&& seq)
 {
-    // first, create read entry and place it in container
+    // create read entry and place it in container
     Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(std::move(name), seq.size());
     //cerr << indent::tab << "re:\n" << indent::inc << re << indent::dec;
     re_cont().insert(re_bptr);
@@ -22,12 +22,13 @@ void Graph::add_read(string&& name, Seq_Type&& seq)
     // create contig entry and place it in container
     Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(std::move(seq));
     //cerr << indent::tab << "ce:\n" << indent::inc << ce << indent::dec;
-    ce_bptr->chunk_cont().insert(&*re_bptr->chunk_cont().begin());
-    //cerr << indent::tab << "ce with chunk:\n" << indent::inc << ce << indent::dec;
     ce_cont().insert(ce_bptr);
 
-    // fix initial rc: assing it to contig entry
-    re_bptr->chunk_cont().begin()->assign_to_contig(ce_bptr, 0, ce_bptr->seq().size(), false, Mutation_Ptr_Cont());
+    // create initial read chunk
+    Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem(re_bptr, ce_bptr);
+    // add it to RE and CE containers
+    re_bptr->chunk_cont().insert(rc_bptr);
+    ce_bptr->chunk_cont().insert(rc_bptr);
 
     ASSERT(check(set< Read_Entry_CBPtr >( { re_bptr })));
 }
@@ -271,67 +272,90 @@ void Graph::remap_chunks(map< Read_Chunk_CPtr, shared_ptr< Read_Chunk > >& rc_ma
         });
     }
 }
+*/
 
-void Graph::merge_read_chunks(Read_Chunk_CPtr c1rc1_chunk_cptr, Read_Chunk_CPtr c2rc2_chunk_cptr, Cigar& rc1rc2_cigar)
+void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPtr c2rc2_chunk_bptr, Cigar& rc1rc2_cigar)
 {
-    ASSERT(rc1rc2_cigar.check(c1rc1_chunk_cptr->get_seq(), c2rc2_chunk_cptr->get_seq()));
-    ASSERT(c1rc1_chunk_cptr->get_c_start() == 0 and c1rc1_chunk_cptr->get_c_end() == c1rc1_chunk_cptr->get_ce_ptr()->get_len());
-    ASSERT(c2rc2_chunk_cptr->get_c_start() == 0 and c2rc2_chunk_cptr->get_c_end() == c2rc2_chunk_cptr->get_ce_ptr()->get_len());
+    ASSERT(rc1rc2_cigar.check(c1rc1_chunk_bptr->get_seq(), c2rc2_chunk_bptr->get_seq()));
+    ASSERT(c1rc1_chunk_bptr->get_c_start() == 0 and c1rc1_chunk_bptr->get_c_end() == c1rc1_chunk_bptr->ce_bptr()->get_len());
+    ASSERT(c2rc2_chunk_bptr->get_c_start() == 0 and c2rc2_chunk_bptr->get_c_end() == c2rc2_chunk_bptr->ce_bptr()->get_len());
     // do not do anything if the chunks are already mapped to the same contig
     // NOTE: with this, we are ignoring alternate mappings
-    const Contig_Entry* c1_ce_cptr = c1rc1_chunk_cptr->get_ce_ptr();
-    const Contig_Entry* c2_ce_cptr = c2rc2_chunk_cptr->get_ce_ptr();
-    if (c1_ce_cptr == c2_ce_cptr)
+    Contig_Entry_BPtr c1_ce_bptr = c1rc1_chunk_bptr->ce_bptr();
+    Contig_Entry_BPtr c2_ce_bptr = c2rc2_chunk_bptr->ce_bptr();
+    if (c1_ce_bptr == c2_ce_bptr)
+    {
         return;
+    }
 
     //cerr << "before merging read chunks:\n" << *c1rc1_chunk_cptr << *c2rc2_chunk_cptr << rc1rc2_cigar << *this;
 
-    // step 1: contruct read chunk for the rc1->rc2 mapping
-    shared_ptr< Read_Chunk > rc1rc2_chunk_sptr;
-    shared_ptr< Contig_Entry > rc1_ce_sptr;
-    std::tie(rc1rc2_chunk_sptr, rc1_ce_sptr) = Read_Chunk::make_chunk_from_cigar_and_chunks(
-                rc1rc2_cigar, *c1rc1_chunk_cptr, *c2rc2_chunk_cptr);
+    // contruct read chunk for the rc1->rc2 mapping
+    Read_Chunk_BPtr rc1rc2_chunk_bptr;
+    rc1rc2_chunk_bptr = Read_Chunk::make_relative_chunk(c1rc1_chunk_bptr, c2rc2_chunk_bptr,
+                                                        rc1rc2_cigar);
 
-    // initialize Read_Chunk translation map, and container for new mutations
-    map< Read_Chunk_CPtr, shared_ptr< Read_Chunk > > rc_map;
-    Mutation_Cont extra_c1_mut_cont;
+    // construct c1<-rc2 mapping directly from c1<-rc1 & rc1<-rc2
+    Read_Chunk_BPtr c1rc2_chunk_bptr = Read_Chunk::collapse_mapping(c1rc1_chunk_bptr, rc1rc2_chunk_bptr,
+                                                                    c1_ce_bptr->mut_cont());
 
-    // construct c1->rc2 mapping directly from c1->rc1 & rc1->rc2
-    rc_map[c2rc2_chunk_cptr] = c1rc1_chunk_cptr->collapse_mapping(*rc1rc2_chunk_sptr, extra_c1_mut_cont);
-    Read_Chunk_CPtr c1rc2_chunk_cptr = rc_map[c2rc2_chunk_cptr].get();
+    // next, construct rc2<-c2 mapping by reversing c2<-rc2
+    Read_Chunk_BPtr rc2c2_chunk_bptr = Read_Chunk::invert_mapping(c2rc2_chunk_bptr);
 
-    // next, construct r2->c2 mapping by reversing c2->rc2
-    shared_ptr< Read_Chunk > rc2c2_chunk_sptr;
-    shared_ptr< Contig_Entry > rc2_ce_sptr;
-    shared_ptr< Mutation_Trans_Cont > c2r2_to_r2c2_mut_trans_cont_sptr;
-    std::tie(rc2c2_chunk_sptr, rc2_ce_sptr, c2r2_to_r2c2_mut_trans_cont_sptr) = c2rc2_chunk_cptr->reverse();
-
-    // construct c1->c2 mapping
-    shared_ptr< Read_Chunk > c1c2_chunk_sptr = c1rc2_chunk_cptr->collapse_mapping(*rc2c2_chunk_sptr, extra_c1_mut_cont);
+    // construct c1<-c2 mapping from c1<-rc2 and rc2<-c2
+    Read_Chunk_BPtr c1c2_chunk_bptr = Read_Chunk::collapse_mapping(c1rc2_chunk_bptr, rc2c2_chunk_bptr,
+                                                                   c1_ce_bptr->mut_cont());
 
     // for the remaining chunks mapped to c2, remap them to c1 through c1->c2 mapping
-    for (auto it = c2_ce_cptr->get_chunk_cptr_cont().begin(); it != c2_ce_cptr->get_chunk_cptr_cont().end(); ++it)
+    for (auto rc_bref : c2_ce_bptr->chunk_cont())
     {
-        Read_Chunk_CPtr rc_cptr = *it;
-        if (rc_cptr == c2rc2_chunk_cptr)
-            continue;
-        rc_map[rc_cptr] = c1c2_chunk_sptr->collapse_mapping(*rc_cptr, extra_c1_mut_cont);
-        rc_map[rc_cptr]->check();
+        Read_Chunk_BPtr c2rc_bptr = &rc_bref;
+        Read_Chunk_BPtr c1rc_bptr;
+        if (c2rc_bptr == c2rc2_chunk_bptr)
+        {
+            c1rc_bptr = c1rc2_chunk_bptr;
+        }
+        else
+        {
+            c1rc_bptr = Read_Chunk::collapse_mapping(c1c2_chunk_bptr, c2rc_bptr, c1_ce_bptr->mut_cont());
+        }
+        // unlink old chunk from RE cont, and link new one
+        Read_Entry_BPtr re_bptr = c2rc_bptr->re_bptr();
+        re_bptr->chunk_cont().erase(c2rc_bptr);
+        re_bptr->chunk_cont().insert(c1rc_bptr);
+        c1_ce_bptr->chunk_cont().insert(c1rc_bptr);
     }
-    // at this point, all read chunks mapped to c2 are translated
-    // with pointers in rc_map and new mutations in extra_mut_cont
-    ASSERT(rc_map.size() == c2_ce_cptr->get_chunk_cptr_cont().size());
+    // all read chunks mapped to c2 are translated to c1
 
-    remap_chunks(rc_map, extra_c1_mut_cont);
-    modify_contig_entry(c1_ce_cptr, [] (Contig_Entry& ce) {
-        ce.drop_unused_mutations();
-    });
-    erase_contig_entry(c2_ce_cptr);
+    // next, deallocate temporary structures
+    // rc1rc2_chunk_bptr:
+    Contig_Entry_BPtr rc1_ce_bptr = rc1rc2_chunk_bptr->ce_bptr();
+    ASSERT(rc1_ce_bptr->chunk_cont().size() == 1);
+    rc1_ce_bptr->chunk_cont().clear_and_dispose();
+    rc1_ce_bptr->mut_cont().clear_and_dispose();
+    Contig_Entry_Fact::del_elem(rc1_ce_bptr);
+
+    // rc2c2_chunk_bptr
+    Contig_Entry_BPtr rc2_ce_bptr = rc2c2_chunk_bptr->ce_bptr();
+    ASSERT(rc2_ce_bptr->chunk_cont().size() == 1);
+    rc2_ce_bptr->chunk_cont().clear_and_dispose();
+    rc2_ce_bptr->mut_cont().clear_and_dispose();
+    Contig_Entry_Fact::del_elem(rc2_ce_bptr);
+
+    // c1c2_chunk_bptr
+    c1c2_chunk_bptr->mut_ptr_cont().clear_and_dispose();
+    Read_Chunk_Fact::del_elem(c1c2_chunk_bptr);
+    c1_ce_bptr->mut_cont().drop_unused();
+
+    // deallocate everything in c2
+    ce_cont().erase(c2_ce_bptr);
+    c2_ce_bptr->chunk_cont().clear_and_dispose();
+    c2_ce_bptr->mut_cont().clear_and_dispose();
+    Contig_Entry_Fact::del_elem(c2_ce_bptr);
 
     //cerr << "after merging read chunks:\n" << *this;
-    ASSERT(check(set< const Contig_Entry* >( { c1_ce_cptr })));
+    ASSERT(check(set< Contig_Entry_CBPtr >( { c1_ce_bptr })));
 }
-*/
 
 vector< std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr, Cigar > >
 Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
@@ -666,31 +690,31 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
 
     auto rc_mapping = chunker(re1_bptr, re2_bptr, cigar);
 
-    //TODO
-    /*
     // reached when we have a complete rc map
-    for (size_t i = 0; i < rc_mapping_sptr->size(); ++i)
+    for (auto& tmp : rc_mapping)
     {
-        Read_Chunk_CPtr rc1_cptr;
-        Read_Chunk_CPtr rc2_cptr;
+        Read_Chunk_BPtr rc1_bptr;
+        Read_Chunk_BPtr rc2_bptr;
         Cigar rc1rc2_cigar;
-        std::tie(rc1_cptr, rc2_cptr, rc1rc2_cigar) = (*rc_mapping_sptr)[i];
-        merge_read_chunks(rc1_cptr, rc2_cptr, rc1rc2_cigar);
+        std::tie(rc1_bptr, rc2_bptr, rc1rc2_cigar) = std::move(tmp);
+        merge_chunk_contigs(rc1_bptr, rc2_bptr, rc1rc2_cigar);
     }
 
+    //TODO
+/*
     // check for unmappable chunks in the contigs recently merged
-    scan_read_for_unmappable_chunks(re1_cptr, r1_start, r1_start + r1_len);
+    scan_read_for_unmappable_chunks(re1_bptr, r1_start, r1_start + r1_len);
 
-    ASSERT(check(set< const Read_Entry* >( { re1_cptr, re2_cptr })));
+    ASSERT(check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr })));
 
     if (global::merge_contigs_at_each_step)
     {
         //cerr << "before merging:\n" << *this;
-        merge_read_contigs(re1_cptr);
+        merge_read_contigs(re1_bptr);
         //cerr << "after merging:\n" << *this;
-        ASSERT(check(set< const Read_Entry* >( { re1_cptr, re2_cptr })));
+        ASSERT(check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr })));
     }
-    */
+*/
 }
 
 bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
@@ -734,62 +758,11 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
 
     ce_cont().erase(ce_next_bptr);
     Contig_Entry::cat_c_right(ce_bptr, ce_next_bptr, rc_cbptr_cont);
-    //TODO
-/*
-    Size_Type prefix_len = ce_cptr->get_len();
-    // construct modifier that allows merge_forward() to rebase chunks into ce_cptr
-    auto rc_rebase_mod = [&] (Read_Chunk_CPtr rc_cptr, const Mutation_Trans_Cont& mut_map) {
-        modify_read_chunk(rc_cptr, [&] (Read_Chunk& rc) {
-            rc.rebase(ce_cptr, mut_map, prefix_len);
-        });
-    };
-    // merge ce_next_cptr into ce_cptr using merge_forward()
-    modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) {
-        ce.merge_forward(ce_next_cptr, rc_rebase_mod);
-    });
-    // we are done with the right contig
-    erase_contig_entry(ce_next_cptr);
-    // merge the read chunks that were previously crossing the contig break
-    set< Read_Chunk_CPtr > erased_chunks_set;
-    Mutation::add_mut_mod_type add_mut_mod = [&] (const Mutation& m) {
-        Mutation_CPtr res;
-        modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) {
-            res = ce.add_mutation(m);
-        });
-        return res;
-    };
-    for (auto rc_cptr_it = chunks_out_cont_sptr->begin(); rc_cptr_it != chunks_out_cont_sptr->end(); ++rc_cptr_it)
-    {
-        Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
-        Read_Chunk_CPtr rc_next_cptr = ce_cptr->get_next_chunk(true, rc_cptr);
-        if (not rc_cptr->get_rc())
-        {
-            erased_chunks_set.insert(rc_next_cptr);
-            modify_read_entry(rc_cptr->get_re_ptr(), [&] (Read_Entry& re) {
-                re.merge_next_chunk(rc_cptr, add_mut_mod);
-            });
-        }
-        else
-        {
-            erased_chunks_set.insert(rc_cptr);
-            modify_read_entry(rc_next_cptr->get_re_ptr(), [&] (Read_Entry& re) {
-                re.merge_next_chunk(rc_next_cptr, add_mut_mod);
-            });
-        }
-    }
-    // remove erased chunks from contig entry
-    modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) {
-        ce.remove_chunks(erased_chunks_set);
-    });
-    // drop any unused mutations
-    modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) {
-        ce.drop_unused_mutations();
-    });
 
     //cerr << "merging contigs result\n" << *ce_cptr;
-*/
+
     return true;
-} // catenate_contigs
+} // cat_contigs
 
 /*
 void Graph::merge_read_contigs(const Read_Entry* re_cptr)

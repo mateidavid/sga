@@ -132,6 +132,19 @@ public:
             insert(rc_bptr);
         });
     }
+
+    /** Clear container and deallocate all Read_Chunk objects.
+     * Pre: Read_Chunk objects must be unlinked from their RE containers.
+     * Post: MCAs are also deallocated, but not the Mutations themselves.
+     */
+    void clear_and_dispose()
+    {
+        Base::clear_and_dispose([] (Read_Chunk_BPtr rc_bptr)
+        {
+            rc_bptr->mut_ptr_cont().clear_and_dispose();
+            Read_Chunk_Fact::del_elem(rc_bptr);
+        });
+    }
 }; // class Read_Chunk_CE_Cont
 
 struct Read_Chunk_Set_Node_Traits

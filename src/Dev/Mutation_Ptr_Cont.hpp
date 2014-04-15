@@ -137,7 +137,6 @@ public:
     /** Insert MCA before element pointed to by iterator. */
     void insert_before(const_iterator cit, Mutation_Chunk_Adapter_BPtr mca_bptr)
     {
-        ASSERT(cit != begin());
         Base::insert(cit, *mca_bptr);
     }
     /** Insert MCA after element pointed to by iterator. */
@@ -146,6 +145,12 @@ public:
         ASSERT(cit != end());
         Base::insert(++cit, *mca_bptr);
     }
+
+    /** Insert at the front. */
+    void push_front(Mutation_Chunk_Adapter_BPtr mca_bptr) { insert_before(begin(), mca_bptr); }
+
+    /** Insert at the back. */
+    void push_back(Mutation_Chunk_Adapter_BPtr mca_bptr) { insert_before(end(), mca_bptr); }
 
     /** Find a given mutation pointer in this container. */
     const_iterator find(Mutation_CBPtr mut_cbptr) const

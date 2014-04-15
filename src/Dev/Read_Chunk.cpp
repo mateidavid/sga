@@ -274,23 +274,40 @@ void Read_Chunk_Pos::advance_past_del(bool forward)
     }
 }
 
+Read_Chunk::Read_Chunk(Read_Entry_BPtr re_bptr, Contig_Entry_BPtr ce_bptr)
+    : _re_bptr(re_bptr),
+      _ce_bptr(ce_bptr),
+      _r_start(0),
+      _r_len(re_bptr->get_len()),
+      _c_start(0),
+      _c_len(ce_bptr->get_len()),
+      _rc(false),
+      _is_unmappable(false)
+{
+    ASSERT(_r_len == _c_len);
+}
+
 Size_Type Read_Chunk::get_read_len() const
 {
     ASSERT(re_bptr());
     return re_bptr()->get_len();
 }
 
-Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf, const Seq_Type& qr)
+Read_Chunk_BPtr
+Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf, const Seq_Type& qr)
 {
-    ASSERT(rf.size() == cigar.get_rf_len() or rf.size() >= cigar.get_rf_start() + cigar.get_rf_len());
-    ASSERT(qr.size() == cigar.get_qr_len() or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
+    ASSERT(rf.size() == cigar.get_rf_len()
+           or rf.size() >= cigar.get_rf_start() + cigar.get_rf_len());
+    ASSERT(qr.size() == cigar.get_qr_len()
+           or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
 
     // create objects with default constructor
     //shared_ptr< Read_Chunk > chunk_sptr(new Read_Chunk());
     //shared_ptr< Contig_Entry > ce_sptr(new Contig_Entry(rf_ptr, (rf_ptr->size() == cigar.get_rf_len()? cigar.get_rf_start() : 0)));
     Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem();
-    Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(std::move(rf),
-                                                            (rf.size() == cigar.get_rf_len()? cigar.get_rf_start() : 0));
+    Contig_Entry_BPtr ce_bptr =
+        Contig_Entry_Fact::new_elem(std::move(rf),
+                                    (rf.size() == cigar.get_rf_len()? cigar.get_rf_start() : 0));
 
     // fix lengths and rc flags
     rc_bptr->_c_start = cigar.get_rf_start();
@@ -312,18 +329,17 @@ Read_Chunk_BPtr Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&&
     return rc_bptr;
 }
 
-/*
-tuple< shared_ptr< Read_Chunk >, shared_ptr< Contig_Entry > >
-Read_Chunk::make_chunk_from_cigar_and_chunks(const Cigar& cigar, const Read_Chunk& rc1, const Read_Chunk& rc2)
+Read_Chunk_BPtr
+Read_Chunk::make_relative_chunk(Read_Chunk_CBPtr rc1_cbptr,
+                                Read_Chunk_CBPtr rc2_cbptr,
+                                const Cigar& cigar)
 {
-    shared_ptr< Read_Chunk > chunk_sptr;
-    shared_ptr< Contig_Entry > ce_sptr;
-    std::tie(chunk_sptr, ce_sptr) = make_chunk_from_cigar(cigar, new Seq_Type(rc1.get_seq()), rc2.get_seq());
+    Read_Chunk_BPtr new_rc_bptr;
+    new_rc_bptr = make_chunk_from_cigar(cigar, Seq_Type(rc1_cbptr->get_seq()), rc2_cbptr->get_seq());
     // fix Read_Entry pointer
-    chunk_sptr->_re_ptr = rc2._re_ptr;
-    return std::make_tuple(chunk_sptr, ce_sptr);
+    new_rc_bptr->re_bptr() = rc2_cbptr->re_bptr();
+    return new_rc_bptr;
 }
-*/
 
 std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >
 Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
@@ -483,62 +499,105 @@ std::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::split(
         return std::make_tuple(false, rc_sptr);
     }
 }
+*/
 
-shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mutation_Cont& extra_mut_cont) const
+Read_Chunk_BPtr
+Read_Chunk::collapse_mapping(Read_Chunk_BPtr c1rc1_cbptr, Read_Chunk_BPtr rc1rc2_cbptr,
+                             Mutation_Cont& mut_cont)
 {
-    ASSERT(get_r_start() <= rc2.get_c_start() and rc2.get_c_end() <= get_r_end());
-    shared_ptr< Read_Chunk > res(new Read_Chunk());
-
-    res->_r_start = rc2.get_r_start();
-    res->_r_len = rc2.get_r_len();
-    res->_rc = (get_rc() != rc2.get_rc());
-    res->_re_ptr = rc2._re_ptr;
-    res->_ce_ptr = _ce_ptr;
+    // the entire part of rc1 to which rc2 is mapped must be in turn mapped to c1
+    ASSERT(c1rc1_cbptr->get_r_start() <= rc1rc2_cbptr->get_c_start()
+           and rc1rc2_cbptr->get_c_end() <= c1rc1_cbptr->get_r_end());
+    Read_Chunk_BPtr c1rc2_bptr = Read_Chunk_Fact::new_elem();
+    c1rc2_bptr->_r_start = rc1rc2_cbptr->get_r_start();
+    c1rc2_bptr->_r_len = rc1rc2_cbptr->get_r_len();
+    c1rc2_bptr->_rc = (c1rc1_cbptr->get_rc() != rc1rc2_cbptr->get_rc());
+    c1rc2_bptr->re_bptr() = rc1rc2_cbptr->re_bptr();
+    c1rc2_bptr->ce_bptr() = c1rc1_cbptr->ce_bptr();
+    c1rc2_bptr->_is_unmappable = false;
 
     // traverse c1 left-to-right; traverse rc1 left-to-right if not _rc, r-to-l ow;
-    Pos pos = get_start_pos();
-    size_t r_mut_cnt = 0;
-    Mutation fake_mut_start((not get_rc()? rc2.get_c_start() : rc2.get_c_end()), 0);
-    Mutation fake_mut_end((not get_rc()? rc2.get_c_end() : rc2.get_c_start()), 0);
+    Pos pos = c1rc1_cbptr->get_start_pos();
+
+    /// iterator used to traverse the rc1 mutations in c1 order;
+    /// if rc1 in the same orientation as c1, it points to next rc1 mutation;
+    /// if rc1 in opposite orientation as c1, it points to last mutation considered;
+    Mutation_Ptr_Cont::iterator r_mut_it = (not c1rc1_cbptr->get_rc()?
+                                            rc1rc2_cbptr->mut_ptr_cont().begin()
+                                            : rc1rc2_cbptr->mut_ptr_cont().end());
+    /// empty rc1 mutation at the endpoint mapped to c1 start
+    Mutation_CBPtr fake_start_r_mut_cbptr = Mutation_Fact::new_elem(
+        not c1rc1_cbptr->get_rc()? rc1rc2_cbptr->get_c_start() : rc1rc2_cbptr->get_c_end(), 0);
+    /// empty rc1 mutation at the endpoint mapped to c1 end
+    Mutation_CBPtr fake_end_r_mut_cbptr = Mutation_Fact::new_elem(
+        not c1rc1_cbptr->get_rc()? rc1rc2_cbptr->get_c_end() : rc1rc2_cbptr->get_c_start(), 0);
+    /// bool used to trigger special code the first time in the while loop
     bool past_start = false;
-    Mutation m;
-    vector< Mutation_CPtr > c_muts;
-    vector< Mutation_CPtr > r_muts;
+
+    // mutation accumulator
+    Mutation_BPtr crt_mut_bptr = Mutation_Fact::new_elem();
+    // currently unused; could track mutation decomposition
+    vector< Mutation_CBPtr > c_muts;
+    vector< Mutation_CBPtr > r_muts;
     while (true)
     {
-        size_t r_mut_idx = (not get_rc()? r_mut_cnt : rc2.mut_ptr_cont().size() - 1 - r_mut_cnt); // next new mutation to look for
-        const Mutation& r_mut = (r_mut_cnt == 0 and not past_start?
-                                 fake_mut_start :
-                                 r_mut_cnt < rc2.mut_ptr_cont().size()? *rc2.mut_ptr_cont()[r_mut_idx] : fake_mut_end);
-
+        /// next rc1 mutation to look for
+        Mutation_CBPtr next_r_mut_cbptr;
+        if (not past_start)
+        {
+            next_r_mut_cbptr = fake_start_r_mut_cbptr;
+        }
+        else
+        {
+            if (not c1rc1_cbptr->get_rc())
+            {
+                next_r_mut_cbptr = (r_mut_it != rc1rc2_cbptr->mut_ptr_cont().end()?
+                                    r_mut_it->mut_cbptr()
+                                    : fake_end_r_mut_cbptr);
+            }
+            else // c1rc1_cbptr->get_rc() == true
+            {
+                auto tmp = r_mut_it;
+                next_r_mut_cbptr = (r_mut_it != rc1rc2_cbptr->mut_ptr_cont().begin()?
+                                    (--tmp)->mut_cbptr()
+                                    : fake_end_r_mut_cbptr);
+            }
+        }
+        /// next c1 position
         Pos pos_next = pos;
-        bool got_r_mut = pos_next.advance_til_mut(r_mut);
+        /// true iff current stretch represents current read mutation
+        bool got_r_mut = pos_next.advance_til_mut(*next_r_mut_cbptr);
 
         if (not past_start)
         {
+            ASSERT(next_r_mut_cbptr == fake_start_r_mut_cbptr);
+            // if c1rc1_cbptr->get_r_start < rc1rc2_cbptr->get_c_start
+            // first iteration produces a chunk of rc1 to which rc2 is not mapped
             if (got_r_mut)
             {
                 ASSERT(pos_next == pos);
-                res->_c_start = pos.c_pos;
+                c1rc2_bptr->_c_start = pos.c_pos;
                 past_start = true;
-                if (pos == get_start_pos())
+                if (pos == c1rc1_cbptr->get_start_pos())
                 {
-                    // if rc2 starts on contig break, incorporate initial deletions
+                    // rc2 starts on contig break; must incorporate initial deletions
                     Pos tmp_pos = pos_next;
-                    while (tmp_pos != get_end_pos())
+                    while (tmp_pos != c1rc1_cbptr->get_end_pos())
                     {
                         tmp_pos.increment();
                         if (tmp_pos.r_pos != pos_next.r_pos)
                         {
                             break;
                         }
+                        // we found a deletion at c1 start
+                        // initial deletions are always whole (offset==0 in pos_next and tmp_pos)
                         ASSERT(tmp_pos.r_pos == pos_next.r_pos);
                         ASSERT(tmp_pos.mut_offset == 0);
-                        ASSERT(tmp_pos.mut_idx == pos_next.mut_idx + 1);
-                        // initial deletions are always whole (offset==0 in pos_next and tmp_pos)
-                        Mutation_CPtr c_mut_cptr = _mut_ptr_cont[pos_next.mut_idx];
-                        m.merge(*c_mut_cptr);
-                        c_muts.push_back(c_mut_cptr);
+                        ASSERT(pos_next.mut_offset == 0);
+                        ASSERT(tmp_pos.mca_cit == std::next(pos_next.mca_cit));
+                        Mutation_CBPtr c_mut_cbptr = pos_next.mca_cit->mut_cbptr();
+                        crt_mut_bptr->extend(c_mut_cbptr);
+                        c_muts.push_back(c_mut_cbptr);
                         pos_next = tmp_pos;
                     }
                 }
@@ -548,112 +607,138 @@ shared_ptr< Read_Chunk > Read_Chunk::collapse_mapping(const Read_Chunk& rc2, Mut
                     Pos tmp_pos = pos_next;
                     tmp_pos.advance_past_del();
                     // FIX: notorious situation:
-                    // do not skip deletions if we can reach the contig end on deletins only,
+                    // do not skip deletions if we can reach the contig end on deletions only,
                     // and read is aligned on contig end
-                    if (tmp_pos != get_end_pos())
+                    if (tmp_pos != c1rc1_cbptr->get_end_pos())
                     {
                         pos_next = tmp_pos;
-                        res->_c_start = pos_next.c_pos;
+                        c1rc2_bptr->_c_start = pos_next.c_pos;
                     }
                     else
                     {
                         // rc2 contains insertions only, and is mapped to the contig end
                         // in this case, we leave the deletion, as it is needed
-                        // to make the result aligned on the contig end
-                        ASSERT(rc2.get_c_start() == rc2.get_c_end());
+                        // to make the c1rc2_bptr aligned on the contig end
+                        ASSERT(rc1rc2_cbptr->get_c_start() == rc1rc2_cbptr->get_c_end());
                     }
-                }
-            }
-        }
+                } // else (rc2 doesn't start on c1 break)
+            } // if (got_r_mut)
+        } // if (not past_start)
         else if ((not got_r_mut and pos.get_match_len() > 0)
-            or (got_r_mut and r_mut_cnt == rc2.mut_ptr_cont().size()))
+            or (got_r_mut and next_r_mut_cbptr == fake_end_r_mut_cbptr))
         {
+            // passed a match strech, or we hit the end of rc2
             ASSERT(not got_r_mut or pos_next == pos);
-            if (got_r_mut and pos_next.r_pos == get_end_pos().r_pos)
+            if (got_r_mut and pos_next.r_pos == c1rc1_cbptr->get_end_pos().r_pos)
             {
-                // if rc2 ends on contig end, incorporate remaining deletions
+                // rc2 ends on contig end; must incorporate remaining deletions
                 Pos tmp_pos = pos_next;
-                while (tmp_pos != get_end_pos())
+                while (tmp_pos != c1rc1_cbptr->get_end_pos())
                 {
                     tmp_pos.increment();
                     ASSERT(tmp_pos.r_pos == pos_next.r_pos);
                     ASSERT(tmp_pos.mut_offset == 0);
-                    ASSERT(tmp_pos.mut_idx == pos_next.mut_idx + 1);
+                    ASSERT(tmp_pos.mca_cit == std::next(pos_next.mca_cit));
                     // final deletions are whole, or we have used a read mutation
                     ASSERT(pos_next.mut_offset == 0 or r_muts.size() > 0);
-                    Mutation_CPtr c_mut_cptr = _mut_ptr_cont[pos_next.mut_idx];
-                    m.merge(Mutation(pos_next.c_pos, tmp_pos.c_pos - pos_next.c_pos, 0));
-                    c_muts.push_back(c_mut_cptr);
+                    Mutation_CBPtr c_mut_cbptr = pos_next.mca_cit->mut_cbptr();
+                    //Mutation_CBPtr tmp_mut_cbptr = Mutation_Fact::new_elem(pos_next.c_pos, tmp_pos.c_pos - pos_next.c_pos, 0);
+                    // extend with deletion
+                    crt_mut_bptr->extend(pos_next.c_pos, tmp_pos.c_pos - pos_next.c_pos, Seq_Type());
+                    c_muts.push_back(c_mut_cbptr);
                     pos_next = tmp_pos;
                 }
-
             }
             // the stretch pos->pos_next is a match, or we are at the end;
             // consolidate any outstanding mutations
-            m.simplify(ce_bptr()->substr(m.get_start(), m.get_len()));
-            if (not m.is_empty())
+            crt_mut_bptr->simplify(c1rc1_cbptr->ce_bptr()->substr(crt_mut_bptr->get_start(), crt_mut_bptr->get_len()));
+            if (not crt_mut_bptr->is_empty())
             {
-                / *
-                if (r_muts.size() == 0)
-                {
-                    // no adjacent contig mutations
-                    ASSERT(c_muts.size() == 1);
-                    res->mut_ptr_cont().push_back(c_muts[0]);
-                }
-                else
-                * /
-                {
-                    // new metamutation
-                    // add it to extra Mutation container if it doesn't exist
-                    Mutation_CPtr new_mut = add_mut_to_cont(extra_mut_cont, m);
-                    res->_mut_ptr_cont.push_back(new_mut);
-                    // NOTE: here we could save the metamutation composition
-                }
+                // use an equivalent Mutation if one exists; else add this one
+                crt_mut_bptr = mut_cont.find_equiv_or_add(crt_mut_bptr).unconst();
+                // add MCA
+                Mutation_Chunk_Adapter_BPtr mca_bptr = Mutation_Chunk_Adapter_Fact::new_elem(crt_mut_bptr, c1rc2_bptr);
+                crt_mut_bptr->chunk_ptr_cont().insert(mca_bptr);
+                c1rc2_bptr->mut_ptr_cont().push_back(mca_bptr);
             }
-            m = Mutation();
+            crt_mut_bptr = Mutation_Fact::new_elem();
             c_muts.clear();
             r_muts.clear();
 
             if (got_r_mut)
             {
-                res->_c_len = pos_next.c_pos - res->_c_start;
+                // exit point of main while loop
+                c1rc2_bptr->_c_len = pos_next.c_pos - c1rc2_bptr->_c_start;
                 break;
             }
-        }
+        } // else if (match strech or fake_end mutation)
         else
         {
             // the stretch pos->post_next is not a match and we are not at the end;
             // add mutation slice to m
             if (got_r_mut)
             {
-                // this was an entire read mutation
-                m.merge(Mutation(pos.c_pos, pos_next.c_pos - pos.c_pos,
-                                 (not get_rc()? r_mut.get_seq() : reverseComplement(r_mut.get_seq()))));
-                r_muts.push_back(&r_mut);
-                ++r_mut_cnt;
+                // this was the entire read mutation next_r_mut_cbptr
+                ASSERT(c1rc1_cbptr->get_rc() or (pos.r_pos == next_r_mut_cbptr->get_start()
+                                                 and pos_next.r_pos == next_r_mut_cbptr->get_end()));
+                ASSERT(not c1rc1_cbptr->get_rc() or (pos.r_pos == next_r_mut_cbptr->get_end()
+                                                     and pos_next.r_pos == next_r_mut_cbptr->get_start()));
+                crt_mut_bptr->extend(pos.c_pos, pos_next.c_pos - pos.c_pos,
+                                     (not c1rc1_cbptr->get_rc()?
+                                      next_r_mut_cbptr->get_seq()
+                                      : reverseComplement(next_r_mut_cbptr->get_seq())));
+                r_muts.push_back(next_r_mut_cbptr);
+                // advance read mutation iterator
+                if (not c1rc1_cbptr->get_rc())
+                {
+                    ++r_mut_it;
+                }
+                else
+                {
+                    --r_mut_it;
+                }
             }
             else
             {
                 // this was a (possibly sliced) contig mutation
-                ASSERT((pos_next.mut_idx == pos.mut_idx and pos_next.mut_offset > pos.mut_offset)
-                       or (pos_next.mut_idx == pos.mut_idx + 1 and pos_next.mut_offset == 0));
-                const Mutation& c_mut = *_mut_ptr_cont[pos.mut_idx];
-                m.merge(Mutation(pos.c_pos, pos_next.c_pos - pos.c_pos,
-                                 c_mut.get_seq().substr(
-                                     min(pos.mut_offset, c_mut.get_seq_len()),
-                                     min((pos_next.mut_offset == 0? string::npos : pos_next.mut_offset - pos.mut_offset), c_mut.get_seq_len()))));
-                c_muts.push_back(&c_mut);
+                ASSERT((pos_next.mca_cit == pos.mca_cit and pos_next.mut_offset > pos.mut_offset)
+                       or (pos_next.mca_cit == std::next(pos.mca_cit) and pos_next.mut_offset == 0));
+                //const Mutation& c_mut = *_mut_ptr_cont[pos.mut_idx];
+                Mutation_CBPtr c_mut_cbptr = pos.mca_cit->mut_cbptr();
+                crt_mut_bptr->extend(pos.c_pos, pos_next.c_pos - pos.c_pos,
+                                     c_mut_cbptr->get_seq().substr(
+                                         min(pos.mut_offset, c_mut_cbptr->get_seq_len()),
+                                         (pos_next.mut_offset == 0? string::npos : pos_next.mut_offset - pos.mut_offset)));
+                c_muts.push_back(c_mut_cbptr);
             }
         }
         pos = pos_next;
     }
-    ASSERT(not (rc2.get_c_start() == get_r_start())
-           or (not get_rc()? res->get_c_start() == get_c_start() : res->get_c_end() == get_c_end()));
-    ASSERT(not (rc2.get_c_end() == get_r_end())
-           or (not get_rc()? res->get_c_end() == get_c_end() : res->get_c_start() == get_c_start()));
-    return res;
+    // clean up temporary mutations
+    Mutation_Fact::del_elem(fake_start_r_mut_cbptr);
+    Mutation_Fact::del_elem(fake_end_r_mut_cbptr);
+    Mutation_Fact::del_elem(crt_mut_bptr);
+
+    // if rc2 is mapped to endpoints of rc1, rc2 will be mapped to the same extent of c1;
+    // in particular, (in this case) no extremal deletions of c1 will be omitted
+    ASSERT(not (rc1rc2_cbptr->get_c_start() == c1rc1_cbptr->get_r_start())
+           or (not c1rc1_cbptr->get_rc()?
+               c1rc2_bptr->get_c_start() == c1rc1_cbptr->get_c_start()
+               : c1rc2_bptr->get_c_end() == c1rc1_cbptr->get_c_end()));
+    ASSERT(not (rc1rc2_cbptr->get_c_end() == c1rc1_cbptr->get_r_end())
+           or (not c1rc1_cbptr->get_rc()?
+               c1rc2_bptr->get_c_end() == c1rc1_cbptr->get_c_end()
+               : c1rc2_bptr->get_c_start() == c1rc1_cbptr->get_c_start()));
+    return c1rc2_bptr;
 }
-*/
+
+Read_Chunk_BPtr Read_Chunk::invert_mapping(Read_Chunk_CBPtr rc_cbptr)
+{
+    Read_Chunk_BPtr new_rc_cbptr;
+    //TODO
+    (void)rc_cbptr;
+    return new_rc_cbptr;
+}
 
 void Read_Chunk::reverse()
 {
@@ -693,7 +778,7 @@ void Read_Chunk::cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bp
         Mutation_BPtr new_mut_bptr = Mutation_Fact::new_elem(left_mut_bptr->get_start(),
                                                              left_mut_bptr->get_len(),
                                                              left_mut_bptr->get_seq());
-        new_mut_bptr->extend(right_mut_bptr->get_len(), right_mut_bptr->get_seq());
+        new_mut_bptr->extend(right_mut_bptr);
         Mutation_BPtr equiv_mut_bptr = mut_cont.find(new_mut_bptr, false).unconst();
         if (equiv_mut_bptr)
         {

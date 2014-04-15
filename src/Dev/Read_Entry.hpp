@@ -37,11 +37,7 @@ private:
      * @param name String containing read name; (take ownership).
      * @param len Length of the read.
      */
-    Read_Entry(std::string&& name, Size_Type len) : _name(std::move(name)), _len(len)
-    {
-        Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem(nullptr, len);
-        _chunk_cont.insert(rc_bptr);
-    }
+    Read_Entry(std::string&& name, Size_Type len) : _name(std::move(name)), _len(len) {}
 
     // allow move only
     DEFAULT_DEF_CTOR(Read_Entry)

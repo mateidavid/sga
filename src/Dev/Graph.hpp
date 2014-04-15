@@ -169,9 +169,22 @@ private:
      */
     bool cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right);
 
+    /** Merge Contig_Entry objects of 2 read chunks according to the cigar mapping of the chunks.
+     * NOTE: If chunks are already mapped to the same contig, nothing is changed.
+     * Pre: Chunks must be mapped to the full length of their contigs.
+     * Post: All chunks from c2 (including rc2) are remapped to c1;
+     * new mutations are added to c1 as needed;
+     * rc2 is mapped as follows: c1<-rc1<-rc2;
+     * all other chunks rcX are mapped indirectly through c2 as follows: c1<-rc1<-rc2<-c2<-rcX;
+     * c2 and all its chunks, mutations, and MCAs, are deallocated.
+     * @param c1rc1_chunk_bptr Mapping of rc1 to c1.
+     * @param c2rc2_chunk_bptr Mapping of rc2 to c2.
+     * @param rc1rc2_cigar Mapping of rc2 to rc1.
+     */
+    void merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPtr c2rc2_chunk_bptr, Cigar& rc1rc2_cigar);
+
     /*
     void remap_chunks(std::map< Read_Chunk_CPtr, std::shared_ptr< Read_Chunk > >& rc_map, Mutation_Cont& extra_mut_cont);
-    void merge_read_chunks(Read_Chunk_CPtr c1rc1_chunk_cptr, Read_Chunk_CPtr c2rc2_chunk_cptr, Cigar& rc1rc2_cigar);
     void merge_read_contigs(const Read_Entry* re_cptr);
     void scan_read_for_unmappable_chunks(const Read_Entry* re_cptr, Size_Type rc_start, Size_Type rc_end);
     void scan_contig_for_unmappable_chunks(const Contig_Entry* ce_cptr);
