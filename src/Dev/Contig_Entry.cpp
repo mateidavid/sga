@@ -17,38 +17,10 @@ using namespace std;
 namespace MAC
 {
 
-/*
-void Contig_Entry::remove_chunk(Read_Chunk_CPtr rc_cptr)
-{
-    Read_Chunk_CPtr_Cont::iterator it, it_end;
-    for (auto it = _chunk_cptr_cont.begin(); it != _chunk_cptr_cont.end(); ++it)
-    {
-        if (*it == rc_cptr)
-        {
-            _chunk_cptr_cont.erase(it);
-            return;
-        }
-    }
-    ASSERT(false);
-}
-
-void Contig_Entry::remove_chunks(const set< Read_Chunk_CPtr >& rc_cptr_set)
-{
-    size_t i = 0;
-    while (i < _chunk_cptr_cont.size())
-    {
-        if (rc_cptr_set.count(_chunk_cptr_cont[i]) > 0)
-            _chunk_cptr_cont.erase(_chunk_cptr_cont.begin() + i);
-        else
-            ++i;
-    }
-}
-*/
-
 void Contig_Entry::cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size_Type r_offset)
 {
     // Mutation must be in this container
-    ASSERT(mut_cont().find(mut_bptr, true) != mut_cont().end());
+    ASSERT(mut_cont().find(mut_bptr, true));
 
     // unlink the Mutation from its container
     mut_cont().erase(mut_bptr);
@@ -217,7 +189,7 @@ Contig_Entry::out_chunks_dir(bool c_right, bool skip_next_unmappable) const
 }
 
 std::tuple< Contig_Entry_CBPtr, bool, vector< Read_Chunk_CBPtr > >
-Contig_Entry::is_catenable_dir(bool c_right) const
+Contig_Entry::can_cat_dir(bool c_right) const
 {
     auto res = out_chunks_dir(c_right, false);
     if (res.size() != 1)
@@ -240,38 +212,45 @@ Contig_Entry::is_catenable_dir(bool c_right) const
     return std::make_tuple(ce_next_cbptr, same_orientation, std::move(rc_cbptr_cont));
 }
 
-/*
-void Contig_Entry::merge_forward(const Contig_Entry* ce_next_cptr, const Read_Chunk::ext_mod_with_map_type& rc_rebase_mod)
+void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_next_bptr,
+                               vector< MAC::Read_Chunk_CBPtr >& rc_cbptr_cont)
 {
-    ASSERT(_seq_offset == 0 and ce_next_cptr->_seq_offset == 0);
-    Mutation_Trans_Cont mut_map;
-    // rebase mutations: copy them into this contig, and in the translation table
-    for (auto mut_it = ce_next_cptr->_mut_cont.begin(); mut_it != ce_next_cptr->_mut_cont.end(); ++mut_it)
+    ASSERT(ce_bptr->_seq_offset == 0 and ce_next_bptr->_seq_offset == 0);
+    ASSERT(ce_next_bptr->is_unlinked());
+    // first, shift all mutations and chunks from the second Contig_Entry
+    ce_next_bptr->mut_cont().shift(int(ce_bptr->get_len()));
+    ce_next_bptr->chunk_cont().shift(int(ce_bptr->get_len()));
+    // move all chunks and mutations into first Contig_Entry
+    ce_bptr->mut_cont().splice(ce_next_bptr->mut_cont());
+    ce_bptr->chunk_cont().splice(ce_next_bptr->chunk_cont(), ce_bptr);
+    // grab next contig's sequence
+    ce_bptr->seq() += ce_next_bptr->seq();
+    // merge read chunks previously spanning the break
+    for (auto rc_cbptr : rc_cbptr_cont)
     {
-        Mutation_Trans mut_trans;
-        mut_trans.old_mut_cptr = &*mut_it;
-        Mutation m(*mut_it);
-        m.add_base_prefix(get_len());
-        Mutation_Cont::iterator new_mut_it;
-        bool success;
-        std::tie(new_mut_it, success) = _mut_cont.insert(m);
-        ASSERT(success);
-        mut_trans.new_mut_cptr = &*new_mut_it;
-        Mutation_Trans_Cont::iterator it;
-        std::tie(it, success) = mut_map.insert(mut_trans);
-        ASSERT(success);
+        Read_Chunk_BPtr rc_bptr = rc_cbptr.unconst();
+        ASSERT(rc_bptr->ce_bptr() == ce_bptr);
+        Read_Chunk_BPtr rc_next_bptr = rc_bptr->re_bptr()->chunk_cont().get_sibling(rc_bptr, false, true).unconst();
+        ASSERT(rc_next_bptr);
+        ASSERT(rc_next_bptr->ce_bptr() == ce_bptr);
+        ASSERT(rc_next_bptr->get_c_start() == rc_bptr->get_c_end());
+        ASSERT(rc_bptr->get_rc() == rc_next_bptr->get_rc());
+        // unlink chunks from RE&CE containers
+        rc_bptr->re_bptr()->chunk_cont().erase(rc_bptr);
+        rc_bptr->re_bptr()->chunk_cont().erase(rc_next_bptr);
+        ce_bptr->chunk_cont().erase(rc_bptr);
+        ce_bptr->chunk_cont().erase(rc_next_bptr);
+        // cat left&right
+        Read_Chunk::cat_c_right(rc_bptr, rc_next_bptr, ce_bptr->mut_cont());
+        // insert resulting chunk back in its RE&CE containers
+        rc_bptr->re_bptr()->chunk_cont().insert(rc_bptr);
+        ce_bptr->chunk_cont().insert(rc_bptr);
     }
-    // rebase chunks using external modifier
-    for (auto rc_cptr_it = ce_next_cptr->_chunk_cptr_cont.begin(); rc_cptr_it != ce_next_cptr->_chunk_cptr_cont.end(); ++rc_cptr_it)
-    {
-        Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
-        rc_rebase_mod(rc_cptr, mut_map);
-        _chunk_cptr_cont.push_back(rc_cptr);
-    }
-    // lastly, merge the next contig's sequence into this one
-    *_seq_ptr += *ce_next_cptr->_seq_ptr;
+    // deallocate rhs contig
+    Contig_Entry_Fact::del_elem(ce_next_bptr);
 }
 
+/*
 shared_ptr< map< std::tuple< const Contig_Entry*, bool >, std::tuple< unsigned int, Size_Type, Size_Type > > >
 Contig_Entry::get_neighbours(bool dir, bool skip_unmappable, bool trim_results) const
 {
@@ -425,7 +404,7 @@ bool Contig_Entry::check() const
             // check back Read_Chunk pointers
             ASSERT(mca_cbptr->chunk_cbptr() == rc_cbptr);
             // check Mutation pointers point inside Mutation container
-            ASSERT(_mut_cont.find(mca_cbptr->mut_cbptr(), true) != _mut_cont.end());
+            ASSERT(_mut_cont.find(mca_cbptr->mut_cbptr(), true));
         }
     }
     return true;

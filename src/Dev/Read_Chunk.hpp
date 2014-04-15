@@ -335,12 +335,19 @@ public:
     /** Reverse the contig mapping; Mutations and their container must be reversed externally. */
     void reverse();
 
-    /** Merge this read chunk with the next chunk of the same read.
-     * Pre: Chunks must be mapped to the same contig, in the same orientation, continuously.
-     * @param rc_next_cptr CPtr to next chunk.
-     * @param add_mut_mod Modifier that allows chunk object to add mutations to contig.
+    /** Merge read chunk with the next chunk of the same read along the contig.
+     * Pre: Chunks must be mapped to the same contig, in the same orientation, in order, continuously.
+     * Pre: Chunks must be unlinked from their RE&CE containers.
+     * Post: If the chunks have touching mutations at the breakpoint,
+     * a new merged Mutation is used; if there is an equivalent Mutation in the continer,
+     * it is used; otherwise a new merged Mutation is created and added to the container;
+     * if either of the old mutations are no longer used, they are removed and deallcated.
+     * Post: rc_next_bptr is deallcated.
+     * @param rc_bptr First chunk.
+     * @param rc_next_bptr Next chunk in read direction.
+     * @param mut_cont Mutation continer to alter.
      */
-    //void merge_next(const Read_Chunk* rc_next_cptr, Mutation::add_mut_mod_type add_mut_mod);
+    static void cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bptr, Mutation_Cont& mut_cont);
 
     /** Rebase this chunk into another contig.
      * @param ce_cptr New contig.

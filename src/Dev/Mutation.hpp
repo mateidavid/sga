@@ -68,7 +68,7 @@ public:
             _start = std::move(rhs._start);
             _len = std::move(rhs._len);
             _seq_len = std::move(rhs._seq_len);
-            _rcpn_cont = std::move(rhs._rcpn_cont);
+            _chunk_ptr_cont = std::move(rhs._chunk_ptr_cont);
         }
         return *this;
     }
@@ -131,7 +131,7 @@ public:
     void merge(Mutation&& rhs)
     {
         ASSERT(is_unlinked() and rhs.is_unlinked());
-        ASSERT(_rcpn_cont.size() == rhs._rcpn_cont.size());
+        ASSERT(_chunk_ptr_cont.size() == rhs._chunk_ptr_cont.size());
         if (is_empty())
         {
             *this = std::move(rhs);
@@ -144,6 +144,18 @@ public:
             _seq_len += rhs._seq_len;
             _seq += rhs._seq;
         }
+    }
+
+    /** Extend Mutation.
+     * @param extra_len Extra reference length.
+     * @param extra_seq Extra alternate sequence.
+     */
+    void extend(Size_Type extra_len, const Seq_Type& extra_seq)
+    {
+        ASSERT(have_seq());
+        _len += extra_len;
+        _seq += extra_seq;
+        _seq_len += extra_seq.size();
     }
 
     /** Cut mutation at given offsets, allocate new Mutation to keep leftover.
@@ -173,14 +185,15 @@ public:
     /** Shift Mutation.
      * @param delta Signed integer value to add to start point.
      */
-    void shift(int delta)
+    template < typename delta_type >
+    void shift(delta_type delta)
     {
-        ASSERT(int(_start) + delta >= 0);
-        _start = Size_Type(int(_start) + delta);
+        ASSERT(delta_type(_start) + delta >= 0);
+        _start = Size_Type(delta_type(_start) + delta);
     }
 
-    const Read_Chunk_Ptr_Cont& chunk_ptr_cont() const { return _rcpn_cont; }
-    Read_Chunk_Ptr_Cont& chunk_ptr_cont() { return _rcpn_cont; }
+    const Read_Chunk_Ptr_Cont& chunk_ptr_cont() const { return _chunk_ptr_cont; }
+    Read_Chunk_Ptr_Cont& chunk_ptr_cont() { return _chunk_ptr_cont; }
 
     friend bool operator == (const Mutation&, const Mutation&);
     friend std::ostream& operator << (std::ostream&, const Mutation&);
@@ -191,7 +204,7 @@ private:
     Size_Type _len;
     Size_Type _seq_len;
 
-    Read_Chunk_Ptr_Cont _rcpn_cont;
+    Read_Chunk_Ptr_Cont _chunk_ptr_cont;
 
     /** Hooks for storage in intrusive interval trees inside Contig_Entry objects. */
     friend struct Mutation_ITree_Node_Traits;

@@ -149,13 +149,18 @@ public:
      * if the chunk is not catenable, the first coordinate is NULL.
      */
     std::tuple< Contig_Entry_CBPtr, bool, std::vector< Read_Chunk_CBPtr > >
-    is_catenable_dir(bool c_right) const;
+    can_cat_dir(bool c_right) const;
 
-    /** Merge the given contig into this one.
-     * @param ce_next_cptr Contig to be merged into this one.
-     * @param rc_rebase_mod External modifier that allows rebasing chunks into this contig.
+    /** Merge two contigs in the first.
+     * Pre: The contig must be in the same orientation as this one.
+     * Pre: The second contig must be unlinked.
+     * Post: The second contig is deallocated.
+     * @param ce_cptr Initial contig.
+     * @param ce_next_cptr Next contig.
+     * @param rc_cbptr_cont Read chunks from first contig that span into the next contig.
      */
-    //void merge_forward(const Contig_Entry* ce_next_cptr, const Read_Chunk::ext_mod_with_map_type& rc_rebase_mod);
+    static void cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_next_bptr,
+                            std::vector< Read_Chunk_CBPtr >& rc_cbptr_cont);
 
     /** Get neighbour contigs.
      * @param dir Bool; true: past contig end, false: past contig start.

@@ -167,7 +167,7 @@ private:
      * @param c_right Bool; true: merge past contig end; false: merge past contig start.
      * @return True iff the merge was successful.
      */
-    bool catenate_contigs(Contig_Entry_BPtr ce_bptr, bool c_right);
+    bool cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right);
 
     /*
     void remap_chunks(std::map< Read_Chunk_CPtr, std::shared_ptr< Read_Chunk > >& rc_map, Mutation_Cont& extra_mut_cont);

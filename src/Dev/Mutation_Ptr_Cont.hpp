@@ -213,6 +213,25 @@ public:
             Mutation_Chunk_Adapter_Fact::del_elem(mca_bptr);
         });
     }
+
+    /** Move Mutation pointers from the given container into this one;
+     * also updates chunk back pointers.
+     * Pre: Mutations in other container are to the right of the ones in this container.
+     * @param other_cont Container to clear.
+     * @param rc_cbptr Chunk back pointer to use.
+     */
+    void splice_right(Mutation_Ptr_Cont& other_cont, Read_Chunk_CBPtr rc_cbptr)
+    {
+        ASSERT(size() == 0
+               or other_cont.size() == 0
+               or rbegin()->mut_cbptr()->get_end() < other_cont.begin()->mut_cbptr()->get_start());
+        for (auto mca_bref : other_cont)
+        {
+            Mutation_Chunk_Adapter_BPtr mca_bptr = &mca_bref;
+            mca_bptr->chunk_cbptr() = rc_cbptr;
+        }
+        Base::splice(end(), static_cast< Base & >(other_cont));
+    }
 };
 
 } // namespace MAC

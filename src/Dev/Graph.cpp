@@ -693,9 +693,9 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     */
 }
 
-bool Graph::catenate_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
+bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
 {
-    auto tmp = ce_bptr->is_catenable_dir(c_right);
+    auto tmp = ce_bptr->can_cat_dir(c_right);
     Contig_Entry_BPtr ce_next_bptr = std::get<0>(tmp).unconst();
     bool same_orientation = std::get<1>(tmp);
     vector< Read_Chunk_CBPtr > rc_cbptr_cont = std::move(std::get<2>(tmp));
@@ -721,7 +721,7 @@ bool Graph::catenate_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
     {
         swap(ce_bptr, ce_next_bptr);
         c_right = true;
-        auto tmp2 = ce_bptr->is_catenable_dir(true);
+        auto tmp2 = ce_bptr->can_cat_dir(true);
         rc_cbptr_cont = std::move(std::get<2>(tmp2));
         ASSERT(not rc_cbptr_cont.empty());
     }
@@ -732,6 +732,8 @@ bool Graph::catenate_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
 
     //cerr << "merging contigs\n" << *ce_cptr << "and\n" << *ce_next_cptr;
 
+    ce_cont().erase(ce_next_bptr);
+    Contig_Entry::cat_c_right(ce_bptr, ce_next_bptr, rc_cbptr_cont);
     //TODO
 /*
     Size_Type prefix_len = ce_cptr->get_len();
@@ -921,7 +923,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
             ASSERT(not rc_bptr->get_rc());
             ASSERT(not next_rc_bptr->get_rc());
             pos = (r_left? next_rc_bptr->get_r_start() : next_rc_bptr->get_r_end());
-            bool success = catenate_contigs(r_left? next_rc_bptr->ce_bptr() : rc_bptr->ce_bptr(), true);
+            bool success = cat_contigs(r_left? next_rc_bptr->ce_bptr() : rc_bptr->ce_bptr(), true);
             ASSERT(success);
             continue;
         }

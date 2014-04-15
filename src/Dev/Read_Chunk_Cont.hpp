@@ -119,6 +119,19 @@ public:
         }
         Base::implement_shift(delta);
     }
+
+    /** Copy chunks from given container into this one.
+     * @param other_cont Container to clear.
+     * @param ce_bptr Pointer to Contig_Entry object of this container.
+     */
+    void splice(Read_Chunk_CE_Cont& other_cont, Contig_Entry_BPtr ce_bptr)
+    {
+        static_cast< Base& >(other_cont).clear_and_dispose([&] (Read_Chunk_BPtr rc_bptr)
+        {
+            rc_bptr->ce_bptr() = ce_bptr;
+            insert(rc_bptr);
+        });
+    }
 }; // class Read_Chunk_CE_Cont
 
 struct Read_Chunk_Set_Node_Traits

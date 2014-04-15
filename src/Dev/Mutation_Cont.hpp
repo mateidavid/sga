@@ -109,7 +109,7 @@ public:
     /** Find an equivalent Mutation in container.
      * @param find_exact Bool; if true, look for that Mutation only; if false, look for equivalent Mutations as well.
      */
-    const_iterator find(Mutation_CBPtr mut_cbptr, bool find_exact = false) const
+    Mutation_CBPtr find(Mutation_CBPtr mut_cbptr, bool find_exact) const
     {
         const_iterator it;
         const_iterator it_end;
@@ -117,10 +117,10 @@ public:
         {
             if (&*it == mut_cbptr or (not find_exact and *mut_cbptr == *it))
             {
-                return it;
+                return &*it;
             }
         }
-        return end();
+        return nullptr;
     }
 
     /** Erase Mutation from container. */
@@ -150,7 +150,8 @@ public:
     /** Shift all Mutations in this container.
      * @param delta Signed integer value to add to all start points.
      */
-    void shift(int delta)
+    template < typename delta_type >
+    void shift(delta_type delta)
     {
         for (auto mut_bref : *this)
         {
@@ -181,6 +182,17 @@ public:
             new_mut_cont.insert(mut_bptr);
         });
         *this = std::move(new_mut_cont);
+    }
+
+    /** Move all Mutations from given container into this one.
+     * @param other_cont Container to clear.
+     */
+    void splice(Mutation_Cont& other_cont)
+    {
+        static_cast< Base& >(other_cont).clear_and_dispose([&] (Mutation_BPtr mut_bptr)
+        {
+            insert(mut_bptr);
+        });
     }
 };
 

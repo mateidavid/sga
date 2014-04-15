@@ -661,65 +661,81 @@ void Read_Chunk::reverse()
     _c_start = _ce_bptr->get_len() - (_c_start + _c_len);
 }
 
-/*
-void Read_Chunk::merge_next(Read_Chunk_CPtr rc_next_cptr, Mutation::add_mut_mod_type add_mut_mod)
+void Read_Chunk::cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bptr,
+                             Mutation_Cont& mut_cont)
 {
-    ASSERT(rc_next_cptr != NULL);
-    ASSERT(rc_next_cptr->get_re_ptr() == get_re_ptr());
-    ASSERT(rc_next_cptr->ce_bptr() == ce_bptr());
-    ASSERT(rc_next_cptr->get_rc() == get_rc());
-    ASSERT(rc_next_cptr->get_r_start() == get_r_end());
-    ASSERT(get_rc() or rc_next_cptr->get_c_start() == get_c_end());
-    ASSERT(not get_rc() or rc_next_cptr->get_c_end() == get_c_start());
+    ASSERT(rc_next_bptr);
+    ASSERT(rc_next_bptr->re_bptr() == rc_bptr->re_bptr());
+    ASSERT(rc_next_bptr->ce_bptr() == rc_bptr->ce_bptr());
+    ASSERT(rc_next_bptr->get_rc() == rc_bptr->get_rc());
+    ASSERT(rc_bptr->get_rc() or rc_next_bptr->get_r_start() == rc_bptr->get_r_end());
+    ASSERT(not rc_bptr->get_rc() or rc_next_bptr->get_r_end() == rc_bptr->get_r_start());
+    ASSERT(rc_next_bptr->get_c_start() == rc_bptr->get_c_end());
+    ASSERT(rc_bptr->is_unlinked());
+    ASSERT(rc_next_bptr->is_unlinked());
 
     // fix coordinates
-    if (get_rc())
+    if (rc_bptr->get_rc())
     {
-        _c_start = rc_next_cptr->_c_start;
+        rc_bptr->_r_start = rc_next_bptr->_r_start;
     }
-    _c_len += rc_next_cptr->_c_len;
-    _r_len += rc_next_cptr->_r_len;
-    // aquire mutations
+    rc_bptr->_c_len += rc_next_bptr->_c_len;
+    rc_bptr->_r_len += rc_next_bptr->_r_len;
     // if there are touching mutations across the break, merge them
-    if (not get_rc())
+    if (rc_bptr->mut_ptr_cont().size() > 0
+        and rc_next_bptr->mut_ptr_cont().size() > 0
+        and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->get_end()
+            == rc_next_bptr->mut_ptr_cont().begin()->mut_cbptr()->get_start())
     {
-        size_t lhs_start = 0;
-        if (_mut_ptr_cont.size() > 0 and rc_next_cptr->_mut_ptr_cont.size() > 0 and
-            _mut_ptr_cont.back()->get_end() == rc_next_cptr->_mut_ptr_cont.front()->get_start())
+        // create new merged Mutation
+        Mutation_BPtr left_mut_bptr = rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr().unconst();
+        Mutation_BPtr right_mut_bptr = rc_next_bptr->mut_ptr_cont().begin()->mut_cbptr().unconst();
+        Mutation_BPtr new_mut_bptr = Mutation_Fact::new_elem(left_mut_bptr->get_start(),
+                                                             left_mut_bptr->get_len(),
+                                                             left_mut_bptr->get_seq());
+        new_mut_bptr->extend(right_mut_bptr->get_len(), right_mut_bptr->get_seq());
+        Mutation_BPtr equiv_mut_bptr = mut_cont.find(new_mut_bptr, false).unconst();
+        if (equiv_mut_bptr)
         {
-            Mutation m(*_mut_ptr_cont.back());
-            m.merge(*rc_next_cptr->_mut_ptr_cont.front());
-            Mutation_CPtr m_cptr = add_mut_mod(m);
-            _mut_ptr_cont.back() = m_cptr;
-            ++lhs_start;
+            // an equivalent merged Mutation exists; use it
+            Mutation_Fact::del_elem(new_mut_bptr);
+            new_mut_bptr = equiv_mut_bptr;
         }
-        _mut_ptr_cont.insert(_mut_ptr_cont.end(), rc_next_cptr->_mut_ptr_cont.begin() + lhs_start, rc_next_cptr->_mut_ptr_cont.end());
-    }
-    else // _rc
-    {
-        size_t rhs_size = _mut_ptr_cont.size();
-        size_t lhs_size = rc_next_cptr->_mut_ptr_cont.size();
-        if (lhs_size > 0)
+        else
         {
-            // mutations from next chunk must be inserted before the ones in here
-            if (rhs_size > 0
-                and rc_next_cptr->_mut_ptr_cont.back()->get_end() == _mut_ptr_cont.front()->get_start())
-            {
-                Mutation m(*rc_next_cptr->_mut_ptr_cont.back());
-                m.merge(*_mut_ptr_cont.front());
-                Mutation_CPtr m_cptr = add_mut_mod(m);
-                _mut_ptr_cont.front() = m_cptr;
-                --lhs_size;
-            }
-            _mut_ptr_cont.resize(lhs_size + rhs_size, NULL);
-            for (size_t i = 0; i < rhs_size; ++i)
-                _mut_ptr_cont[lhs_size + rhs_size - 1 - i] = _mut_ptr_cont[rhs_size - 1 - i];
-            for (size_t i = 0; i <  lhs_size; ++i)
-                _mut_ptr_cont[i] = rc_next_cptr->_mut_ptr_cont[i];
+            // no equivalent Mutation exists; insert this one
+            mut_cont.insert(new_mut_bptr);
         }
-    }
+        // remove MCAs for left&right mutations
+        Mutation_Chunk_Adapter_BPtr left_mca_bptr = &*rc_bptr->mut_ptr_cont().rbegin();
+        Mutation_Chunk_Adapter_BPtr right_mca_bptr = &*rc_next_bptr->mut_ptr_cont().begin();
+        left_mut_bptr->chunk_ptr_cont().erase(left_mca_bptr);
+        right_mut_bptr->chunk_ptr_cont().erase(right_mca_bptr);
+        rc_bptr->mut_ptr_cont().erase(left_mca_bptr);
+        rc_next_bptr->mut_ptr_cont().erase(right_mca_bptr);
+        // if the old Mutations are no longer used, erase&deallocate them
+        if (left_mut_bptr->chunk_ptr_cont().size() == 0)
+        {
+            mut_cont.erase(left_mut_bptr);
+            Mutation_Fact::del_elem(left_mut_bptr);
+        }
+        if (right_mut_bptr->chunk_ptr_cont().size() == 0)
+        {
+            mut_cont.erase(right_mut_bptr);
+            Mutation_Fact::del_elem(right_mut_bptr);
+        }
+        // insert MCA for new Mutation
+        Mutation_Chunk_Adapter_BPtr new_mca_bptr = Mutation_Chunk_Adapter_Fact::new_elem(new_mut_bptr, rc_bptr);
+        rc_bptr->mut_ptr_cont().insert_before(rc_bptr->mut_ptr_cont().end(), new_mca_bptr);
+        new_mut_bptr->chunk_ptr_cont().insert(new_mca_bptr);
+    } // if [exist touching mutations]
+    // grab rhs mutations
+    rc_bptr->mut_ptr_cont().splice_right(rc_next_bptr->mut_ptr_cont(), rc_bptr);
+    // deallocate rhs chunk
+    Read_Chunk_Fact::del_elem(rc_next_bptr);
 }
 
+/*
 void Read_Chunk::rebase(const Contig_Entry* ce_cptr, const Mutation_Trans_Cont& mut_map, Size_Type prefix_len)
 {
     _ce_ptr = ce_cptr;
