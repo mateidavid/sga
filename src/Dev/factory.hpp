@@ -420,12 +420,12 @@ public:
     }
 
     /** Delete element pointed at. */
-    void del_elem_ns(ptr_type elem_ptr)
+    void del_elem_ns(const_ptr_type elem_cptr)
     {
         //std::clog << "deallocating element at: " << (void*)&_cont.at(elem_ptr._id._ptr) << '\n';
-        elem_ptr->~val_type();
-        _cont.at(elem_ptr._id._ptr)._next_free_idn = _next_free_idn;
-        _next_free_idn = elem_ptr._id;
+        elem_cptr->~val_type();
+        _cont.at(elem_cptr._id._ptr)._next_free_idn = _next_free_idn;
+        _next_free_idn = elem_cptr._id;
     }
 
     /** Get currently allocated size. */
@@ -457,10 +457,10 @@ public:
     }
 
     /** Static version of del_elem, using active factory. */
-    static void del_elem(ptr_type elem_ptr)
+    static void del_elem(const_ptr_type elem_cptr)
     {
         ASSERT(get_active_ptr());
-        get_active_ptr()->del_elem_ns(elem_ptr);
+        get_active_ptr()->del_elem_ns(elem_cptr);
     }
 
 private:
