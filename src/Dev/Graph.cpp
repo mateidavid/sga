@@ -700,13 +700,13 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
         merge_chunk_contigs(rc1_bptr, rc2_bptr, rc1rc2_cigar);
     }
 
-    //TODO
-/*
     // check for unmappable chunks in the contigs recently merged
     scan_read_for_unmappable_chunks(re1_bptr, r1_start, r1_start + r1_len);
 
     ASSERT(check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr })));
 
+    //TODO
+/*
     if (global::merge_contigs_at_each_step)
     {
         //cerr << "before merging:\n" << *this;
@@ -958,34 +958,56 @@ void Graph::extend_unmapped_chunk(Read_Entry_BPtr re_bptr, Size_Type rc_start, S
     extend_unmapped_chunk_dir(re_bptr, rc_end, true);
 }
 
-/*
-void Graph::scan_read_for_unmappable_chunks(const Read_Entry* re_cptr, Size_Type rc_start, Size_Type rc_end)
+void Graph::scan_read_for_unmappable_chunks(Read_Entry_BPtr re_bptr, Size_Type rc_start, Size_Type rc_end)
 {
     Size_Type pos = rc_start;
     while (pos < rc_end)
     {
-        Read_Chunk_CPtr rc_cptr = re_cptr->get_chunk_with_pos(pos);
-        ASSERT(rc_cptr != NULL);
-        ASSERT(rc_cptr->get_r_start() <= pos);
-        ASSERT(pos < rc_cptr->get_r_end());
-        pos = rc_cptr->get_r_end();
-        scan_contig_for_unmappable_chunks(rc_cptr->get_ce_ptr());
+        Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(pos);
+        ASSERT(rc_bptr);
+        ASSERT(rc_bptr->get_r_start() <= pos);
+        ASSERT(pos < rc_bptr->get_r_end());
+        pos = rc_bptr->get_r_end();
+        scan_contig_for_unmappable_chunks(rc_bptr->ce_bptr());
     }
 }
 
-void Graph::scan_contig_for_unmappable_chunks(const Contig_Entry* ce_cptr)
+void Graph::scan_contig_for_unmappable_chunks(Contig_Entry_BPtr ce_bptr)
 {
+    // If different chunks of the same read
+    // are mapped to overlapping regions of the contig,
+    // we make those regions unmappable
+    // By property of contig entries, 2 chunks of the same read
+    // can be mapped to the same contig only if each overlaps
+    // at least one contig endpoint.
+
+    map< Read_Entry_BPtr, vector< Read_Chunk_BPtr > > overlap_map;
+    // first look at contig start
+    for (auto rc_bref : ce_bptr->chunk_cont().interval_intersect(0, 0))
+    {
+        Read_Chunk_BPtr rc_bptr = &rc_bref;
+        overlap_map[rc_bptr->re_bptr()].push_back(rc_bptr);
+    }
+    // then at contig end
+    for (auto rc_bref : ce_bptr->chunk_cont().interval_intersect(ce_bptr->get_len(), ce_bptr->get_len()))
+    {
+        Read_Chunk_BPtr rc_bptr = &rc_bref;
+        overlap_map[rc_bptr->re_bptr()].push_back(rc_bptr);
+    }
+    
+    //TODO
+    
     // if 2 chunks of the same read are mapped to overlapping regions of this contig, unmap both
     list< const Read_Entry* > re_list;
     list< std::tuple< Size_Type, Size_Type > > pos_list;
-    for (size_t i = 0; i < ce_cptr->get_chunk_cptr_cont().size(); ++i)
+    for (size_t i = 0; i < ce_bptr->get_chunk_cptr_cont().size(); ++i)
     {
-        Read_Chunk_CPtr rc1_cptr = ce_cptr->get_chunk_cptr_cont()[i];
+        Read_Chunk_CPtr rc1_cptr = ce_bptr->get_chunk_cptr_cont()[i];
         for (size_t j = 0; j < i; ++j)
         {
-            Read_Chunk_CPtr rc2_cptr = ce_cptr->get_chunk_cptr_cont()[j];
+            Read_Chunk_CPtr rc2_cptr = ce_bptr->get_chunk_cptr_cont()[j];
             if (rc1_cptr->get_re_ptr() == rc2_cptr->get_re_ptr())
-                / *
+                /*
                 and ((rc1_cptr->get_c_start() <= rc2_cptr->get_c_start() and rc2_cptr->get_c_start() < rc1_cptr->get_c_end())
                      or (rc2_cptr->get_c_start() <= rc1_cptr->get_c_start() and rc1_cptr->get_c_start() < rc2_cptr->get_c_end())
                      or (rc1_cptr->get_c_end() == rc2_cptr->get_c_start()
@@ -998,19 +1020,19 @@ void Graph::scan_contig_for_unmappable_chunks(const Contig_Entry* ce_cptr)
                          and rc1_cptr->get_mut_ptr_cont().size() > 0
                          and rc2_cptr->get_mut_ptr_cont().back()->is_ins()
                          and rc2_cptr->get_mut_ptr_cont().back() == rc1_cptr->get_mut_ptr_cont().front())))
-                * /
+                */
             {
                 // overlapping chunks from the same read
                 re_list.push_back(rc1_cptr->get_re_ptr());
                 pos_list.push_back(std::make_tuple(rc1_cptr->get_r_start(), rc1_cptr->get_r_end()));
                 //re_list.push_back(rc2_cptr->get_re_ptr());
                 //pos_list.push_back(std::make_tuple(rc2_cptr->get_r_start(), rc2_cptr->get_r_end()));
-                / *
+                /*
                 cerr << "overlapping chunks from same read: " << rc1_cptr->get_re_ptr()->get_name() << ' '
                 << rc1_cptr->get_r_start() << ' ' << rc1_cptr->get_r_end() << ' '
                 << rc2_cptr->get_r_start() << ' ' << rc2_cptr->get_r_end() << '\n'
-                << *rc1_cptr << *rc2_cptr << *ce_cptr;
-                * /
+                << *rc1_cptr << *rc2_cptr << *ce_bptr;
+                */
             }
         }
     }
@@ -1036,6 +1058,7 @@ void Graph::scan_contig_for_unmappable_chunks(const Contig_Entry* ce_cptr)
     ASSERT(check(set< const Read_Entry* >(re_list.begin(), re_list.end())));
 }
 
+/*
 void Graph::clear_contig_colours()
 {
     for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)

@@ -69,7 +69,10 @@ public:
     Seq_Type& seq() { return _seq; }
     Size_Type get_seq_offset() const { return _seq_offset; }
     Seq_Type substr(Size_Type start, Size_Type len) const
-    { ASSERT(start >= _seq_offset and start + len <= _seq_offset + _seq.size()); return _seq.substr(start - _seq_offset, len); }
+    {
+        ASSERT(start >= _seq_offset and start + len <= _seq_offset + _seq.size());
+        return _seq.substr(start - _seq_offset, len);
+    }
     Size_Type get_len() const { return _seq.size(); }
     const Mutation_Cont& mut_cont() const { return _mut_cont; }
     Mutation_Cont& mut_cont() { return _mut_cont; }

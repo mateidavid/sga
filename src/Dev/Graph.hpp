@@ -183,11 +183,12 @@ private:
      */
     void merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPtr c2rc2_chunk_bptr, Cigar& rc1rc2_cigar);
 
+    void scan_read_for_unmappable_chunks(Read_Entry_BPtr re_bptr, Size_Type rc_start, Size_Type rc_end);
+    void scan_contig_for_unmappable_chunks(Contig_Entry_BPtr ce_bptr);
+
     /*
     void remap_chunks(std::map< Read_Chunk_CPtr, std::shared_ptr< Read_Chunk > >& rc_map, Mutation_Cont& extra_mut_cont);
     void merge_read_contigs(const Read_Entry* re_cptr);
-    void scan_read_for_unmappable_chunks(const Read_Entry* re_cptr, Size_Type rc_start, Size_Type rc_end);
-    void scan_contig_for_unmappable_chunks(const Contig_Entry* ce_cptr);
     */
 }; // class Graph
 

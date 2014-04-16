@@ -734,10 +734,63 @@ Read_Chunk::collapse_mapping(Read_Chunk_BPtr c1rc1_cbptr, Read_Chunk_BPtr rc1rc2
 
 Read_Chunk_BPtr Read_Chunk::invert_mapping(Read_Chunk_CBPtr rc_cbptr)
 {
-    Read_Chunk_BPtr new_rc_cbptr;
-    //TODO
-    (void)rc_cbptr;
-    return new_rc_cbptr;
+    // create new chunk and contig entry
+    Read_Chunk_BPtr new_rc_bptr = Read_Chunk_Fact::new_elem();
+    Contig_Entry_BPtr new_ce_bptr = Contig_Entry_Fact::new_elem(
+        string(rc_cbptr->get_seq()), rc_cbptr->get_r_start());
+    // basic settings
+    new_rc_bptr->_r_start = rc_cbptr->get_c_start();
+    new_rc_bptr->_r_len = rc_cbptr->get_c_len();
+    new_rc_bptr->_c_start = rc_cbptr->get_r_start();
+    new_rc_bptr->_c_len = rc_cbptr->get_r_len();
+    new_rc_bptr->_rc = rc_cbptr->get_rc();
+    new_rc_bptr->ce_bptr() = new_ce_bptr;
+    // iterate over contig sequence and create reversed mutations
+    Pos pos = rc_cbptr->get_start_pos();
+    while (true)
+    {
+        ASSERT(pos != rc_cbptr->get_end_pos() or pos.get_match_len() == 0);
+        // ignore matched stretches
+        while (pos.get_match_len() > 0)
+        {
+            pos.increment();
+        }
+        if (pos == rc_cbptr->get_end_pos())
+        {
+            break;
+        }
+        // with no breakpoints, we don't slice mutations
+        ASSERT(pos.mut_offset == 0);
+        // the next stretch is a mutation
+        Pos pos_next = pos;
+        pos_next.increment();
+        ASSERT(pos_next.mut_offset == 0);
+        ASSERT(pos_next.mca_cit == std::next(pos.mca_cit));
+        // create reversed Mutation
+        /*
+        Mutation rev_mut((not _rc? pos.r_pos : pos_next.r_pos),
+                         (not _rc? pos_next.r_pos - pos.r_pos : pos.r_pos - pos_next.r_pos),
+                         (not _rc? _ce_ptr->substr(pos.c_pos, pos_next.c_pos - pos.c_pos)
+                          : reverseComplement(_ce_ptr->substr(pos.c_pos, pos_next.c_pos - pos.c_pos))));
+        */
+        string mut_c_seq = rc_cbptr->ce_bptr()->substr(pos.c_pos, pos_next.c_pos - pos.c_pos);
+        Mutation_BPtr new_mut_bptr = (
+            not rc_cbptr->get_rc()?
+            Mutation_Fact::new_elem(pos.r_pos, pos_next.r_pos - pos.r_pos, mut_c_seq)
+            : Mutation_Fact::new_elem(pos_next.r_pos, pos.r_pos - pos_next.r_pos, reverseComplement(mut_c_seq)));
+        // save it in Mutation container
+        new_ce_bptr->mut_cont().insert(new_mut_bptr);
+        // add MCA
+        Mutation_Chunk_Adapter_BPtr mca_bptr = Mutation_Chunk_Adapter_Fact::new_elem(new_mut_bptr, new_rc_bptr);
+        new_mut_bptr->chunk_ptr_cont().insert(mca_bptr);
+        new_rc_bptr->mut_ptr_cont().insert_before(
+            not rc_cbptr->get_rc()? new_rc_bptr->mut_ptr_cont().end() : new_rc_bptr->mut_ptr_cont().begin(),
+            mca_bptr);
+        pos = pos_next;
+    }
+    // add chunk to contig
+    new_ce_bptr->chunk_cont().insert(new_rc_bptr);
+    return new_rc_bptr;
 }
 
 void Read_Chunk::reverse()
