@@ -18,6 +18,7 @@
 #include "Read_Entry_Cont.hpp"
 #include "Contig_Entry.hpp"
 #include "Contig_Entry_Cont.hpp"
+#include "Range_Cont.hpp"
 
 
 namespace MAC
@@ -66,7 +67,9 @@ public:
                      const std::string& cigar);
     
     /** Merge all contigs. */
-    //void merge_all_read_contigs();
+    void cat_all_read_contigs();
+
+    void set_contig_ids();
     
     /** Clear contig colors. */
     //void clear_contig_colours();
@@ -79,18 +82,21 @@ public:
                      std::list< std::tuple< const Contig_Entry*, size_t, size_t, bool > >& l, bool& cycle);
     void print_supercontig_lengths(std::ostream& os);
     void print_supercontig_lengths_2(std::ostream& os);
-    void set_contig_ids();
     void unmap_single_chunks();
     */
     
     /** Integrity checks. */
     bool check_all() const;
-    bool check(const std::set< Read_Entry_CBPtr >& re_set, const std::set< Contig_Entry_CBPtr >& ce_set = std::set< Contig_Entry_CBPtr >()) const;
-    bool check(const std::set< Contig_Entry_CBPtr >& ce_set) const { return check(std::set< Read_Entry_CBPtr >(), ce_set); }
+    bool check(const std::set< Read_Entry_CBPtr >& re_set,
+               const std::set< Contig_Entry_CBPtr >& ce_set = std::set< Contig_Entry_CBPtr >()) const;
+    bool check(const std::set< Contig_Entry_CBPtr >& ce_set) const
+    {
+        return check(std::set< Read_Entry_CBPtr >(), ce_set);
+    }
     //bool check_colours() const;
     
     /** Stats. */
-    //void dump_detailed_counts(std::ostream& os) const;
+    void dump_detailed_counts(std::ostream& os) const;
     
     /*
     void print_separated_het_mutations(
@@ -145,8 +151,18 @@ private:
     std::vector< std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr, Cigar > >
     chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar);
 
-    /** Set chunk as unmappable. */
+    /** Make chunk unmappable.
+     * The contig containing the chunk is first trimmed to the extent of the chunk.
+     * After potential contig trimming, all other chunks in the contig now fully spanned
+     * by this chunk are also made unmappable.
+     */
     void unmap_chunk(Read_Chunk_BPtr rc_bptr);
+
+    /** Unmap read regions.
+     * The read is cut at region endpoints, and all chunks spanning the given regions
+     * are made unmappable.
+     */
+    void unmap_regions(Read_Entry_BPtr re_bptr, const Range_Cont< Size_Type >& region_cont);
 
     /** Try to extend an unmappable read region in both directions.
      * @param re_bptr Read_Entry object.
@@ -183,13 +199,22 @@ private:
      */
     void merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPtr c2rc2_chunk_bptr, Cigar& rc1rc2_cigar);
 
-    void scan_read_for_unmappable_chunks(Read_Entry_BPtr re_bptr, Size_Type rc_start, Size_Type rc_end);
-    void scan_contig_for_unmappable_chunks(Contig_Entry_BPtr ce_bptr);
+    /** Find unmappable regions in a read entry.
+     * @param re_cbptr Read to scan.
+     * @param r_start Read position to scan from.
+     * @param r_end Read position to scan to.
+     * @return A set of disjoint ranges which should be made unmappable in this read.
+     */
+    Range_Cont< Size_Type >
+    find_unmappable_regions(Read_Entry_CBPtr re_cbptr, Size_Type r_start, Size_Type r_end) const;
 
-    /*
-    void remap_chunks(std::map< Read_Chunk_CPtr, std::shared_ptr< Read_Chunk > >& rc_map, Mutation_Cont& extra_mut_cont);
-    void merge_read_contigs(const Read_Entry* re_cptr);
-    */
+    /** Find unmappable regions in a read chunk.
+     * @param rc_cbptr Read chunk to scan.
+     * @param region_cont Set of disjoint ranges of the chunk's read which should be made unmappable.
+     */
+    void find_unmappable_regions(Read_Chunk_CBPtr rc_cbptr, Range_Cont< Size_Type >& region_cont) const;
+
+    void cat_read_contigs(Read_Entry_BPtr re_bptr);
 }; // class Graph
 
 } // namespace MAC

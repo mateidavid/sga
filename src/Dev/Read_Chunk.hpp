@@ -120,7 +120,7 @@ public:
      * @param brk Breakpoint location.
      * @param on_contig True: contig position; False: read position.
      */
-    void jump_to_brk(Size_Type brk, bool on_contig);
+    Read_Chunk_Pos& jump_to_brk(Size_Type brk, bool on_contig);
 
     /** Advance position, but using a read Mutation breakpoint.
      * Repeated calls to this function will produce mapping stretches prior to the read Mutation,
@@ -368,13 +368,6 @@ public:
      */
     static void cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bptr, Mutation_Cont& mut_cont);
 
-    /** Rebase this chunk into another contig.
-     * @param ce_cptr New contig.
-     * @param mut_map Mutation translation map.
-     * @param prefix_len Length of prefix by which new contig is larger than the old one.
-     */
-    //void rebase(const Contig_Entry* ce_cptr, const Mutation_Trans_Cont& mut_map, Size_Type prefix_len);
-
     /** Shift contig coordinates of this Read_Chunk object.
      * @param delta Signed integer value to add to contig start point.
      */
@@ -383,6 +376,28 @@ public:
         ASSERT(int(_c_start) + delta >= 0);
         _c_start = Size_Type(int(_c_start) + delta);
     }
+
+    /** Compute mapped range.
+     * Given a read/contig range, compute the corresponding contig/read range
+     * under the mapping described in this object.
+     * Pre: rg_start <= rg_end.
+     * Pre: the given range must be included in this chunk.
+     * NOTE: "Maximal" means the returned range is maximal at that endpoint;
+     * e.g. if the chunk is mapped to the positive strand (not rc) of the contig,
+     * and the original range is on the contig,
+     * then rg_start_maximal == true means the left endpoint of the returned read range
+     * is as _small_ as possible.
+     * NOTE: It is possible to get a negative range returned (meaning start > end)
+     * iff the start range is empty and rg_start_maximal and rg_end_maximal are both false.
+     * @param rg_start Start of original range.
+     * @param rg_end End of original range.
+     * @param on_contig True iff original range is on contig.
+     * @param rg_start_maximal True: use maximal mapping for start endpoint of original range.
+     * @param rg_end_maximal True: use maximal mapping for end endpoint of original range.
+     */
+    std::tuple< Size_Type, Size_Type >
+    mapped_range(Size_Type rg_start, Size_Type rg_end, bool on_contig,
+                 bool rg_start_maximal, bool rg_end_maximal) const;
 
     bool check() const;
 

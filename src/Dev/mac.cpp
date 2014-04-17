@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
         //ASSERT(g.check_all());
     }
     //g.unmap_single_chunks();
-    //g.set_contig_ids();
+    g.set_contig_ids();
     ASSERT(g.check_all());
     if (global::merge_contigs_at_end)
     {
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
             ofstream stats_2_ofs(global::stats_file_2);
             //g.dump_detailed_counts(stats_2_ofs);
         }
-        //g.merge_all_read_contigs();
+        g.cat_all_read_contigs();
         ASSERT(g.check_all());
     }
     if (not global::stats_file_1.empty())

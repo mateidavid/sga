@@ -57,55 +57,6 @@ void Contig_Entry::cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size
     ASSERT(check());
 }
 
-/*
-vector< Read_Chunk_CPtr > Contig_Entry::get_chunks_with_mutation(const Mutation* mut_cptr) const
-{
-    vector< Read_Chunk_CPtr > res;
-    for (auto it = _chunk_cptr_cont.begin(); it != _chunk_cptr_cont.end(); ++it)
-    {
-        if ((*it)->have_mutation(mut_cptr))
-            res.push_back(*it);
-    }
-    return res;
-}
-
-map< const Mutation*, const Mutation* > Contig_Entry::acquire_second_half_mutations(
-    const Contig_Entry* ce_cptr, Size_Type c_pos, const Mutation* mut_left_cptr)
-{
-    map< const Mutation*, const Mutation* > res;
-
-    ASSERT(mut_left_cptr == NULL or (mut_left_cptr->get_start() == c_pos and mut_left_cptr->is_ins()));
-
-    Mutation_Cont::iterator mut_old_it = ce_cptr->_mut_cont.lower_bound(c_pos);
-    while (mut_old_it != ce_cptr->_mut_cont.end())
-    {
-        if (&(*mut_old_it) != mut_left_cptr)
-        {
-            Mutation_Cont::iterator mut_new_it;
-            bool success;
-            if (mut_old_it->have_seq())
-                tie(mut_new_it, success) = _mut_cont.insert(
-                                               Mutation(mut_old_it->get_start() - c_pos, mut_old_it->get_len(), mut_old_it->get_seq()));
-            else
-                tie(mut_new_it, success) = _mut_cont.insert(
-                                               Mutation(mut_old_it->get_start() - c_pos, mut_old_it->get_len(), mut_old_it->get_seq_len()));
-            ASSERT(success);
-            res[&(*mut_old_it)] = &(*mut_new_it);
-        }
-        ++mut_old_it;
-    }
-    return res;
-}
-
-void Contig_Entry::drop_mutations(const map< const Mutation*, const Mutation* >& mut_cptr_map)
-{
-    for (auto it = mut_cptr_map.begin(); it != mut_cptr_map.end(); ++it)
-    {
-        _mut_cont.erase(_mut_cont.iterator_to(*(it->first)));
-    }
-}
-*/
-
 void Contig_Entry::reverse()
 {
     // only reverse full contigs
@@ -151,24 +102,10 @@ tuple< size_t, size_t, size_t, size_t > Contig_Entry::get_out_degrees() const
     }
     return std::make_tuple(cnt_0, set_0.size(), cnt_1, set_1.size());
 }
-
-shared_ptr< vector< Read_Chunk_CPtr > > Contig_Entry::get_chunks_spanning_pos(Size_Type start, Size_Type end) const
-{
-    shared_ptr< vector< Read_Chunk_CPtr > > res(new vector< Read_Chunk_CPtr >());
-    for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
-    {
-        Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
-        if (rc_cptr->get_c_start() <= start and rc_cptr->get_c_end() >= end)
-        {
-            res->push_back(rc_cptr);
-        }
-    }
-    return res;
-}
 */
 
 map< std::tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > >
-Contig_Entry::out_chunks_dir(bool c_right, bool skip_next_unmappable) const
+Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_threshold) const
 {
     map< std::tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > > res;
     bool c_left = not c_right;
@@ -176,22 +113,101 @@ Contig_Entry::out_chunks_dir(bool c_right, bool skip_next_unmappable) const
     for (auto rc_cbref : chunk_cont().interval_intersect(endpoint, endpoint))
     {
         Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
-        Read_Chunk_CBPtr rc_next_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, false, c_right);
-        if (not rc_next_cbptr or (skip_next_unmappable and rc_next_cbptr->is_unmappable()))
+        Read_Entry_BPtr re_cbptr = rc_cbptr->re_bptr();
+        Read_Chunk_CBPtr rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, false, c_right);
+        if (not rc_next_cbptr)
         {
             continue;
         }
+        if (unmappable_policy == 3)
+        {
+            // skip unmappable chunks
+            while (rc_next_cbptr and rc_next_cbptr->is_unmappable())
+            {
+                rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_next_cbptr, false, c_right);
+            }
+            if (not rc_next_cbptr)
+            {
+                continue;
+            }
+        }
+        ASSERT(rc_next_cbptr);
         Contig_Entry_CBPtr ce_next_cbptr = rc_next_cbptr->ce_bptr();
         bool same_orientation = (rc_cbptr->get_rc() == rc_next_cbptr->get_rc());
-        res[std::make_tuple(ce_next_cbptr, same_orientation)].push_back(rc_cbptr);
+        if (rc_next_cbptr->is_unmappable())
+        {
+            ASSERT(unmappable_policy != 3);
+            switch (unmappable_policy)
+            {
+            case 0:
+                break;
+            case 1:
+                res[std::make_tuple(ce_next_cbptr, same_orientation)].push_back(rc_cbptr);
+                break;
+            case 2:
+                res[std::make_tuple(Contig_Entry_CBPtr(nullptr), false)].push_back(rc_cbptr);
+                break;
+            default:
+                ASSERT(false);
+            }
+        }
+        else
+        {
+            res[std::make_tuple(ce_next_cbptr, same_orientation)].push_back(rc_cbptr);
+        }
+    }
+    // remove (contig,orientation) pairs with low support
+    auto it = res.begin();
+    while (it != res.end())
+    {
+        if (it->second.size() <= ignore_threshold)
+        {
+            auto it_next = next(it);
+            res.erase(it);
+            it = it_next;
+        }
+        else
+        {
+            ++it;
+        }
     }
     return res;
+}
+
+tuple< Size_Type, Size_Type >
+Contig_Entry::unmappable_neighbour_range(bool c_right, const vector< MAC::Read_Chunk_CBPtr >& chunk_cont) const
+{
+    if (chunk_cont.empty())
+    {
+        return std::make_tuple(Size_Type(0), Size_Type(0));
+    }
+    Size_Type min_skip_len = numeric_limits< Size_Type >::max();
+    Size_Type max_skip_len = 0;
+    for (auto rc_cbptr : chunk_cont)
+    {
+        ASSERT(rc_cbptr);
+        Read_Entry_CBPtr re_cbptr = rc_cbptr->re_bptr();
+        ASSERT(c_right or rc_cbptr->get_c_start() == 0);
+        ASSERT(not c_right or rc_cbptr->get_c_end() == get_len());
+        Read_Chunk_CBPtr rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, false, c_right);
+        ASSERT(rc_next_cbptr);
+        Size_Type skip_len = 0;
+        while (rc_next_cbptr->is_unmappable())
+        {
+            skip_len += rc_next_cbptr->get_r_len();
+            rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_next_cbptr, false, c_right);
+            ASSERT(rc_next_cbptr);
+        }
+        min_skip_len = min(min_skip_len, skip_len);
+        max_skip_len = max(max_skip_len, skip_len);
+    }
+    return std::make_tuple(min_skip_len, max_skip_len);
 }
 
 std::tuple< Contig_Entry_CBPtr, bool, vector< Read_Chunk_CBPtr > >
 Contig_Entry::can_cat_dir(bool c_right) const
 {
-    auto res = out_chunks_dir(c_right, false);
+    auto res = out_chunks_dir(c_right, 0);
     if (res.size() != 1)
     {
         return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
@@ -201,7 +217,7 @@ Contig_Entry::can_cat_dir(bool c_right) const
     bool same_orientation;
     vector< Read_Chunk_CBPtr > rc_cbptr_cont = std::move(res.begin()->second);
     std::tie(ce_next_cbptr, same_orientation) = res.begin()->first;
-    auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation);
+    auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, 0);
     if (tmp.size() != 1)
     {
         return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
@@ -251,26 +267,26 @@ void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_n
 }
 
 /*
-shared_ptr< map< std::tuple< const Contig_Entry*, bool >, std::tuple< unsigned int, Size_Type, Size_Type > > >
-Contig_Entry::get_neighbours(bool dir, bool skip_unmappable, bool trim_results) const
+map< std::tuple< Contig_Entry_CBPtr, bool >, std::tuple< unsigned int, Size_Type, Size_Type > >
+Contig_Entry::neighbour_stats(bool c_right, int unmappable_policy, bool trim_results) const
 {
-    shared_ptr< map< std::tuple< const Contig_Entry*, bool >, std::tuple< unsigned int, Size_Type, Size_Type > > >
-    res(new map< std::tuple< const Contig_Entry*, bool >, std::tuple< unsigned int, Size_Type, Size_Type > >());
+    map< std::tuple< Contig_Entry_CBPtr, bool >, std::tuple< unsigned int, Size_Type, Size_Type > > res;
     //unsigned int support = 0;
+    auto out_chunks_cont = out_chunks_dir(c_right, unmappable_policy);
     for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
     {
         Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
-        if ((not dir and not rc_cptr->get_c_start() == 0)
-                or (dir and not rc_cptr->get_c_end() == get_len()))
+        if ((not c_right and not rc_cptr->get_c_start() == 0)
+                or (c_right and not rc_cptr->get_c_end() == get_len()))
         {
             continue;
         }
-        Read_Chunk_CPtr rc_next_cptr = rc_cptr->get_re_ptr()->get_sibling(rc_cptr, dir != rc_cptr->get_rc());
+        Read_Chunk_CPtr rc_next_cptr = rc_cptr->get_re_ptr()->get_sibling(rc_cptr, c_right != rc_cptr->get_rc());
         Size_Type skipped_len = 0;
         if (rc_next_cptr != NULL and skip_unmappable and rc_next_cptr->is_unmappable())
         {
             skipped_len = rc_next_cptr->get_r_len();
-            rc_next_cptr = rc_next_cptr->get_re_ptr()->get_sibling(rc_next_cptr, dir != rc_cptr->get_rc());
+            rc_next_cptr = rc_next_cptr->get_re_ptr()->get_sibling(rc_next_cptr, c_right != rc_cptr->get_rc());
         }
         if (rc_next_cptr == NULL or rc_next_cptr->is_unmappable())
         {
@@ -316,7 +332,9 @@ Contig_Entry::get_neighbours(bool dir, bool skip_unmappable, bool trim_results) 
     }
     return res;
 }
+*/
 
+/*
 vector< Mutation_CPtr > Contig_Entry::get_separated_het_mutations(
     size_t min_support_report, Size_Type min_separation) const
 {

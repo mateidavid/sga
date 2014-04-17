@@ -214,7 +214,7 @@ void Read_Chunk_Pos::decrement(Size_Type brk, bool on_contig)
     }
 }
 
-void Read_Chunk_Pos::jump_to_brk(Size_Type brk, bool on_contig)
+Read_Chunk_Pos& Read_Chunk_Pos::jump_to_brk(Size_Type brk, bool on_contig)
 {
     ASSERT(check());
     ASSERT(not on_contig or (rc_cptr->get_c_start() <= brk and brk <= rc_cptr->get_c_end()));
@@ -226,6 +226,7 @@ void Read_Chunk_Pos::jump_to_brk(Size_Type brk, bool on_contig)
     {
         advance(forward, brk, on_contig);
     }
+    return *this;
 }
 
 bool Read_Chunk_Pos::advance_til_mut(const Mutation& mut, bool forward)
@@ -470,36 +471,6 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
         }
     }
 }
-
-/*
-std::tuple< bool, shared_ptr< Read_Chunk > > Read_Chunk::split(
-    Size_Type c_brk, const map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr)
-{
-    // compute read chunk position corresponding to a contig cut at c_brk
-
-    else
-    {
-        // read chunk gets split in 2
-        ASSERT(get_r_start() < pos.r_pos and pos.r_pos < get_r_end());
-        ASSERT(get_c_start() <= pos.c_pos and pos.c_pos <= get_c_end());
-
-        // create new read chunk for second part of the contig
-        shared_ptr< Read_Chunk > rc_sptr(new Read_Chunk());
-
-        // transfer mutations starting at i (to values under mapping) to read chunk for contig rhs
-        for (size_t j = pos.mut_idx; j < _mut_ptr_cont.size(); ++j)
-        {
-            ASSERT(mut_cptr_map.count(_mut_ptr_cont[j]) > 0);
-            rc_sptr->_mut_ptr_cont.push_back(mut_cptr_map.find(_mut_ptr_cont[j])->second);
-        }
-
-        // drop transfered mutations from this chunk
-        _mut_ptr_cont.resize(pos.mut_idx);
-
-        return std::make_tuple(false, rc_sptr);
-    }
-}
-*/
 
 Read_Chunk_BPtr
 Read_Chunk::collapse_mapping(Read_Chunk_BPtr c1rc1_cbptr, Read_Chunk_BPtr rc1rc2_cbptr,
@@ -873,22 +844,79 @@ void Read_Chunk::cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bp
     Read_Chunk_Fact::del_elem(rc_next_bptr);
 }
 
-/*
-void Read_Chunk::rebase(const Contig_Entry* ce_cptr, const Mutation_Trans_Cont& mut_map, Size_Type prefix_len)
+tuple< Size_Type, Size_Type >
+Read_Chunk::mapped_range(Size_Type rg_start, Size_Type rg_end, bool on_contig,
+                         bool rg_start_maximal, bool rg_end_maximal) const
 {
-    _ce_ptr = ce_cptr;
-    _c_start += prefix_len;
-    vector< Mutation_CPtr > old_mut_cptr_cont = _mut_ptr_cont;
-    _mut_ptr_cont.clear();
-    for (auto old_mut_cptr_it = old_mut_cptr_cont.begin(); old_mut_cptr_it != old_mut_cptr_cont.end(); ++old_mut_cptr_it)
+    ASSERT(rg_start <= rg_end);
+    ASSERT(not on_contig or (get_c_start() <= rg_start and rg_end <= get_c_end()));
+    ASSERT(on_contig or (get_r_start() <= rg_start and rg_end <= get_r_end()));
+    // compute range endpoints in contig order
+    Size_Type rg_endpoint_c_left;
+    Size_Type rg_endpoint_c_right;
+    bool rg_endpoint_c_left_maximal;
+    bool rg_endpoint_c_right_maximal;
+    if (on_contig or not get_rc())
     {
-        Mutation_CPtr old_mut_cptr = *old_mut_cptr_it;
-        ASSERT(mut_map.count(old_mut_cptr) == 1);
-        Mutation_Trans_Cont::const_iterator it = mut_map.find(old_mut_cptr);
-        _mut_ptr_cont.push_back(it->new_mut_cptr);
+        rg_endpoint_c_left = rg_start;
+        rg_endpoint_c_right = rg_end;
+        rg_endpoint_c_left_maximal = rg_start_maximal;
+        rg_endpoint_c_right_maximal = rg_end_maximal;
     }
+    else
+    {
+        rg_endpoint_c_left = rg_end;
+        rg_endpoint_c_right = rg_start;
+        rg_endpoint_c_left_maximal = rg_end_maximal;
+        rg_endpoint_c_right_maximal = rg_start_maximal;
+    }
+    // compute map start position
+    auto start_pos = get_start_pos().jump_to_brk(rg_endpoint_c_left, on_contig);
+    if (not rg_endpoint_c_left_maximal and start_pos.get_match_len() == 0)
+    {
+        // incorporate mutation if range position doesn't change
+        auto next_pos = start_pos;
+        next_pos.increment();
+        if (on_contig? next_pos.c_pos == start_pos.c_pos : next_pos.r_pos == start_pos.r_pos)
+        {
+            start_pos = next_pos;
+        }
+    }
+    // compute map end position
+    auto end_pos = get_end_pos().jump_to_brk(rg_endpoint_c_right, on_contig);
+    if (not rg_endpoint_c_right_maximal and end_pos.get_match_len() == 0)
+    {
+        // incorporate mutation if range position doesn't change
+        auto next_pos = end_pos;
+        next_pos.decrement();
+        if (on_contig? next_pos.c_pos == end_pos.c_pos : next_pos.r_pos == end_pos.r_pos)
+        {
+            end_pos = next_pos;
+        }
+    }
+    Size_Type ret_rg_start;
+    Size_Type ret_rg_end;
+    if (on_contig)
+    {
+        if (not get_rc())
+        {
+            ret_rg_start = start_pos.r_pos;
+            ret_rg_end = end_pos.r_pos;
+        }
+        else
+        {
+            ret_rg_start = end_pos.r_pos;
+            ret_rg_end = start_pos.r_pos;
+        }
+    }
+    else // not on_contig
+    {
+        ret_rg_start = start_pos.c_pos;
+        ret_rg_end = end_pos.c_pos;
+    }
+    ASSERT(ret_rg_start <= ret_rg_end or (rg_start == rg_end and not rg_start_maximal and not rg_end_maximal));
+    return std::make_tuple(ret_rg_start, ret_rg_end);
 }
-*/
 
 Seq_Type Read_Chunk::get_seq() const
 {

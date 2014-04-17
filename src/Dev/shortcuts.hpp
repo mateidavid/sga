@@ -39,8 +39,8 @@
 #define USING_ITERATORS(_type) \
     using _type::size; \
     using _type::empty; \
-    using _type::iterator; \
-    using _type::const_iterator; \
+    using typename _type::iterator; \
+    using typename _type::const_iterator; \
     using _type::begin; \
     using _type::end; \
     using _type::rbegin; \

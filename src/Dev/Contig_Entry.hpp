@@ -107,18 +107,6 @@ public:
      */
     void cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size_Type r_offset);
 
-    /** Add mutation to container if it doesn't already exists.
-     * @param m Mutation to look for.
-     * @return Pointer to mutation.
-     */
-    //Mutation_CPtr add_mutation(const Mutation& m) { return add_mut_to_cont(_mut_cont, m); }
-
-    /** Get chunks which contain a given mutation.
-     * @param mut_cptr Pointer to mutation.
-     * @return Vector of pointers to chunks that have this mutation.
-     */
-    //std::vector< Read_Chunk_CPtr > get_chunks_with_mutation(const Mutation* mut_cptr) const;
-
     /** Reverse the contig. */
     void reverse();
 
@@ -129,22 +117,42 @@ public:
      */
     //std::tuple< size_t, size_t, size_t, size_t > get_out_degrees() const;
 
-    /** Retrieve read chunks completely spanning the given interval.
-     * @param start Start of the interval, 0-based, closed.
-     * @param end End of the interval, 0-based, open.
-     */
-    //std::shared_ptr< std::vector< Read_Chunk_CPtr > > get_chunks_spanning_pos(Size_Type start, Size_Type end) const;
-
     /** Retrieve chunks leaving contig.
+     * For every chunk rc leaving the contig in the specified direction,
+     * and whose sibling chunk rc' is unmappable, the following policies are available:
+     * 0: skip such rc;
+     * 1: ignore issue: each such rc will appear in a bucket on its own;
+     * 2: collect all such rc in a special bucket with key (NULL, false);
+     * 3: skip unmappable chunks: instead of rc', continue traversing the read
+     * and use the next mappable chunk instead.
      * @param c_right Bool; true: spanning past contig end, false: spanning past contig start.
-     * @param skip_next_unmappable Bool; true: ignore chunks whose next chunk is unmappable.
+     * @param unmappable_policy See above.
+     * @param ignore_threshold Ignore contigs&orientations supported by that many
+     * chunks or less (0 means nothing is ignored).
      * @return A map containing, for each Contig_Entry and orientation,
      * a list of Read_Chunk objects whose sibling is in that Contig_Entry and has the same orientation;
      * two chunks have the same orientation if they are both mapped to the positive or negative
      * strand of their respective contigs.
      */
     std::map< std::tuple< Contig_Entry_CBPtr, bool >, std::vector< Read_Chunk_CBPtr > >
-    out_chunks_dir(bool c_right, bool skip_next_unmappable = true) const;
+    out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_threshold = 0) const;
+
+    /** Compute the min and max unmappable regions neighbouring this contig.
+     * Given a set of chunks leaving the contig in the given direction,
+     * compute the minimum and maximum unmappable sibling chunks.
+     * Pre: Chunks must exit the contig in the given direction.
+     * Pre: After skipping unmappable chunks, each chunk must eventually
+     * have a sibling mappable chunk before the end of the read.
+     * NOTE: This method does not assume the chunks eventually lead
+     * into the same neighbour contig.
+     * NOTE: This method is only be useful when chunk_cont is one of the
+     * vectors returned by out_chunks_dir() under unmappable policy 3.
+     * @param c_right Bool; true: spanning past contig end, false: spanning past contig start.
+     * @param chunk_cont Container of chunks leaving the contig in direction c_right.
+     * @return (Minimum, maximum) unmappable regions.
+     */
+    std::tuple< Size_Type, Size_Type >
+    unmappable_neighbour_range(bool c_right, const std::vector< Read_Chunk_CBPtr >& chunk_cont) const;
 
     /** Check if contig is catenable with a single other contig in the given direction.
      * @param c_right Bool; true: merge past contig end, false: merge past contig start.
