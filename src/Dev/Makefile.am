@@ -3,7 +3,7 @@
 # Setting target-specific C(XX)FLAGS or LDFLAGS disables the use of the corresponding default.
 AM_CXXFLAGS += -std=c++0x
 
-noinst_PROGRAMS = bloom-filter-tool mac test-itree-and-factory
+noinst_PROGRAMS = bloom-filter-tool mac test-itree-and-factory test-log
 noinst_LTLIBRARIES = libmac.la libdev.la
 
 bloom_filter_tool_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
@@ -66,3 +66,7 @@ test_itree_and_factory_CPPFLAGS = -I$(top_srcdir)/boost-intrusive/include -I$(to
 test_itree_and_factory_CXXFLAGS = $(AM_CXXFLAGS) -Wno-ignored-qualifiers
 test_itree_and_factory_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
 test_itree_and_factory_LDADD = $(BOOST_PROGRAM_OPTIONS_LIBS)
+
+test_log_SOURCES = test-log.cpp Log.cpp
+test_log_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
+test_log_LDADD = $(BOOST_PROGRAM_OPTIONS_LIBS)
