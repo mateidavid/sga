@@ -1554,15 +1554,12 @@ void Graph::dump_detailed_counts(ostream& os) const
             total_mut_bp += mut_cbptr->get_len() + mut_cbptr->get_seq_len();
         }
         os << n_snp << '\t' << n_ins << '\t' << n_del << '\t' << n_mnp << '\t' << total_mut_bp << '\t';
-        //TODO
-        /*
         size_t cnt_0;
         size_t uniq_0;
         size_t cnt_1;
         size_t uniq_1;
-        std::tie(cnt_0, uniq_0, cnt_1, uniq_1) = ce_cbptr->get_out_degrees();
+        std::tie(cnt_0, uniq_0, cnt_1, uniq_1) = ce_cbptr->get_out_degrees(1);
         os << cnt_0 << '\t' << uniq_0 << '\t' << cnt_1 << '\t' << uniq_1 << '\t';
-        */
         os << (int)ce_cbptr->is_unmappable() << '\t';
         if (ce_cbptr->is_unmappable())
         {
