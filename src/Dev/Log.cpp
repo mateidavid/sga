@@ -12,5 +12,6 @@ namespace detail
 {
 
 map< string, Log::Level > Log::_level;
+Log::Level Log::_default_level = Log::error;
 
 } // namespace detail
