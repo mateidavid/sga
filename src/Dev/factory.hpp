@@ -195,6 +195,17 @@ bool operator == (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs,
 {
     return lhs._id == rhs._id;
 }
+template <class LHS_T, class Other_Base_Ptr>
+bool operator == (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs, std::nullptr_t)
+{
+    return lhs == Bounded_Pointer< LHS_T, Other_Base_Ptr >(nullptr);
+}
+template <class RHS_T, class Other_Base_Ptr>
+bool operator == (std::nullptr_t,
+                  const Bounded_Pointer< RHS_T, Other_Base_Ptr >& rhs)
+{
+    return Bounded_Pointer< RHS_T, Other_Base_Ptr >(nullptr) == rhs;
+}
 template <class LHS_T, class RHS_T, class Other_Base_Ptr>
 bool operator < (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs,
                  const Bounded_Pointer< RHS_T, Other_Base_Ptr >& rhs)
@@ -206,6 +217,16 @@ bool operator != (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs,
                   const Bounded_Pointer< RHS_T, Other_Base_Ptr >& rhs)
 {
     return !(lhs == rhs);
+}
+template <class LHS_T, class Other_Base_Ptr>
+bool operator != (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs, std::nullptr_t)
+{
+    return !(lhs == nullptr);
+}
+template <class RHS_T, class Other_Base_Ptr>
+bool operator != (std::nullptr_t, const Bounded_Pointer< RHS_T, Other_Base_Ptr >& rhs)
+{
+    return !(nullptr == rhs);
 }
 template <class T, class Base_Ptr>
 std::ostream& operator <<(std::ostream& os, const Bounded_Pointer< T, Base_Ptr >& rhs)

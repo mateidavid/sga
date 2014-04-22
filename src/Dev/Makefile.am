@@ -31,8 +31,9 @@ bloom_filter_tool_SOURCES = bloom-filter-tool.cpp
 libdev_la_SOURCES = kmer_gen.cpp
 
 libmac_la_SOURCES = \
-	globals.cpp \
-	global_assert.cpp \
+        globals.cpp \
+        global_assert.cpp \
+        Log.cpp \
         Mutation_Chunk_Adapter.cpp \
         Mutation.cpp \
         Mutation_Cont.cpp \
@@ -52,9 +53,9 @@ mac_CPPFLAGS = -I$(top_srcdir)/boost-intrusive/include -I$(top_srcdir)/interval-
 mac_CXXFLAGS = $(AM_CXXFLAGS) -Wno-ignored-qualifiers
 mac_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LDFLAGS)
 mac_LDADD = libmac.la \
-	$(top_builddir)/Util/libutil.a \
-	$(top_builddir)/Thirdparty/libthirdparty.a \
-	$(BOOST_IOSTREAMS_LIBS)
+        $(top_builddir)/Util/libutil.a \
+        $(top_builddir)/Thirdparty/libthirdparty.a \
+        $(BOOST_IOSTREAMS_LIBS)
 
 #test_read_chunk_traversal_SOURCES = test_read_chunk_traversal.cpp
 #test_read_chunk_traversal_LDADD = libmac.la \

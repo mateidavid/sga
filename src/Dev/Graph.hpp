@@ -120,19 +120,17 @@ private:
      * NOTE: A cut must be forced iff it is at the edge of a read.
      * @param re_bptr Read_Entry to cut.
      * @param r_brk Cut coordinate in read.
-     * @param force False: enough to cut Read_Chunk only; True: always cut underlying Contrig_Entry.
      * @return True iff a cut was made.
      */
-    bool cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk, bool force);
+    bool cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk);
 
     /** Cut Read_Chunk at given read coordinate.
      * NOTE: A cut must be forced iff it is at the edge of a read chunk.
      * @param rc_bptr Read_Chunk to cut.
      * @param r_brk Cut coordinate in read.
-     * @param force True: always cut underlying Contrig_Entry.
      * @return True iff a cut was made.
      */
-    bool cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk, bool force);
+    bool cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk);
 
     /** Cut Contig_Entry object.
      * @param ce_bptr Contig_Entry to cut.

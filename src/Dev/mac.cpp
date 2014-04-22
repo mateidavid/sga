@@ -10,6 +10,7 @@
 #include "Graph.hpp"
 #include "indent.hpp"
 #include "ixstream.hpp"
+#include "Log.hpp"
 
 using namespace std;
 using namespace MAC;
@@ -24,7 +25,7 @@ int main(int argc, char* argv[])
 {
     global::program_name = argv[0];
     char c;
-    while ((c = getopt(argc, argv, "i:x:y:segGpc:u:l:M:U:")) != -1)
+    while ((c = getopt(argc, argv, "i:x:y:segGpc:u:l:M:U:d:")) != -1)
     {
         istringstream optarg_s(optarg != NULL? optarg : "");
         switch (c) {
@@ -66,6 +67,13 @@ int main(int argc, char* argv[])
                 break;
             case 'U':
                 global::unmappable_contigs_file = optarg;
+                break;
+            case 'd':
+                {
+                    int tmp;
+                    optarg_s >> tmp;
+                    ::detail::Log::default_level() = static_cast< ::detail::Log::Level >(tmp);
+                }
                 break;
             default:
                 cerr << "unrecognized option: " << c << endl;

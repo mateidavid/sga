@@ -5,6 +5,9 @@
 #include "indent.hpp"
 #include "print_seq.hpp"
 #include "../Util/Util.h"
+#include "Log.hpp"
+
+#define LOG_FACILITY "graph"
 
 using namespace std;
 
@@ -14,6 +17,8 @@ namespace MAC
 
 void Graph::add_read(string&& name, Seq_Type&& seq)
 {
+    log_l(info) << "add_read(name=" << name << ")\n";
+
     // create read entry and place it in container
     Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(std::move(name), seq.size());
     //cerr << indent::tab << "re:\n" << indent::inc << re << indent::dec;
@@ -35,6 +40,11 @@ void Graph::add_read(string&& name, Seq_Type&& seq)
 
 bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
+    log_l(debug) << "cut_contig_entry" << indent::inc
+                 << indent::nl << "ce_bptr=" << *ce_bptr
+                 << indent::nl << "c_brk=" << c_brk
+                 << indent::nl << "mut_left_cbptr=" << *mut_left_cbptr << indent::dec << endl;
+
     // there is nothing to cut if:
     if (// cut is at the start, and no insertion goes to the left
         (c_brk == 0 and mut_left_cbptr == nullptr)
@@ -107,7 +117,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     return true;
 } // cut_contig_entry
 
-bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk, bool force)
+bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
 {
     ASSERT(rc_bptr->get_r_len() > 0);
     ASSERT(rc_bptr->get_r_start() <= r_brk and r_brk <= rc_bptr->get_r_end());
@@ -119,7 +129,6 @@ bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk, bool force)
     if (r_brk == rc_bptr->get_r_start() or r_brk == rc_bptr->get_r_end())
     {
         // cut is at the edge; it must be forced
-        ASSERT(force);
         if ((r_brk == rc_bptr->get_r_start()) == (not rc_bptr->get_rc()))
         {
             // cut if mapping doesn't start on contig start
@@ -156,7 +165,6 @@ bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk, bool force)
     else
     {
         // cut is inside the read chunk; it must not be forced
-        ASSERT(not force);
         ASSERT(rc_bptr->get_r_start() < r_brk and r_brk < rc_bptr->get_r_end());
         bool cut_made = false;
         Read_Chunk::Pos pos = rc_bptr->get_start_pos();
@@ -196,23 +204,21 @@ bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk, bool force)
     }
 } // cut_read_chunk
 
-bool Graph::cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk, bool force)
+bool Graph::cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk)
 {
     if (r_brk == 0 or r_brk == re_bptr->get_len())
     {
         // cut is on the edge of the read; it must be forced
-        ASSERT(force);
         Read_Chunk_BPtr rc_bptr = (r_brk == 0? &*re_bptr->chunk_cont().begin() : &*re_bptr->chunk_cont().rbegin());
-        return cut_read_chunk(rc_bptr, r_brk, true);
+        return cut_read_chunk(rc_bptr, r_brk);
     }
     else
     {
         // cut is inside the read, it must not be forced
-        ASSERT(not force);
         Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(r_brk).unconst();
         // the chunk to be cut must exist
         ASSERT(rc_bptr->get_r_start() <= r_brk and r_brk < rc_bptr->get_r_end());
-        return cut_read_chunk(rc_bptr, r_brk, false);
+        return cut_read_chunk(rc_bptr, r_brk);
     }
 }
 
@@ -498,7 +504,7 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
                 }
                 else
                 {
-                    cut_read_entry(re2_bptr, cigar.get_qr_offset(op_end), false);
+                    cut_read_entry(re2_bptr, cigar.get_qr_offset(op_end));
                     done = false;
                     break;
                 }
@@ -538,7 +544,7 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
                 }
                 else
                 {
-                    cut_read_entry(re1_bptr, cigar.get_rf_offset(op_end), false);
+                    cut_read_entry(re1_bptr, cigar.get_rf_offset(op_end));
                     done = false;
                     break;
                 }
@@ -582,6 +588,15 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
                         Size_Type r2_start, Size_Type r2_len, bool r2_rc,
                         const string& cigar_string)
 {
+    log_l(info) << "add_overlap(r1_name=" << r1_name
+                << ",r2_name" << r2_name
+                << ",r1_start=" << r1_start
+                << ",r1_len=" << r1_len
+                << ",r2_start=" << r2_start
+                << ",r2_len=" << r2_len
+                << ",r2_rc=" << r2_rc
+                << ",cigar=" << cigar_string << ")\n";
+
     // construct cigar object
     Cigar cigar(cigar_string, r2_rc, r1_start, r2_start);
     ASSERT(r1_len == cigar.get_rf_len());
@@ -614,21 +629,22 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
 
     string r1_seq = re1_bptr->get_seq();
     string r2_seq = re2_bptr->get_seq();
-    /*
-    cerr << indent::tab << "adding overlap:" << indent::inc
-         << indent::nl << "re1: " << r1_seq.substr(r1_start, r1_len)
-         << indent::nl << "re2: " << (not cigar.is_reversed()? r2_seq.substr(r2_start, r2_len) : reverseComplement(r2_seq.substr(r2_start, r2_len)))
-         << indent::nl << "initial cigar:\n" << indent::inc << cigar << indent::dec;
-    */
+    log_l(debug) << indent::tab << "adding overlap:" << indent::inc
+                 << indent::nl << "re1: " << r1_seq.substr(r1_start, r1_len)
+                 << indent::nl << "re2: " << (not cigar.is_reversed()?
+                                              r2_seq.substr(r2_start, r2_len)
+                                              : reverseComplement(r2_seq.substr(r2_start, r2_len)))
+                 << indent::nl << "initial cigar:\n" << indent::inc << cigar << indent::dec;
+
     cigar.disambiguate(r1_seq.substr(r1_start, r1_len), r2_seq.substr(r2_start, r2_len));
-    //cerr << indent::tab << "disambiguated cigar:\n" << indent::inc << cigar << indent::dec << indent::dec;
+    log_l(debug) << indent::tab << "disambiguated cigar:\n" << indent::inc << cigar << indent::dec << indent::dec;
 
     // cut r1 & r2 at the ends of the match region
     // NOTE: unmappable chunks are never cut
-    cut_read_entry(re1_bptr, r1_start, true);
-    cut_read_entry(re1_bptr, r1_start + r1_len, true);
-    cut_read_entry(re2_bptr, r2_start, true);
-    cut_read_entry(re2_bptr, r2_start + r2_len, true);
+    cut_read_entry(re1_bptr, r1_start);
+    cut_read_entry(re1_bptr, r1_start + r1_len);
+    cut_read_entry(re2_bptr, r2_start);
+    cut_read_entry(re2_bptr, r2_start + r2_len);
 
     auto rc_mapping = chunker(re1_bptr, re2_bptr, cigar);
 
@@ -834,7 +850,7 @@ void Graph::unmap_regions(Read_Entry_BPtr re_bptr, const Range_Cont< Size_Type >
         }
         else if (rc_bptr->get_r_start() < rg_r_start)
         {
-            cut_read_chunk(rc_bptr, rg_r_start, (rg_r_start == 0 or rg_r_start == re_bptr->get_len()));
+            cut_read_chunk(rc_bptr, rg_r_start);
             rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg_r_start).unconst();
             ASSERT(rc_bptr->get_r_start() == rg_r_start);
         }
@@ -853,7 +869,7 @@ void Graph::unmap_regions(Read_Entry_BPtr re_bptr, const Range_Cont< Size_Type >
                 // if chunk contains the region end, we cut it first
                 if (rg_r_end < rc_bptr->get_r_end())
                 {
-                    cut_read_chunk(rc_bptr, rg_r_end, (rg_r_end == 0 or rg_r_end == re_bptr->get_len()));
+                    cut_read_chunk(rc_bptr, rg_r_end);
                     rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(pos).unconst();
                     ASSERT(rc_bptr->get_r_start() == pos and rc_bptr->get_r_end() == rg_r_end);
                 }
