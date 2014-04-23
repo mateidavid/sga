@@ -12,6 +12,9 @@
 #include "print_seq.hpp"
 #include "indent.hpp"
 #include "../Util/Util.h"
+#include "Log.hpp"
+
+#define LOG_FACILITY "Read_Chunk"
 
 using namespace std;
 
@@ -345,6 +348,11 @@ Read_Chunk::make_relative_chunk(Read_Chunk_CBPtr rc1_cbptr,
 std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >
 Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
+    log_l(debug1) << ptree().put("tag", "split()")
+                            .put_child("rc", (*rc_bptr).to_ptree())
+                            .put("c_brk", c_brk)
+                            .put_child("mut_left", (*mut_left_cbptr).to_ptree());
+
     ASSERT(rc_bptr->is_unlinked());
     ASSERT(mut_left_cbptr == nullptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
     Read_Chunk_BPtr left_rc_bptr = nullptr;
@@ -1029,6 +1037,37 @@ ostream& operator << (ostream& os, const Read_Chunk& rhs)
     print_seq(os, rhs._mut_ptr_cont, indent::nl, indent::tab, '\n');
     os << indent::dec << indent::dec << indent::tab << ")\n";
     return os;
+}
+
+boost::property_tree::ptree Read_Chunk_Pos::to_ptree() const
+{
+    boost::property_tree::ptree pt;
+    pt.put("c_pos", c_pos);
+    pt.put("r_pos", r_pos);
+    pt.put("mut_offset", mut_offset);
+    pt.put_child("mut", mut().to_ptree());
+    return pt;
+}
+
+boost::property_tree::ptree Read_Chunk::to_ptree() const
+{
+    boost::property_tree::ptree pt;
+    pt.put("re_bptr", re_bptr().to_int());
+    pt.put("ce_bptr", ce_bptr().to_int());
+    pt.put("is_unmappable", is_unmappable());
+    pt.put("r_start", get_r_start());
+    pt.put("r_len", get_r_len());
+    pt.put("c_start", get_c_start());
+    pt.put("c_len", get_c_len());
+    pt.put("rc", get_rc());
+    pt.put_child("mut_ptr_cont", cont_to_ptree(mut_ptr_cont()));
+    pt.put("re_parent", _re_parent.to_int());
+    pt.put("re_l_child", _re_l_child.to_int());
+    pt.put("re_r_child", _re_r_child.to_int());
+    pt.put("ce_parent", _ce_parent.to_int());
+    pt.put("ce_l_child", _ce_l_child.to_int());
+    pt.put("ce_r_child", _ce_r_child.to_int());
+    return pt;
 }
 
 } // namespace MAC

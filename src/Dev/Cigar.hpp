@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <boost/property_tree/ptree.hpp>
 #include "MAC_forward.hpp"
 
 
@@ -21,6 +22,7 @@ struct Cigar_Op
     Size_Type rf_offset;
     Size_Type qr_offset;
     char op;
+    boost::property_tree::ptree to_ptree() const;
 };
 
 /** Cigar string holder. */
@@ -187,6 +189,7 @@ public:
     bool operator == (const Cigar& rhs);
 
     friend std::ostream& operator << (std::ostream& os, const Cigar& rhs);
+    boost::property_tree::ptree to_ptree() const;
 
 private:
     std::vector< Cigar_Op > _op_vect;

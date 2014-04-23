@@ -33,7 +33,7 @@ public:
     /** Constructor: initialize buffer. */
     Log(const std::string& facility, Level msg_level)
     {
-        *this << facility << "." << int(msg_level) << ": ";
+        *this << "= " << facility << "." << int(msg_level) << ": ";
     }
 
     /** Destructor: dump buffer to output. */

@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <cstdlib>
+#include <boost/property_tree/json_parser.hpp>
 
 #include "indent.hpp"
 #include "print_seq.hpp"
@@ -260,6 +261,7 @@ ostream& operator << (ostream& os, const Cigar_Op& rhs)
 
 ostream& operator << (ostream& os, const Cigar& rhs)
 {
+    /*
     os << indent::tab << "(Cigar" << indent::inc
        << indent::nl << "rf_start=" << rhs._rf_start << ",rf_len=" << rhs._rf_len
        << indent::nl << "qr_start=" << rhs._qr_start << ",qr_len=" << rhs._qr_len
@@ -267,7 +269,32 @@ ostream& operator << (ostream& os, const Cigar& rhs)
        << indent::nl << "ops:" << indent::inc << '\n';
     print_seq(os, rhs._op_vect, indent::nl, indent::tab, '\n');
     os << indent::dec << indent::dec << indent::tab << ")\n";
+    */
+    boost::property_tree::write_json(os, rhs.to_ptree(), false);
     return os;
+}
+
+boost::property_tree::ptree Cigar_Op::to_ptree() const
+{
+    boost::property_tree::ptree pt;
+    ostringstream tmp;
+    tmp << len << op;
+    pt.put("op", tmp.str());
+    pt.put("rf_offset", rf_offset);
+    pt.put("qr_offset", qr_offset);
+    return pt;
+}
+
+boost::property_tree::ptree Cigar::to_ptree() const
+{
+    boost::property_tree::ptree pt;
+    pt.put("rf_start", get_rf_start());
+    pt.put("rf_len", get_rf_len());
+    pt.put("qr_start", get_qr_start());
+    pt.put("qr_len", get_qr_len());
+    pt.put("rc", is_reversed());
+    pt.put_child("ops", cont_to_ptree(_op_vect));
+    return pt;
 }
 
 } // namespace MAC

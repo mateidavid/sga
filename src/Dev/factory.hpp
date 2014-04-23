@@ -1,6 +1,8 @@
 #ifndef __FACTORY_HPP
 #define __FACTORY_HPP
 
+#include "shortcuts.hpp" // needed before other includes for is_convertible fix
+
 #include <cstddef>
 #include <iostream>
 #include <deque>
@@ -9,9 +11,10 @@
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/logical.hpp>
 #include <boost/utility/enable_if.hpp>
-#include <typeinfo>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/tti/tti.hpp>
+//#include <typeinfo>
 
-#include "shortcuts.hpp"
 #include "global_assert.hpp"
 #include "nonconst_methods.hpp"
 
@@ -163,6 +166,7 @@ public:
 
     // get raw pointer
     val_type* raw() const { return &_id.dereference(); }
+    size_t to_int() const { return static_cast< size_t >(_id._ptr); }
 
     operator bool() const { return this->_id; }
     Bounded_Pointer& operator ++ () { ++(this->_id)._ptr; return *this; }
@@ -171,6 +175,13 @@ public:
     // dereferencing operators
     ref_type operator * () const { return ref_type(_id); }
     real_ptr_type operator -> () const { return &_id.dereference(); }
+
+    boost::property_tree::ptree to_ptree() const
+    {
+        boost::property_tree::ptree pt;
+        pt.put("bptr", _id._ptr);
+        return pt;
+    }
 
 private:
     friend class Bounded_Reference< val_type, Base_Ptr >;
@@ -236,6 +247,24 @@ std::ostream& operator <<(std::ostream& os, const Bounded_Pointer< T, Base_Ptr >
     return os;
 }
 
+template < typename T, bool = false >
+struct to_ptree_caller_impl
+{
+    static void call(boost::property_tree::ptree&, const T&) {}
+};
+template < typename T >
+struct to_ptree_caller_impl< T, true >
+{
+    static void call(boost::property_tree::ptree& pt, const T& val)
+    {
+        pt.put_child("deref", val.to_ptree());
+    }
+};
+BOOST_TTI_HAS_MEMBER_FUNCTION(to_ptree)
+template < typename T >
+struct to_ptree_caller
+    : public to_ptree_caller_impl< T, has_member_function_to_ptree< const T, boost::property_tree::ptree >::value > {};
+
 /** Bounded Reference. */
 template <class T, class Base_Ptr = uint32_t>
 class Bounded_Reference
@@ -243,6 +272,7 @@ class Bounded_Reference
 private:
     typedef typename std::is_void< T > is_void_t; // true_type iff T is (cv-) void
     typedef typename std::is_const< T > is_const_t; // true_type iff T is const-qualified
+    typedef to_ptree_caller< T > to_ptree_caller_t;
     static_assert(not is_void_t::value, "Bounded_Reference instantiated with void type");
     //template <int val> struct enabler {};
 public:
@@ -304,6 +334,17 @@ public:
     */
     { _id.dereference() = rhs._id.dereference(); return *this; }
 
+    boost::property_tree::ptree to_ptree() const
+    {
+        boost::property_tree::ptree pt;
+        pt.put("baddr", _id._ptr);
+        if (_id._ptr != 0)
+        {
+            to_ptree_caller_t::call(pt, raw());
+        }
+        return pt;
+    }
+
 private:
     friend class Bounded_Pointer< T, Base_Ptr >;
     friend std::ostream& operator << <>(std::ostream&, const Bounded_Reference&);
@@ -316,9 +357,16 @@ private:
 template <class T, class Base_Ptr>
 std::ostream& operator <<(std::ostream& os, const Bounded_Reference< T, Base_Ptr >& rhs)
 {
+    /*
     os << "[Bounded_Reference:&=" << (void*)&rhs._id
-       << ",_ptr=" << rhs._id._ptr
-       << ",deref=" << rhs._id.dereference() << "]";
+       << ",_ptr=" << rhs._id._ptr;
+    */
+    os << "{id=" << rhs._id._ptr;
+    if (&rhs)
+    {
+        os << ",deref=" << rhs._id.dereference();
+    }
+    os << "}";
     return os;
 }
 

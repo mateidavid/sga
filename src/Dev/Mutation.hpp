@@ -8,6 +8,7 @@
 #define __MUTATION_HPP
 
 #include <iostream>
+#include <boost/property_tree/ptree.hpp>
 
 #include "MAC_forward.hpp"
 #include "Read_Chunk_Ptr_Cont.hpp"
@@ -75,7 +76,7 @@ public:
 
 private:
     /** Destructor. */
-    ~Mutation() { ASSERT(is_unlinked()); }
+    //~Mutation() { ASSERT(is_unlinked()); }
 
 public:
     /** @name Getters */
@@ -226,6 +227,7 @@ public:
 
     friend bool operator == (const Mutation&, const Mutation&);
     friend std::ostream& operator << (std::ostream&, const Mutation&);
+    boost::property_tree::ptree to_ptree() const;
 
 private:
     Seq_Type _seq;

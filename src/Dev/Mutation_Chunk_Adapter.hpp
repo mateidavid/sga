@@ -42,7 +42,7 @@ private:
         : _mut_cbptr(mut_cbptr), _chunk_cbptr(chunk_cbptr) {}
 
     /** Check it is unlinked before destruction. */
-    ~Mutation_Chunk_Adapter() { ASSERT(is_unlinked()); }
+    //~Mutation_Chunk_Adapter() { ASSERT(is_unlinked()); }
 
     /** Getters. */
 public:
@@ -52,6 +52,13 @@ public:
     Read_Chunk_CBPtr& chunk_cbptr() { return _chunk_cbptr; }
 
     friend std::ostream& operator << (std::ostream& os, const Mutation_Chunk_Adapter&);
+    boost::property_tree::ptree to_ptree() const
+    {
+        boost::property_tree::ptree pt;
+        pt.put("mut_ptr", mut_cbptr().to_int());
+        pt.put("chunk_ptr", chunk_cbptr().to_int());
+        return pt;
+    }
 
 private:
     Mutation_CBPtr _mut_cbptr;

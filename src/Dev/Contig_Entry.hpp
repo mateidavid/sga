@@ -45,7 +45,7 @@ private:
     DEFAULT_DEF_CTOR(Contig_Entry)
     DELETE_COPY_CTOR(Contig_Entry)
     Contig_Entry(Contig_Entry&& rhs) { *this = std::move(rhs); }
-    ~Contig_Entry() { ASSERT(is_unlinked()); }
+    //~Contig_Entry() { ASSERT(is_unlinked()); }
 public:
     DELETE_COPY_ASOP(Contig_Entry)
     Contig_Entry& operator = (Contig_Entry&& rhs)
@@ -199,6 +199,7 @@ public:
     //bool check_colour(bool dir) const;
 
     friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
+    boost::property_tree::ptree to_ptree() const;
 
 private:
     Seq_Type _seq;

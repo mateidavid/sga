@@ -444,11 +444,24 @@ ostream& operator << (ostream& os, const Contig_Entry& rhs)
        << indent::nl << "mut_cont:"
        << indent::inc << '\n';
     print_seq(os, rhs._mut_cont, indent::nl, indent::tab, '\n');
-    os << indent::dec << indent::tab << "chunk_cptr_cont:"
+    os << indent::dec << indent::tab << "chunk_cont:"
        << indent::inc << '\n';
     print_seq(os, rhs._chunk_cont, indent::nl, indent::tab, '\n');
     os << indent::dec << indent::dec << indent::tab << ")" << '\n';
     return os;
+}
+
+boost::property_tree::ptree Contig_Entry::to_ptree() const
+{
+    boost::property_tree::ptree pt;
+    pt.put("addr", (void*)this);
+    pt.put("seq", seq());
+    pt.put("seq_len", get_len());
+    pt.put("col", colour());
+    pt.put("is_unmappable", is_unmappable());
+    pt.put_child("mut_cont", cont_to_ptree(mut_cont()));
+    pt.put_child("chunk_cont", cont_to_ptree(chunk_cont()));
+    return pt;
 }
 
 } // namespace MAC

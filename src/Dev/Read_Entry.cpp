@@ -76,4 +76,13 @@ ostream& operator << (ostream& os, const Read_Entry& rhs)
     return os;
 }
 
+boost::property_tree::ptree Read_Entry::to_ptree() const
+{
+    boost::property_tree::ptree pt;
+    pt.put("name", get_name());
+    pt.put("len", get_len());
+    pt.put_child("chunk_cont", cont_to_ptree(chunk_cont()));
+    return pt;
+}
+
 }

@@ -7,6 +7,7 @@
 #include "Mutation.hpp"
 
 #include <iostream>
+#include <boost/property_tree/json_parser.hpp>
 #include "../Util/Util.h"
 #include "indent.hpp"
 
@@ -75,9 +76,24 @@ bool operator == (const Mutation& lhs, const Mutation& rhs)
 
 ostream& operator << (ostream& os, const Mutation& rhs)
 {
+    /*
     os << "(Mutation &=" << (void*)&rhs << ", start=" << (size_t)rhs.get_start() << ",len=" << (size_t)rhs.get_len()
        << ",seq_len=" << rhs.get_seq_len() << ",seq=" << rhs.get_seq() << ")";
+    */
+    boost::property_tree::write_json(os, rhs.to_ptree(), false);
     return os;
 }
+
+boost::property_tree::ptree Mutation::to_ptree() const
+{
+    boost::property_tree::ptree pt;
+    pt.put("addr", (void*)this);
+    pt.put("start", get_start());
+    pt.put("len", get_len());
+    pt.put("seq_len", get_seq_len());
+    pt.put("seq", get_seq());
+    return pt;
+}
+
 
 } // namespace MAC

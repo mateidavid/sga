@@ -141,6 +141,7 @@ public:
 
     /** To stream. */
     friend std::ostream& operator << (std::ostream&, const Read_Chunk_Pos&);
+    boost::property_tree::ptree to_ptree() const;
 };
 
 bool operator == (const Read_Chunk_Pos&, const Read_Chunk_Pos&);
@@ -402,6 +403,7 @@ public:
     bool check() const;
 
     friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
+    boost::property_tree::ptree to_ptree() const;
 
 private:
     Read_Entry_BPtr _re_bptr;

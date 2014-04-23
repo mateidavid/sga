@@ -103,6 +103,7 @@ public:
     bool check() const;
 
     friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);
+    boost::property_tree::ptree to_ptree() const;
 
 private:
     std::string _name;
