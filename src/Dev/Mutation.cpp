@@ -75,11 +75,9 @@ bool operator == (const Mutation& lhs, const Mutation& rhs)
 
 ostream& operator << (ostream& os, const Mutation& rhs)
 {
-    /*
     os << "(Mutation &=" << (void*)&rhs << ", start=" << (size_t)rhs.get_start() << ",len=" << (size_t)rhs.get_len()
        << ",seq_len=" << rhs.get_seq_len() << ",seq=" << rhs.get_seq() << ")";
-    */
-    os << rhs.to_ptree();
+    //os << rhs.to_ptree();
     return os;
 }
 

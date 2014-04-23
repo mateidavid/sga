@@ -260,7 +260,6 @@ ostream& operator << (ostream& os, const Cigar_Op& rhs)
 
 ostream& operator << (ostream& os, const Cigar& rhs)
 {
-    /*
     os << indent::tab << "(Cigar" << indent::inc
        << indent::nl << "rf_start=" << rhs._rf_start << ",rf_len=" << rhs._rf_len
        << indent::nl << "qr_start=" << rhs._qr_start << ",qr_len=" << rhs._qr_len
@@ -268,8 +267,7 @@ ostream& operator << (ostream& os, const Cigar& rhs)
        << indent::nl << "ops:" << indent::inc << '\n';
     print_seq(os, rhs._op_vect, indent::nl, indent::tab, '\n');
     os << indent::dec << indent::dec << indent::tab << ")\n";
-    */
-    os << rhs.to_ptree();
+    //os << rhs.to_ptree();
     return os;
 }
 
