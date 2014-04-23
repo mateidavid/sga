@@ -8,7 +8,6 @@
 #define __MUTATION_HPP
 
 #include <iostream>
-#include <boost/property_tree/ptree.hpp>
 
 #include "MAC_forward.hpp"
 #include "Read_Chunk_Ptr_Cont.hpp"
