@@ -22,6 +22,7 @@ struct Value
     Value() = default;
     Value(const Value &) = default;
     Value(Value&&) = delete;
+    ~Value() { ASSERT(is_unlinked()); }
 //public:
     typedef Factory< Value > fact_type;
     typedef fact_type::ptr_type ptr_type;
@@ -37,6 +38,7 @@ struct Value
 
     ptr_type _list_next;
     ptr_type _list_prev;
+    bool is_unlinked() const { return not(_parent or _l_child or _r_child or _list_prev or _list_next); }
 };
 
 typedef Factory< Value > fact_type;
@@ -100,7 +102,7 @@ struct ITree_Value_Traits
     typedef typename node_traits::fact_type::ref_type reference;
     typedef typename node_traits::fact_type::const_ref_type const_reference;
 
-    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::normal_link;
+    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::safe_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
@@ -139,7 +141,7 @@ struct List_Value_Traits
     typedef typename node_traits::fact_type::ref_type reference;
     typedef typename node_traits::fact_type::const_ref_type const_reference;
 
-    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::normal_link;
+    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::safe_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }

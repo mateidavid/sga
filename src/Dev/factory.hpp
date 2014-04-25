@@ -124,7 +124,7 @@ public:
     typedef typename boost::mpl::if_< is_void_t, void, Bounded_Reference< val_type, Base_Ptr > >::type ref_type;
 
     /** Rebinder.
-     * Wrap pointers to T, const T, void, and const void. Anything else gets transformed into a raw pointer.
+     * Wrap pointers to T and const T. Anything else gets transformed into a raw pointer.
      */
     template <class U>
     struct rebind
