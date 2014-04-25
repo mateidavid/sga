@@ -38,7 +38,16 @@ struct Value
 
     ptr_type _list_next;
     ptr_type _list_prev;
+
     bool is_unlinked() const { return not(_parent or _l_child or _r_child or _list_prev or _list_next); }
+    void unlink()
+    {
+        _parent = ptr_type();
+        _l_child = ptr_type();
+        _r_child = ptr_type();
+        _list_prev = ptr_type();
+        _list_next = ptr_type();
+    }
 };
 
 typedef Factory< Value > fact_type;
@@ -55,6 +64,8 @@ ostream& operator <<(ostream& os, const Value& rhs)
        << ",_r_child=" << rhs._r_child
        << ",_col=" << rhs._col
        << ",_max_end=" << rhs._max_end
+       << ",_list_prev=" << rhs._list_prev
+       << ",_list_next=" << rhs._list_next
        << "]";
     return os;
 }
@@ -159,24 +170,24 @@ static_assert(
     >::enabled,
     "Extra data manager is not enabled");
 
-template <class T>
-class delete_disposer
+
+struct Value_Disposer
 {
-public:
-    template <class Pointer>
-    void operator () (Pointer p)
+    fact_type::disposer_type fact_disposer;
+    void operator () (ptr_type p)
     {
-        delete boost::intrusive::detail::to_raw_pointer(p);
+        fact_disposer(p);
     }
 };
 
-template <class T>
-class new_cloner
+struct Value_Cloner
 {
-public:
-    T* operator () (const T& t)
+    fact_type::cloner_type fact_cloner;
+    ptr_type operator () (const Value& orig)
     {
-        return new T(t);
+        ptr_type tmp = fact_cloner(orig);
+        tmp->unlink();
+        return tmp;
     }
 };
 
@@ -288,7 +299,7 @@ void real_main(const Program_Options& po)
             size_t e2 = size_t(drand48() * po.range_max);
             a->_start = min(e1, e2);
             a->_end = max(e1, e2);
-            clog << "adding: " << *a << '\n';
+            clog << "--- adding: " << *a << '\n';
             l.push_back(*a);
             t.insert(*a);
         }
@@ -307,7 +318,7 @@ void real_main(const Program_Options& po)
                 --idx;
             }
             ptr_type a = &*it;
-            clog << "deleting: " << *a << '\n';
+            clog << "--- deleting: " << *a << '\n';
             l.erase(it);
             t.erase(t.iterator_to(*a));
             f.del_elem(a);
@@ -324,7 +335,7 @@ void real_main(const Program_Options& po)
             ptr_type a = f.new_elem();
             a->_start = e1;
             a->_end = e2;
-            clog << "checking intersection with: " << *a << '\n';
+            clog << "--- checking intersection with: " << *a << '\n';
             // first count intersections using list
             size_t res_list = 0;
             for (const auto& v : l)
@@ -364,15 +375,15 @@ void real_main(const Program_Options& po)
         else if (op == 3)
         {
             // check max_end fields in the tree
-            clog << "checking max_end fields\n";
+            clog << "--- checking max_end fields\n";
             check_max_ends(t, f);
         }
         else if (op == 4)
         {
             // clone tree and check
-            clog << "cloning tree of size: " << t.size() << '\n';
+            clog << "--- cloning tree of size: " << t.size() << '\n';
             itree_type t2;
-            t2.clone_from(t, fact_type::cloner_type(), fact_type::disposer_type());
+            t2.clone_from(t, Value_Cloner(), Value_Disposer());
             clog << "checking max_end fields in clone of size: " << t2.size() << '\n';
             check_max_ends(t2, f);
             clog << "destroying clone\n";
