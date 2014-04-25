@@ -54,10 +54,8 @@ public:
     friend std::ostream& operator << (std::ostream& os, const Mutation_Chunk_Adapter&);
     boost::property_tree::ptree to_ptree() const
     {
-        boost::property_tree::ptree pt;
-        pt.put("mut_ptr", mut_cbptr().to_int());
-        pt.put("chunk_ptr", chunk_cbptr().to_int());
-        return pt;
+        return ptree().put("mut_ptr", mut_cbptr().to_ptree())
+                      .put("chunk_ptr", chunk_cbptr().to_ptree());
     }
 
 private:

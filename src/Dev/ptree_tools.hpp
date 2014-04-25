@@ -30,11 +30,6 @@ public:
         boost::property_tree::ptree::put_child(key, pt);
         return *this;
     }
-    ptree& put_child(std::string key, const boost::property_tree::ptree& pt)
-    {
-        boost::property_tree::ptree::put_child(key, pt);
-        return *this;
-    }
 };
 
 template < bool = true >

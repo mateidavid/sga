@@ -11,12 +11,12 @@
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/logical.hpp>
 #include <boost/utility/enable_if.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <boost/tti/tti.hpp>
 //#include <typeinfo>
 
 #include "global_assert.hpp"
 #include "nonconst_methods.hpp"
+#include "ptree_tools.hpp"
 
 
 namespace detail
@@ -178,9 +178,9 @@ public:
 
     boost::property_tree::ptree to_ptree() const
     {
-        boost::property_tree::ptree pt;
-        pt.put("bptr", _id._ptr);
-        return pt;
+        std::ostringstream tmp;
+        tmp << _id._ptr;
+        return boost::property_tree::ptree(tmp.str());
     }
 
 private:
@@ -250,14 +250,14 @@ std::ostream& operator <<(std::ostream& os, const Bounded_Pointer< T, Base_Ptr >
 template < typename T, bool = false >
 struct to_ptree_caller_impl
 {
-    static void call(boost::property_tree::ptree&, const T&) {}
+    static void call(ptree&, const T&) {}
 };
 template < typename T >
 struct to_ptree_caller_impl< T, true >
 {
-    static void call(boost::property_tree::ptree& pt, const T& val)
+    static void call(ptree& pt, const T& val)
     {
-        pt.put_child("deref", val.to_ptree());
+        pt.put("deref", val.to_ptree());
     }
 };
 BOOST_TTI_HAS_MEMBER_FUNCTION(to_ptree)
@@ -336,7 +336,7 @@ public:
 
     boost::property_tree::ptree to_ptree() const
     {
-        boost::property_tree::ptree pt;
+        ptree pt;
         pt.put("baddr", _id._ptr);
         if (_id._ptr != 0)
         {

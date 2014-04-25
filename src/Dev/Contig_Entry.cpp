@@ -453,15 +453,13 @@ ostream& operator << (ostream& os, const Contig_Entry& rhs)
 
 boost::property_tree::ptree Contig_Entry::to_ptree() const
 {
-    boost::property_tree::ptree pt;
-    pt.put("addr", (void*)this);
-    pt.put("seq", seq());
-    pt.put("seq_len", get_len());
-    pt.put("col", colour());
-    pt.put("is_unmappable", is_unmappable());
-    pt.put_child("mut_cont", cont_to_ptree(mut_cont()));
-    pt.put_child("chunk_cont", cont_to_ptree(chunk_cont()));
-    return pt;
+    return ptree().put("addr", (void*)this)
+                  .put("seq", seq())
+                  .put("seq_len", get_len())
+                  .put("col", colour())
+                  .put("is_unmappable", is_unmappable())
+                  .put("mut_cont", cont_to_ptree(mut_cont()))
+                  .put("chunk_cont", cont_to_ptree(chunk_cont()));
 }
 
 } // namespace MAC
