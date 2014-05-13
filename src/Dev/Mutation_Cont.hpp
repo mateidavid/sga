@@ -17,7 +17,7 @@ namespace MAC
 
 struct Mutation_ITree_Node_Traits
 {
-    typedef Holder< Mutation > node;
+    typedef Mutation node;
     typedef Factory< Mutation > fact_type;
     typedef typename fact_type::ptr_type node_ptr;
     typedef typename fact_type::const_ptr_type const_node_ptr;
@@ -50,7 +50,7 @@ struct Mutation_ITree_Value_Traits
     typedef typename node_traits::fact_type::ref_type reference;
     typedef typename node_traits::fact_type::const_ref_type const_reference;
 
-    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::normal_link;
+    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::safe_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
@@ -63,10 +63,14 @@ struct Mutation_ITree_Value_Traits
 };
 
 class Mutation_Cont
-    : private boost::intrusive::itree< Mutation_ITree_Value_Traits >
+    : private boost::intrusive::itree< Mutation,
+                                       boost::intrusive::value_traits< Mutation_ITree_Value_Traits >,
+                                       boost::intrusive::node_allocator_type< Bounded_Allocator< Mutation_Alloc > > >
 {
 private:
-    typedef boost::intrusive::itree< Mutation_ITree_Value_Traits > Base;
+    typedef boost::intrusive::itree< Mutation,
+                                     boost::intrusive::value_traits< Mutation_ITree_Value_Traits >,
+                                     boost::intrusive::node_allocator_type< Bounded_Allocator< Mutation_Alloc > > > Base;
 public:
     // allow move only
     DEFAULT_DEF_CTOR(Mutation_Cont)
