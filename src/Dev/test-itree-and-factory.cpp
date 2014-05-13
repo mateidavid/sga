@@ -8,11 +8,12 @@
 #include "factory.hpp"
 
 using namespace std;
+namespace bi = boost::intrusive;
 
 namespace detail
 {
     //check Boost Intrusive contains hooks to maintain extra data
-    typedef boost::intrusive::detail::extra_data_manager< void > extra_data_manager_check;
+    typedef bi::detail::extra_data_manager< void > extra_data_manager_check;
 }
 
 struct Value
@@ -20,11 +21,13 @@ struct Value
 //private:
 //    friend class Factory< Value >;
     Value() = default;
-    Value(const Value &) = default;
+    Value(const Value& rhs)
+        : _start(rhs._start), _end(rhs._end),
+          _parent(), _l_child(), _r_child(), _list_prev(), _list_next() {}
     Value(Value&&) = delete;
     ~Value() { ASSERT(is_unlinked()); }
 //public:
-    typedef Factory< Value > fact_type;
+    typedef bounded::Factory< Value > fact_type;
     typedef fact_type::ptr_type ptr_type;
 
     size_t _start;
@@ -36,12 +39,12 @@ struct Value
     int _col;
     size_t _max_end;
 
-    ptr_type _list_next;
     ptr_type _list_prev;
+    ptr_type _list_next;
     bool is_unlinked() const { return not(_parent or _l_child or _r_child or _list_prev or _list_next); }
 };
 
-typedef Factory< Value > fact_type;
+typedef bounded::Factory< Value > fact_type;
 typedef fact_type::ptr_type ptr_type;
 typedef fact_type::const_ptr_type const_ptr_type;
 typedef fact_type::ref_type ref_type;
@@ -68,8 +71,8 @@ bool intersect(const Value& lhs, const Value& rhs)
 template <class T>
 struct ITree_Node_Traits
 {
-    typedef Holder< T > node;
-    typedef Factory< T > fact_type;
+    typedef T node;
+    typedef bounded::Factory< T > fact_type;
     typedef typename fact_type::ptr_type node_ptr;
     typedef typename fact_type::const_ptr_type const_node_ptr;
     typedef int color;
@@ -102,7 +105,7 @@ struct ITree_Value_Traits
     typedef typename node_traits::fact_type::ref_type reference;
     typedef typename node_traits::fact_type::const_ref_type const_reference;
 
-    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::safe_link;
+    static const bi::link_mode_type link_mode = bi::safe_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
@@ -118,8 +121,8 @@ struct ITree_Value_Traits
 template <class T>
 struct List_Node_Traits
 {
-    typedef Holder< T > node;
-    typedef Factory< T > fact_type;
+    typedef T node;
+    typedef bounded::Factory< T > fact_type;
     typedef typename fact_type::ptr_type node_ptr;
     typedef typename fact_type::const_ptr_type const_node_ptr;
 
@@ -141,7 +144,7 @@ struct List_Value_Traits
     typedef typename node_traits::fact_type::ref_type reference;
     typedef typename node_traits::fact_type::const_ref_type const_reference;
 
-    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::safe_link;
+    static const bi::link_mode_type link_mode = bi::safe_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
@@ -149,36 +152,21 @@ struct List_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
-typedef boost::intrusive::itree< ITree_Value_Traits< Value > > itree_type;
+typedef bi::itree< Value,
+                   bi::value_traits< ITree_Value_Traits< Value > >,
+                   bi::node_allocator_type< bounded::Static_Allocator< Value > >
+                 > itree_type;
 typedef itree_type::itree_algo itree_algo;
-typedef boost::intrusive::list< Value, boost::intrusive::value_traits< List_Value_Traits< Value > > > list_type;
+typedef bi::list< Value,
+                  bi::value_traits< List_Value_Traits< Value > >,
+                  bi::node_allocator_type< bounded::Static_Allocator< Value > >
+                  > list_type;
 
 static_assert(
-    boost::intrusive::detail::extra_data_manager<
-        boost::intrusive::detail::ITree_Node_Traits < ITree_Value_Traits< Value > >
+    bi::detail::extra_data_manager<
+        bi::detail::ITree_Node_Traits < ITree_Value_Traits< Value > >
     >::enabled,
     "Extra data manager is not enabled");
-
-template <class T>
-class delete_disposer
-{
-public:
-    template <class Pointer>
-    void operator () (Pointer p)
-    {
-        delete boost::intrusive::detail::to_raw_pointer(p);
-    }
-};
-
-template <class T>
-class new_cloner
-{
-public:
-    T* operator () (const T& t)
-    {
-        return new T(t);
-    }
-};
 
 const_ptr_type get_root(itree_type& t)
 {
@@ -265,138 +253,141 @@ void real_main(const Program_Options& po)
     clog << "----- constructing factory\n";
     fact_type f(true);
 
-    clog << "----- constructing itree & list\n";
-    itree_type t;
-    list_type l;
-
-    clog << "----- initializing random number generator\n";
-    srand48(po.seed);
-
-    clog << "----- main loop\n";
-    for (size_t i = 0; i < po.n_ops; ++i)
     {
-        int op = int(drand48()*5);
-        if (op == 0)
+        clog << "----- constructing itree & list\n";
+        itree_type t;
+        list_type l;
+
+        clog << "----- initializing random number generator\n";
+        srand48(po.seed);
+
+        clog << "----- main loop\n";
+        for (size_t i = 0; i < po.n_ops; ++i)
         {
-            // insert new element
-            if (l.size() >= po.max_load)
+            int op = int(drand48()*5);
+            if (op == 0)
             {
-                continue;
+                // insert new element
+                if (l.size() >= po.max_load)
+                {
+                    continue;
+                }
+                ptr_type a = f.new_elem();
+                size_t e1 = size_t(drand48() * po.range_max);
+                size_t e2 = size_t(drand48() * po.range_max);
+                a->_start = min(e1, e2);
+                a->_end = max(e1, e2);
+                clog << "adding: " << *a << '\n';
+                l.push_back(*a);
+                t.insert(*a);
             }
-            ptr_type a = f.new_elem();
-            size_t e1 = size_t(drand48() * po.range_max);
-            size_t e2 = size_t(drand48() * po.range_max);
-            a->_start = min(e1, e2);
-            a->_end = max(e1, e2);
-            clog << "adding: " << *a << '\n';
-            l.push_back(*a);
-            t.insert(*a);
+            else if (op == 1)
+            {
+                // delete existing element
+                if (l.size() == 0)
+                {
+                    continue;
+                }
+                size_t idx = size_t(drand48() * l.size());
+                auto it = l.begin();
+                while (idx > 0)
+                {
+                    ++it;
+                    --idx;
+                }
+                ptr_type a = &*it;
+                clog << "deleting: " << *a << '\n';
+                l.erase(it);
+                t.erase(t.iterator_to(*a));
+                f.del_elem(a);
+            }
+            else if (op == 2)
+            {
+                // compute intersection with some interval
+                size_t e1 = size_t(drand48() * po.range_max);
+                size_t e2 = size_t(drand48() * po.range_max);
+                if (e1 > e2)
+                {
+                    swap(e1, e2);
+                }
+                ptr_type a = f.new_elem();
+                a->_start = e1;
+                a->_end = e2;
+                clog << "checking intersection with: " << *a << '\n';
+                // first count intersections using list
+                size_t res_list = 0;
+                for (const auto& v : l)
+                {
+                    if (intersect(v, *a))
+                    {
+                        ++res_list;
+                    }
+                }
+                // count with iterator range
+                size_t res_iterator_range = 0;
+                for (const auto& r : t.iintersect(e1, e2))
+                {
+                    (void)r;
+                    ++res_iterator_range;
+                }
+                if (res_iterator_range != res_list)
+                {
+                    clog << "wrong intersection with " << *a << '\n';
+                    clog << "factory:\n" << f;
+                    clog << "list:\n";
+                    for (const auto& v : l)
+                    {
+                        clog << v << '\n';
+                    }
+                    clog << "itree:\n";
+                    for (const auto& v : t)
+                    {
+                        clog << v << '\n';
+                    }
+                    print_tree(t);
+                    exit(EXIT_FAILURE);
+                }
+                clog << "intersection ok, size = " << res_list << " / " << l.size() << '\n';
+                f.del_elem(a);
+            }
+            else if (op == 3)
+            {
+                // check max_end fields in the tree
+                clog << "checking max_end fields\n";
+                check_max_ends(t, f);
+            }
+            else if (op == 4)
+            {
+                // clone tree and check
+                clog << "cloning tree of size: " << t.size() << '\n';
+                itree_type t2;
+                t2.clone_from(t); //, fact_type::cloner_type(), fact_type::disposer_type());
+                clog << "checking max_end fields in clone of size: " << t2.size() << '\n';
+                check_max_ends(t2, f);
+                clog << "destroying clone\n";
+                ptr_type tmp;
+                t2.clear_and_dispose();
+            }
+            if (po.print_tree_each_op)
+            {
+                print_tree(t);
+            }
         }
-        else if (op == 1)
+        clog << "----- clearing list\n";
+        /*
+        while (l.size() > 0)
         {
-            // delete existing element
-            if (l.size() == 0)
-            {
-                continue;
-            }
-            size_t idx = size_t(drand48() * l.size());
             auto it = l.begin();
-            while (idx > 0)
-            {
-                ++it;
-                --idx;
-            }
             ptr_type a = &*it;
-            clog << "deleting: " << *a << '\n';
             l.erase(it);
             t.erase(t.iterator_to(*a));
             f.del_elem(a);
         }
-        else if (op == 2)
-        {
-            // compute intersection with some interval
-            size_t e1 = size_t(drand48() * po.range_max);
-            size_t e2 = size_t(drand48() * po.range_max);
-            if (e1 > e2)
-            {
-                swap(e1, e2);
-            }
-            ptr_type a = f.new_elem();
-            a->_start = e1;
-            a->_end = e2;
-            clog << "checking intersection with: " << *a << '\n';
-            // first count intersections using list
-            size_t res_list = 0;
-            for (const auto& v : l)
-            {
-                if (intersect(v, *a))
-                {
-                    ++res_list;
-                }
-            }
-            // count with iterator range
-            size_t res_iterator_range = 0;
-            for (const auto& r : t.interval_intersect(e1, e2))
-            {
-                (void)r;
-                ++res_iterator_range;
-            }
-            if (res_iterator_range != res_list)
-            {
-                clog << "wrong intersection with " << *a << '\n';
-                clog << "factory:\n" << f;
-                clog << "list:\n";
-                for (const auto& v : l)
-                {
-                    clog << v << '\n';
-                }
-                clog << "itree:\n";
-                for (const auto& v : t)
-                {
-                    clog << v << '\n';
-                }
-                print_tree(t);
-                exit(EXIT_FAILURE);
-            }
-            clog << "intersection ok, size = " << res_list << " / " << l.size() << '\n';
-            f.del_elem(a);
-        }
-        else if (op == 3)
-        {
-            // check max_end fields in the tree
-            clog << "checking max_end fields\n";
-            check_max_ends(t, f);
-        }
-        else if (op == 4)
-        {
-            // clone tree and check
-            clog << "cloning tree of size: " << t.size() << '\n';
-            itree_type t2;
-            t2.clone_from(t, fact_type::cloner_type(), fact_type::disposer_type());
-            clog << "checking max_end fields in clone of size: " << t2.size() << '\n';
-            check_max_ends(t2, f);
-            clog << "destroying clone\n";
-            ptr_type tmp;
-            while ((tmp = t2.unlink_leftmost_without_rebalance()))
-            {
-                f.del_elem(tmp);
-            }
-        }
-        if (po.print_tree_each_op)
-        {
-            print_tree(t);
-        }
+        */
+        t.clear();
+        l.clear_and_dispose();
     }
-    clog << "----- clearing list\n";
-    while (l.size() > 0)
-    {
-        auto it = l.begin();
-        ptr_type a = &*it;
-        l.erase(it);
-        t.erase(t.iterator_to(*a));
-        f.del_elem(a);
-    }
-    if (f.unused() != f.size() - 3)
+    if (f.unused() != f.size())
     {
         clog << "factory not empty on exit:\n" << f;
         exit(EXIT_FAILURE);

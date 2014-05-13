@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <iostream>
+#include <limits>
 #include <deque>
 #include <type_traits>
 #include <boost/intrusive/pointer_traits.hpp>
@@ -18,55 +19,56 @@
 #include "nonconst_methods.hpp"
 #include "ptree_tools.hpp"
 
+#define CONST_CONVERSIONS(_type, _t) \
+    operator const _type< typename boost::add_const< _t >::type >& () const \
+    { return *reinterpret_cast< const _type< typename boost::add_const< _t >::type >* >(this); } \
+    operator _type< typename boost::add_const< _t >::type >& () \
+    { return *reinterpret_cast< _type< typename boost::add_const< _t >::type >* >(this); } \
+    \
+    const _type< typename boost::remove_const< _t >::type >& unconst() const \
+    { return *reinterpret_cast< const _type< typename boost::remove_const< _t >::type >* >(this); } \
+    _type< typename boost::remove_const< _t >::type >& unconst() \
+    { return *reinterpret_cast< _type< typename boost::remove_const< _t >::type >* >(this); }
 
+#define T_ENABLE_IF(_cond) \
+    bool _unused = true, typename boost::enable_if_c< _unused and (_cond), int >::type = 42
+
+namespace bounded
+{
 namespace detail
 {
 
-template <class T, class Base_Ptr>
+template < typename, typename >
 struct Identifier;
-template <class T, class Base_Ptr>
-class Bounded_Pointer;
-template <class T, class Base_Ptr>
-class Bounded_Reference;
-template <class T, class Base_Ptr>
+template < typename, typename >
+class Pointer;
+template < typename, typename >
+class Reference;
+template < typename, typename >
 struct Cloner;
-template <class T, class Base_Ptr>
+template < typename, typename >
 struct Disposer;
-template <class T, class Base_Ptr>
+template < typename, typename >
+class Storage;
+template < typename, typename >
 class Factory;
+template < typename, typename >
+class Static_Allocator;
 
-template <class T, class Base_Ptr>
-bool operator == (const Identifier< T, Base_Ptr >&,
-                  const Identifier< T, Base_Ptr >&);
-
-template <class LHS_T, class RHS_T, class Base_Ptr>
-bool operator == (const Bounded_Pointer< LHS_T, Base_Ptr >&,
-                  const Bounded_Pointer< RHS_T, Base_Ptr >&);
-template <class LHS_T, class RHS_T, class Base_Ptr>
-bool operator < (const Bounded_Pointer< LHS_T, Base_Ptr >&,
-                 const Bounded_Pointer< RHS_T, Base_Ptr >&);
-template <class T, class Base_Ptr>
-std::ostream& operator << (std::ostream&, const Bounded_Pointer< T, Base_Ptr >&);
-
-template <class T, class Base_Ptr>
-std::ostream& operator << (std::ostream& os, const Bounded_Reference< T, Base_Ptr >&);
-
-template <class T, class Base_Ptr>
-std::ostream& operator << (std::ostream& os, const Factory< T, Base_Ptr >&);
-
-template <class T, class Base_Ptr = uint32_t>
+template < typename Value, typename Index = uint32_t >
 struct Identifier
 {
-    typedef typename std::is_void< T > is_void_t; // true_type iff T is (cv-) void
-    typedef typename std::is_const< T > is_const_t; // true_type iff T is const-qualified
+    typedef Value val_type;
+    typedef Index index_type;
+    typedef typename std::is_void< val_type > is_void_t; // true_type iff T is (cv-) void
+    typedef typename std::is_const< val_type > is_const_t; // true_type iff T is const-qualified
     static_assert(not is_const_t::value, "Identifier instantiated with const type");
-
-    typedef T val_type;
-    typedef Base_Ptr base_ptr_type;
     typedef typename std::add_lvalue_reference< val_type >::type raw_ref_type; // void if T==void
-    typedef typename boost::mpl::if_< is_void_t, void, Factory< T, Base_Ptr > >::type fact_type; // void if T==void
+    typedef typename boost::mpl::if_< is_void_t, void, Storage< val_type, index_type > >::type storage_type; // void if T==void
 
-    Identifier() : _ptr(0) {}
+    static index_type const null_val = std::numeric_limits< index_type >::max();
+
+    Identifier() : _idx(null_val) {}
 
     // allow copy & move
     DEFAULT_COPY_CTOR(Identifier)
@@ -74,177 +76,141 @@ struct Identifier
     DEFAULT_COPY_ASOP(Identifier)
     DEFAULT_MOVE_ASOP(Identifier)
 
-    operator Base_Ptr () const { return _ptr; }
+    //operator Index () const { return _ptr; }
+    bool is_null() const { return _idx == null_val; }
 
     /** Dereferencing operator (non-void types only). */
-    template < bool _unused = true, typename boost::enable_if_c< _unused and not is_void_t::value, int >::type = 0 >
+    template < T_ENABLE_IF((not is_void_t::value)) >
     raw_ref_type dereference() const
     {
-        ASSERT(fact_type::get_active_ptr());
-        return fact_type::get_active_ptr()->get_elem(*this);
+        return storage_type::elem_at(*this);
     }
 
-    Base_Ptr _ptr;
+    bool operator == (const Identifier& rhs) const { return _idx == rhs._idx; }
+    bool operator < (const Identifier& rhs) const { return _idx < rhs._idx; }
+    friend std::ostream& operator << (std::ostream& os, const Identifier& rhs)
+    {
+        os << "_idx=" << rhs._idx;
+        return os;
+    }
+
+    index_type _idx;
 };
 
-template <class T, class Base_Ptr>
-bool operator == (const Identifier< T, Base_Ptr >& lhs,
-                  const Identifier< T, Base_Ptr >& rhs)
-{
-    return lhs._ptr == rhs._ptr;
-}
-template <class T, class Base_Ptr>
-bool operator < (const Identifier< T, Base_Ptr >& lhs,
-                 const Identifier< T, Base_Ptr >& rhs)
-{
-    return lhs._ptr < rhs._ptr;
-}
-template <class T, class Base_Ptr>
-bool operator != (const Identifier< T, Base_Ptr >& lhs,
-                  const Identifier< T, Base_Ptr >& rhs)
+template < typename Value, typename Index >
+bool operator != (const Identifier< Value, Index >& lhs, const Identifier< Value, Index >& rhs)
 {
     return !(lhs == rhs);
 }
 
-template <class T, class Base_Ptr = uint32_t>
-class Bounded_Pointer
+template < typename Value, typename Index = uint32_t >
+class Pointer
 {
-private:
-    typedef typename std::is_void< T > is_void_t; // true_type iff T is (cv-) void
-    typedef typename std::is_const< T > is_const_t; // true_type iff T is const-qualified
 public:
-    typedef T val_type;
-    typedef Base_Ptr base_ptr_type;
-    typedef val_type* real_ptr_type;
+    typedef Value val_type;
+    typedef Index index_type;
+    typedef val_type* raw_ptr_type;
     typedef typename std::remove_const< val_type >::type unqual_val_type;
 private:
-    typedef Identifier< unqual_val_type, Base_Ptr > idn_type;
+    typedef typename std::is_void< val_type > is_void_t; // true_type iff T is (cv-) void
+    typedef typename std::is_const< val_type > is_const_t; // true_type iff T is const-qualified
+    typedef Identifier< unqual_val_type, index_type > idn_type;
 public:
-    typedef typename idn_type::fact_type fact_type;
-    typedef typename boost::mpl::if_< is_void_t, void, Bounded_Reference< val_type, Base_Ptr > >::type ref_type;
+    typedef typename boost::mpl::if_< is_void_t, void, Reference< val_type, index_type > >::type ref_type;
+
+    template < typename Other_Value >
+    struct has_same_base
+        : std::is_same< typename std::remove_const< Other_Value >::type,
+                        typename std::remove_const< val_type >::type >
+    {};
 
     /** Rebinder.
      * Wrap pointers to T and const T. Anything else gets transformed into a raw pointer.
      */
-    template <class U>
+    template < typename Other_Value >
     struct rebind
     {
-        typedef typename boost::mpl::if_<
-                std::is_same< typename std::remove_const< U >::type,
-                              typename std::remove_const< T >::type
-                            >,
-                Bounded_Pointer< U, Base_Ptr >,
-                U*
-            >::type type;
+        typedef typename boost::mpl::if_< has_same_base< Other_Value >,
+                                          Pointer< Other_Value, index_type >,
+                                          Other_Value*
+                                        >::type type;
     };
 
-public:
-    Bounded_Pointer() {}
-    Bounded_Pointer(std::nullptr_t) {}
+    Pointer(std::nullptr_t = nullptr) {}
 
     // allow copy & move
-    DEFAULT_COPY_CTOR(Bounded_Pointer)
-    DEFAULT_MOVE_CTOR(Bounded_Pointer)
-    DEFAULT_COPY_ASOP(Bounded_Pointer)
-    DEFAULT_MOVE_ASOP(Bounded_Pointer)
+    DEFAULT_COPY_CTOR(Pointer)
+    DEFAULT_MOVE_CTOR(Pointer)
+    DEFAULT_COPY_ASOP(Pointer)
+    DEFAULT_MOVE_ASOP(Pointer)
 
-    // implicit conversion to const
-    operator const Bounded_Pointer< const unqual_val_type, Base_Ptr >& () const
-    { return *reinterpret_cast< const Bounded_Pointer< const unqual_val_type, Base_Ptr >* >(this); }
-    operator Bounded_Pointer< const unqual_val_type, Base_Ptr >& ()
-    { return *reinterpret_cast< Bounded_Pointer< const unqual_val_type, Base_Ptr >* >(this); }
-
-    // explicit conversion to non-const
-    const Bounded_Pointer< unqual_val_type, Base_Ptr >& unconst() const
-    { return *reinterpret_cast< const Bounded_Pointer< unqual_val_type, Base_Ptr >* >(this); }
-    Bounded_Pointer< unqual_val_type, Base_Ptr >& unconst()
-    { return *reinterpret_cast< Bounded_Pointer< unqual_val_type, Base_Ptr >* >(this); }
-
-    // conversion to void*
-    operator typename boost::mpl::if_< is_const_t, const void*, void* >::type () const
-    { return &_id.dereference(); }
+    CONST_CONVERSIONS(Pointer, val_type)
 
     // get raw pointer
-    val_type* raw() const { return &_id.dereference(); }
-    size_t to_int() const { return static_cast< size_t >(_id._ptr); }
+    raw_ptr_type raw() const { return _idn.is_null()? nullptr : &_idn.dereference(); }
 
-    operator bool() const { return this->_id; }
-    Bounded_Pointer& operator ++ () { ++(this->_id)._ptr; return *this; }
-    Bounded_Pointer operator ++ (int) { Bounded_Pointer res(*this); ++(*this); return res; }
+    // bool conversion: via raw ptr
+    operator bool () const { return raw(); }
+
+    //size_t to_int() const { return static_cast< size_t >(_id._ptr); }
+
+    // increment operators
+    Pointer& operator ++ () { ++(this->_idn)._idx; return *this; }
+    Pointer operator ++ (int) { Pointer res(*this); ++(*this); return res; }
 
     // dereferencing operators
-    ref_type operator * () const { return ref_type(_id); }
-    real_ptr_type operator -> () const { return &_id.dereference(); }
+    ref_type operator * () const { return ref_type(_idn); }
+    raw_ptr_type operator -> () const { return raw(); }
 
     boost::property_tree::ptree to_ptree() const
     {
         std::ostringstream tmp;
-        tmp << _id._ptr;
+        tmp << _idn._idx;
         return boost::property_tree::ptree(tmp.str());
     }
 
+    template < typename Other_Value,
+               T_ENABLE_IF((has_same_base< Other_Value >::value)) >
+    bool operator == (const Pointer< Other_Value, index_type >& rhs) const { return _idn == rhs._idn; }
+    template < typename Other_Value,
+               T_ENABLE_IF((has_same_base< Other_Value >::value)) >
+    bool operator < (const Pointer< Other_Value, index_type >& rhs) const { return _idn < rhs._idn; }
+
 private:
-    friend class Bounded_Reference< val_type, Base_Ptr >;
-    friend class Factory< unqual_val_type, Base_Ptr >;
+    template < typename, typename > friend class Pointer;
+    friend class Reference< val_type, index_type >;
+    //friend class Factory< unqual_val_type, index_type >;
+    friend class Storage< unqual_val_type, index_type >;
 
-    template <class LHS_T, class RHS_T, class Other_Base_Ptr>
-    friend bool operator == (const Bounded_Pointer< LHS_T, Other_Base_Ptr >&,
-                             const Bounded_Pointer< RHS_T, Other_Base_Ptr >&);
-    template <class LHS_T, class RHS_T, class Other_Base_Ptr>
-    friend bool operator < (const Bounded_Pointer< LHS_T, Other_Base_Ptr >&,
-                            const Bounded_Pointer< RHS_T, Other_Base_Ptr >&);
-    friend std::ostream& operator << <>(std::ostream&, const Bounded_Pointer&);
+    Pointer(const idn_type& idn) : _idn(idn) {}
 
-    Bounded_Pointer(const idn_type& id) : _id(id) {}
-
-    idn_type _id;
+    idn_type _idn;
 };
 
-template <class LHS_T, class RHS_T, class Other_Base_Ptr>
-bool operator == (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs,
-                  const Bounded_Pointer< RHS_T, Other_Base_Ptr >& rhs)
+template < typename Value, typename Index >
+bool operator == (const Pointer< Value, Index >& lhs, std::nullptr_t)
 {
-    return lhs._id == rhs._id;
+    return lhs == Pointer< Value, Index >(nullptr);
 }
-template <class LHS_T, class Other_Base_Ptr>
-bool operator == (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs, std::nullptr_t)
+template < typename Value, typename Index >
+bool operator == (std::nullptr_t, const Pointer< Value, Index >& rhs)
 {
-    return lhs == Bounded_Pointer< LHS_T, Other_Base_Ptr >(nullptr);
+    return Pointer< Value, Index >(nullptr) == rhs;
 }
-template <class RHS_T, class Other_Base_Ptr>
-bool operator == (std::nullptr_t,
-                  const Bounded_Pointer< RHS_T, Other_Base_Ptr >& rhs)
-{
-    return Bounded_Pointer< RHS_T, Other_Base_Ptr >(nullptr) == rhs;
-}
-template <class LHS_T, class RHS_T, class Other_Base_Ptr>
-bool operator < (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs,
-                 const Bounded_Pointer< RHS_T, Other_Base_Ptr >& rhs)
-{
-    return lhs._id < rhs._id;
-}
-template <class LHS_T, class RHS_T, class Other_Base_Ptr>
-bool operator != (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs,
-                  const Bounded_Pointer< RHS_T, Other_Base_Ptr >& rhs)
+template < typename Value_LHS, typename Value_RHS, typename Index >
+bool operator != (const Pointer< Value_LHS, Index >& lhs, const Pointer< Value_RHS, Index >& rhs)
 {
     return !(lhs == rhs);
 }
-template <class LHS_T, class Other_Base_Ptr>
-bool operator != (const Bounded_Pointer< LHS_T, Other_Base_Ptr >& lhs, std::nullptr_t)
+template < typename Value, typename Index >
+bool operator != (const Pointer< Value, Index >& lhs, std::nullptr_t)
 {
     return !(lhs == nullptr);
 }
-template <class RHS_T, class Other_Base_Ptr>
-bool operator != (std::nullptr_t, const Bounded_Pointer< RHS_T, Other_Base_Ptr >& rhs)
+template < typename Value, typename Index >
+bool operator != (std::nullptr_t, const Pointer< Value, Index >& rhs)
 {
     return !(nullptr == rhs);
-}
-template <class T, class Base_Ptr>
-std::ostream& operator <<(std::ostream& os, const Bounded_Pointer< T, Base_Ptr >& rhs)
-{
-    os << "[Bounded_Pointer:&=" << (void*)&rhs
-       << ",_ptr=" << rhs._id._ptr << "]";
-    return os;
 }
 
 template < typename T, bool = false >
@@ -265,80 +231,55 @@ template < typename T >
 struct to_ptree_caller
     : public to_ptree_caller_impl< T, has_member_function_to_ptree< const T, boost::property_tree::ptree >::value > {};
 
-/** Bounded Reference. */
-template <class T, class Base_Ptr = uint32_t>
-class Bounded_Reference
+/** Reference. */
+template < typename Value, typename Index = uint32_t >
+class Reference
 {
-private:
-    typedef typename std::is_void< T > is_void_t; // true_type iff T is (cv-) void
-    typedef typename std::is_const< T > is_const_t; // true_type iff T is const-qualified
-    typedef to_ptree_caller< T > to_ptree_caller_t;
-    static_assert(not is_void_t::value, "Bounded_Reference instantiated with void type");
-    //template <int val> struct enabler {};
 public:
-    typedef T val_type;
-    typedef Base_Ptr base_ptr_type;
-    typedef val_type& real_ref_type;
-    typedef const val_type& real_const_ref_type;
-    typedef typename std::remove_const< val_type >::type unqual_val_type;
-    typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
+    typedef Value val_type;
+    typedef Index index_type;
 private:
-    typedef Identifier< unqual_val_type, Base_Ptr > idn_type;
+    typedef typename std::is_void< val_type > is_void_t; // true_type iff T is (cv-) void
+    typedef typename std::is_const< val_type > is_const_t; // true_type iff T is const-qualified
+    typedef to_ptree_caller< val_type > to_ptree_caller_t;
+    static_assert(not is_void_t::value, "Reference instantiated with void type");
+public:
+    typedef val_type& raw_ref_type;
+    typedef typename std::remove_const< val_type >::type unqual_val_type;
+    typedef Pointer< val_type, index_type > ptr_type;
+private:
+    typedef Identifier< unqual_val_type, index_type > idn_type;
 
 public:
     // allow construction only
-    DEFAULT_COPY_CTOR(Bounded_Reference)
-    DEFAULT_MOVE_CTOR(Bounded_Reference)
-    DELETE_COPY_ASOP(Bounded_Reference)
-    DELETE_MOVE_ASOP(Bounded_Reference)
+    DELETE_DEF_CTOR(Reference)
+    DEFAULT_COPY_CTOR(Reference)
+    DEFAULT_MOVE_CTOR(Reference)
+    DELETE_MOVE_ASOP(Reference)
 
-    // automatic conversion to const
-    operator const Bounded_Reference< const unqual_val_type, Base_Ptr >& () const
-    { return *reinterpret_cast< const Bounded_Reference< const unqual_val_type, Base_Ptr >* >(this); }
-    operator Bounded_Reference< const unqual_val_type, Base_Ptr >& ()
-    { return *reinterpret_cast< Bounded_Reference< const unqual_val_type, Base_Ptr >* >(this); }
-
-    // explicit conversion to nonconst
-    const Bounded_Reference< unqual_val_type, Base_Ptr >& unconst() const
-    { return *reinterpret_cast< const Bounded_Reference< unqual_val_type, Base_Ptr >* >(this); }
-    Bounded_Reference< unqual_val_type, Base_Ptr >& unconst()
-    { return *reinterpret_cast< Bounded_Reference< unqual_val_type, Base_Ptr >* >(this); }
-
-    // address-of operator returns bounded pointer
-    ptr_type operator & () const { return ptr_type(_id); }
+    CONST_CONVERSIONS(Reference, val_type)
 
     // get raw reference
-    real_ref_type raw() const { return _id.dereference(); }
+    raw_ref_type raw() const { ASSERT(not _idn.is_null()); return _idn.dereference(); }
+
+    // address-of operator returns bounded pointer
+    ptr_type operator & () const { return ptr_type(_idn); }
 
     // implicit conversion to raw reference
-    operator real_ref_type () const { return raw(); }
+    operator raw_ref_type () const { return raw(); }
 
     // allow referred element assignment (non-const only)
-    template < bool _unused = true, typename boost::enable_if_c< _unused and not is_const_t::value, int >::type = 0 >
-    const Bounded_Reference& operator = (const val_type& rhs) const
-    /*
-        typename boost::mpl::if_c< std::is_same< val_type, unqual_val_type >::value,
-                                   const val_type&,
-                                   enabler<0>&
-                                 >::type rhs) const
-    */
-    { _id.dereference() = rhs; return *this; }
+    template < T_ENABLE_IF((not is_const_t::value)) >
+    const Reference& operator = (const val_type& rhs) const { raw() = rhs; return *this; }
 
-    template < bool _unused = true, typename boost::enable_if_c< _unused and not is_const_t::value, int >::type = 0 >
-    const Bounded_Reference& operator = (const Bounded_Reference& rhs) const
-    /*
-        typename boost::mpl::if_c< std::is_same< val_type, unqual_val_type >::value,
-                                   const Bounded_Reference&,
-                                   enabler<1>&
-                                 >::type rhs) const
-    */
-    { _id.dereference() = rhs._id.dereference(); return *this; }
+    template < T_ENABLE_IF((not is_const_t::value)) >
+    const Reference& operator = (const Reference& rhs) const { raw() = rhs.raw(); return *this; }
 
     boost::property_tree::ptree to_ptree() const
     {
         ptree pt;
-        pt.put("baddr", _id._ptr);
-        if (_id._ptr != 0)
+        pt.put("baddr", _idn._idx);
+        if (not _idn.is_null())
         {
             to_ptree_caller_t::call(pt, raw());
         }
@@ -346,54 +287,39 @@ public:
     }
 
 private:
-    friend class Bounded_Pointer< T, Base_Ptr >;
-    friend std::ostream& operator << <>(std::ostream&, const Bounded_Reference&);
+    friend class Pointer< val_type, index_type >;
 
-    Bounded_Reference(const idn_type& id) : _id(id) {}
+    Reference(const idn_type& idn) : _idn(idn) {}
 
-    const idn_type _id;
-}; // class Bounded_Reference
+    const idn_type _idn;
+}; // class Reference
 
-template <class T, class Base_Ptr>
-std::ostream& operator <<(std::ostream& os, const Bounded_Reference< T, Base_Ptr >& rhs)
-{
-    /*
-    os << "[Bounded_Reference:&=" << (void*)&rhs._id
-       << ",_ptr=" << rhs._id._ptr;
-    */
-    os << "{id=" << rhs._id._ptr;
-    if (&rhs)
-    {
-        os << ",deref=" << rhs._id.dereference();
-    }
-    os << "}";
-    return os;
-}
-
-template <class T, class Base_Ptr = uint32_t>
+template < typename Value, typename Index = uint32_t >
 struct Cloner
 {
-    typedef T val_type;
+    typedef Value val_type;
+    typedef Index index_type;
     static_assert(not std::is_const< val_type >::value, "Cloner instantiated with const type");
     static_assert(std::is_copy_constructible< val_type >::value, "Cloner instantiated with non-copy-construtible type");
-    typedef Identifier< val_type, Base_Ptr > idn_type;
-    typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
+    typedef Identifier< val_type, index_type > idn_type;
+    typedef Pointer< val_type, index_type > ptr_type;
     typedef typename idn_type::fact_type fact_type;
 
-    ptr_type operator () (const T& t)
+    ptr_type operator () (const val_type& t)
     {
         ASSERT(fact_type::get_active_ptr());
         return fact_type::get_active_ptr()->new_elem(t);
     }
 };
 
-template <class T, class Base_Ptr = uint32_t>
+template < typename Value, typename Index = uint32_t >
 struct Disposer
 {
-    typedef T val_type;
+    typedef Value val_type;
+    typedef Index index_type;
     static_assert(not std::is_const< val_type >::value, "Disposer instantiated with const type");
-    typedef Identifier< val_type, Base_Ptr > idn_type;
-    typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
+    typedef Identifier< val_type, index_type > idn_type;
+    typedef Pointer< val_type, index_type > ptr_type;
     typedef typename idn_type::fact_type fact_type;
 
     void operator () (ptr_type ptr)
@@ -404,50 +330,156 @@ struct Disposer
 };
 
 /** Wrapper type used by Factory objects to store free node list without overhead. */
-template <class T, class Base_Ptr = uint32_t>
-union Factory_Wrapper
+template < typename Value, typename Index = uint32_t >
+union Value_Wrapper
 {
-    typedef T val_type;
-    typedef Identifier< T, Base_Ptr > idn_type;
+    typedef Value val_type;
+    typedef Index index_type;
+    typedef Identifier< val_type, index_type > idn_type;
 
     val_type _key;
     idn_type _next_free_idn;
 
-    Factory_Wrapper() : _next_free_idn() {}
-    Factory_Wrapper(const Factory_Wrapper& rhs) : _next_free_idn(rhs._next_free_idn) {}
-    ~Factory_Wrapper() { (&(this->_next_free_idn))->~idn_type(); }
+    Value_Wrapper() : _next_free_idn() {}
+    Value_Wrapper(const Value_Wrapper& rhs) : _next_free_idn(rhs._next_free_idn) {}
+    ~Value_Wrapper() { (&(this->_next_free_idn))->~idn_type(); }
 };
 
-/** Factory class that manages storage for objects of type T. */
-template <class T, class Base_Ptr = uint32_t>
-class Factory
+template < typename Value, typename Index = uint32_t >
+class Storage
 {
 public:
-    /** Type of object stored. */
-    typedef T val_type;
-    static_assert(not std::is_const< val_type >::value, "Factory instantiated with const type");
-    typedef const T const_val_type;
-    /** Non-constant pointer. */
-    typedef Bounded_Pointer< val_type, Base_Ptr > ptr_type;
-    /** Constant pointer. */
-    typedef Bounded_Pointer< const_val_type, Base_Ptr > const_ptr_type;
-    /** Non-constant reference. */
-    typedef Bounded_Reference< val_type, Base_Ptr > ref_type;
-    /** Constant reference. */
-    typedef Bounded_Reference< const_val_type, Base_Ptr > const_ref_type;
-    /** Object cloner. */
-    typedef Cloner< T, Base_Ptr > cloner_type;
-    /** Object disposer. */
-    typedef Disposer< T, Base_Ptr > disposer_type;
+    typedef Value val_type;
+    typedef Index index_type;
+    static_assert(not std::is_const< val_type >::value, "Storage instantiated with const type");
+    typedef Pointer< val_type, index_type > ptr_type;
+    typedef Pointer< const val_type, index_type > const_ptr_type;
 private:
-    typedef Identifier< T, Base_Ptr > idn_type;
-    typedef Factory_Wrapper< T, Base_Ptr > wrapper_type;
+    typedef Identifier< val_type, index_type > idn_type;
+    typedef Value_Wrapper< val_type, index_type > wrapper_type;
+
+public:
+    // disable copy & move
+    Storage(bool activate = true) : _cont(), _next_free_idn() { if (activate) { make_active(); } }
+    DELETE_COPY_CTOR(Storage)
+    DELETE_MOVE_CTOR(Storage)
+    DELETE_COPY_ASOP(Storage)
+    DELETE_MOVE_ASOP(Storage)
+
+    void make_active() { active_ptr() = this; }
+
+    /** Get and set active storage. */
+    static Storage*& active_ptr() { return _active_ptr; }
+
+    /** Static methods that use active storage. */
+    static ptr_type allocate() { ASSERT(active_ptr()); return active_ptr()->ns_allocate(); }
+    static void deallocate(ptr_type elem_cptr) { ASSERT(active_ptr()); active_ptr()->ns_deallocate(elem_cptr); }
+    static val_type& elem_at(const idn_type& idn) { ASSERT(active_ptr()); return active_ptr()->ns_elem_at(idn); }
+    static size_t size() { ASSERT(active_ptr()); return active_ptr()->ns_size(); }
+    static size_t unused() { ASSERT(active_ptr()); return active_ptr()->ns_unused(); }
+
+private:
+    /** Allocate space for new element. */
+    ptr_type ns_allocate()
+    {
+        ptr_type res;
+        if (not _next_free_idn.is_null())
+        {
+            res._idn = _next_free_idn;
+            _next_free_idn = _cont.at(_next_free_idn._idx)._next_free_idn;
+        }
+        else
+        {
+            _cont.push_back(wrapper_type());
+            res._idn._idx = _cont.size() - 1;
+        }
+        //std::clog << "allocating element at: " << res._idn._idx << "\n";
+        return res;
+    }
+
+    /** Deallocate element. */
+    void ns_deallocate(ptr_type elem_ptr)
+    {
+        //std::clog << "deallocating element at: " << elem_ptr._idn._idx << "\n";
+        _cont.at(elem_ptr._idn._idx)._next_free_idn = _next_free_idn;
+        _next_free_idn = elem_ptr._idn;
+    }
+
+    /** Dereference element. */
+    val_type& ns_elem_at(const idn_type& idn) const
+    {
+        return ns_wrapper_at(idn)._key;
+    }
+
+    /** Get currently allocated size. */
+    size_t ns_size() const { return _cont.size(); }
+
+    /** Get number of unused entries. */
+    size_t ns_unused() const
+    {
+        size_t res = 0;
+        for (auto crt = _next_free_idn; not crt.is_null(); crt = ns_wrapper_at(crt)._next_free_idn)
+        {
+            ++res;
+        }
+        return res;
+    }
+
+    /** Dereference wrapper. */
+    wrapper_type& ns_wrapper_at(const idn_type& idn) const
+    {
+        return const_cast< wrapper_type& >(_cont.at(idn._idx));
+    }
+
+    std::deque< wrapper_type > _cont;
+    idn_type _next_free_idn;
+
+    static Storage* _active_ptr;
+
+    friend std::ostream& operator << (std::ostream& os, const Storage& f)
+    {
+        os << "allocated=" << f.ns_size() << '\n'
+           << "n_free=" << f.ns_unused() << '\n'
+           << "next_free=" << f._next_free_idn << '\n';
+        size_t idx = 0;
+        for (const auto& w : f._cont)
+        {
+            os << idx++ << ": [key=" << w._key
+            << ",next_free_idn=" << w._next_free_idn << "]\n";
+        }
+        return os;
+    }
+}; // class Storage
+
+template < typename Value, typename Index >
+Storage< Value, Index >* Storage< Value, Index >::_active_ptr = nullptr;
+
+/** Factory class that manages storage for objects of type T. */
+template < typename Value, typename Index = uint32_t >
+class Factory
+    : public Storage< Value, Index >
+{
+private:
+    typedef Storage< Value, Index > Base;
+public:
+    typedef Value val_type;
+    typedef Index index_type;
+    static_assert(not std::is_const< val_type >::value, "Factory instantiated with const type");
+    typedef Pointer< val_type, index_type > ptr_type;
+    typedef Pointer< const val_type, index_type > const_ptr_type;
+    typedef Reference< val_type, index_type > ref_type;
+    typedef Reference< const val_type, index_type > const_ref_type;
+    typedef Cloner< val_type, index_type > cloner_type;
+    typedef Disposer< val_type, index_type > disposer_type;
+private:
+    typedef Identifier< val_type, index_type > idn_type;
+    typedef Value_Wrapper< val_type, index_type > wrapper_type;
 
 public:
     /** Default constructor.
      * @param activate Bool; if true, the object is used to resolve all managed pointers.
      */
-    Factory(bool activate = true) : _cont(1, wrapper_type()), _next_free_idn() { if (activate) { set_active(); } }
+    Factory(bool activate = true) : Base(activate) {}
 
     // disable copy & move
     DELETE_COPY_CTOR(Factory)
@@ -455,126 +487,66 @@ public:
     DELETE_COPY_ASOP(Factory)
     DELETE_MOVE_ASOP(Factory)
 
-private:
-    /** Dereference identifier. */
-    wrapper_type& dereference(const idn_type& idn) const
-    {
-        return const_cast<wrapper_type&>(_cont.at(idn._ptr));
-    }
-    /** Get element pointed at. */
-    val_type& get_elem(const idn_type& idn) const
-    {
-        return dereference(idn)._key;
-    }
+    void make_active() { Base::make_active(); }
 
-public:
-    /** Allocate space for new element and return pointer to it. */
-    template <typename... Args>
-    ptr_type new_elem_ns(Args&& ... args)
+    /** Allocate and construct new element. */
+    template < typename ...Args >
+    static ptr_type new_elem(Args&& ...args)
     {
-        ptr_type res;
-        if (_next_free_idn)
-        {
-            res._id = _next_free_idn;
-            _next_free_idn = _cont.at(_next_free_idn._ptr)._next_free_idn;
-        }
-        else
-        {
-            _cont.push_back(wrapper_type());
-            res._id._ptr = _cont.size() - 1;
-        }
-        //std::clog << "allocating element at: " << (void*)&_cont.at(res._id._ptr) << '\n';
-        new (&_cont.at(res._id._ptr)) val_type(std::forward<Args>(args)...);
+        ptr_type res = Base::allocate(); // use active storage
+        new (res.raw()) val_type(std::forward<Args>(args)...);
         return res;
     }
 
-    /** Delete element pointed at. */
-    void del_elem_ns(const_ptr_type elem_cptr)
+    /** Destruct and deallocate given element. */
+    static void del_elem(ptr_type elem_ptr)
     {
-        //std::clog << "deallocating element at: " << (void*)&_cont.at(elem_ptr._id._ptr) << '\n';
-        elem_cptr->~val_type();
-        _cont.at(elem_cptr._id._ptr)._next_free_idn = _next_free_idn;
-        _next_free_idn = elem_cptr._id;
+        elem_ptr->~val_type();
+        Base::deallocate(elem_ptr); // use active storage
     }
-
-    /** Get currently allocated size. */
-    size_t size() const { return _cont.size(); }
-
-    /** Get number of unused entries. */
-    size_t unused() const
-    {
-        size_t res = 0;
-        for (auto crt = _next_free_idn; crt; crt = dereference(crt)._next_free_idn)
-        {
-            ++res;
-        }
-        return res;
-    }
-
-    /** Use this object to resolve all managed pointers. */
-    void set_active() { _active_ptr = this; }
-
-    /** Get active factory pointer. */
-    static Factory* get_active_ptr() { return _active_ptr; }
-
-    /** Static version of new_elem, using active factory. */
-    template <typename... Args>
-    static ptr_type new_elem(Args&& ... args)
-    {
-        ASSERT(get_active_ptr());
-        return get_active_ptr()->new_elem_ns(std::forward< Args >(args)...);
-    }
-
-    /** Static version of del_elem, using active factory. */
-    static void del_elem(const_ptr_type elem_cptr)
-    {
-        ASSERT(get_active_ptr());
-        get_active_ptr()->del_elem_ns(elem_cptr);
-    }
-
-private:
-    friend struct Identifier< T, Base_Ptr >;
-
-    static Factory* _active_ptr;
-
-    friend std::ostream& operator << <>(std::ostream&, const Factory&);
-
-    std::deque< wrapper_type > _cont;
-    idn_type _next_free_idn;
 }; // class Factory
 
-template <class T, class Base_Ptr>
-Factory< T, Base_Ptr >* Factory< T, Base_Ptr >::_active_ptr = NULL;
-
-template <class T, class Base_Ptr>
-std::ostream& operator << (std::ostream& os, const Factory< T, Base_Ptr >& f)
+/** Stateless allocator that uses the active storage. */
+template < typename Value, typename Index = uint32_t >
+class Static_Allocator
 {
-    os << "allocated=" << f._cont.size() << '\n';
-    size_t n_free = 0;
-    for (auto crt = f._next_free_idn; crt; crt = f.dereference(crt)._next_free_idn)
-    {
-        ++n_free;
-    }
-    os << "n_free=" << n_free << '\n'
-       << "next_free=" << f._next_free_idn << '\n';
-    size_t idx = 0;
-    for (const auto& w : f._cont)
-    {
-        os << idx++ << ": [key=" << w._key
-           << ",next_free_idn=" << w._next_free_idn << "]\n";
-    }
-    return os;
-}
+public:
+    typedef Value value_type;
+    typedef Index index_type;
+    typedef Pointer< value_type, index_type > pointer;
+    typedef Pointer< const value_type, index_type > const_pointer;
+    typedef Reference< value_type, index_type > reference;
+    typedef Reference< const value_type, index_type > const_reference;
+    typedef Storage< value_type, index_type > storage_type;
 
-template <class T, class Base_Ptr = uint32_t>
+    DEFAULT_DEF_CTOR(Static_Allocator)
+    DEFAULT_COPY_CTOR(Static_Allocator)
+    DEFAULT_MOVE_CTOR(Static_Allocator)
+    DEFAULT_COPY_ASOP(Static_Allocator)
+    DEFAULT_MOVE_ASOP(Static_Allocator)
+
+    pointer allocate(size_t n, std::allocator< void >::const_pointer = nullptr)
+    {
+        ASSERT(n == 1);
+        return storage_type::allocate(); // use active storage
+    }
+    void deallocate(pointer p, size_t n)
+    {
+        ASSERT(n == 1);
+        storage_type::deallocate(p); // use active storage
+    }
+};
+
+/*
+template < typename Value, typename Index = uint32_t >
 class Holder
 {
 public:
     typedef T val_type;
     typedef typename std::remove_const< val_type >::type unqual_val_type;
-    typedef Factory< unqual_val_type, Base_Ptr > fact_type;
+    typedef Factory< unqual_val_type, Index > fact_type;
 private:
-    typedef Identifier< unqual_val_type, Base_Ptr > idn_type;
+    typedef Identifier< unqual_val_type, Index > idn_type;
 public:
     typedef typename fact_type::ptr_type ptr_type;
     typedef typename fact_type::const_ptr_type const_ptr_type;
@@ -616,44 +588,42 @@ private:
 
     ptr_type _val_ptr;
 }; // class Holder
+*/
 
 } // namespace detail
 
-using detail::Bounded_Pointer;
-using detail::Bounded_Reference;
+using detail::Pointer;
+using detail::Reference;
 using detail::Factory;
-using detail::Holder;
+using detail::Static_Allocator;
+//using detail::Holder;
+
+} // namespace bounded
 
 namespace boost
 {
 namespace intrusive
 {
 
-template <class T, class Base_Ptr >
-struct pointer_traits< Bounded_Pointer< T, Base_Ptr > >
+template < typename Value, typename Index >
+struct pointer_traits< bounded::Pointer< Value, Index > >
 {
-    typedef T element_type;
-    typedef Bounded_Pointer< T, Base_Ptr > pointer;
-    typedef Bounded_Pointer< const T, Base_Ptr > const_pointer;
+    typedef Value element_type;
+    typedef Index index_type;
+    typedef bounded::Pointer< element_type, index_type > pointer;
+    typedef bounded::Pointer< const element_type, index_type > const_pointer;
     typedef ptrdiff_t difference_type;
-    typedef Bounded_Reference< T, Base_Ptr > reference;
+    typedef bounded::Reference< element_type, index_type > reference;
 
-    template <class U>
+    template < class Other_Value >
     struct rebind_pointer
     {
-        typedef typename Bounded_Pointer< T, Base_Ptr >::template rebind<U>::type type;
+        typedef typename bounded::Pointer< element_type, index_type >::template rebind< Other_Value >::type type;
     };
 
-    static pointer pointer_to(reference r)
-    {
-        return &r;
-    }
-
-    static pointer const_cast_from(const const_pointer& cptr)
-    {
-        return cptr.unconst();
-    }
-};
+    static pointer pointer_to(reference r) { return &r; }
+    static pointer const_cast_from(const_pointer cptr) { return cptr.unconst(); }
+}; // struct pointer_traits
 
 } // namespace intrusive
 } // namespace boost
