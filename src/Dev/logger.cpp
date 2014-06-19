@@ -4,14 +4,13 @@
 // Released under the GPL license
 //-----------------------------------------------
 
-#include "Log.hpp"
+#include "logger.hpp"
 
-using namespace std;
 
-namespace detail
+namespace logger
 {
 
-map< string, Log::Level > Log::_level;
-Log::Level Log::_default_level = Log::error;
+std::map< std::string, level > log::_facility_level;
+level log::_default_level = error;
 
-} // namespace detail
+} // namespace logger
