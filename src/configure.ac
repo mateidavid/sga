@@ -30,7 +30,7 @@ AC_SEARCH_LIBS([clock_gettime], [rt], [AC_DEFINE([HAVE_CLOCK_GETTIME], [1], [clo
 
 # Check for openmp
 #AX_OPENMP([openmp_cppflags="-fopenmp" AC_DEFINE(HAVE_OPENMP,1,[Define if OpenMP is enabled])])
-AX_OPENMP([AC_DEFINE(HAVE_OPENMP, 1, [OpenMP is enabled])])
+AC_OPENMP([AC_DEFINE(HAVE_OPENMP, 1, [OpenMP is enabled])])
 AC_SUBST(OPENMP_CXXFLAGS)
 
 # Check for the bamtools library path
