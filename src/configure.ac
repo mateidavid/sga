@@ -210,8 +210,8 @@ CPPFLAGS=$save_CPPFLAGS
 LDFLAGS=$save_LDFLAGS
 
 # Set compiler flags.
-AC_SUBST(AM_CFLAGS, ["-Wall -Wextra -Werror -Wno-unknown-pragmas $OPENMP_CXXFLAGS"])
-AC_SUBST(AM_CXXFLAGS, ["-Wall -Wextra -Werror -Wno-unknown-pragmas -Wno-unused-local-typedefs $OPENMP_CXXFLAGS"])
+AC_SUBST(AM_CFLAGS, ["-Wall -Wextra -pedantic $OPENMP_CXXFLAGS"])
+AC_SUBST(AM_CXXFLAGS, ["-Wall -Wextra -pedantic $OPENMP_CXXFLAGS"])
 AC_SUBST(AM_LDFLAGS, ["-Wl,--rpath=\${LD_RUN_PATH} $EXTERNAL_MALLOC_LDFLAGS"])
 AC_SUBST(AM_CPPFLAGS, ['$(BOOST_CPPFLAGS) $(SPARSEHASH_CPPFLAGS) $(BAMTOOLS_CPPFLAGS) \
     -I$(top_srcdir)/Thirdparty \
