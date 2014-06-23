@@ -15,9 +15,12 @@
 namespace MAC
 {
 
+namespace detail
+{
+
 struct Read_Entry_Set_Node_Traits
 {
-    typedef Holder< Read_Entry > node;
+    typedef Read_Entry node;
     typedef Read_Entry_Fact fact_type;
     typedef fact_type::ptr_type node_ptr;
     typedef fact_type::const_ptr_type const_node_ptr;
@@ -45,14 +48,17 @@ struct Read_Entry_Set_Value_Traits
     typedef const_node_ptr const_pointer;
     typedef node_traits::fact_type::ref_type reference;
     typedef node_traits::fact_type::const_ref_type const_reference;
+    typedef Read_Entry_Set_Value_Traits* value_traits_ptr;
 
-    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::normal_link;
+    static const bi::link_mode_type link_mode = bi::safe_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
     static pointer to_value_ptr(node_ptr n) { return n; }
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
+
+} // namespace detail
 
 /** Comparator for storage in tree. */
 struct Read_Entry_Comparator
@@ -72,16 +78,18 @@ struct Read_Entry_Comparator
 };
 
 class Read_Entry_Cont
-    : private boost::intrusive::set< Read_Entry,
-                                     boost::intrusive::compare< Read_Entry_Comparator >,
-                                     boost::intrusive::value_traits< Read_Entry_Set_Value_Traits >
-                                   >
+    : private bi::set< Read_Entry,
+                       bi::compare< Read_Entry_Comparator >,
+                       bi::value_traits< detail::Read_Entry_Set_Value_Traits >,
+                       bi::header_holder_type< bounded::Pointer_Holder< Read_Entry > >
+                     >
 {
 private:
-    typedef boost::intrusive::set< Read_Entry,
-                                   boost::intrusive::compare< Read_Entry_Comparator >,
-                                   boost::intrusive::value_traits< Read_Entry_Set_Value_Traits >
-                                 > Base;
+    typedef bi::set< Read_Entry,
+                     bi::compare< Read_Entry_Comparator >,
+                     bi::value_traits< detail::Read_Entry_Set_Value_Traits >,
+                     bi::header_holder_type< bounded::Pointer_Holder< Read_Entry > >
+                   > Base;
 public:
     DEFAULT_DEF_CTOR(Read_Entry_Cont)
     DELETE_COPY_CTOR(Read_Entry_Cont)

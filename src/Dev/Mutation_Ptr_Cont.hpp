@@ -40,7 +40,7 @@ private:
 
 struct Mutation_Ptr_List_Node_Traits
 {
-    typedef Holder< Mutation_Chunk_Adapter > node;
+    typedef Mutation_Chunk_Adapter node;
     typedef Mutation_Chunk_Adapter_Fact fact_type;
     typedef fact_type::ptr_type node_ptr;
     typedef fact_type::const_ptr_type const_node_ptr;
@@ -61,8 +61,9 @@ struct Mutation_Ptr_List_Value_Traits
     typedef const_node_ptr const_pointer;
     typedef node_traits::fact_type::ref_type reference;
     typedef node_traits::fact_type::const_ref_type const_reference;
+    typedef Mutation_Ptr_List_Value_Traits* value_traits_ptr;
 
-    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::normal_link;
+    static const bi::link_mode_type link_mode = bi::normal_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
@@ -73,15 +74,17 @@ struct Mutation_Ptr_List_Value_Traits
 } // namespace detail
 
 class Mutation_Ptr_Cont
-    : private boost::intrusive::list< Mutation_Chunk_Adapter,
-                                      boost::intrusive::value_traits< detail::Mutation_Ptr_List_Value_Traits >
+    : private bi::list< Mutation_Chunk_Adapter,
+                                      bi::value_traits< detail::Mutation_Ptr_List_Value_Traits >,
+                                      bi::header_holder_type< bounded::Pointer_Holder< Mutation_Chunk_Adapter > >
                                     >
 {
 private:
-    typedef boost::intrusive::list< Mutation_Chunk_Adapter,
-                                    boost::intrusive::value_traits< detail::Mutation_Ptr_List_Value_Traits >
+    typedef bi::list< Mutation_Chunk_Adapter,
+                                    bi::value_traits< detail::Mutation_Ptr_List_Value_Traits >,
+                                    bi::header_holder_type< bounded::Pointer_Holder< Mutation_Chunk_Adapter > >
                                   > Base;
-public:
+//public:
     //typedef detail::MCA_Mutation_Ptr_Cloner Cloner;
 public:
     // allow move only

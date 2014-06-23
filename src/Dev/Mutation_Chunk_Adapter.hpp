@@ -25,7 +25,7 @@ class Mutation_Chunk_Adapter
 {
     // only constructed by Factory object
 private:
-    friend class Factory< Mutation_Chunk_Adapter >;
+    friend class bounded::Factory< Mutation_Chunk_Adapter >;
 
     // disallow copy or move
 private:
@@ -51,7 +51,7 @@ public:
     const Read_Chunk_CBPtr& chunk_cbptr() const { return _chunk_cbptr; }
     Read_Chunk_CBPtr& chunk_cbptr() { return _chunk_cbptr; }
 
-    friend std::ostream& operator << (std::ostream& os, const Mutation_Chunk_Adapter&);
+    //friend std::ostream& operator << (std::ostream& os, const Mutation_Chunk_Adapter&);
     boost::property_tree::ptree to_ptree() const
     {
         return ptree().put("mut_ptr", mut_cbptr().to_ptree())

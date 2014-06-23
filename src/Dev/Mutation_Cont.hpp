@@ -15,10 +15,13 @@
 namespace MAC
 {
 
+namespace detail
+{
+
 struct Mutation_ITree_Node_Traits
 {
     typedef Mutation node;
-    typedef Factory< Mutation > fact_type;
+    typedef Mutation_Fact fact_type;
     typedef typename fact_type::ptr_type node_ptr;
     typedef typename fact_type::const_ptr_type const_node_ptr;
     typedef int color;
@@ -49,8 +52,9 @@ struct Mutation_ITree_Value_Traits
     typedef const_node_ptr const_pointer;
     typedef typename node_traits::fact_type::ref_type reference;
     typedef typename node_traits::fact_type::const_ref_type const_reference;
+    typedef Mutation_ITree_Value_Traits* value_traits_ptr;
 
-    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::safe_link;
+    static const bi::link_mode_type link_mode = bi::safe_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
@@ -62,15 +66,17 @@ struct Mutation_ITree_Value_Traits
     static key_type get_end(const value_type* n) { return n->get_end(); }
 };
 
+} // namespace detail
+
 class Mutation_Cont
-    : private boost::intrusive::itree< Mutation,
-                                       boost::intrusive::value_traits< Mutation_ITree_Value_Traits >,
-                                       boost::intrusive::node_allocator_type< Bounded_Allocator< Mutation_Alloc > > >
+    : private bi::itree< Mutation,
+                         bi::value_traits< detail::Mutation_ITree_Value_Traits >,
+                         bi::header_holder_type< bounded::Pointer_Holder< Mutation > > >
 {
 private:
-    typedef boost::intrusive::itree< Mutation,
-                                     boost::intrusive::value_traits< Mutation_ITree_Value_Traits >,
-                                     boost::intrusive::node_allocator_type< Bounded_Allocator< Mutation_Alloc > > > Base;
+    typedef bi::itree< Mutation,
+                       bi::value_traits< detail::Mutation_ITree_Value_Traits >,
+                       bi::header_holder_type< bounded::Pointer_Holder< Mutation > > > Base;
 public:
     // allow move only
     DEFAULT_DEF_CTOR(Mutation_Cont)

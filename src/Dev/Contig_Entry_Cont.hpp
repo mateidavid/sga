@@ -12,14 +12,16 @@
 #include "MAC_forward.hpp"
 #include "Contig_Entry.hpp"
 
-class B;
 
 namespace MAC
 {
 
+namespace detail
+{
+
 struct Contig_Entry_List_Node_Traits
 {
-    typedef Holder< Contig_Entry > node;
+    typedef Contig_Entry node;
     typedef Contig_Entry_Fact fact_type;
     typedef fact_type::ptr_type node_ptr;
     typedef fact_type::const_ptr_type const_node_ptr;
@@ -40,8 +42,9 @@ struct Contig_Entry_List_Value_Traits
     typedef const_node_ptr const_pointer;
     typedef node_traits::fact_type::ref_type reference;
     typedef node_traits::fact_type::const_ref_type const_reference;
+    typedef Contig_Entry_List_Value_Traits* value_traits_ptr;
 
-    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::normal_link;
+    static const bi::link_mode_type link_mode = bi::safe_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
@@ -49,15 +52,19 @@ struct Contig_Entry_List_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
+} // namespace detail
+
 class Contig_Entry_Cont
-    : private boost::intrusive::list< Contig_Entry,
-                                      boost::intrusive::value_traits< Contig_Entry_List_Value_Traits >
-                                    >
+    : private bi::list< Contig_Entry,
+                        bi::value_traits< detail::Contig_Entry_List_Value_Traits >,
+                        bi::header_holder_type< bounded::Pointer_Holder< Contig_Entry > >
+                      >
 {
 private:
-    typedef boost::intrusive::list< Contig_Entry,
-                                    boost::intrusive::value_traits< Contig_Entry_List_Value_Traits >
-                                  > Base;
+    typedef bi::list< Contig_Entry,
+                      bi::value_traits< detail::Contig_Entry_List_Value_Traits >,
+                      bi::header_holder_type< bounded::Pointer_Holder< Contig_Entry > >
+                    > Base;
 public:
     DEFAULT_DEF_CTOR(Contig_Entry_Cont)
     DELETE_COPY_CTOR(Contig_Entry_Cont)

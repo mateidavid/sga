@@ -18,7 +18,11 @@
 namespace MAC
 {
 
+namespace detail {
+
 struct Mutation_ITree_Node_Traits;
+
+}
 
 /** Holds information about a mutation from a base sequence.
  *
@@ -29,7 +33,7 @@ class Mutation
 {
 private:
     // Can only be created by Factory object
-    friend class Factory< Mutation >;
+    friend class bounded::Factory< Mutation >;
 
     /** Default constructor. */
     Mutation()
@@ -237,7 +241,7 @@ private:
     Read_Chunk_Ptr_Cont _chunk_ptr_cont;
 
     /** Hooks for storage in intrusive interval trees inside Contig_Entry objects. */
-    friend struct Mutation_ITree_Node_Traits;
+    friend struct detail::Mutation_ITree_Node_Traits;
     Mutation_BPtr _parent;
     Mutation_BPtr _l_child;
     Mutation_BPtr _r_child;

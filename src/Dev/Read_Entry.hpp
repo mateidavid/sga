@@ -21,7 +21,12 @@
 namespace MAC
 {
 
+namespace detail
+{
+
 struct Read_Entry_Set_Node_Traits;
+
+}
 
 /** Holds information about a read.
  *
@@ -31,7 +36,7 @@ struct Read_Entry_Set_Node_Traits;
 class Read_Entry
 {
 private:
-    friend class Factory< Read_Entry >;
+    friend class bounded::Factory< Read_Entry >;
 
     /** Constructor.
      * @param name String containing read name; (take ownership).
@@ -111,7 +116,7 @@ private:
     Size_Type _len;
 
     /** Hooks for storage in intrusive set inside Graph object. */
-    friend struct Read_Entry_Set_Node_Traits;
+    friend struct detail::Read_Entry_Set_Node_Traits;
     Read_Entry_BPtr _parent;
     Read_Entry_BPtr _l_child;
     Read_Entry_BPtr _r_child;

@@ -24,7 +24,13 @@
 namespace MAC
 {
 
+namespace detail
+{
+
 struct Contig_Entry_List_Node_Traits;
+
+}
+
 /** Holds information about a contig.
  *
  * Each object holds a base sequence, a list of observed mutations, and a list of pointers
@@ -34,7 +40,7 @@ class Contig_Entry
 {
 private:
     // only constructed by Factory object
-    friend class Factory< Contig_Entry >;
+    friend class bounded::Factory< Contig_Entry >;
 
     /** Constructor.
      * @param seq RVR to read sequence (assume ownership).
@@ -210,7 +216,7 @@ private:
     int _colour;
 
     /** Hooks for storage in intrusive list in Graph object. */
-    friend struct Contig_Entry_List_Node_Traits;
+    friend struct detail::Contig_Entry_List_Node_Traits;
     Contig_Entry_BPtr _previous;
     Contig_Entry_BPtr _next;
     bool is_unlinked() const { return not(_previous or _next); }

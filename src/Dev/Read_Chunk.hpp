@@ -147,8 +147,13 @@ public:
 bool operator == (const Read_Chunk_Pos&, const Read_Chunk_Pos&);
 bool operator != (const Read_Chunk_Pos&, const Read_Chunk_Pos&);
 
+namespace detail
+{
+
 struct Read_Chunk_ITree_Node_Traits;
 struct Read_Chunk_Set_Node_Traits;
+
+}
 
 /** Holds information about a read chunk.
  *
@@ -162,7 +167,7 @@ public:
     typedef Read_Chunk_Pos Pos;
 private:
     // Can only be constructed by Factory object
-    friend class Factory< Read_Chunk >;
+    friend class bounded::Factory< Read_Chunk >;
 
     /** @name Constructors */
     /**@{*/
@@ -420,8 +425,8 @@ private:
      * 1. in intrusive interval trees inside Contig_Entry objects.
      * 2. in intrusive trees inside Read_Entry objects.
      */
-    friend struct Read_Chunk_ITree_Node_Traits;
-    friend struct Read_Chunk_Set_Node_Traits;
+    friend struct detail::Read_Chunk_ITree_Node_Traits;
+    friend struct detail::Read_Chunk_Set_Node_Traits;
     Read_Chunk_BPtr _ce_parent;
     Read_Chunk_BPtr _ce_l_child;
     Read_Chunk_BPtr _ce_r_child;

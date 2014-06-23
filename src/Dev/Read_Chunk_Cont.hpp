@@ -13,9 +13,12 @@
 namespace MAC
 {
 
+namespace detail
+{
+
 struct Read_Chunk_ITree_Node_Traits
 {
-    typedef Holder< Read_Chunk > node;
+    typedef Read_Chunk node;
     typedef Read_Chunk_Fact fact_type;
     typedef fact_type::ptr_type node_ptr;
     typedef fact_type::const_ptr_type const_node_ptr;
@@ -47,8 +50,9 @@ struct Read_Chunk_ITree_Value_Traits
     typedef const_node_ptr const_pointer;
     typedef node_traits::fact_type::ref_type reference;
     typedef node_traits::fact_type::const_ref_type const_reference;
+    typedef Read_Chunk_ITree_Value_Traits* value_traits_ptr;
 
-    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::normal_link;
+    static const bi::link_mode_type link_mode = bi::safe_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
@@ -60,11 +64,19 @@ struct Read_Chunk_ITree_Value_Traits
     static key_type get_end(const value_type* n) { return n->get_c_end(); }
 };
 
+} // namespace detail
+
 class Read_Chunk_CE_Cont
-    : private boost::intrusive::itree< Read_Chunk_ITree_Value_Traits >
+    : private bi::itree< Read_Chunk,
+                         bi::value_traits< detail::Read_Chunk_ITree_Value_Traits >,
+                         bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
+                       >
 {
 private:
-    typedef boost::intrusive::itree< Read_Chunk_ITree_Value_Traits > Base;
+    typedef bi::itree< Read_Chunk,
+                       bi::value_traits< detail::Read_Chunk_ITree_Value_Traits >,
+                       bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
+                     > Base;
 
 public:
     // allow move only
@@ -80,7 +92,7 @@ public:
     USING_ITERATORS(Base)
     using typename Base::intersection_const_iterator;
     using typename Base::intersection_const_iterator_range;
-    using Base::interval_intersect;
+    using Base::iintersect;
     using Base::max_end;
     using Base::clear_and_dispose;
 
@@ -147,9 +159,12 @@ public:
     }
 }; // class Read_Chunk_CE_Cont
 
+namespace detail
+{
+
 struct Read_Chunk_Set_Node_Traits
 {
-    typedef Holder< Read_Chunk > node;
+    typedef Read_Chunk node;
     typedef Read_Chunk_Fact fact_type;
     typedef fact_type::ptr_type node_ptr;
     typedef fact_type::const_ptr_type const_node_ptr;
@@ -177,14 +192,17 @@ struct Read_Chunk_Set_Value_Traits
     typedef const_node_ptr const_pointer;
     typedef node_traits::fact_type::ref_type reference;
     typedef node_traits::fact_type::const_ref_type const_reference;
+    typedef Read_Chunk_Set_Value_Traits* value_traits_ptr;
 
-    static const boost::intrusive::link_mode_type link_mode = boost::intrusive::normal_link;
+    static const bi::link_mode_type link_mode = bi::safe_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
     static pointer to_value_ptr(node_ptr n) { return n; }
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
+
+} // namespace detail
 
 /** Comparator for storage in RE Cont. */
 struct Read_Chunk_Set_Comparator
@@ -204,16 +222,18 @@ struct Read_Chunk_Set_Comparator
 };
 
 class Read_Chunk_RE_Cont
-    : private boost::intrusive::set< Read_Chunk,
-                                     boost::intrusive::compare< Read_Chunk_Set_Comparator >,
-                                     boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
-                                   >
+    : private bi::set< Read_Chunk,
+                       bi::compare< Read_Chunk_Set_Comparator >,
+                       bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
+                       bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
+                     >
 {
 private:
-    typedef boost::intrusive::set< Read_Chunk,
-                                   boost::intrusive::compare< Read_Chunk_Set_Comparator >,
-                                   boost::intrusive::value_traits< Read_Chunk_Set_Value_Traits >
-                                 > Base;
+    typedef bi::set< Read_Chunk,
+                     bi::compare< Read_Chunk_Set_Comparator >,
+                     bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
+                     bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
+                   > Base;
 public:
     // allow move only
     DEFAULT_DEF_CTOR(Read_Chunk_RE_Cont)
