@@ -72,9 +72,9 @@ int main(int argc, char* argv[])
         if (vm.count("help"))
         {
             cout << "test-log: Test Logger library\n\n"
-                 << "    The program sends 5 log messages with decreasing priority to 2 log facilities.\n"
-                 << "    The level of '" TEST_FACILITY  "' can be set explicitly, while the level of\n"
-                 << "    '" ALT_FACILITY "' can only be controlled using the default log level.\n\n"
+                    "    The program sends 5 log messages with decreasing priority (0=highest,\n"
+                    "    4=lowest) to 2 facilities. The level of '" TEST_FACILITY  "' is set explicitly,\n"
+                    "    while the level of '" ALT_FACILITY "' is set via the default log level.\n\n"
                  << visible_opts_desc;
             exit(EXIT_SUCCESS);
         }
