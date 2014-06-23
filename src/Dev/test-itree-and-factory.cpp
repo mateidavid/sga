@@ -104,6 +104,7 @@ struct ITree_Value_Traits
     typedef const_node_ptr const_pointer;
     typedef typename node_traits::fact_type::ref_type reference;
     typedef typename node_traits::fact_type::const_ref_type const_reference;
+    typedef ITree_Value_Traits* value_traits_ptr;
 
     static const bi::link_mode_type link_mode = bi::safe_link;
 
@@ -143,6 +144,7 @@ struct List_Value_Traits
     typedef const_node_ptr const_pointer;
     typedef typename node_traits::fact_type::ref_type reference;
     typedef typename node_traits::fact_type::const_ref_type const_reference;
+    typedef List_Value_Traits* value_traits_ptr;
 
     static const bi::link_mode_type link_mode = bi::safe_link;
 
@@ -154,12 +156,12 @@ struct List_Value_Traits
 
 typedef bi::itree< Value,
                    bi::value_traits< ITree_Value_Traits< Value > >,
-                   bi::node_allocator_type< bounded::Static_Allocator< Value > >
+                   bi::header_holder_type< bounded::Pointer_Holder< Value > >
                  > itree_type;
 typedef itree_type::itree_algo itree_algo;
 typedef bi::list< Value,
                   bi::value_traits< List_Value_Traits< Value > >,
-                  bi::node_allocator_type< bounded::Static_Allocator< Value > >
+                  bi::header_holder_type< bounded::Pointer_Holder< Value > >
                   > list_type;
 
 static_assert(
@@ -361,12 +363,12 @@ void real_main(const Program_Options& po)
                 // clone tree and check
                 clog << "cloning tree of size: " << t.size() << '\n';
                 itree_type t2;
-                t2.clone_from(t); //, fact_type::cloner_type(), fact_type::disposer_type());
+                t2.clone_from(t, fact_type::cloner_type(), fact_type::disposer_type()); //, fact_type::cloner_type(), fact_type::disposer_type());
                 clog << "checking max_end fields in clone of size: " << t2.size() << '\n';
                 check_max_ends(t2, f);
                 clog << "destroying clone\n";
                 ptr_type tmp;
-                t2.clear_and_dispose();
+                t2.clear_and_dispose(fact_type::disposer_type());
             }
             if (po.print_tree_each_op)
             {
@@ -385,7 +387,7 @@ void real_main(const Program_Options& po)
         }
         */
         t.clear();
-        l.clear_and_dispose();
+        l.clear_and_dispose(fact_type::disposer_type());
     }
     if (f.unused() != f.size())
     {
