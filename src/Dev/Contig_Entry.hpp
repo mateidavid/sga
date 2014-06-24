@@ -204,7 +204,7 @@ public:
     bool check() const;
     //bool check_colour(bool dir) const;
 
-    friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
+    //friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
     boost::property_tree::ptree to_ptree() const;
 
 private:

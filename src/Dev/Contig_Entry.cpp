@@ -436,6 +436,7 @@ bool Contig_Entry::check_colour(bool dir) const
 }
 */
 
+/*
 ostream& operator << (ostream& os, const Contig_Entry& rhs)
 {
     os << indent::tab << "(Contig_Entry &=" << (void*)&rhs
@@ -450,6 +451,7 @@ ostream& operator << (ostream& os, const Contig_Entry& rhs)
     os << indent::dec << indent::dec << indent::tab << ")" << '\n';
     return os;
 }
+*/
 
 boost::property_tree::ptree Contig_Entry::to_ptree() const
 {

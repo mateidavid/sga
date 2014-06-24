@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
         }
         if (global::print_graph_each_step)
         {
-            cerr << g;
+            cerr << g.to_ptree();
         }
         if (global::progress_count > 0)
         {
@@ -185,7 +185,7 @@ int main(int argc, char* argv[])
     }
     if (global::print_graph)
     {
-        cout << g;
+        cout << g.to_ptree();
     }
     if (not global::unmappable_contigs_file.empty())
     {

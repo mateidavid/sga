@@ -65,6 +65,7 @@ bool Read_Entry::check() const
     return true;
 }
 
+/*
 ostream& operator << (ostream& os, const Read_Entry& rhs)
 {
     os << indent::tab << "(Read_Entry &=" << (void*)&rhs
@@ -75,6 +76,7 @@ ostream& operator << (ostream& os, const Read_Entry& rhs)
     os << indent::dec << indent::dec << indent::tab << ")\n";
     return os;
 }
+*/
 
 boost::property_tree::ptree Read_Entry::to_ptree() const
 {

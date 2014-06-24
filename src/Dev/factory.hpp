@@ -17,7 +17,7 @@
 
 #include "global_assert.hpp"
 #include "nonconst_methods.hpp"
-#include "ptree_tools.hpp"
+#include "ptree.hpp"
 
 #define CONST_CONVERSIONS(_type, _t) \
     operator const _type< typename boost::add_const< _t >::type >& () const \
@@ -105,9 +105,9 @@ public:
     friend bool operator >  (const Identifier& lhs, const Identifier& rhs) { return lhs._idx >  rhs._idx; }
     friend bool operator >= (const Identifier& lhs, const Identifier& rhs) { return lhs._idx >= rhs._idx; }
 
-    friend std::ostream& operator << (std::ostream& os, const Identifier& rhs) { os << rhs._idx; return os; }
+    //friend std::ostream& operator << (std::ostream& os, const Identifier& rhs) { os << rhs._idx; return os; }
     index_type to_int() const { return _idx; }
-    boost::property_tree::ptree to_ptree() const { boost::property_tree::ptree pt; pt.put_value(_idx); return pt; }
+    boost::property_tree::ptree to_ptree() const { ptree pt; pt.put_value(_idx); return pt; }
 
     index_type _idx;
 };
@@ -213,7 +213,7 @@ struct to_ptree_caller_impl
 template < typename T >
 struct to_ptree_caller_impl< T, true >
 {
-    static void call(boost::property_tree::ptree& pt, const T& val) { pt.put("deref", val.to_ptree()); }
+    static void call(boost::property_tree::ptree& pt, const T& val) { pt.put_child("deref", val.to_ptree()); }
 };
 BOOST_TTI_HAS_MEMBER_FUNCTION(to_ptree)
 template < typename T >
@@ -265,11 +265,11 @@ public:
 
     boost::property_tree::ptree to_ptree() const
     {
-        boost::property_tree::ptree pt;
+        ptree pt;
         pt.put("baddr", _idn._idx);
         if (_idn)
         {
-            //to_ptree_caller_t::call(pt, raw());
+            to_ptree_caller_t::call(pt, raw());
         }
         return pt;
     }
@@ -430,6 +430,7 @@ private:
 
     static Storage* _active_ptr;
 
+    /*
     friend std::ostream& operator << (std::ostream& os, const Storage& f)
     {
         os << "allocated=" << f.ns_size() << '\n'
@@ -443,6 +444,7 @@ private:
         }
         return os;
     }
+    */
 }; // class Storage
 
 template < typename Value, typename Index >

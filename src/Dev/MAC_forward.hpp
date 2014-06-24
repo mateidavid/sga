@@ -14,7 +14,7 @@
 #include "shortcuts.hpp"
 #include "global_assert.hpp"
 #include "factory.hpp"
-#include "ptree_tools.hpp"
+#include "ptree.hpp"
 
 
 /** Multi-Allelic Contig namespace. */

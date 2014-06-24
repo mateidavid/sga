@@ -349,9 +349,9 @@ std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >
 Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
     log_l(debug1) << ptree().put("tag", "split()")
-                            .put("rc", (*rc_bptr).to_ptree())
+                            .put("rc", rc_bptr->to_ptree())
                             .put("c_brk", c_brk)
-                            .put("mut_left", (*mut_left_cbptr).to_ptree());
+                            .put("mut_left", mut_left_cbptr->to_ptree());
 
     ASSERT(rc_bptr->is_unlinked());
     ASSERT(not mut_left_cbptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
@@ -1014,6 +1014,7 @@ bool Read_Chunk::check() const
     return true;
 }
 
+/*
 ostream& operator << (ostream& os, const Read_Chunk_Pos& pos)
 {
     os << "(c_pos=" << (size_t)pos.c_pos << ",r_pos=" << (size_t)pos.r_pos
@@ -1038,6 +1039,7 @@ ostream& operator << (ostream& os, const Read_Chunk& rhs)
     os << indent::dec << indent::dec << indent::tab << ")\n";
     return os;
 }
+*/
 
 boost::property_tree::ptree Read_Chunk_Pos::to_ptree() const
 {

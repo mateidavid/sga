@@ -1638,6 +1638,7 @@ void Graph::dump_detailed_counts(ostream& os) const
     }
 }
 
+/*
 ostream& operator << (ostream& os, const Graph& g)
 {
     os << indent::tab << "(Graph\n" << indent::inc
@@ -1648,5 +1649,6 @@ ostream& operator << (ostream& os, const Graph& g)
     os << indent::dec << indent::dec << indent::tab << ")\n";
     return os;
 }
+*/
 
 } // namespace MAC

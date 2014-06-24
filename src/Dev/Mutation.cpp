@@ -73,6 +73,7 @@ bool operator == (const Mutation& lhs, const Mutation& rhs)
             and (not lhs.have_seq() or lhs._seq == rhs._seq));
 }
 
+/*
 ostream& operator << (ostream& os, const Mutation& rhs)
 {
     os << "(Mutation &=" << (void*)&rhs << ", start=" << (size_t)rhs.get_start() << ",len=" << (size_t)rhs.get_len()
@@ -80,6 +81,7 @@ ostream& operator << (ostream& os, const Mutation& rhs)
     //os << rhs.to_ptree();
     return os;
 }
+*/
 
 boost::property_tree::ptree Mutation::to_ptree() const
 {

@@ -229,7 +229,7 @@ public:
     Read_Chunk_Ptr_Cont& chunk_ptr_cont() { return _chunk_ptr_cont; }
 
     friend bool operator == (const Mutation&, const Mutation&);
-    friend std::ostream& operator << (std::ostream&, const Mutation&);
+    //friend std::ostream& operator << (std::ostream&, const Mutation&);
     boost::property_tree::ptree to_ptree() const;
 
 private:

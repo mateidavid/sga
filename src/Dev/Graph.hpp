@@ -65,16 +65,16 @@ public:
                      Size_Type r1_start, Size_Type r1_len,
                      Size_Type r2_start, Size_Type r2_len, bool r2_rc,
                      const std::string& cigar);
-    
+
     /** Merge all contigs. */
     void cat_all_read_contigs();
 
     void set_contig_ids();
-    
+
     /** Clear contig colors. */
     //void clear_contig_colours();
     //void clear_contig_visit();
-    
+
     /** Mark contig endpoints and branches. */
     /*
     std::tuple< Size_Type, bool > visit_contig(const Contig_Entry* ce_cptr, bool dir);
@@ -84,7 +84,7 @@ public:
     void print_supercontig_lengths_2(std::ostream& os);
     void unmap_single_chunks();
     */
-    
+
     /** Integrity checks. */
     bool check_all() const;
     bool check(const std::set< Read_Entry_CBPtr >& re_set,
@@ -94,18 +94,19 @@ public:
         return check(std::set< Read_Entry_CBPtr >(), ce_set);
     }
     //bool check_colours() const;
-    
+
     /** Stats. */
     void dump_detailed_counts(std::ostream& os) const;
-    
+
     /*
     void print_separated_het_mutations(
         std::ostream& os, size_t min_support_report, Size_Type min_separation) const;
         void print_unmappable_contigs(std::ostream& os) const;
     */
-        
-    friend std::ostream& operator << (std::ostream&, const Graph&);
-        
+
+    //friend std::ostream& operator << (std::ostream&, const Graph&);
+    boost::property_tree::ptree to_ptree() const { return ptree(); } // TODO: implement
+
 private:
     Mutation_Fact _mut_fact;
     Mutation_Chunk_Adapter_Fact _mca_fact;

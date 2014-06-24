@@ -140,7 +140,7 @@ public:
     bool check() const;
 
     /** To stream. */
-    friend std::ostream& operator << (std::ostream&, const Read_Chunk_Pos&);
+    //friend std::ostream& operator << (std::ostream&, const Read_Chunk_Pos&);
     boost::property_tree::ptree to_ptree() const;
 };
 
@@ -407,7 +407,7 @@ public:
 
     bool check() const;
 
-    friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
+    //friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
     boost::property_tree::ptree to_ptree() const;
 
 private:
