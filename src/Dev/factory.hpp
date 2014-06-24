@@ -106,6 +106,7 @@ public:
     friend bool operator >= (const Identifier& lhs, const Identifier& rhs) { return lhs._idx >= rhs._idx; }
 
     friend std::ostream& operator << (std::ostream& os, const Identifier& rhs) { os << rhs._idx; return os; }
+    index_type to_int() const { return _idx; }
     boost::property_tree::ptree to_ptree() const { boost::property_tree::ptree pt; pt.put_value(_idx); return pt; }
 
     index_type _idx;
@@ -191,6 +192,7 @@ public:
     friend bool operator >  (const Pointer& lhs, const Pointer& rhs) { return lhs._idn >  rhs._idn; }
     friend bool operator >= (const Pointer& lhs, const Pointer& rhs) { return lhs._idn >= rhs._idn; }
 
+    index_type to_int() const { return _idn.to_int(); }
     boost::property_tree::ptree to_ptree() const { return _idn.to_ptree(); }
 
 private:
@@ -206,12 +208,12 @@ private:
 template < typename T, bool = false >
 struct to_ptree_caller_impl
 {
-    static void call(ptree&, const T&) {}
+    static void call(boost::property_tree::ptree&, const T&) {}
 };
 template < typename T >
 struct to_ptree_caller_impl< T, true >
 {
-    static void call(ptree& pt, const T& val) { pt.put("deref", val.to_ptree()); }
+    static void call(boost::property_tree::ptree& pt, const T& val) { pt.put("deref", val.to_ptree()); }
 };
 BOOST_TTI_HAS_MEMBER_FUNCTION(to_ptree)
 template < typename T >
@@ -267,10 +269,18 @@ public:
         pt.put("baddr", _idn._idx);
         if (_idn)
         {
-            to_ptree_caller_t::call(pt, raw());
+            //to_ptree_caller_t::call(pt, raw());
         }
         return pt;
     }
+
+    /*
+    friend std::ostream& operator << (std::ostream& os, const Reference& rhs)
+    {
+        os << "bref:{" << rhs.raw() << "}";
+        return os;
+    }
+    */
 
 private:
     friend class Pointer< val_type, index_type >;

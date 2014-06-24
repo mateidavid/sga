@@ -33,7 +33,7 @@ libdev_la_SOURCES = kmer_gen.cpp
 libmac_la_SOURCES = \
         globals.cpp \
         global_assert.cpp \
-        Log.cpp \
+        logger.cpp \
         Mutation_Chunk_Adapter.cpp \
         Mutation.cpp \
         Mutation_Cont.cpp \

@@ -10,7 +10,7 @@
 #include "Graph.hpp"
 #include "indent.hpp"
 #include "ixstream.hpp"
-#include "Log.hpp"
+#include "logger.hpp"
 
 using namespace std;
 using namespace MAC;
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
                 {
                     int tmp;
                     optarg_s >> tmp;
-                    ::detail::Log::default_level() = static_cast< ::detail::Log::Level >(tmp);
+                    logger::log::default_level() = static_cast< logger::level >(tmp);
                 }
                 break;
             default:

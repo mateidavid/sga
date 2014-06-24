@@ -12,7 +12,7 @@
 #include "print_seq.hpp"
 #include "indent.hpp"
 #include "../Util/Util.h"
-#include "Log.hpp"
+#include "logger.hpp"
 
 #define LOG_FACILITY "Read_Chunk"
 
@@ -354,7 +354,7 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
                             .put("mut_left", (*mut_left_cbptr).to_ptree());
 
     ASSERT(rc_bptr->is_unlinked());
-    ASSERT(mut_left_cbptr == nullptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
+    ASSERT(not mut_left_cbptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
     Read_Chunk_BPtr left_rc_bptr = nullptr;
     Read_Chunk_BPtr right_rc_bptr = nullptr;
 
@@ -1008,7 +1008,7 @@ bool Read_Chunk::check() const
     {
         ASSERT(_mut_ptr_cont.size() == 0);
         ASSERT(_ce_bptr->chunk_cont().size() == 1);
-        ASSERT(&*(_ce_bptr->chunk_cont().begin()) == this);
+        ASSERT((&*(_ce_bptr->chunk_cont().begin())).raw() == this);
         ASSERT(_ce_bptr->mut_cont().size() == 0);
     }
     return true;
@@ -1024,8 +1024,8 @@ ostream& operator << (ostream& os, const Read_Chunk_Pos& pos)
 ostream& operator << (ostream& os, const Read_Chunk& rhs)
 {
     os << indent::tab << "(Read_Chunk &=" << (void*)&rhs
-       << indent::inc << indent::nl << "re_bptr=" << (void*)rhs._re_bptr
-       << ",ce_bptr=" << (void*)rhs._ce_bptr
+       << indent::inc << indent::nl << "re_bptr=" << (void*)rhs._re_bptr.raw()
+       << ",ce_bptr=" << (void*)rhs._ce_bptr.raw()
        << ",is_unmappable=" << (int)rhs._is_unmappable
        << indent::nl << "r_start=" << rhs.get_r_start()
        << ",r_len=" << rhs.get_r_len()
@@ -1034,7 +1034,7 @@ ostream& operator << (ostream& os, const Read_Chunk& rhs)
        << ",rc=" << (int)rhs.get_rc()
        << indent::nl << "mut_cptr_cont:"
        << indent::inc << '\n';
-    print_seq(os, rhs._mut_ptr_cont, indent::nl, indent::tab, '\n');
+    //print_seq(os, rhs._mut_ptr_cont, indent::nl, indent::tab, '\n');
     os << indent::dec << indent::dec << indent::tab << ")\n";
     return os;
 }

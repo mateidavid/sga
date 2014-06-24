@@ -5,7 +5,7 @@
 #include "indent.hpp"
 #include "print_seq.hpp"
 #include "../Util/Util.h"
-#include "Log.hpp"
+#include "logger.hpp"
 
 #define LOG_FACILITY "graph"
 
@@ -46,7 +46,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
 
     // there is nothing to cut if:
     if (// cut is at the start, and no insertion goes to the left
-        (c_brk == 0 and mut_left_cbptr == nullptr)
+        (c_brk == 0 and not mut_left_cbptr)
         // cut is at the end, and:
         or (c_brk == ce_bptr->get_len()
             and (// there are no mutations
@@ -65,14 +65,16 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     ce_cont().insert(ce_new_bptr);
 
     // split any mutations that span c_pos
+    while (true)
     {
-        Mutation_BPtr mut_bptr;
-        while ((mut_bptr = ce_bptr->mut_cont().find_span_pos(c_brk).unconst()) != nullptr)
+        Mutation_BPtr mut_bptr = ce_bptr->mut_cont().find_span_pos(c_brk).unconst();
+        if (not mut_bptr)
         {
-            ASSERT(mut_bptr->get_start() < c_brk and c_brk < mut_bptr->get_end());
-            ASSERT(mut_bptr != mut_left_cbptr);
-            ce_bptr->cut_mutation(mut_bptr, c_brk - mut_bptr->get_start(), 0);
+            break;
         }
+        ASSERT(mut_bptr->get_start() < c_brk and c_brk < mut_bptr->get_end());
+        ASSERT(mut_bptr != mut_left_cbptr);
+        ce_bptr->cut_mutation(mut_bptr, c_brk - mut_bptr->get_start(), 0);
     }
 
     // split Mutation_Cont, save rhs in new Contig_Entry
@@ -634,9 +636,9 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     }
 
     Read_Entry_BPtr re1_bptr = re_cont().find(r1_name).unconst();
-    ASSERT(re1_bptr != nullptr);
+    ASSERT(re1_bptr);
     Read_Entry_BPtr re2_bptr = re_cont().find(r2_name).unconst();
-    ASSERT(re2_bptr != nullptr);
+    ASSERT(re2_bptr);
 
     string r1_seq = re1_bptr->get_seq();
     string r2_seq = re2_bptr->get_seq();
@@ -1010,13 +1012,13 @@ Graph::find_unmappable_regions(Read_Chunk_CBPtr orig_rc_cbptr, Range_Cont< Size_
     // group all extremal read chunks by their read entry
     map< Read_Entry_CBPtr, vector< Read_Chunk_CBPtr > > re_chunk_map;
     // first look at contig start
-    for (auto rc_cbref : ce_cbptr->chunk_cont().interval_intersect(0, 0))
+    for (auto rc_cbref : ce_cbptr->chunk_cont().iintersect(0, 0))
     {
         Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         re_chunk_map[rc_cbptr->re_bptr()].push_back(rc_cbptr);
     }
     // then at contig end
-    for (auto rc_cbref : ce_cbptr->chunk_cont().interval_intersect(ce_cbptr->get_len(), ce_cbptr->get_len()))
+    for (auto rc_cbref : ce_cbptr->chunk_cont().iintersect(ce_cbptr->get_len(), ce_cbptr->get_len()))
     {
         Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         re_chunk_map[rc_cbptr->re_bptr()].push_back(rc_cbptr);

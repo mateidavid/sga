@@ -98,7 +98,7 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
     map< std::tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > > res;
     bool c_left = not c_right;
     Size_Type endpoint = (c_left? 0 : get_len());
-    for (auto rc_cbref : chunk_cont().interval_intersect(endpoint, endpoint))
+    for (auto rc_cbref : chunk_cont().iintersect(endpoint, endpoint))
     {
         Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         Read_Entry_BPtr re_cbptr = rc_cbptr->re_bptr();
