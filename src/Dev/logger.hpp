@@ -30,19 +30,19 @@ class log
     : public std::ostringstream
 {
 public:
-
     /** Constructor: initialize buffer. */
     log(const std::string& facility, level msg_level)
     {
         *this << "= " << facility << "." << int(msg_level) << ": ";
     }
-
     /** Destructor: dump buffer to output. */
     ~log()
     {
         //_buffer << std::endl;
-        std::cerr.write(this->str().c_str(), this->str().size());
+        std::clog.write(this->str().c_str(), this->str().size());
     }
+    /** Produce l-value for output chaining. */
+    std::ostream& l_value() { return *this; }
 
     /** Get and set the log level of the given facility. */
     static level& facility_level(const std::string& facility)
@@ -59,17 +59,17 @@ public:
 private:
     static std::map< std::string, level > _facility_level;
     static level _default_level;
-}; // class logger
+}; // class log
 
-} // namespace log
+} // namespace logger
 
 #define log_l(msg_level) \
     if (logger::msg_level > logger::log::facility_level(LOG_FACILITY)) ; \
-    else logger::log(LOG_FACILITY, logger::msg_level)
+    else logger::log(LOG_FACILITY, logger::msg_level).l_value()
 
 #define log_i(int_msg_level) \
     if (static_cast< logger::level >(int_msg_level) > logger::log::facility_level(LOG_FACILITY)) ; \
-    else logger::log(LOG_FACILITY, static_cast< logger::level >(int_msg_level))
+    else logger::log(LOG_FACILITY, static_cast< logger::level >(int_msg_level)).l_value()
 
 
 #endif

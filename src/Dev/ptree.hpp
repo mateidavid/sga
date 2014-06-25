@@ -4,8 +4,8 @@
 // Released under the GPL license
 //-----------------------------------------------
 
-#ifndef __PTREE_TOOLS_HPP
-#define __PTREE_TOOLS_HPP
+#ifndef __PTREE_HPP
+#define __PTREE_HPP
 
 #include "shortcuts.hpp" // for is_convertible fix
 
@@ -31,6 +31,7 @@ public:
         return *this;
     }
 };
+
 
 template < bool = true >
 std::ostream& operator << (std::ostream& os, const boost::property_tree::ptree& rhs)
