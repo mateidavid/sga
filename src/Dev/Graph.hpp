@@ -60,11 +60,12 @@ public:
      * @param r2_len Overlap length in r2.
      * @param r2_rc True iff r2 is reverse complemented.
      * @param cigar Cigar string (r1:reference, r2:query).
+     * @param cat_at_step Catenate contigs after adding the overlap.
      */
     void add_overlap(const std::string& r1_name, const std::string& r2_name,
                      Size_Type r1_start, Size_Type r1_len,
                      Size_Type r2_start, Size_Type r2_len, bool r2_rc,
-                     const std::string& cigar);
+                     const std::string& cigar, bool cat_at_step);
 
     /** Merge all contigs. */
     void cat_all_read_contigs();
@@ -82,8 +83,8 @@ public:
                      std::list< std::tuple< const Contig_Entry*, size_t, size_t, bool > >& l, bool& cycle);
     void print_supercontig_lengths(std::ostream& os);
     void print_supercontig_lengths_2(std::ostream& os);
-    void unmap_single_chunks();
     */
+    void unmap_single_chunks();
 
     /** Integrity checks. */
     bool check_all() const;
@@ -209,7 +210,7 @@ private:
 
     /** Find unmappable regions in a read chunk.
      * @param rc_cbptr Read chunk to scan.
-     * @param region_cont Set of disjoint ranges of the chunk's read which should be made unmappable.
+     * @param region_cont Set of ranges of the chunk's read which should be made unmappable.
      */
     void find_unmappable_regions(Read_Chunk_CBPtr rc_cbptr, Range_Cont< Size_Type >& region_cont) const;
 

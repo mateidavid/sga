@@ -38,8 +38,8 @@ struct Program_Options
     size_t progress_count;
     size_t unmap_trigger_len;
     size_t default_log_level;
-    bool merge_at_step;
-    bool merge_at_end;
+    bool cat_at_step;
+    bool cat_at_end;
     bool print_at_step;
     bool print_at_end;
 
@@ -54,8 +54,8 @@ struct Program_Options
                       .put("progress count", progress_count)
                       .put("unmap trigger length", unmap_trigger_len)
                       .put("default log level", default_log_level)
-                      .put("merge contigs at each step", merge_at_step)
-                      .put("merge contigs at end", merge_at_end)
+                      .put("cat contigs at each step", cat_at_step)
+                      .put("cat contigs at end", cat_at_end)
                       .put("print graph at each step", print_at_step)
                       .put("print graph at end", print_at_end)
                       ;
@@ -64,7 +64,7 @@ struct Program_Options
 
 int real_main(const Program_Options& po)
 {
-    log_l(info) << po.to_ptree();
+    log_l(info) << ptree().put("settings", po.to_ptree());
 
     if (po.input_file.empty())
     {
@@ -120,7 +120,7 @@ int real_main(const Program_Options& po)
             ++r1_end;
             ++r2_end;
             global::assert_message = string("ED ") + r1_id + " " + r2_id;
-            g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
+            g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5), po.cat_at_step);
         }
 
         log_l(debug2) << g.to_ptree();
@@ -134,25 +134,23 @@ int real_main(const Program_Options& po)
         }
         //ASSERT(g.check_all());
     }
-    //g.unmap_single_chunks();
+    g.unmap_single_chunks();
     g.set_contig_ids();
     ASSERT(g.check_all());
-    if (po.merge_at_end)
+    if (po.cat_at_end)
     {
         if (not po.stats_file_2.empty())
         {
-            //TODO
-            //ofstream stats_2_ofs(po.stats_file_2);
-            //g.dump_detailed_counts(stats_2_ofs);
+            ofstream stats_2_ofs(po.stats_file_2);
+            g.dump_detailed_counts(stats_2_ofs);
         }
         g.cat_all_read_contigs();
         ASSERT(g.check_all());
     }
     if (not po.stats_file_1.empty())
     {
-        //TODO
-        //ofstream stats_1_ofs(po.stats_file_1);
-        //g.dump_detailed_counts(stats_1_ofs);
+        ofstream stats_1_ofs(po.stats_file_1);
+        g.dump_detailed_counts(stats_1_ofs);
     }
     if (not po.supercontig_lengths_file.empty())
     {
@@ -221,8 +219,8 @@ int main(int argc, char* argv[])
         ("unmappable-contigs-file,U", bo::value< string >(&po.unmappable_contigs_file), "unmappable contigs file")
         ("progress-count,c", bo::value< size_t >(&po.progress_count)->default_value(0), "progress count")
         ("unmap-trigger-len,u", bo::value< size_t >(&po.unmap_trigger_len)->default_value(9), "unmap trigger len")
-        ("merge-each-step,s", bo::value< bool >(&po.merge_at_step)->default_value(false), "merge contigs at each step")
-        ("merge-end,e", bo::value< bool >(&po.merge_at_end)->default_value(false), "merge contigs at end")
+        ("cat-each-step,s", bo::value< bool >(&po.cat_at_step)->default_value(false), "cat contigs at each step")
+        ("cat-end,e", bo::value< bool >(&po.cat_at_end)->default_value(false), "cat contigs at end")
         ("print-at-step,G", bo::value< bool >(&po.print_at_step)->default_value(false), "print graph at each step")
         ("print-at-end,g", bo::value< bool >(&po.print_at_end)->default_value(false), "print graph at end")
         ("default-log-level,d", bo::value< size_t >(&po.default_log_level)->default_value(0), "default log level")

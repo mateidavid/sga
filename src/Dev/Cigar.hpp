@@ -188,7 +188,7 @@ public:
     /** Equality comparison. */
     bool operator == (const Cigar& rhs);
 
-    friend std::ostream& operator << (std::ostream& os, const Cigar& rhs);
+    //friend std::ostream& operator << (std::ostream& os, const Cigar& rhs);
     boost::property_tree::ptree to_ptree() const;
 
 private:

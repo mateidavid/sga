@@ -598,7 +598,8 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
 void Graph::add_overlap(const string& r1_name, const string& r2_name,
                         Size_Type r1_start, Size_Type r1_len,
                         Size_Type r2_start, Size_Type r2_len, bool r2_rc,
-                        const string& cigar_string)
+                        const string& cigar_string,
+                        bool cat_at_step)
 {
     log_l(info) << ptree().put("tag", "add_overlap()")
                           .put("r1_name", r1_name)
@@ -678,7 +679,7 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
 
     ASSERT(check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr })));
 
-    if (global::merge_contigs_at_each_step)
+    if (cat_at_step)
     {
         //cerr << "before merging:\n" << *this;
         cat_read_contigs(re1_bptr);
@@ -1374,23 +1375,22 @@ void Graph::set_contig_ids()
     }
 }
 
-/*
 void Graph::unmap_single_chunks()
 {
-    for (auto re_it = _re_cont.begin(); re_it != _re_cont.end(); ++re_it)
+    for (const auto re_cbref : _re_cont)
     {
-        const Read_Entry* re_cptr = &*re_it;
+        Read_Entry_CBPtr re_cbptr = &re_cbref;
         bool done = false;
         while (not done)
         {
             done = true;
-            for (auto rc_it = re_cptr->get_chunk_cont().begin(); rc_it != re_cptr->get_chunk_cont().end(); ++rc_it)
+            for (const auto rc_cbref : re_cbptr->chunk_cont())
             {
-                Read_Chunk_CPtr rc_cptr = &*rc_it;
-                const Contig_Entry* ce_cptr = rc_cptr->get_ce_ptr();
-                if (not ce_cptr->is_unmappable() and ce_cptr->get_chunk_cptr_cont().size() == 1)
+                Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
+                Contig_Entry_CBPtr ce_cbptr = rc_cbptr->ce_bptr();
+                if (not ce_cbptr->is_unmappable() and ce_cbptr->chunk_cont().size() == 1)
                 {
-                    unmap_chunk(rc_cptr);
+                    unmap_chunk(rc_cbptr.unconst());
                     done = false;
                     break;
                 }
@@ -1399,6 +1399,7 @@ void Graph::unmap_single_chunks()
     }
 }
 
+/*
 void Graph::print_separated_het_mutations(ostream& os, size_t min_support_report, Size_Type min_separation) const
 {
     for (const auto& ce : _ce_cont)

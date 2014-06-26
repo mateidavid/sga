@@ -252,6 +252,7 @@ bool Cigar::check(const string& rf_seq, const string& qr_seq) const
     return true;
 }
 
+/*
 ostream& operator << (ostream& os, const Cigar_Op& rhs)
 {
     os << '(' << (size_t)rhs.len << rhs.op << ",rf_offset=" << (size_t)rhs.rf_offset << ",qr_offset=" << (size_t)rhs.qr_offset << ')';
@@ -270,6 +271,7 @@ ostream& operator << (ostream& os, const Cigar& rhs)
     //os << rhs.to_ptree();
     return os;
 }
+*/
 
 boost::property_tree::ptree Cigar_Op::to_ptree() const
 {
