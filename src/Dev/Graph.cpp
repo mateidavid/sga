@@ -40,9 +40,9 @@ void Graph::add_read(string&& name, Seq_Type&& seq)
 bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
     log_l(debug) << ptree().put("tag", "cut_contig_entry()")
-                           .put("ce", (*ce_bptr).to_ptree())
+                           .put("ce_ptr", ce_bptr.to_ptree())
                            .put("c_brk", c_brk)
-                           .put("mut_left", (*mut_left_cbptr).to_ptree());
+                           .put("mut_left_ptr", mut_left_cbptr.to_ptree());
 
     // there is nothing to cut if:
     if (// cut is at the start, and no insertion goes to the left
@@ -86,6 +86,10 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     // split Read_Chunk_Cont, save rhs in new Contig_Entry
     ce_new_bptr->chunk_cont() = ce_bptr->chunk_cont().split(c_brk, mut_left_cbptr);
     ASSERT(ce_bptr->chunk_cont().max_end() <= c_brk);
+    const auto& x = ce_new_bptr->chunk_cont();
+    const auto& y = x.begin();
+    (void)x;
+    (void)y;
     ASSERT(c_brk <= ce_new_bptr->chunk_cont().begin()->get_c_start());
 
     // rebase all mutations and read chunks from the rhs to the breakpoint
@@ -119,7 +123,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
 bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
 {
     log_l(debug) << ptree().put("tag", "cut_read_chunk()")
-                           .put("rc", (*rc_bptr).to_ptree())
+                           .put("rc_ptr", rc_bptr.to_ptree())
                            .put("r_brk", r_brk);
 
     ASSERT(rc_bptr->get_r_len() > 0);
@@ -210,7 +214,7 @@ bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
 bool Graph::cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk)
 {
     log_l(debug) << ptree().put("tag", "cut_read_entry()")
-                           .put("re", (*re_bptr).to_ptree())
+                           .put("re_ptr", re_bptr.to_ptree())
                            .put("r_brk", r_brk);
 
     if (r_brk == 0 or r_brk == re_bptr->get_len())

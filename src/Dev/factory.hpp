@@ -107,7 +107,19 @@ public:
 
     //friend std::ostream& operator << (std::ostream& os, const Identifier& rhs) { os << rhs._idx; return os; }
     index_type to_int() const { return _idx; }
-    boost::property_tree::ptree to_ptree() const { ptree pt; pt.put_value(_idx); return pt; }
+    boost::property_tree::ptree to_ptree() const
+    {
+        boost::property_tree::ptree pt;
+        if (*this)
+        {
+            pt.put_value(_idx);
+        }
+        else
+        {
+            pt.put_value("null");
+        }
+        return pt;
+    }
 
     index_type _idx;
 };

@@ -19,7 +19,7 @@ namespace detail
 struct Mutation_Ptr_List_Node_Traits;
 struct Read_Chunk_Ptr_List_Node_Traits;
 
-};
+}
 
 class Mutation_Chunk_Adapter
 {

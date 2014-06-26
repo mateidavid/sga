@@ -69,7 +69,7 @@ namespace Quality
 
     // Return a string which encodes the log-scaled double vector as characters
     std::string encodeLogProbVector(const DoubleVector& dv);
-};
+}
 
 
 #endif
