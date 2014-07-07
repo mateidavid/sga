@@ -42,10 +42,11 @@ public:
     void insert(const range_type& range)
     {
         // ignore negative ranges
-        if (std::get<1>(range) < std::get<0>(range))
+        if (std::get<1>(range) <= std::get<0>(range))
         {
             return;
         }
+        std::cerr << "adding range: [" << std::get<0>(range) << "," << std::get<1>(range) << "]\n";
         // find first range that could overlap this one
         auto it = Base::lower_bound(range);
         if (it != begin())
@@ -60,7 +61,7 @@ public:
                 // either get<0>(range) <  get<0>(*it)   [ <= get<1>(range) ]
                 // or     get<0>(*it)   <= get<0>(range) [ <= get<1>(*it)   ]
                 range_type new_range = std::make_tuple(std::min(std::get<0>(*it), std::get<0>(range)),
-                                                       std::max(std::get<0>(*it), std::get<0>(range)));
+                                                       std::max(std::get<1>(*it), std::get<1>(range)));
                 Base::erase(it);
                 Base::insert(new_range);
                 return;

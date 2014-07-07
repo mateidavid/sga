@@ -95,6 +95,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     // rebase all mutations and read chunks from the rhs to the breakpoint
     ce_new_bptr->mut_cont().shift(-int(c_brk));
     ce_new_bptr->chunk_cont().shift(-int(c_brk));
+    ce_new_bptr->chunk_cont().set_ce_ptr(ce_new_bptr);
 
     // link back the chunks into their RE containers
     ce_bptr->chunk_cont().insert_into_re_cont();
@@ -1015,18 +1016,18 @@ Graph::find_unmappable_regions(Read_Chunk_CBPtr orig_rc_cbptr, Range_Cont< Size_
 
     Contig_Entry_CBPtr ce_cbptr = orig_rc_cbptr->ce_bptr();
     // group all extremal read chunks by their read entry
-    map< Read_Entry_CBPtr, vector< Read_Chunk_CBPtr > > re_chunk_map;
+    map< Read_Entry_CBPtr, set< Read_Chunk_CBPtr > > re_chunk_map;
     // first look at contig start
     for (auto rc_cbref : ce_cbptr->chunk_cont().iintersect(0, 0))
     {
         Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
-        re_chunk_map[rc_cbptr->re_bptr()].push_back(rc_cbptr);
+        re_chunk_map[rc_cbptr->re_bptr()].insert(rc_cbptr);
     }
     // then at contig end
     for (auto rc_cbref : ce_cbptr->chunk_cont().iintersect(ce_cbptr->get_len(), ce_cbptr->get_len()))
     {
         Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
-        re_chunk_map[rc_cbptr->re_bptr()].push_back(rc_cbptr);
+        re_chunk_map[rc_cbptr->re_bptr()].insert(rc_cbptr);
     }
 
     // read regions to unmap

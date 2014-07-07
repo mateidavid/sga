@@ -18,7 +18,7 @@ Read_Chunk_CE_Cont Read_Chunk_CE_Cont::split(Size_Type c_brk, Mutation_CBPtr mut
     ASSERT(not mut_left_cbptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
     Read_Chunk_CE_Cont lhs_cont;
     Read_Chunk_CE_Cont rhs_cont;
-    
+
     while (size() > 0)
     {
         Read_Chunk_BPtr left_rc_bptr;
@@ -26,8 +26,14 @@ Read_Chunk_CE_Cont Read_Chunk_CE_Cont::split(Size_Type c_brk, Mutation_CBPtr mut
         Read_Chunk_BPtr rc_bptr = &*begin();
         erase(rc_bptr);
         std::tie(left_rc_bptr, right_rc_bptr) = Read_Chunk::split(rc_bptr, c_brk, mut_left_cbptr);
-        lhs_cont.insert(left_rc_bptr);
-        rhs_cont.insert(right_rc_bptr);
+        if (left_rc_bptr)
+        {
+            lhs_cont.insert(left_rc_bptr);
+        }
+        if (right_rc_bptr)
+        {
+            rhs_cont.insert(right_rc_bptr);
+        }
     }
 
     *this = std::move(lhs_cont);

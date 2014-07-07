@@ -195,7 +195,8 @@ Contig_Entry::unmappable_neighbour_range(bool c_right, const vector< MAC::Read_C
 std::tuple< Contig_Entry_CBPtr, bool, vector< Read_Chunk_CBPtr > >
 Contig_Entry::can_cat_dir(bool c_right) const
 {
-    auto res = out_chunks_dir(c_right, 0);
+    // ignore unmappable out chunks iff this ce is not unmappable
+    auto res = out_chunks_dir(c_right, not is_unmappable()? 0 : 1);
     if (res.size() != 1)
     {
         return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
@@ -205,7 +206,11 @@ Contig_Entry::can_cat_dir(bool c_right) const
     bool same_orientation;
     vector< Read_Chunk_CBPtr > rc_cbptr_cont = std::move(res.begin()->second);
     std::tie(ce_next_cbptr, same_orientation) = res.begin()->first;
-    auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, 0);
+    if (ce_next_cbptr->is_unmappable() != is_unmappable())
+    {
+        return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
+    }
+    auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, not is_unmappable()? 0 : 1);
     if (tmp.size() != 1)
     {
         return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());

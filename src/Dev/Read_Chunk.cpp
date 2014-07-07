@@ -414,9 +414,11 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
                 ASSERT((rc_bptr->get_c_start() == c_brk
                         and pos.mca_cit == rc_bptr->mut_ptr_cont().begin())
                        or (rc_bptr->get_c_start() < c_brk
+                           and not rc_bptr->mut_ptr_cont().empty()
                            and pos.mca_cit == ++(rc_bptr->mut_ptr_cont().begin())
                            and rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->is_del()
-                           and rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->get_start() == rc_bptr->get_c_start()));
+                           and rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->get_start() == rc_bptr->get_c_start()
+                           and rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->get_end() == c_brk));
                 // remove initial deletion, if any
                 if (rc_bptr->get_c_start() < c_brk)
                 {
@@ -434,6 +436,7 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
                 ASSERT((c_brk == rc_bptr->get_c_end()
                         and pos.mca_cit == rc_bptr->mut_ptr_cont().end())
                        or (c_brk < rc_bptr->get_c_end()
+                           and not rc_bptr->mut_ptr_cont().empty()
                            and pos.mca_cit == --(rc_bptr->mut_ptr_cont().end())
                            and pos.mca_cit->mut_cbptr()->is_del()
                            and pos.mca_cit->mut_cbptr()->get_end() == rc_bptr->get_c_end()));
@@ -458,7 +461,7 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
             right_rc_bptr->_rc = rc_bptr->_rc;
             right_rc_bptr->_re_bptr = rc_bptr->_re_bptr;
             right_rc_bptr->_ce_bptr = rc_bptr->_ce_bptr;
-            right_rc_bptr->_c_start = 0;
+            right_rc_bptr->_c_start = c_brk;
             right_rc_bptr->_c_len = rc_bptr->_c_start + rc_bptr->_c_len - c_brk;
             rc_bptr->_c_len -= right_rc_bptr->_c_len;
             if (not rc_bptr->_rc)

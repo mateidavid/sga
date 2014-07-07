@@ -58,7 +58,7 @@ struct Read_Chunk_Ptr_List_Value_Traits
     typedef node_traits::fact_type::const_ref_type const_reference;
     typedef Read_Chunk_Ptr_List_Value_Traits* value_traits_ptr;
 
-    static const bi::link_mode_type link_mode = bi::normal_link;
+    static const bi::link_mode_type link_mode = bi::safe_link;
 
     static node_ptr to_node_ptr (reference value) { return &value; }
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }

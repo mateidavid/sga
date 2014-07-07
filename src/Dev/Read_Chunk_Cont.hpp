@@ -132,6 +132,18 @@ public:
         Base::implement_shift(delta);
     }
 
+    /** Set ce_ptr of all chunks.
+     * @param ce_ptr New ce pointer.
+     */
+    void set_ce_ptr(Contig_Entry_BPtr ce_bptr)
+    {
+        for (auto rc_bref : *this)
+        {
+            Read_Chunk_BPtr rc_bptr = &rc_bref;
+            rc_bptr->ce_bptr() = ce_bptr;
+        }
+    }
+
     /** Copy chunks from given container into this one.
      * @param other_cont Container to clear.
      * @param ce_bptr Pointer to Contig_Entry object of this container.
