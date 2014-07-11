@@ -5,10 +5,6 @@ configure
 autom4te.cache/
 aclocal.m4
 *.swp
-depcomp
-install-sh
-missing
-build*
 *.o
 *.lo
 *.a
@@ -20,8 +16,12 @@ Makefile
 /configure.log
 /config.status
 /stamp-h1
-config.guess
-config.sub
+/auxfiles/compile
+/auxfiles/config.guess
+/auxfiles/config.sub
+/auxfiles/depcomp
+/auxfiles/install-sh
+/auxfiles/missing
 /libtool
-/*.kdev*
+/GIT_VERSION
 *~
