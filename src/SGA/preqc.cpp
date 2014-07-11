@@ -58,8 +58,9 @@ struct ModelParameters
     double mean_read_starts;
     double mean_error_kmer_depth;
     double error_rate;
-    static const double error_rate_prior = 0.02;
+    static const double error_rate_prior;
 };
+const double ModelParameters::error_rate_prior = 0.02;
 
 // struct to store posterior probabilities calculated
 // by the model
