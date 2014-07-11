@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <iterator>
+#include <omp.h>
 #include "Util.h"
 #include "overlap-long.h"
 #include "SuffixArray.h"
