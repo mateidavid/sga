@@ -1,0 +1,43 @@
+#include "version.h"
+
+/* Name of package */
+#define PACKAGE "@PACKAGE@"
+
+/* Define to the address where bug reports for this package should be sent. */
+#define PACKAGE_BUGREPORT "@PACKAGE_BUGREPORT@"
+
+/* Define to the full name of this package. */
+#define PACKAGE_NAME "@PACKAGE_NAME@"
+
+/* Define to the full name and version of this package. */
+#define PACKAGE_STRING "@PACKAGE_STRING@"
+
+/* Define to the one symbol short name of this package. */
+#define PACKAGE_TARNAME "@PACKAGE_TARNAME@"
+
+/* Define to the home page for this package. */
+#define PACKAGE_URL "@PACKAGE_URL@"
+
+/* clock_getttime found */
+#cmakedefine HAVE_CLOCK_GETTIME 1
+
+/* Define to 1 if you have the <ext/hash_map> header file. */
+#cmakedefine HAVE_EXT_HASH_MAP 1
+
+/* Define to 1 if you have the <google/sparse_hash_map> header file. */
+#cmakedefine HAVE_GOOGLE_SPARSE_HASH_MAP 1
+
+/* Define to 1 if you have the <tr1/unordered_map> header file. */
+#cmakedefine HAVE_TR1_UNORDERED_MAP 1
+
+/* Define to 1 if you have the <unordered_map> header file. */
+#cmakedefine HAVE_UNORDERED_MAP 1
+
+/* Define to 1 if you have the `hoard' library (-lhoard). */
+#cmakedefine HAVE_LIBHOARD 1
+
+/* Define to 1 if you have the `jemalloc' library (-ljemalloc). */
+#cmakedefine HAVE_LIBJEMALLOC 1
+
+/* Define to 1 if you have the `tcmalloc' library (-ltcmalloc). */
+#cmakedefine HAVE_LIBTCMALLOC 1
