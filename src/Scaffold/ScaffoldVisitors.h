@@ -21,7 +21,7 @@ namespace ScaffoldAlgorithms
                                              int& dist, double& sd, EdgeDir& dir_yz, 
                                              EdgeDir& dir_zy, EdgeComp& comp);
 
-};
+}
 
 // Write summary statistics of the scaffold graph to stdout
 class ScaffoldStatsVisitor

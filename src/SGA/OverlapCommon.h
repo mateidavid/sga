@@ -30,6 +30,6 @@ void parseHitsString(const std::string& hitString,
                      size_t& sumBlockSize,
                      OverlapVector& outVector, 
                      bool& isSubstring);
-};
+}
 
 #endif

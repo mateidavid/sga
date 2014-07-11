@@ -1140,4 +1140,4 @@ void extendHitFullLength(LRHit& hit, uint8_t* pQueryPacked, uint8_t* pTargetPack
 
 
 
-};
+}

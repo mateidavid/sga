@@ -73,6 +73,6 @@ EdgeDesc getEdgeDescFromEdge(Edge* pEdge);
 
 void printOverlapMap(const EdgeDescOverlapMap& overlapMap);
 
-};
+}
 
 #endif

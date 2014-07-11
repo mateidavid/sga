@@ -192,6 +192,6 @@ std::string sampleRandomString(const BWT* pBWT);
 // Returns a randomly chosen substring from the BWT 
 std::string sampleRandomSubstring(const BWT* pBWT, size_t len);
 
-};
+}
 
 #endif

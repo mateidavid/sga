@@ -77,6 +77,6 @@ namespace SGSearch
 
     // Returns true if all the endpoints of the edges in epv are in vertexSet
     bool checkEndpointsInSet(EdgePtrVec& epv, std::set<Vertex*>& vertexSet);
-};
+}
 
 #endif

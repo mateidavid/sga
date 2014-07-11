@@ -76,6 +76,6 @@ std::string makeDeBruijnVertex(const std::string& v, char edgeBase, EdgeDir dire
 // Add a de Bruijn graph edge to the given graph betwee pX and pY.
 void addSameStrandDeBruijnEdges(StringGraph* pGraph, const Vertex* pX, const Vertex* pY, EdgeDir direction);
 
-};
+}
 
 #endif

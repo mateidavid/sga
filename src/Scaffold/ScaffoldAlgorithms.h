@@ -67,6 +67,6 @@ namespace ScaffoldAlgorithms
     // Returns all the vertices contained on the cycle
     ScaffoldVertexVector checkForStrictCycle(ScaffoldVertex* pVertex);
     ScaffoldEdge* _cycleDFSBothDir(ScaffoldVertex* pVertex, LayoutEdgeMap& predMap);
-};
+}
 
 #endif

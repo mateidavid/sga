@@ -70,6 +70,6 @@ namespace ScaffoldSearch
 
     void printWalks(const ScaffoldWalkVector& walkVector);
 
-};
+}
 
 #endif

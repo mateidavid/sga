@@ -226,6 +226,6 @@ void extendHitFullLength(LRHit& hit, uint8_t* pQueryPacked, uint8_t* pTargetPack
                          int query_length, int target_length, AlnParam* pStdAlnPar);
 
 
-};
+}
 
 #endif

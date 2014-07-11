@@ -115,6 +115,6 @@ namespace ASQG
 
     // Writing functions
     void writeFields(std::ostream& out, const StringVector& fields);
-};
+}
 
 #endif

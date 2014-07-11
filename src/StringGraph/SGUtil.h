@@ -28,5 +28,5 @@ StringGraph* loadASQG(const std::string& filename, const unsigned int minOverlap
 StringGraph* loadFASTA(const std::string& filename);
 
 
-};
+}
 #endif

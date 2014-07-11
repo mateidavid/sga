@@ -96,6 +96,6 @@ namespace SQG
     typedef TagValue<int> IntTag;
     typedef TagValue<float> FloatTag;
     typedef TagValue<std::string> StringTag;
-};
+}
 
 #endif

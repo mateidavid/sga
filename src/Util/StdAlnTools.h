@@ -125,6 +125,6 @@ namespace StdAlnTools
 
     // Print the padded aligned strings
     void printPaddedStrings(const std::string& s1, const std::string& s2, const std::string& m, int colSize = 120);
-};
+}
 
 #endif

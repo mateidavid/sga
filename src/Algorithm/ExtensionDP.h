@@ -125,6 +125,6 @@ namespace ExtensionDP
 
     // Print the full scoring matrix
     void printMatrix(const BandedDPColumnPtrVector& columnPtrVec);
-};
+}
 
 #endif

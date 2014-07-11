@@ -43,7 +43,7 @@ enum HaplotypeBuilderReturnCode
     HBRC_OK,
     HBRC_TOO_MANY_VERTICES,
     HBRC_NO_PATH,
-    HBRC_WALK_FAILED,
+    HBRC_WALK_FAILED
 };
 
 //

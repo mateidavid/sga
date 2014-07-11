@@ -37,6 +37,6 @@ namespace OverlapTools
                                 int minOverlap, double maxErrorRate, const DPAlignment& dpAlign,
                                 Match& outMatch);
 
-};
+}
 
 #endif

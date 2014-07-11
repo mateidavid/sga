@@ -136,6 +136,6 @@ namespace HapgenUtil
     // Print an alignment to a reference
     void printAlignment(const std::string& query, const HapgenAlignment& aln, const ReadTable* pRefTable);
 
-};
+}
 
 #endif

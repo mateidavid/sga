@@ -387,6 +387,6 @@ size_t processSequencesParallelOpenMP(const std::string& readsFile, std::vector<
 }
 
 
-};
+}
 
 #endif

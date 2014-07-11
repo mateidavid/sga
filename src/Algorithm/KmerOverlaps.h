@@ -52,6 +52,6 @@ SequenceOverlapPairVector approximateMatch(const std::string& query,
                                            int bandwidth, 
                                            int max_interval,
                                            const BWTIndexSet& indices);
-};
+}
 
 #endif

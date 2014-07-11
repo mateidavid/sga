@@ -71,6 +71,6 @@ namespace DindelUtil
 
     void initializeCodeCounts(int counts[DRC_NUM_CODES]);
     void printReturnReport(const int counts[DRC_NUM_CODES]);
-};
+}
 
 #endif

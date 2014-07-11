@@ -115,6 +115,6 @@ namespace VCFUtil
     // constants
     static const int HOMOPOLYMER_ANNOTATE_THRESHOLD = 5;
 
-};
+}
 
 #endif

@@ -51,6 +51,6 @@ class IBWTReader
 namespace BWTReader
 {
     IBWTReader* createReader(const std::string& filename);
-};
+}
 
 #endif

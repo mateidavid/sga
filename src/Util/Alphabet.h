@@ -71,7 +71,7 @@ namespace DNA_ALPHABET
     }
 
     static const uint8_t size = 4;
-};
+}
 
 namespace BWT_ALPHABET
 {
@@ -105,7 +105,7 @@ namespace BWT_ALPHABET
     {
         return RANK_ALPHABET[idx];
     }
-};
+}
 
 // IUPAC ambiguity alphabet
 namespace IUPAC
@@ -122,7 +122,7 @@ namespace IUPAC
     // Returns a string defining the possible unambiguous bases for each symbol
     // in the alphabet
     std::string getPossibleSymbols(char c);
-};
+}
 
 //
 // A simple class holding the count for each base of a DNA string (plus the terminator)

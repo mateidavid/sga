@@ -70,6 +70,6 @@ namespace BWTCA
 
     // Calculate absolute position for each element of the nvector
     void calculateAbsolutePositions(BCRVector& bcrVector, const AlphaCount64& suffixSymbolCounts);
-};
+}
 
 #endif

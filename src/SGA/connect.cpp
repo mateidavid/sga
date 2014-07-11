@@ -88,7 +88,7 @@ namespace opt
 
 static const char* shortopts = "p:m:e:t:l:s:o:d:v";
 
-enum { OPT_HELP = 1, OPT_VERSION, OPT_METRICS, OPT_HETSV, OPT_CONNECTED_ONLY, };
+enum { OPT_HELP = 1, OPT_VERSION, OPT_METRICS, OPT_HETSV, OPT_CONNECTED_ONLY };
 
 static const struct option longopts[] = {
     { "verbose",         no_argument,       NULL, 'v' },
