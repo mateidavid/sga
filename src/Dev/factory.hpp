@@ -380,7 +380,7 @@ public:
     /** Static methods that use active storage. */
     static ptr_type allocate() { ASSERT(active_ptr()); return active_ptr()->ns_allocate(); }
     static void deallocate(const_ptr_type elem_cptr) { ASSERT(active_ptr()); active_ptr()->ns_deallocate(elem_cptr); }
-    static val_type& elem_at(const idn_type& idn) { ASSERT(active_ptr()); return active_ptr()->ns_elem_at(idn); }
+    static val_type& elem_at(idn_type idn) { ASSERT(active_ptr()); return active_ptr()->ns_elem_at(idn); }
     static size_t size() { ASSERT(active_ptr()); return active_ptr()->ns_size(); }
     static size_t unused() { ASSERT(active_ptr()); return active_ptr()->ns_unused(); }
 
@@ -412,7 +412,7 @@ private:
     }
 
     /** Dereference element. */
-    val_type& ns_elem_at(const idn_type& idn) const
+    val_type& ns_elem_at(idn_type idn) const
     {
         return ns_wrapper_at(idn)._key;
     }
@@ -432,7 +432,7 @@ private:
     }
 
     /** Dereference wrapper. */
-    wrapper_type& ns_wrapper_at(const idn_type& idn) const
+    wrapper_type& ns_wrapper_at(idn_type idn) const
     {
         return const_cast< wrapper_type& >(_cont.at(idn._idx));
     }
