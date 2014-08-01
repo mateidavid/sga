@@ -209,6 +209,14 @@ private:
     // allow move only when unlinked
     DELETE_COPY_CTOR(Read_Chunk)
     Read_Chunk(Read_Chunk&& rhs) { *this = std::move(rhs); }
+
+    // when deallocating, mut_ptr_cont must have been cleared
+    ~Read_Chunk()
+    {
+        ASSERT(mut_ptr_cont().empty());
+        ASSERT(is_unlinked());
+    }
+
 public:
     DELETE_COPY_ASOP(Read_Chunk)
     Read_Chunk& operator = (Read_Chunk&& rhs)
@@ -262,7 +270,7 @@ public:
     /** Get mapping end position. */
     Pos get_end_pos() const
     {
-        return Pos(get_c_end(), (not _rc? get_r_end() : get_r_start()), --_mut_ptr_cont.end(), 0, this);
+        return Pos(get_c_end(), (not _rc? get_r_end() : get_r_start()), _mut_ptr_cont.end(), 0, this);
     }
 
     /** Find bounded pointer to this object.

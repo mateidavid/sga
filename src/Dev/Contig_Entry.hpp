@@ -51,7 +51,14 @@ private:
     DEFAULT_DEF_CTOR(Contig_Entry)
     DELETE_COPY_CTOR(Contig_Entry)
     Contig_Entry(Contig_Entry&& rhs) { *this = std::move(rhs); }
-    //~Contig_Entry() { ASSERT(is_unlinked()); }
+
+    ~Contig_Entry()
+    {
+        ASSERT(chunk_cont().empty());
+        ASSERT(mut_cont().empty());
+        ASSERT(is_unlinked());
+    }
+
 public:
     DELETE_COPY_ASOP(Contig_Entry)
     Contig_Entry& operator = (Contig_Entry&& rhs)

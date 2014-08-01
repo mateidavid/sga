@@ -36,6 +36,12 @@ public:
     DELETE_COPY_ASOP(Graph)
     DELETE_MOVE_ASOP(Graph)
 
+    ~Graph()
+    {
+        ASSERT(ce_cont().empty());
+        ASSERT(re_cont().empty());
+    }
+
     const Read_Entry_Cont& re_cont() const { return _re_cont; }
     Read_Entry_Cont& re_cont() { return _re_cont; }
     const Contig_Entry_Cont& ce_cont() const { return _ce_cont; }
@@ -48,7 +54,7 @@ public:
      * @param seq_ptr Read sequence. (Contig container takes ownership.)
      */
     void add_read(std::string&& name, Seq_Type&& seq);
-    
+
     /** Add an overlap between 2 reads.
      * The contigs holding overlapping chunks of each read are collapsed into one.
      * In the process, reads and contigs are first fragmented into matching chunks.
@@ -86,6 +92,9 @@ public:
     */
     void unmap_single_chunks();
 
+    /** Clear CE and RE containers and deallocate all objects. */
+    void clear_and_dispose();
+
     /** Integrity checks. */
     bool check_all() const;
     bool check(const std::set< Read_Entry_CBPtr >& re_set,
@@ -106,7 +115,7 @@ public:
     */
 
     //friend std::ostream& operator << (std::ostream&, const Graph&);
-    boost::property_tree::ptree to_ptree() const { return ptree(); } // TODO: implement
+    boost::property_tree::ptree to_ptree() const;
 
 private:
     Mutation_Fact _mut_fact;

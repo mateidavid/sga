@@ -48,6 +48,13 @@ private:
     DEFAULT_DEF_CTOR(Read_Entry)
     DELETE_COPY_CTOR(Read_Entry)
     Read_Entry(Read_Entry&& rhs) { *this = std::move(rhs); }
+
+    ~Read_Entry()
+    {
+        ASSERT(chunk_cont().empty());
+        ASSERT(is_unlinked());
+    }
+
 public:
     DELETE_COPY_ASOP(Read_Entry)
     Read_Entry& operator = (Read_Entry&& rhs)

@@ -119,6 +119,17 @@ public:
         auto cit = Base::find(name, Base::value_compare());
         return cit != end()? &*cit : nullptr;
     }
+
+    /** Clear container and deallocate RE objects.
+     * Pre: Chunks must have been removed from their RE containers.
+     */
+    void clear_and_dispose()
+    {
+        Base::clear_and_dispose([] (Read_Entry_BPtr re_bptr)
+        {
+            Read_Entry_Fact::del_elem(re_bptr);
+        });
+    }
 };
 
 } // namespace MAC

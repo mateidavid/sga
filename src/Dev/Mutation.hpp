@@ -79,7 +79,11 @@ public:
 
 private:
     /** Destructor. */
-    //~Mutation() { ASSERT(is_unlinked()); }
+    ~Mutation()
+    {
+        ASSERT(chunk_ptr_cont().empty());
+        ASSERT(is_unlinked());
+    }
 
 public:
     /** @name Getters */

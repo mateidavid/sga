@@ -1436,6 +1436,12 @@ bool Graph::check_colours() const
 }
 */
 
+void Graph::clear_and_dispose()
+{
+    ce_cont().clear_and_dispose();
+    re_cont().clear_and_dispose();
+}
+
 bool Graph::check_all() const
 {
     size_t chunks_count_1 = 0;
@@ -1656,5 +1662,12 @@ ostream& operator << (ostream& os, const Graph& g)
     return os;
 }
 */
+
+boost::property_tree::ptree Graph::to_ptree() const
+{
+    return ptree().put("re_cont", cont_to_ptree(re_cont()))
+                  .put("ce_cont", cont_to_ptree(ce_cont()));
+}
+
 
 } // namespace MAC

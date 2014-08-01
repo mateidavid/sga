@@ -64,7 +64,7 @@ struct Program_Options
 
 int real_main(const Program_Options& po)
 {
-    log_l(info) << ptree().put("settings", po.to_ptree());
+    log_l(info) << ptree().put("main() settings", po.to_ptree());
 
     if (po.input_file.empty())
     {
@@ -84,7 +84,7 @@ int real_main(const Program_Options& po)
     size_t line_count = 0;
     while (getline(ixs, line))
     {
-        log_l(debug) << ptree().put("op", line);
+        log_l(debug) << ptree().put("main() op", line);
 
         istringstream iss(line + "\n");
         string rec_type;
@@ -134,9 +134,11 @@ int real_main(const Program_Options& po)
         }
         //ASSERT(g.check_all());
     }
+    log_l(info) << ptree().put("main() done loop", "");
     g.unmap_single_chunks();
     g.set_contig_ids();
     ASSERT(g.check_all());
+    log_l(info) << ptree().put("main() done postprocessing", "");
     if (po.cat_at_end)
     {
         if (not po.stats_file_2.empty())
@@ -175,7 +177,10 @@ int real_main(const Program_Options& po)
         //ofstream unmappable_contigs_ofs(po.unmappable_contigs_file);
         //g.print_unmappable_contigs(unmappable_contigs_ofs);
     }
-    cerr << "success\n";
+    log_l(info) << ptree().put("main() done output", "");
+
+    g.clear_and_dispose();
+    log_l(info) << ptree().put("main() graph cleared", "");
 
     return EXIT_SUCCESS;
 }
@@ -219,10 +224,10 @@ int main(int argc, char* argv[])
         ("unmappable-contigs-file,U", bo::value< string >(&po.unmappable_contigs_file), "unmappable contigs file")
         ("progress-count,c", bo::value< size_t >(&po.progress_count)->default_value(0), "progress count")
         ("unmap-trigger-len,u", bo::value< size_t >(&po.unmap_trigger_len)->default_value(9), "unmap trigger len")
-        ("cat-each-step,s", bo::value< bool >(&po.cat_at_step)->default_value(false), "cat contigs at each step")
-        ("cat-end,e", bo::value< bool >(&po.cat_at_end)->default_value(false), "cat contigs at end")
-        ("print-at-step,G", bo::value< bool >(&po.print_at_step)->default_value(false), "print graph at each step")
-        ("print-at-end,g", bo::value< bool >(&po.print_at_end)->default_value(false), "print graph at end")
+        ("cat-each-step,s", bo::bool_switch(&po.cat_at_step), "cat contigs at each step")
+        ("cat-end,e", bo::bool_switch(&po.cat_at_end), "cat contigs at end")
+        ("print-at-step,G", bo::bool_switch(&po.print_at_step), "print graph at each step")
+        ("print-at-end,g", bo::bool_switch(&po.print_at_end), "print graph at end")
         ("default-log-level,d", bo::value< size_t >(&po.default_log_level)->default_value(0), "default log level")
         ;
         cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);

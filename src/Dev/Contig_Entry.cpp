@@ -391,23 +391,32 @@ bool Contig_Entry::check() const
     // check there are chunks mapped to this contig
     ASSERT(_chunk_cont.size() > 0);
     // mutations:
-    for (const auto& mut_cbref : _mut_cont)
+    for (const auto& mut_cbref : mut_cont())
     {
-        const Mutation& mut = mut_cbref.raw();
+        Mutation_CBPtr mut_cbptr = &mut_cbref;
         // check base coordinates
-        ASSERT(mut.get_start() <= _seq.size() and mut.get_end() <= _seq.size());
+        ASSERT(mut_cbptr->get_start() <= seq().size() and mut_cbptr->get_end() <= seq().size());
         // check no empty mutations
-        ASSERT(not mut.is_empty());
+        ASSERT(not mut_cbptr->is_empty());
+        // check read_chunk_ptr_cont
+        for (const auto& mca_cbref : mut_cbptr->chunk_ptr_cont())
+        {
+            Mutation_Chunk_Adapter_CBPtr mca_cbptr = &mca_cbref;
+            // check mutation back pointers
+            ASSERT(mca_cbptr->mut_cbptr() == mut_cbptr);
+            // check read chunk part of current contig
+            ASSERT(mca_cbptr->chunk_cbptr()->ce_bptr().raw() == this);
+        }
     }
     // read chunks:
     auto ce_bptr = bptr_to();
-    for (const auto& rc_cbref : _chunk_cont)
+    for (const auto& rc_cbref : chunk_cont())
     {
         Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         // check contig entry pointers
         ASSERT(rc_cbptr->ce_bptr() == ce_bptr);
         // check contig coordinates
-        ASSERT(rc_cbptr->get_c_end() <= _seq.size());
+        ASSERT(rc_cbptr->get_c_end() <= seq().size());
         // mutation pointers:
         for (const auto& mca_cbref : rc_cbptr->mut_ptr_cont())
         {
@@ -415,7 +424,7 @@ bool Contig_Entry::check() const
             // check back Read_Chunk pointers
             ASSERT(mca_cbptr->chunk_cbptr() == rc_cbptr);
             // check Mutation pointers point inside Mutation container
-            ASSERT(_mut_cont.find(mca_cbptr->mut_cbptr(), true));
+            ASSERT(mut_cont().find(mca_cbptr->mut_cbptr(), true));
         }
     }
     return true;
