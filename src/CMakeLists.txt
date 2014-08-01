@@ -9,7 +9,7 @@ include(CheckIncludeFileCXX)
 
 # check that "SGA/sga.cpp" exists; if not, assume the source dir is wrong
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/SGA/sga.cpp")
-  message(FATAL_ERROR "${PROJECT_SOURCE_DIR}: source files not found")
+    message(FATAL_ERROR "${PROJECT_SOURCE_DIR}: source files not found")
 endif()
 
 # set project-related variables that appear in config.h.in
@@ -122,13 +122,17 @@ get_directory_property(include_directories INCLUDE_DIRECTORIES)
 message(STATUS "INCLUDE_DIRECTORIES = ${include_directories}")
 
 # compile flags
-set(CMAKE_C_FLAGS "$ENV{CFLAGS} -Wall -Wextra -pedantic -Wno-long-long -Wno-format -Wno-unused-local-typedefs")
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -Wall -Wextra -pedantic -Wno-long-long -Wno-format -Wno-unused-local-typedefs")
+set(CMAKE_C_FLAGS "$ENV{CFLAGS} -Wall -Wextra -pedantic -Wno-long-long -Wno-format -Wno-unused-local-typedefs -Wno-unknown-warning -Wno-unknown-warning-option")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -Wall -Wextra -pedantic -Wno-long-long -Wno-format -Wno-unused-local-typedefs -Wno-unknown-warning -Wno-unknown-warning-option")
 if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
+
+# compile flags for debug build
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g3 -fno-inline")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -fno-inline")
 
 # link flags
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath=$ENV{LD_RUN_PATH}")
