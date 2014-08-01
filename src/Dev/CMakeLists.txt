@@ -37,3 +37,12 @@ target_link_libraries(mac-bin
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
 )
+
+add_executable(test-itree-and-factory
+    test-itree-and-factory.cpp
+    globals.cpp
+    global_assert.cpp
+)
+target_link_libraries(test-itree-and-factory
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)

@@ -166,7 +166,7 @@ typedef bi::list< Value,
 
 static_assert(
     bi::detail::extra_data_manager<
-        bi::detail::ITree_Node_Traits < ITree_Value_Traits< Value > >
+        bi::detail::itree_node_traits < ITree_Value_Traits< Value > >
     >::enabled,
     "Extra data manager is not enabled");
 
@@ -217,13 +217,13 @@ bool check_max_ends(const_ptr_type node_ptr, size_t& max_end)
     return true;
 }
 
-void check_max_ends(itree_type& t, fact_type& f)
+void check_max_ends(itree_type& t, fact_type&)
 {
     const_ptr_type root_node = get_root(t);
     size_t max_end;
     if (not check_max_ends(root_node, max_end))
     {
-        clog << "factory:\n" << f;
+        //clog << "factory:\n" << f;
         clog << "tree:\n";
         for (auto const& e :t)
         {
@@ -335,7 +335,7 @@ void real_main(const Program_Options& po)
                 if (res_iterator_range != res_list)
                 {
                     clog << "wrong intersection with " << *a << '\n';
-                    clog << "factory:\n" << f;
+                    //clog << "factory:\n" << f;
                     clog << "list:\n";
                     for (const auto& v : l)
                     {
@@ -391,7 +391,7 @@ void real_main(const Program_Options& po)
     }
     if (f.unused() != f.size())
     {
-        clog << "factory not empty on exit:\n" << f;
+        clog << "factory not empty on exit!\n"; // << f;
         exit(EXIT_FAILURE);
     }
     clog << "----- success\n";
