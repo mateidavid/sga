@@ -103,7 +103,7 @@ public:
                                                > const_iterator;
     */
 
-    USING_ITERATORS(Base)
+    USING_INTRUSIVE_CONT(Base)
     using Base::reverse;
 
     // check it is empty when deallocating
@@ -117,25 +117,21 @@ public:
         Mutation_CBPtr last_mut_cbptr = nullptr;
         for (const auto& mut_cbref : mut_cont)
         {
-            Mutation_CBPtr mut_cbptr = &mut_cbref;
+            Mutation_BPtr mut_bptr = &mut_cbref.unconst();
             if (last_mut_cbptr)
             {
-                ASSERT(last_mut_cbptr->get_end() < mut_cbptr->get_start());
+                ASSERT(last_mut_cbptr->get_end() < mut_bptr->get_start());
             }
-            Mutation_Chunk_Adapter_BPtr mca_bptr = Mutation_Chunk_Adapter_Fact::new_elem(mut_cbptr, chunk_cbptr);
+            Mutation_Chunk_Adapter_BPtr mca_bptr = Mutation_Chunk_Adapter_Fact::new_elem(mut_bptr, chunk_cbptr);
             Base::push_back(*mca_bptr);
+            ASSERT(mut_bptr->chunk_ptr_cont().empty());
+            mut_bptr->chunk_ptr_cont().insert(mca_bptr);
         }
     }
 
     /** Get iterator to MCA object in this container. */
-    const_iterator iterator_to(Mutation_Chunk_Adapter_CBPtr mca_cbptr) const
-    {
-        return Base::iterator_to(*mca_cbptr);
-    }
-    iterator iterator_to(Mutation_Chunk_Adapter_BPtr mca_bptr)
-    {
-        return Base::iterator_to(*mca_bptr);
-    }
+    //const_iterator iterator_to(Mutation_Chunk_Adapter_CBPtr mca_cbptr) const { return Base::iterator_to(*mca_cbptr); }
+    //iterator iterator_to(Mutation_Chunk_Adapter_BPtr mca_bptr) { return Base::iterator_to(*mca_bptr); }
 
     /** Insert MCA before element pointed to by iterator. */
     void insert_before(const_iterator cit, Mutation_Chunk_Adapter_BPtr mca_bptr)
@@ -162,7 +158,7 @@ public:
         {
             if (mca_cbref.raw().mut_cbptr() == mut_cbptr)
             {
-                return Base::iterator_to(mca_cbref);
+                return iterator_to(mca_cbref);
             }
         }
         return end();
@@ -183,7 +179,7 @@ public:
     /** Erase MCA from container. */
     void erase(Mutation_Chunk_Adapter_CBPtr mca_cbptr)
     {
-        Base::erase(Base::iterator_to(*mca_cbptr));
+        Base::erase(iterator_to(*mca_cbptr));
     }
 
     /** Extract all elements starting with and beyond the given one,

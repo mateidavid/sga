@@ -419,14 +419,16 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
                            and rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->is_del()
                            and rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->get_start() == rc_bptr->get_c_start()
                            and rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->get_end() == c_brk));
-                // remove initial deletion, if any
                 if (rc_bptr->get_c_start() < c_brk)
                 {
+                    // remove initial deletion and adjust contig coordinates
                     Mutation_Chunk_Adapter_BPtr mca_bptr = &*rc_bptr->mut_ptr_cont().begin();
                     Mutation_BPtr mut_bptr = mca_bptr->mut_cbptr().unconst();
                     rc_bptr->mut_ptr_cont().erase(mca_bptr);
                     mut_bptr->chunk_ptr_cont().erase(mca_bptr);
                     Mutation_Chunk_Adapter_Fact::del_elem(mca_bptr);
+                    rc_bptr->_c_start = c_brk;
+                    rc_bptr->_c_len -= mut_bptr->get_len();
                 }
                 return std::make_tuple(left_rc_bptr, rc_bptr);
             }
@@ -440,14 +442,15 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
                            and pos.mca_cit == --(rc_bptr->mut_ptr_cont().end())
                            and pos.mca_cit->mut_cbptr()->is_del()
                            and pos.mca_cit->mut_cbptr()->get_end() == rc_bptr->get_c_end()));
-                // remove final deletion, if any
                 if (c_brk < rc_bptr->get_c_end())
                 {
+                    // remove final deletion and adjust contig coordinates
                     Mutation_Chunk_Adapter_BPtr mca_bptr = &*rc_bptr->mut_ptr_cont().rbegin();
                     Mutation_BPtr mut_bptr = mca_bptr->mut_cbptr().unconst();
                     rc_bptr->mut_ptr_cont().erase(mca_bptr);
                     mut_bptr->chunk_ptr_cont().erase(mca_bptr);
                     Mutation_Chunk_Adapter_Fact::del_elem(mca_bptr);
+                    rc_bptr->_c_len -= mut_bptr->get_len();
                 }
                 return std::make_tuple(rc_bptr, right_rc_bptr);
             }

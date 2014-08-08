@@ -74,7 +74,7 @@ public:
     // check it is empty when deallocating
     ~Contig_Entry_Cont() { ASSERT(size() == 0); }
 
-    USING_ITERATORS(Base)
+    USING_INTRUSIVE_CONT(Base)
 
     /** Insert Contig_Entry into container.
      * @param ce_bptr Pointer to Contig_Entry object.
@@ -87,7 +87,7 @@ public:
     /** Erase Contig_Entry from container. */
     void erase(Contig_Entry_CBPtr ce_cbptr)
     {
-        Base::erase(Base::iterator_to(*ce_cbptr));
+        Base::erase(iterator_to(*ce_cbptr));
     }
 
     /** Clear container and deallocate CE objects.

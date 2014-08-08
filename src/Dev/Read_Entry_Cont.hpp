@@ -99,7 +99,7 @@ public:
     // check it is empty when deallocating
     ~Read_Entry_Cont() { ASSERT(size() == 0); }
 
-    USING_ITERATORS(Base)
+    USING_INTRUSIVE_CONT(Base)
 
     /** Insert Read_Entry into container.
      * @param re_bptr Pointer to Read_Entry object.

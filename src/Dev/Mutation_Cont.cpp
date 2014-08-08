@@ -96,9 +96,11 @@ Mutation_Cont Mutation_Cont::split(Size_Type c_brk, Mutation_CBPtr mut_left_cbpt
 {
     ASSERT(not mut_left_cbptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
     Mutation_Cont rhs_cont;
-    for (auto it = begin(); it != end(); ++it)
+    auto it = begin();
+    while (it != end())
     {
         Mutation_BPtr mut_bptr = &*it;
+        ++it;
         // no Mutation may span c_brk
         ASSERT(not (mut_bptr->get_start() < c_brk and c_brk < mut_bptr->get_end()));
         // move the ones starting at or past the break, except possibly for mut_left_cbptr

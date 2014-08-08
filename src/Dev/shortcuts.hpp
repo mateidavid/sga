@@ -37,8 +37,6 @@
     _type& operator = (_type&&) = default;
 
 #define USING_ITERATORS(_type) \
-    using _type::size; \
-    using _type::empty; \
     using typename _type::iterator; \
     using typename _type::const_iterator; \
     using _type::begin; \
@@ -50,5 +48,20 @@
     using _type::crbegin; \
     using _type::crend;
 
+#define USING_ITERATOR_TO(_type) \
+    using _type::iterator_to;
+
+#define USING_SIZE_MEMBERS(_type) \
+    using _type::size; \
+    using _type::empty;
+
+#define USING_STD_CONT(_type) \
+    USING_ITERATORS(_type) \
+    USING_SIZE_MEMBERS(_type)
+
+#define USING_INTRUSIVE_CONT(_type) \
+    USING_ITERATORS(_type) \
+    USING_ITERATOR_TO(_type) \
+    USING_SIZE_MEMBERS(_type)
 
 #endif

@@ -155,9 +155,9 @@ private:
      * @param re1_bptr Read_Entry reference.
      * @param re2_bptr Read_Entry query.
      * @param cigar Cigar string describing the mapping.
-     * @return Vector of tuples of the form (chunk, chunk, cigar).
+     * @return Vector of tuples of the form (chunk r_start, chunk r_start, cigar).
      */
-    std::vector< std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr, Cigar > >
+    std::vector< std::tuple< Size_Type, Size_Type, Cigar > >
     chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar);
 
     /** Make chunk unmappable.

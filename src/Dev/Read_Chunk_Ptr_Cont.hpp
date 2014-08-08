@@ -88,7 +88,7 @@ public:
     DELETE_COPY_ASOP(Read_Chunk_Ptr_Cont)
     DEFAULT_MOVE_ASOP(Read_Chunk_Ptr_Cont)
 
-    USING_ITERATORS(Base)
+    USING_INTRUSIVE_CONT(Base)
     using Base::splice;
 
     // check it is empty when deallocating
@@ -112,7 +112,7 @@ public:
     /** Erase MCA from container. */
     void erase(Mutation_Chunk_Adapter_CBPtr mca_cbptr)
     {
-        Base::erase(Base::iterator_to(*mca_cbptr));
+        Base::erase(iterator_to(*mca_cbptr));
     }
 };
 

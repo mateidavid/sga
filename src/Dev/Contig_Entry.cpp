@@ -46,7 +46,7 @@ void Contig_Entry::cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size
             Read_Chunk_BPtr rc_bptr = mca_it->chunk_cbptr().unconst();
             Mutation_Chunk_Adapter_BPtr new_mca_bptr = &*new_mca_it;
 
-            rc_bptr->mut_ptr_cont().insert_after(rc_bptr->mut_ptr_cont().iterator_to(&*mca_it), new_mca_bptr);
+            rc_bptr->mut_ptr_cont().insert_after(rc_bptr->mut_ptr_cont().iterator_to(*mca_it), new_mca_bptr);
 
             ++mca_it;
             ++new_mca_it;

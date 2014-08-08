@@ -89,7 +89,7 @@ public:
     // check it is empty when deallocating
     ~Read_Chunk_CE_Cont() { ASSERT(size() == 0); }
 
-    USING_ITERATORS(Base)
+    USING_INTRUSIVE_CONT(Base)
     using typename Base::intersection_const_iterator;
     using typename Base::intersection_const_iterator_range;
     using Base::iintersect;
@@ -100,7 +100,7 @@ public:
     void insert(Read_Chunk_BPtr rc_bptr) { Base::insert(*rc_bptr); }
 
     /** Erase Read_Chunk from container. */
-    void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(*rc_cbptr); }
+    void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(iterator_to(*rc_cbptr)); }
 
     /** Split container and its Read_Chunk objects at a contig breakpoint.
      * Pre: No Mutations may span c_pos.
@@ -257,7 +257,7 @@ public:
     // check it is empty when deallocating
     ~Read_Chunk_RE_Cont() { ASSERT(size() == 0); }
 
-    USING_ITERATORS(Base)
+    USING_INTRUSIVE_CONT(Base)
 
     /** Insert read chunk in this container. */
     void insert(Read_Chunk_BPtr rc_bptr)
@@ -269,7 +269,7 @@ public:
     }
 
     /** Erase Read_Chunk from container. */
-    void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(*rc_cbptr); }
+    void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(iterator_to(*rc_cbptr)); }
 
     /** Find chunk which contains given read position.
      * @param r_pos Read position, 0-based.
@@ -300,7 +300,7 @@ public:
      */
     Read_Chunk_CBPtr get_sibling(Read_Chunk_CBPtr rc_cbptr, bool read, bool right) const
     {
-        const_iterator rc_cit = this->iterator_to(*rc_cbptr);
+        const_iterator rc_cit = iterator_to(*rc_cbptr);
         bool r_right = (read? right : right != rc_cbptr->get_rc());
         if (r_right)
         {

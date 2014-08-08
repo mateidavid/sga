@@ -85,7 +85,7 @@ public:
     DELETE_COPY_ASOP(Mutation_Cont)
     DEFAULT_MOVE_ASOP(Mutation_Cont)
 
-    USING_ITERATORS(Base)
+    USING_INTRUSIVE_CONT(Base)
     //using Base::iterator_to;
 
     // check it is empty before deallocating
@@ -100,8 +100,8 @@ public:
     Mutation_Cont(const Cigar& cigar, const std::string& qr = std::string());
 
     /** Get iterator to Mutation inside container. */
-    const_iterator iterator_to(Mutation_CBPtr mut_cbptr) const { return Base::iterator_to(*mut_cbptr); }
-    iterator iterator_to(Mutation_BPtr mut_bptr) { return Base::iterator_to(*mut_bptr); }
+    //const_iterator iterator_to(Mutation_CBPtr mut_cbptr) const { return Base::iterator_to(*mut_cbptr); }
+    //iterator iterator_to(Mutation_BPtr mut_bptr) { return Base::iterator_to(*mut_bptr); }
 
     /** Insert Mutation in container. */
     iterator insert(Mutation_BPtr mut_bptr) { return Base::insert(*mut_bptr); }
@@ -148,7 +148,7 @@ public:
     }
 
     /** Erase Mutation from container. */
-    void erase(Mutation_BPtr mut_bptr) { Base::erase(*mut_bptr); }
+    void erase(Mutation_BPtr mut_bptr) { Base::erase(iterator_to(*mut_bptr)); }
 
     /** Add Mutation to container; if an equivalent one already exists, use that one.
      * Note: Does not deallocate new Mutation when reusing old one.

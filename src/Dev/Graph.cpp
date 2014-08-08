@@ -86,10 +86,6 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     // split Read_Chunk_Cont, save rhs in new Contig_Entry
     ce_new_bptr->chunk_cont() = ce_bptr->chunk_cont().split(c_brk, mut_left_cbptr);
     ASSERT(ce_bptr->chunk_cont().max_end() <= c_brk);
-    const auto& x = ce_new_bptr->chunk_cont();
-    const auto& y = x.begin();
-    (void)x;
-    (void)y;
     ASSERT(c_brk <= ce_new_bptr->chunk_cont().begin()->get_c_start());
 
     // rebase all mutations and read chunks from the rhs to the breakpoint
@@ -255,7 +251,7 @@ void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPt
                            .put("c2", (*c2_ce_bptr).to_ptree())
                            .put("rc1rc2_cigar", rc1rc2_cigar.to_ptree());
 
-    // contruct read chunk for the rc1->rc2 mapping
+    // construct read chunk for the rc1->rc2 mapping
     Read_Chunk_BPtr rc1rc2_chunk_bptr;
     rc1rc2_chunk_bptr = Read_Chunk::make_relative_chunk(c1rc1_chunk_bptr, c2rc2_chunk_bptr,
                                                         rc1rc2_cigar);
@@ -322,10 +318,10 @@ void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPt
     ASSERT(check(set< Contig_Entry_CBPtr >( { c1_ce_bptr })));
 }
 
-vector< std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr, Cigar > >
+vector< std::tuple< Size_Type, Size_Type, Cigar > >
 Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
 {
-    vector< std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr, Cigar > > rc_mapping;
+    vector< std::tuple< Size_Type, Size_Type, Cigar > > rc_mapping;
 
     /// match start in re1
     Size_Type r1_start = cigar.get_rf_start();
@@ -585,7 +581,7 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
             if (not rc1_bptr->is_unmappable())
             {
                 // add read chunk mapping
-                rc_mapping.push_back(std::make_tuple(rc1_bptr, rc2_bptr, cigar.substring(op_start, op_end)));
+                rc_mapping.push_back(std::make_tuple(rc1_bptr->get_r_start(), rc2_bptr->get_r_start(), cigar.substring(op_start, op_end)));
             }
             // advance both chunks and cigar
             r1_pos = rc1_bptr->get_r_end();
@@ -671,10 +667,14 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     // reached when we have a complete rc map
     for (auto& tmp : rc_mapping)
     {
-        Read_Chunk_BPtr rc1_bptr;
-        Read_Chunk_BPtr rc2_bptr;
+        Size_Type rc1_start;
+        Size_Type rc2_start;
         Cigar rc1rc2_cigar;
-        std::tie(rc1_bptr, rc2_bptr, rc1rc2_cigar) = std::move(tmp);
+        std::tie(rc1_start, rc2_start, rc1rc2_cigar) = std::move(tmp);
+        Read_Chunk_BPtr rc1_bptr = re1_bptr->chunk_cont().get_chunk_with_pos(rc1_start).unconst();
+        ASSERT(rc1_bptr->get_r_start() == rc1_start);
+        Read_Chunk_BPtr rc2_bptr = re2_bptr->chunk_cont().get_chunk_with_pos(rc2_start).unconst();
+        ASSERT(rc2_bptr->get_r_start() == rc2_start);
         merge_chunk_contigs(rc1_bptr, rc2_bptr, rc1rc2_cigar);
     }
 
