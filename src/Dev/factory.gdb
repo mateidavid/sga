@@ -4,24 +4,22 @@ assert 'boost_print' in sys.modules, 'boost_print not found'
 #from boost_print import *
 #from boost_print.utils import _add_to_dict, _new, _del
 
-# dict of null identifiers
+# dict of max values
 # key: type name
-# value: _idx value representing null
+# value: max value (representing null)
 #
-null_idn_val = dict()
+max_val = dict()
 
 def get_null_idn_val(t):
-    type_name = str(t.strip_typedefs())
-    if type_name not in null_idn_val:
-        #gdb.execute('set $_tmp = (%s *)malloc(sizeof(%s))' % (type_name, type_name))
-        #gdb.execute('call $_tmp->Identifier()')
-        #res = gdb.parse_and_eval('$_tmp._idx')
-        #gdb.execute('call free($_tmp)')
-        p = boost_print.utils._new.invoke(boost_print.parse_and_eval('(%s *)0' % type_name))
-        res = p['_idx']
-        boost_print.utils._del.invoke(p)
-        null_idn_val[type_name] = int(res)
-    return null_idn_val[type_name]
+    idx_type = gdb.types.get_basic_type(t.strip_typedefs().template_argument(1))
+    idx_type_name = str(idx_type)
+    if idx_type_name not in max_val:
+        #p = boost_print.utils._new.invoke(boost_print.parse_and_eval('(%s *)0' % type_name))
+        #res = p['_idx']
+        #boost_print.utils._del.invoke(p)
+        res = boost_print.parse_and_eval('(' + idx_type_name + ')-1')
+        max_val[idx_type_name] = int(res)
+    return max_val[idx_type_name]
 
 # add null value checkers for bounded identifier and pointer
 #
@@ -57,26 +55,21 @@ boost_print.add_trivial_printer('bounded::detail::Pointer<.*>', lambda p: str(p[
 def __aux_factory_raw_ptr(p):
     if boost_print.is_null(p):
         return boost_print.parse_and_eval(
-            '(' + str(p.type.template_argument(0).strip_typedefs()) + ' *)0')
+            '(' + str(p.type.template_argument(0)) + ' *)0')
 
-    idn = p['_idn']
-    idx = idn['_idx']
+    idx = p['_idn']['_idx']
     #print('raw_ptr(' + str(idx) + ')', file=sys.stderr)
-    idn_str = boost_print.to_eval(idn, '$_raw_bptr_idn')
-    #cmd = ('& bounded::detail::Storage<'
-    #       + str(p.type.template_argument(0)) + ', ' + str(p.type.template_argument(1))
-    #       + '>::elem_at(' + idn_str + ')')
     sz = boost_print.parse_and_eval(
         'bounded::detail::Storage< ' +
-        str(p.type.template_argument(0)) + ', ' + str(p.type.template_argument(1)) +
-        ' >::_active_ptr->_cont.size()')
+        str(gdb.types.get_basic_type(p.type.template_argument(0))) + ', ' +
+        str(p.type.template_argument(1)) + ' >::_active_ptr->_cont.size()')
     if idx >= int(sz):
         return boost_print.parse_and_eval(
             '(' + str(p.type.template_argument(0)) + ' *)0')
     res = boost_print.parse_and_eval(
         '(' + str(p.type.template_argument(0)) + ' *)(& bounded::detail::Storage< ' +
-        str(p.type.template_argument(0)) + ', ' + str(p.type.template_argument(1)) +
-        ' >::_active_ptr->_cont.at(' + str(idx) + '))')
+        str(gdb.types.get_basic_type(p.type.template_argument(0))) + ', ' +
+        str(p.type.template_argument(1)) + ' >::_active_ptr->_cont.at(' + str(idx) + '))')
     #print('got: ' + str(res), file=sys.stderr)
     return res
 
