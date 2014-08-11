@@ -821,12 +821,8 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
     vector< std::tuple< Read_Entry_BPtr, Size_Type, Size_Type > > l;
     ce_bptr->chunk_cont().clear_and_dispose([&] (Read_Chunk_BPtr other_rc_bptr) {
         l.push_back(std::make_tuple(other_rc_bptr->re_bptr(), other_rc_bptr->get_r_start(), other_rc_bptr->get_r_end()));
-        Contig_Entry_BPtr ce_new_bptr = Contig_Entry_Fact::new_elem(other_rc_bptr->get_seq());
-        other_rc_bptr->mut_ptr_cont().clear_and_dispose();
-        other_rc_bptr->ce_bptr() = ce_new_bptr;
-        other_rc_bptr->set_unmappable();
-        ce_new_bptr->chunk_cont().insert(other_rc_bptr);
-        ce_cont().insert(ce_new_bptr);
+        Read_Chunk::make_unmappable(other_rc_bptr);
+        ce_cont().insert(other_rc_bptr->ce_bptr());
     });
     // done with old Contig_Entry
     ce_bptr->mut_cont().clear_and_dispose();
@@ -879,13 +875,14 @@ void Graph::unmap_regions(Read_Entry_BPtr re_bptr, const Range_Cont< Size_Type >
         while (pos < rg_r_end)
         {
             rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(pos).unconst();
-            ASSERT(rc_bptr->get_r_start() == pos);
             if (rc_bptr->is_unmappable())
             {
+                ASSERT(rc_bptr->get_r_start() <= pos);
                 pos = rc_bptr->get_r_end();
             }
             else
             {
+                ASSERT(rc_bptr->get_r_start() == pos);
                 // if chunk contains the region end, we cut it first
                 if (rg_r_end < rc_bptr->get_r_end())
                 {

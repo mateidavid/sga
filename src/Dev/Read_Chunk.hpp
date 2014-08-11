@@ -256,7 +256,6 @@ public:
     Seq_Type get_seq() const;
     Seq_Type substr(Size_Type start, Size_Type len) const;
     bool is_unmappable() const { return _is_unmappable; }
-    void set_unmappable() { _is_unmappable = true; }
     Size_Type get_read_len() const;
     /**@}*/
 
@@ -412,6 +411,14 @@ public:
     std::tuple< Size_Type, Size_Type >
     mapped_range(Size_Type rg_start, Size_Type rg_end, bool on_contig,
                  bool rg_start_maximal, bool rg_end_maximal) const;
+
+    /** Make chunk unmappable.
+     * Creates a new contig entry containing only this chunk mapped to the positive strand.
+     * Pre: Chunk should be removed from its previous contig entry container (call during clear and destroy).
+     * NOTE: New contig entry is not inserted in the graph.
+     * @param rc_bptr Chunk to make unmappable.
+     */
+    static void make_unmappable(Read_Chunk_BPtr rc_bptr);
 
     bool check() const;
 

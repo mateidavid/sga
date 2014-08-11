@@ -932,6 +932,17 @@ Read_Chunk::mapped_range(Size_Type rg_start, Size_Type rg_end, bool on_contig,
     return std::make_tuple(ret_rg_start, ret_rg_end);
 }
 
+void Read_Chunk::make_unmappable(Read_Chunk_BPtr rc_bptr)
+{
+    Contig_Entry_BPtr ce_new_bptr = Contig_Entry_Fact::new_elem(rc_bptr->get_seq());
+    rc_bptr->mut_ptr_cont().clear_and_dispose();
+    rc_bptr->ce_bptr() = ce_new_bptr;
+    rc_bptr->_c_start = 0;
+    rc_bptr->_rc = false;
+    rc_bptr->_is_unmappable = true;
+    ce_new_bptr->chunk_cont().insert(rc_bptr);
+}
+
 Seq_Type Read_Chunk::get_seq() const
 {
     Seq_Type res;
