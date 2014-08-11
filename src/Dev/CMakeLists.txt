@@ -46,3 +46,5 @@ add_executable(test-itree-and-factory
 target_link_libraries(test-itree-and-factory
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
+
+file(COPY factory.gdb mac-gdb.gdb DESTINATION .)
