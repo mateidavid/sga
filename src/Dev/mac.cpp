@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
         bo::options_description cmdline_opts_desc;
         bo::options_description visible_opts_desc("Allowed options");
         generic_opts_desc.add_options()
-        ("help,h", "produce help message")
+        ("help,?", "produce help message")
         ;
         config_opts_desc.add_options()
         ("input-file,i", bo::value< string >(&po.input_file), "input file")
