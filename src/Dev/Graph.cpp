@@ -59,11 +59,6 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
         return false;
     }
 
-    // create new contig entry object; set base sequences; add new one to container
-    Contig_Entry_BPtr ce_new_bptr = Contig_Entry_Fact::new_elem(string(ce_bptr->seq().substr(c_brk)));
-    ce_bptr->seq().resize(c_brk);
-    ce_cont().insert(ce_new_bptr);
-
     // split any mutations that span c_pos
     while (true)
     {
@@ -77,6 +72,11 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
         ce_bptr->cut_mutation(mut_bptr, c_brk - mut_bptr->get_start(), 0);
     }
 
+    // create new contig entry object; set base sequences; add new one to container
+    Contig_Entry_BPtr ce_new_bptr = Contig_Entry_Fact::new_elem(string(ce_bptr->seq().substr(c_brk)));
+    ce_cont().insert(ce_new_bptr);
+    ce_bptr->seq().resize(c_brk);
+
     // split Mutation_Cont, save rhs in new Contig_Entry
     ce_new_bptr->mut_cont() = ce_bptr->mut_cont().split(c_brk, mut_left_cbptr);
 
@@ -85,8 +85,8 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
 
     // split Read_Chunk_Cont, save rhs in new Contig_Entry
     ce_new_bptr->chunk_cont() = ce_bptr->chunk_cont().split(c_brk, mut_left_cbptr);
-    ASSERT(ce_bptr->chunk_cont().max_end() <= c_brk);
-    ASSERT(c_brk <= ce_new_bptr->chunk_cont().begin()->get_c_start());
+    ASSERT(ce_bptr->chunk_cont().size() == 0 or ce_bptr->chunk_cont().max_end() <= c_brk);
+    ASSERT(ce_new_bptr->chunk_cont().size() == 0 or c_brk <= ce_new_bptr->chunk_cont().begin()->get_c_start());
 
     // rebase all mutations and read chunks from the rhs to the breakpoint
     ce_new_bptr->mut_cont().shift(-int(c_brk));
@@ -102,18 +102,21 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
     ce_new_bptr->mut_cont().drop_unused();
 
     // if either contig has no read chunks mapped to it, remove it
+    set< Contig_Entry_CBPtr > ce_to_check = { ce_bptr, ce_new_bptr };
     if (ce_bptr->chunk_cont().size() == 0)
     {
+        ce_to_check.erase(ce_bptr);
         ce_cont().erase(ce_bptr);
         Contig_Entry_Fact::del_elem(ce_bptr);
     }
     if (ce_new_bptr->chunk_cont().size() == 0)
     {
+        ce_to_check.erase(ce_new_bptr);
         ce_cont().erase(ce_new_bptr);
         Contig_Entry_Fact::del_elem(ce_new_bptr);
     }
 
-    ASSERT(check(set< Contig_Entry_CBPtr >( { ce_bptr, ce_new_bptr })));
+    ASSERT(check(ce_to_check));
     return true;
 } // cut_contig_entry
 
