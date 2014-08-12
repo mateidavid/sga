@@ -952,6 +952,7 @@ Seq_Type Read_Chunk::get_seq() const
     {
         Pos next_pos = pos;
         next_pos.advance(not _rc);
+        ASSERT(next_pos.mut_offset == 0);
         Size_Type match_len = pos.get_match_len(not _rc);
         if (match_len > 0)
         {
@@ -965,11 +966,11 @@ Seq_Type Read_Chunk::get_seq() const
             if (not _rc)
             {
                 ASSERT(not pos.past_last_mut());
-                res += pos.mut().get_seq().substr(pos.mut_offset, next_pos.r_pos - pos.r_pos);
+                res += pos.mut().get_seq().substr(0, next_pos.r_pos - pos.r_pos);
             }
             else
             {
-                res += reverseComplement(pos.mut().get_seq().substr(next_pos.mut_offset, pos.r_pos - next_pos.r_pos));
+                res += reverseComplement(next_pos.mut().get_seq().substr(0, pos.r_pos - next_pos.r_pos));
             }
         }
         pos = next_pos;
