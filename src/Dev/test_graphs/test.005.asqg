@@ -1,7 +1,21 @@
+# 003   AT-T-TG
+# 002'  ATCTCTG
+# 001   AT-T-TG
+# 000'  AT-T-TG
+
 VT      000     CAAAT
 VT      001     ATTTG
 VT      002     CAGAGAT
 VT	003	ATTTG
+
+# 000   CAAAT
+# 001'  CAAAT
 ED      000 001 0 4 5 0 4 5 1 -1        CG:Z:5= PI:f:100
+
+# 003   AT-T-TG
+# 002'  ATCTCTG
 ED	003 002 0 4 5 0 6 7 1 -1	CG:Z:2=1I1=1I2= PI:f:100
+
+# 001   AT-T-TG
+# 002'  ATCTCTG
 ED      001 002 0 4 5 0 6 7 1 -1        CG:Z:2=1I1=1I2= PI:f:100

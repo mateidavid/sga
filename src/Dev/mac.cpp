@@ -89,6 +89,10 @@ int real_main(const Program_Options& po)
         istringstream iss(line + "\n");
         string rec_type;
         iss >> rec_type;
+        if (iss.eof() or rec_type[0] == '#')
+        {
+            // ignore blank lines & lines starting with '#'
+        }
         if (rec_type == "HT")
         {
             // ignore header line for now
