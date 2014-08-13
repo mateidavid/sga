@@ -65,12 +65,7 @@ void Contig_Entry::reverse()
     _seq = reverseComplement(_seq);
     // reverse Mutation objects in their container
     mut_cont().reverse_mutations(get_len());
-    for (auto rc_bref : chunk_cont())
-    {
-        Read_Chunk_BPtr rc_bptr = &rc_bref;
-        rc_bptr->mut_ptr_cont().reverse();
-        rc_bptr->reverse();
-    }
+    chunk_cont().reverse();
 }
 
 std::tuple< size_t, size_t, size_t, size_t >
@@ -390,6 +385,8 @@ bool Contig_Entry::check() const
 {
     // check there are chunks mapped to this contig
     ASSERT(_chunk_cont.size() > 0);
+    // check mutation container itree
+    ASSERT(mut_cont().check());
     // mutations:
     for (const auto& mut_cbref : mut_cont())
     {
@@ -408,6 +405,8 @@ bool Contig_Entry::check() const
             ASSERT(mca_cbptr->chunk_cbptr()->ce_bptr().raw() == this);
         }
     }
+    // check chunk container itree
+    ASSERT(chunk_cont().check());
     // read chunks:
     auto ce_bptr = bptr_to();
     for (const auto& rc_cbref : chunk_cont())

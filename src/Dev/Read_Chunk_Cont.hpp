@@ -95,6 +95,7 @@ public:
     using Base::iintersect;
     using Base::max_end;
     using Base::clear_and_dispose;
+    using Base::check;
 
     /** Insert Read_Chunk in this container. */
     void insert(Read_Chunk_BPtr rc_bptr) { Base::insert(*rc_bptr); }
@@ -169,6 +170,21 @@ public:
             Read_Chunk_Fact::del_elem(rc_bptr);
         });
     }
+
+    /** Reverse all chunks in this container.
+     */
+    void reverse()
+    {
+        Read_Chunk_CE_Cont new_cont;
+        Base::clear_and_dispose([&new_cont] (Read_Chunk_BPtr rc_bptr)
+        {
+            rc_bptr->mut_ptr_cont().reverse();
+            rc_bptr->reverse();
+            new_cont.insert(rc_bptr);
+        });
+        *this = std::move(new_cont);
+    }
+
 }; // class Read_Chunk_CE_Cont
 
 namespace detail

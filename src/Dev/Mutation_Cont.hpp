@@ -86,7 +86,7 @@ public:
     DEFAULT_MOVE_ASOP(Mutation_Cont)
 
     USING_INTRUSIVE_CONT(Base)
-    //using Base::iterator_to;
+    using Base::check;
 
     // check it is empty before deallocating
     ~Mutation_Cont() { ASSERT(size() == 0); }

@@ -717,6 +717,7 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
         // we reverse one of the contigs
         // reversal modifications are done in-place, so chunk vectors are still valid
         ce_bptr->reverse();
+        ASSERT(ce_bptr->check());
         c_right = not c_right;
         same_orientation = true;
     }
@@ -757,7 +758,7 @@ void Graph::cat_read_contigs(Read_Entry_BPtr re_bptr)
             {
                 continue;
             }
-            // first try to merge first contig to the left or read start
+            // first try to merge first contig to the left of read start
             if (rc_bptr == &*re_bptr->chunk_cont().begin())
             {
                 if (cat_contigs(ce_bptr, rc_bptr->get_rc()))
