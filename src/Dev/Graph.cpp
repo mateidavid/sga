@@ -738,6 +738,7 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
 
     ce_cont().erase(ce_next_bptr);
     Contig_Entry::cat_c_right(ce_bptr, ce_next_bptr, rc_cbptr_cont);
+    ASSERT(ce_bptr->check());
 
     //cerr << "merging contigs result\n" << *ce_cptr;
 
@@ -763,6 +764,7 @@ void Graph::cat_read_contigs(Read_Entry_BPtr re_bptr)
             {
                 if (cat_contigs(ce_bptr, rc_bptr->get_rc()))
                 {
+                    ASSERT(re_bptr->check());
                     done = false;
                     break;
                 }
@@ -770,6 +772,7 @@ void Graph::cat_read_contigs(Read_Entry_BPtr re_bptr)
             // then every contig to the right of its chunk
             if (cat_contigs(ce_bptr, not rc_bptr->get_rc()))
             {
+                ASSERT(re_bptr->check());
                 done = false;
                 break;
             }
