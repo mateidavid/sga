@@ -386,7 +386,7 @@ bool Contig_Entry::check() const
     // check there are chunks mapped to this contig
     ASSERT(_chunk_cont.size() > 0);
     // check mutation container itree
-    ASSERT(mut_cont().check());
+    mut_cont().check();
     // mutations:
     for (const auto& mut_cbref : mut_cont())
     {
@@ -406,7 +406,7 @@ bool Contig_Entry::check() const
         }
     }
     // check chunk container itree
-    ASSERT(chunk_cont().check());
+    chunk_cont().check();
     // read chunks:
     auto ce_bptr = bptr_to();
     for (const auto& rc_cbref : chunk_cont())
