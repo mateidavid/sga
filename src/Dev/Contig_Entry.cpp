@@ -191,7 +191,8 @@ std::tuple< Contig_Entry_CBPtr, bool, vector< Read_Chunk_CBPtr > >
 Contig_Entry::can_cat_dir(bool c_right) const
 {
     // ignore unmappable out chunks iff this ce is not unmappable
-    auto res = out_chunks_dir(c_right, not is_unmappable()? 0 : 1);
+    //auto res = out_chunks_dir(c_right, not is_unmappable()? 0 : 1);
+    auto res = out_chunks_dir(c_right, 1);
     if (res.size() != 1)
     {
         return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
@@ -205,7 +206,8 @@ Contig_Entry::can_cat_dir(bool c_right) const
     {
         return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
     }
-    auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, not is_unmappable()? 0 : 1);
+    //auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, not is_unmappable()? 0 : 1);
+    auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, 1);
     if (tmp.size() != 1)
     {
         return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
