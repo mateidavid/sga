@@ -51,14 +51,16 @@ def Pointer_Printer(p):
 boost_print.add_trivial_printer('bounded::detail::Identifier<.*>', Identifier_Printer)
 boost_print.add_trivial_printer('bounded::detail::Pointer<.*>', lambda p: str(p['_idn']))
 
-@boost_print.utils._add_to_dict(boost_print.raw_ptr, 'bounded::detail::Pointer')
-def __aux_factory_raw_ptr(p):
-    if boost_print.is_null(p):
+def factory_raw_ptr(p, idx=None):
+    """Transform bounded pointer into raw pointer.
+    If `idx` is given, it is taken to be the index to dereference, rather than the one in `p`.
+    In this case, `p` still provides the bounded pointer type."""
+    null_idn_val = get_null_idn_val(p['_idn'].type)
+    if idx == None:
+        idx = p['_idn']['_idx']
+    if idx == null_idn_val:
         return boost_print.parse_and_eval(
             '(' + str(p.type.template_argument(0)) + ' *)0')
-
-    idx = p['_idn']['_idx']
-    #print('raw_ptr(' + str(idx) + ')', file=sys.stderr)
     sz = boost_print.parse_and_eval(
         'bounded::detail::Storage< ' +
         str(gdb.types.get_basic_type(p.type.template_argument(0))) + ', ' +
@@ -73,15 +75,18 @@ def __aux_factory_raw_ptr(p):
     #print('got: ' + str(res), file=sys.stderr)
     return res
 
+@boost_print.utils._add_to_dict(boost_print.raw_ptr, 'bounded::detail::Pointer')
+def __aux_factory_raw_ptr(p):
+    return factory_raw_ptr(p)
 
 # convenience function for obtaining raw pointers from bounded identifiers and pointers
 #
 class raw_func(gdb.Function):
     def __init__(self):
         super(raw_func, self).__init__('raw')
-    def invoke(self, p):
+    def invoke(self, p, idx=None):
         assert isinstance(p, gdb.Value), '"v" not a gdb.Value'
         assert boost_print.template_name(p.type) == 'bounded::detail::Pointer', '"v" not a bounded pointer'
-        return boost_print.get_raw_ptr(p)
+        return factory_raw_ptr(p, idx)
 
 raw = raw_func()
