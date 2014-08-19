@@ -56,6 +56,31 @@ public:
 
     static level& default_level() { return _default_level; }
 
+    static level level_from_string(const std::string& s)
+    {
+       std::istringstream iss(s);
+       int tmp_int = -1;
+       iss >> tmp_int;
+       if (iss.good())
+       {
+          return level(tmp_int);
+       }
+       else
+       {
+          if (s == "error") return error;
+          else if (s == "warning") return warning;
+          else if (s == "info") return info;
+          else if (s == "debug") return debug;
+          else if (s == "debug1") return debug1;
+          else if (s == "debug2") return debug2;
+          else
+          {
+             std::cerr << "could not parse log level: " << s << "\n";
+             std::exit(1);
+          }
+       }
+    }
+
 private:
     static std::map< std::string, level > _facility_level;
     static level _default_level;

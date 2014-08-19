@@ -13,7 +13,7 @@
 #include "ixstream.hpp"
 #include "logger.hpp"
 
-#define LOG_FACILITY "main"
+#define LOG_FACILITY "mac"
 
 
 using namespace std;
@@ -37,7 +37,7 @@ struct Program_Options
     string unmappable_contigs_file;
     size_t progress_count;
     size_t unmap_trigger_len;
-    size_t default_log_level;
+    vector< string > log_level;
     bool cat_at_step;
     bool cat_at_end;
     bool print_at_step;
@@ -53,7 +53,7 @@ struct Program_Options
                       .put("unmappable contigs file", unmappable_contigs_file)
                       .put("progress count", progress_count)
                       .put("unmap trigger length", unmap_trigger_len)
-                      .put("default log level", default_log_level)
+                      .put("log levels", cont_to_ptree< vector<string>, string >(log_level, [] (const string& s) { return boost::property_tree::ptree(s); }))
                       .put("cat contigs at each step", cat_at_step)
                       .put("cat contigs at end", cat_at_end)
                       .put("print graph at each step", print_at_step)
@@ -64,7 +64,7 @@ struct Program_Options
 
 int real_main(const Program_Options& po)
 {
-    log_l(info) << ptree().put("main() settings", po.to_ptree());
+    log_l(info) << ptree("settings", po.to_ptree());
 
     if (po.input_file.empty())
     {
@@ -84,7 +84,7 @@ int real_main(const Program_Options& po)
     size_t line_count = 0;
     while (getline(ixs, line))
     {
-        log_l(debug) << ptree().put("main() op", line);
+        log_l(debug) << ptree("op").put("line", line);
 
         istringstream iss(line + "\n");
         string rec_type;
@@ -133,16 +133,16 @@ int real_main(const Program_Options& po)
         {
             if ((++line_count % po.progress_count) == 0)
             {
-                log_l(info) << ptree().put("count", line_count);
+                log_l(info) << ptree("progress").put("count", line_count);
             }
         }
         //ASSERT(g.check_all());
     }
-    log_l(info) << ptree().put("main() done loop", "");
+    log_l(info) << ptree("done_loop");
     g.unmap_single_chunks();
     g.set_contig_ids();
     ASSERT(g.check_all());
-    log_l(info) << ptree().put("main() done postprocessing", "");
+    log_l(info) << ptree("done_postprocessing");
     if (po.cat_at_end)
     {
         if (not po.stats_file_2.empty())
@@ -181,10 +181,10 @@ int real_main(const Program_Options& po)
         //ofstream unmappable_contigs_ofs(po.unmappable_contigs_file);
         //g.print_unmappable_contigs(unmappable_contigs_ofs);
     }
-    log_l(info) << ptree().put("main() done output", "");
+    log_l(info) << ptree("done_output");
 
     g.clear_and_dispose();
-    log_l(info) << ptree().put("main() graph cleared", "");
+    log_l(info) << ptree("graph_cleared");
 
     return EXIT_SUCCESS;
 }
@@ -232,7 +232,7 @@ int main(int argc, char* argv[])
         ("cat-end,e", bo::bool_switch(&po.cat_at_end), "cat contigs at end")
         ("print-at-step,G", bo::bool_switch(&po.print_at_step), "print graph at each step")
         ("print-at-end,g", bo::bool_switch(&po.print_at_end), "print graph at end")
-        ("default-log-level,d", bo::value< size_t >(&po.default_log_level)->default_value(0), "default log level")
+        ("log-level,d", bo::value< vector< string > >(&po.log_level)->composing(), "default log level")
         ;
         cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
         visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
@@ -245,8 +245,23 @@ int main(int argc, char* argv[])
             cout << visible_opts_desc;
             exit(EXIT_SUCCESS);
         }
-        // set default log level
-        logger::log::default_level() = logger::level(po.default_log_level);
+
+        // set log levels
+        for (const auto& l : po.log_level)
+        {
+           size_t i = l.find(':');
+           if (i == string::npos)
+           {
+              logger::log::default_level() = logger::log::level_from_string(l);
+              clog << "set default log level to: " << static_cast< int >(logger::log::default_level()) << "\n";
+           }
+           else
+           {
+              logger::log::facility_level(l.substr(0, i)) = logger::log::level_from_string(l.substr(i + 1));
+              clog << "set log level of '" << l.substr(0, i) << "' to: "
+                   << static_cast< int >(logger::log::facility_level(l.substr(0, i))) << "\n";
+           }
+        }
         /*
         if (po.seed == 0)
         {

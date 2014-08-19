@@ -17,8 +17,7 @@ namespace MAC
 
 void Graph::add_read(string&& name, Seq_Type&& seq)
 {
-    log_l(info) << ptree().put("tag", "add_read()")
-                          .put("name", name);
+    log_l(info) << ptree("add_read").put("name", name);
 
     // create read entry and place it in container
     Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(std::move(name), seq.size());
@@ -39,10 +38,10 @@ void Graph::add_read(string&& name, Seq_Type&& seq)
 
 bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
-    log_l(debug) << ptree().put("tag", "cut_contig_entry()")
-                           .put("ce_ptr", ce_bptr.to_ptree())
-                           .put("c_brk", c_brk)
-                           .put("mut_left_ptr", mut_left_cbptr.to_ptree());
+    log_l(debug) << ptree("cut_contig_entry")
+        .put("ce_ptr", ce_bptr.to_ptree())
+        .put("c_brk", c_brk)
+        .put("mut_left_ptr", mut_left_cbptr.to_ptree());
 
     // there is nothing to cut if:
     if (// cut is at the start, and no insertion goes to the left
@@ -122,9 +121,9 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
 
 bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
 {
-    log_l(debug) << ptree().put("tag", "cut_read_chunk()")
-                           .put("rc_ptr", rc_bptr.to_ptree())
-                           .put("r_brk", r_brk);
+    log_l(debug) << ptree("cut_read_chunk")
+        .put("rc_ptr", rc_bptr.to_ptree())
+        .put("r_brk", r_brk);
 
     ASSERT(rc_bptr->get_r_len() > 0);
     ASSERT(rc_bptr->get_r_start() <= r_brk and r_brk <= rc_bptr->get_r_end());
@@ -213,9 +212,9 @@ bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
 
 bool Graph::cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk)
 {
-    log_l(debug) << ptree().put("tag", "cut_read_entry()")
-                           .put("re_ptr", re_bptr.to_ptree())
-                           .put("r_brk", r_brk);
+    log_l(debug) << ptree("cut_read_entry")
+        .put("re_ptr", re_bptr.to_ptree())
+        .put("r_brk", r_brk);
 
     if (r_brk == 0 or r_brk == re_bptr->get_len())
     {
@@ -247,12 +246,12 @@ void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPt
         return;
     }
 
-    log_l(debug) << ptree().put("tag", "merge_chunk_contigs")
-                           .put("c1rc1_chunk_bptr", c1rc1_chunk_bptr.to_int())
-                           .put("c1", (*c1_ce_bptr).to_ptree())
-                           .put("c2rc2_chunk_bptr", c2rc2_chunk_bptr.to_int())
-                           .put("c2", (*c2_ce_bptr).to_ptree())
-                           .put("rc1rc2_cigar", rc1rc2_cigar.to_ptree());
+    log_l(debug) << ptree("merge_chunk_contigs")
+        .put("c1rc1_chunk_bptr", c1rc1_chunk_bptr.to_int())
+        .put("c1", (*c1_ce_bptr).to_ptree())
+        .put("c2rc2_chunk_bptr", c2rc2_chunk_bptr.to_int())
+        .put("c2", (*c2_ce_bptr).to_ptree())
+        .put("rc1rc2_cigar", rc1rc2_cigar.to_ptree());
 
     // construct read chunk for the rc1->rc2 mapping
     Read_Chunk_BPtr rc1rc2_chunk_bptr;
@@ -605,15 +604,15 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
                         const string& cigar_string,
                         bool cat_at_step)
 {
-    log_l(info) << ptree().put("tag", "add_overlap()")
-                          .put("r1_name", r1_name)
-                          .put("r2_name", r2_name)
-                          .put("r1_start", r1_start)
-                          .put("r1_len", r1_len)
-                          .put("r2_start", r2_start)
-                          .put("r2_len", r2_len)
-                          .put("r2_rc", r2_rc)
-                          .put("cigar", cigar_string);
+    log_l(info) << ptree("add_overlap_start")
+        .put("r1_name", r1_name)
+        .put("r2_name", r2_name)
+        .put("r1_start", r1_start)
+        .put("r1_len", r1_len)
+        .put("r2_start", r2_start)
+        .put("r2_len", r2_len)
+        .put("r2_rc", r2_rc)
+        .put("cigar", cigar_string);
 
     // construct cigar object
     Cigar cigar(cigar_string, r2_rc, r1_start, r2_start);
@@ -647,16 +646,15 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
 
     string r1_seq = re1_bptr->get_seq();
     string r2_seq = re2_bptr->get_seq();
-    log_l(debug) << ptree().put("tag", "adding overlap")
-                           .put("re1", r1_seq.substr(r1_start, r1_len))
-                           .put("re2", (not cigar.is_reversed()?
-                                        r2_seq.substr(r2_start, r2_len)
-                                        : reverseComplement(r2_seq.substr(r2_start, r2_len))))
-                           .put("cigar", cigar.to_ptree());
+    log_l(debug) << ptree("add_overlap_before_disambiguate")
+        .put("re1", r1_seq.substr(r1_start, r1_len))
+        .put("re2", (not cigar.is_reversed()?
+                     r2_seq.substr(r2_start, r2_len)
+                     : reverseComplement(r2_seq.substr(r2_start, r2_len))))
+        .put("cigar", cigar.to_ptree());
 
     cigar.disambiguate(r1_seq.substr(r1_start, r1_len), r2_seq.substr(r2_start, r2_len));
-    log_l(debug) << ptree().put("tag", "disambiguated cigar")
-                           .put("cigar", cigar.to_ptree());
+    log_l(debug) << ptree("add_overlap_after_disambiguate").put("cigar", cigar.to_ptree());
 
     // cut r1 & r2 at the ends of the match region
     // NOTE: unmappable chunks are never cut

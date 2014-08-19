@@ -10,6 +10,7 @@
 #include "shortcuts.hpp" // for is_convertible fix
 
 #include <string>
+#include <functional>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -54,16 +55,22 @@ std::ostream& operator << (std::ostream& os, const boost::property_tree::ptree& 
     return os;
 }
 
-template < typename Cont >
-boost::property_tree::ptree cont_to_ptree(const Cont& cont)
+template < typename Cont, typename Elem_Type = typename Cont::value_type >
+boost::property_tree::ptree cont_to_ptree(const Cont& cont, std::function<boost::property_tree::ptree(const Elem_Type&)> to_ptree)
 {
     boost::property_tree::ptree pt;
     auto& array = pt.get_child("");
-    for (const auto& e : cont)
+    for (const typename Cont::value_type& e : cont)
     {
-        array.push_back(std::make_pair("", e.to_ptree()));
+        array.push_back(std::make_pair("", to_ptree(e)));
     }
     return pt;
+}
+template < typename Cont >
+boost::property_tree::ptree cont_to_ptree(const Cont& cont)
+{
+    typedef typename Cont::iterator::value_type elem_type;
+    return cont_to_ptree< Cont, elem_type >(cont, [] (const elem_type& e) { return e.to_ptree(); });
 }
 
 #endif

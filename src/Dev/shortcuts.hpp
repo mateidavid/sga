@@ -37,6 +37,7 @@
     _type& operator = (_type&&) = default;
 
 #define USING_ITERATORS(_type) \
+    using typename _type::value_type; \
     using typename _type::iterator; \
     using typename _type::const_iterator; \
     using _type::begin; \

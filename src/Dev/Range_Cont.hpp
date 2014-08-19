@@ -24,7 +24,6 @@ class Range_Cont
 private:
     typedef std::set< Range< T > > Base;
 public:
-    typedef T value_type;
     typedef Range< T > range_type;
 
     // allow move but not copy
@@ -46,7 +45,7 @@ public:
         {
             return;
         }
-        std::cerr << "adding range: [" << std::get<0>(range) << "," << std::get<1>(range) << "]\n";
+        //std::cerr << "adding range: [" << std::get<0>(range) << "," << std::get<1>(range) << "]\n";
         // find first range that could overlap this one
         auto it = Base::lower_bound(range);
         if (it != begin())
