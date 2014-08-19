@@ -58,7 +58,7 @@ public:
 
     static level level_from_string(const std::string& s)
     {
-       std::istringstream iss(s);
+       std::istringstream iss(s + "\n");
        int tmp_int = -1;
        iss >> tmp_int;
        if (iss.good())
