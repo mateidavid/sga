@@ -9,7 +9,6 @@ include_directories(BEFORE ${CMAKE_SOURCE_DIR}/boost-intrusive/include) # <-firs
 add_library(mac STATIC
     globals.cpp
     global_assert.cpp
-    logger.cpp
     Mutation_Chunk_Adapter.cpp
     Mutation.cpp
     Mutation_Cont.cpp

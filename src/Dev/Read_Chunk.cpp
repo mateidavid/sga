@@ -348,10 +348,10 @@ Read_Chunk::make_relative_chunk(Read_Chunk_CBPtr rc1_cbptr,
 std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >
 Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
-    log_l(debug1) << ptree().put("tag", "split()")
-                            .put("rc", rc_bptr->to_ptree())
-                            .put("c_brk", c_brk)
-                            .put("mut_left_ptr", mut_left_cbptr.to_ptree());
+    logger(debug1) << ptree("split")
+        .put("rc", rc_bptr->to_ptree())
+        .put("c_brk", c_brk)
+        .put("mut_left_ptr", mut_left_cbptr.to_ptree());
 
     ASSERT(rc_bptr->is_unlinked());
     ASSERT(not mut_left_cbptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));

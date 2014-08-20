@@ -18,6 +18,7 @@
 #include "global_assert.hpp"
 #include "nonconst_methods.hpp"
 #include "ptree.hpp"
+#include "logger.hpp"
 
 #define CONST_CONVERSIONS(_type, _t) \
     operator const _type< typename boost::add_const< _t >::type >& () const \
@@ -52,8 +53,6 @@ template < typename, typename >
 class Storage;
 template < typename, typename >
 class Factory;
-template < typename, typename >
-class Static_Allocator;
 
 template < typename Value, typename Index = uint32_t >
 struct Identifier
@@ -139,28 +138,6 @@ private:
     typedef Identifier< unqual_val_type, index_type > idn_type;
 public:
     typedef typename boost::mpl::if_< is_void_t, void, Reference< val_type, index_type > >::type reference;
-
-    /*
-    template < typename Other_Value >
-    struct has_same_base
-        : std::is_same< typename std::remove_const< Other_Value >::type,
-                        typename std::remove_const< val_type >::type >
-    {};
-    */
-
-    /** Rebinder.
-     * Wrap pointers to T and const T. Anything else gets transformed into a raw pointer.
-     */
-    /*
-    template < typename Other_Value >
-    struct rebind
-    {
-        typedef typename boost::mpl::if_< has_same_base< Other_Value >,
-                                          Pointer< Other_Value, index_type >,
-                                          Other_Value*
-                                        >::type type;
-    };
-    */
 
     Pointer(std::nullptr_t = nullptr) {}
 
@@ -286,14 +263,6 @@ public:
         return pt;
     }
 
-    /*
-    friend std::ostream& operator << (std::ostream& os, const Reference& rhs)
-    {
-        os << "bref:{" << rhs.raw() << "}";
-        return os;
-    }
-    */
-
 private:
     friend class Pointer< val_type, index_type >;
 
@@ -399,14 +368,16 @@ private:
             _cont.push_back(wrapper_type());
             res._idn._idx = _cont.size() - 1;
         }
-        //std::clog << "allocating element at: " << res._idn._idx << "\n";
+        logger("factory", debug1) << "Factory<" << typeid(Value).name() << "> @" << static_cast< void* >(this)
+            << ": allocating element at: " << res._idn._idx << "\n";
         return res;
     }
 
     /** Deallocate element. */
     void ns_deallocate(const_ptr_type elem_cptr)
     {
-        //std::clog << "deallocating element at: " << elem_ptr._idn._idx << "\n";
+        logger("factory", debug1) << "Factory<" << typeid(Value).name() << "> @" << static_cast< void* >(this)
+            << ": deallocating element at: " << elem_cptr._idn._idx << "\n";
         _cont.at(elem_cptr._idn._idx)._next_free_idn = _next_free_idn;
         _next_free_idn = elem_cptr._idn;
     }
@@ -441,22 +412,6 @@ private:
     idn_type _next_free_idn;
 
     static Storage* _active_ptr;
-
-    /*
-    friend std::ostream& operator << (std::ostream& os, const Storage& f)
-    {
-        os << "allocated=" << f.ns_size() << '\n'
-           << "n_free=" << f.ns_unused() << '\n'
-           << "next_free=" << f._next_free_idn << '\n';
-        size_t idx = 0;
-        for (const auto& w : f._cont)
-        {
-            os << idx++ << ": [key=" << w._key
-            << ",next_free_idn=" << w._next_free_idn << "]\n";
-        }
-        return os;
-    }
-    */
 }; // class Storage
 
 template < typename Value, typename Index >
@@ -583,36 +538,9 @@ private:
 using detail::Pointer;
 using detail::Reference;
 using detail::Factory;
-using detail::Allocator;
 using detail::Pointer_Holder;
 
 } // namespace bounded
 
-/*
-namespace boost
-{
-namespace intrusive
-{
-
-template < typename Value, typename Index >
-struct pointer_traits< bounded::Pointer< Value, Index > >
-{
-    typedef Value element_type;
-    typedef Index index_type;
-    typedef bounded::Pointer< element_type, index_type > pointer;
-    typedef bounded::Pointer< const element_type, index_type > const_pointer;
-    typedef ptrdiff_t difference_type;
-    typedef bounded::Reference< element_type, index_type > reference;
-
-    template < class Other_Value >
-    struct rebind_pointer
-    {
-        typedef typename bounded::Pointer< element_type, index_type >::template rebind< Other_Value >::type type;
-    };
-}; // struct pointer_traits
-
-} // namespace intrusive
-} // namespace boost
-*/
 
 #endif

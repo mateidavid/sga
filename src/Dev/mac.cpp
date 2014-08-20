@@ -64,7 +64,7 @@ struct Program_Options
 
 int real_main(const Program_Options& po)
 {
-    log_l(info) << ptree("settings", po.to_ptree());
+    logger(info) << ptree("settings", po.to_ptree());
 
     if (po.input_file.empty())
     {
@@ -84,7 +84,7 @@ int real_main(const Program_Options& po)
     size_t line_count = 0;
     while (getline(ixs, line))
     {
-        log_l(debug) << ptree("op").put("line", line);
+        logger(debug) << ptree("op").put("line", line);
 
         istringstream iss(line + "\n");
         string rec_type;
@@ -127,22 +127,22 @@ int real_main(const Program_Options& po)
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5), po.cat_at_step);
         }
 
-        log_l(debug2) << g.to_ptree();
+        logger(debug2) << g.to_ptree();
 
         if (po.progress_count > 0)
         {
             if ((++line_count % po.progress_count) == 0)
             {
-                log_l(info) << ptree("progress").put("count", line_count);
+                logger(info) << ptree("progress").put("count", line_count);
             }
         }
         //ASSERT(g.check_all());
     }
-    log_l(info) << ptree("done_loop");
+    logger(info) << ptree("done_loop");
     g.unmap_single_chunks();
     g.set_contig_ids();
     ASSERT(g.check_all());
-    log_l(info) << ptree("done_postprocessing");
+    logger(info) << ptree("done_postprocessing");
     if (po.cat_at_end)
     {
         if (not po.stats_file_2.empty())
@@ -181,10 +181,10 @@ int real_main(const Program_Options& po)
         //ofstream unmappable_contigs_ofs(po.unmappable_contigs_file);
         //g.print_unmappable_contigs(unmappable_contigs_ofs);
     }
-    log_l(info) << ptree("done_output");
+    logger(info) << ptree("done_output");
 
     g.clear_and_dispose();
-    log_l(info) << ptree("graph_cleared");
+    logger(info) << ptree("graph_cleared");
 
     return EXIT_SUCCESS;
 }
@@ -252,14 +252,14 @@ int main(int argc, char* argv[])
            size_t i = l.find(':');
            if (i == string::npos)
            {
-              logger::log::default_level() = logger::log::level_from_string(l);
-              clog << "set default log level to: " << static_cast< int >(logger::log::default_level()) << "\n";
+              Logger::set_default_level(Logger::level_from_string(l));
+              clog << "set default log level to: " << static_cast< int >(Logger::get_default_level()) << "\n";
            }
            else
            {
-              logger::log::facility_level(l.substr(0, i)) = logger::log::level_from_string(l.substr(i + 1));
+              Logger::set_facility_level(l.substr(0, i), Logger::level_from_string(l.substr(i + 1)));
               clog << "set log level of '" << l.substr(0, i) << "' to: "
-                   << static_cast< int >(logger::log::facility_level(l.substr(0, i))) << "\n";
+                   << static_cast< int >(Logger::get_facility_level(l.substr(0, i))) << "\n";
            }
         }
         /*
