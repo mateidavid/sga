@@ -20,12 +20,6 @@ using namespace std;
 using namespace MAC;
 namespace bo = boost::program_options;
 
-/*
-auto inc_tab = indent::inc;
-auto dec_tab = indent::dec;
-using indent::nl;
-using indent::tab;
-*/
 
 struct Program_Options
 {
@@ -35,8 +29,11 @@ struct Program_Options
     string supercontig_lengths_file;
     string mutations_file;
     string unmappable_contigs_file;
+    string save_file;
+    string load_file;
     size_t progress_count;
     size_t unmap_trigger_len;
+    long seed;
     vector< string > log_level;
     bool cat_at_step;
     bool cat_at_end;
@@ -46,6 +43,8 @@ struct Program_Options
     boost::property_tree::ptree to_ptree() const
     {
         return ptree().put("input file", input_file)
+                      .put("load file", load_file)
+                      .put("save file", save_file)
                       .put("stats file 1", stats_file_1)
                       .put("stats file 2", stats_file_2)
                       .put("supercontig lengths file", supercontig_lengths_file)
@@ -58,34 +57,18 @@ struct Program_Options
                       .put("cat contigs at end", cat_at_end)
                       .put("print graph at each step", print_at_step)
                       .put("print graph at end", print_at_end)
+                      .put("seed", seed)
                       ;
     }
 };
 
-int real_main(const Program_Options& po)
+void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
 {
-    logger(info) << ptree("settings", po.to_ptree());
-
-    if (po.input_file.empty())
-    {
-        cerr << "no input file\n";
-        exit(EXIT_FAILURE);
-    }
-
-    Graph g;
-    ixstream ixs(po.input_file);
-    if (not ixs)
-    {
-        cerr << "error opening file: " << po.input_file << '\n';
-        return EXIT_FAILURE;
-    }
-
     string line;
     size_t line_count = 0;
-    while (getline(ixs, line))
+    while (getline(is, line))
     {
         logger(debug) << ptree("op").put("line", line);
-
         istringstream iss(line + "\n");
         string rec_type;
         iss >> rec_type;
@@ -116,9 +99,9 @@ int real_main(const Program_Options& po)
             string sam_cigar;
             string sam_pi;
             iss >> r1_id >> r2_id
-                >> r1_start >> r1_end >> r1_len
-                >> r2_start >> r2_end >> r2_len
-                >> rc >> tmp >> sam_cigar >> sam_pi;
+            >> r1_start >> r1_end >> r1_len
+            >> r2_start >> r2_end >> r2_len
+            >> rc >> tmp >> sam_cigar >> sam_pi;
             ASSERT(not iss.eof());
             // switch to open interval ends
             ++r1_end;
@@ -126,9 +109,7 @@ int real_main(const Program_Options& po)
             global::assert_message = string("ED ") + r1_id + " " + r2_id;
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5), po.cat_at_step);
         }
-
         logger(debug2) << g.to_ptree();
-
         if (po.progress_count > 0)
         {
             if ((++line_count % po.progress_count) == 0)
@@ -143,6 +124,43 @@ int real_main(const Program_Options& po)
     g.set_contig_ids();
     ASSERT(g.check_all());
     logger(info) << ptree("done_postprocessing");
+}
+
+
+int real_main(const Program_Options& po)
+{
+    Graph g;
+
+    logger(info) << ptree("settings", po.to_ptree());
+
+    if (po.input_file.empty() == po.load_file.empty())
+    {
+        cerr << "exactly 1 of input file or load file must be specified\n";
+        exit(EXIT_FAILURE);
+    }
+    if (not po.input_file.empty())
+    {
+        ixstream ixs(po.input_file);
+        if (not ixs)
+        {
+            cerr << "error opening file: " << po.input_file << '\n';
+            return EXIT_FAILURE;
+        }
+        logger(info) << ptree("loading").put("input_file", po.input_file);
+        load_asqg(ixs, po, g);
+    }
+    else
+    {
+        ifstream ifs(po.load_file, ios_base::in | ios_base::binary);
+        if (not ifs)
+        {
+            cerr << "error opening file: " << po.load_file << '\n';
+            return EXIT_FAILURE;
+        }
+        logger(info) << ptree("loading").put("load_file", po.load_file);
+        g.load(ifs);
+    }
+
     if (po.cat_at_end)
     {
         if (not po.stats_file_2.empty())
@@ -183,26 +201,24 @@ int real_main(const Program_Options& po)
     }
     logger(info) << ptree("done_output");
 
+    if (not po.save_file.empty())
+    {
+        ofstream ofs(po.save_file.c_str(), ios_base::out | ios_base::binary);
+        if (not ofs)
+        {
+            cerr << "error opening file: " << po.save_file << '\n';
+            return EXIT_FAILURE;
+        }
+        logger(info) << ptree("saving").put("save_file", po.save_file);
+        g.save(ofs);
+    }
+
     g.clear_and_dispose();
     logger(info) << ptree("graph_cleared");
 
     return EXIT_SUCCESS;
 }
 
-/*
-    string input_file;
-    string stats_file_1;
-    string stats_file_2;
-    string supercontig_lengths_file;
-    string mutations_file;
-    string unmappable_contigs_file;
-    size_t progress_count;
-    size_t unmap_trigger_len;
-    bool merge_contigs_at_each_step;
-    bool merge_contigs_at_end;
-    bool print_graph;
-    bool print_graph_each_step;
-*/
 
 int main(int argc, char* argv[])
 {
@@ -233,6 +249,9 @@ int main(int argc, char* argv[])
         ("print-at-step,G", bo::bool_switch(&po.print_at_step), "print graph at each step")
         ("print-at-end,g", bo::bool_switch(&po.print_at_end), "print graph at end")
         ("log-level,d", bo::value< vector< string > >(&po.log_level)->composing(), "default log level")
+        ("save,S", bo::value< string >(&po.save_file), "save file")
+        ("load,L", bo::value< string >(&po.load_file), "load file")
+        ("seed", bo::value< long >(&po.seed), "RNG seed")
         ;
         cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
         visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
@@ -262,12 +281,10 @@ int main(int argc, char* argv[])
                    << static_cast< int >(Logger::get_facility_level(l.substr(0, i))) << "\n";
            }
         }
-        /*
         if (po.seed == 0)
         {
-            po.seed = time(NULL);
+            po.seed = time(nullptr);
         }
-        */
     }
     catch(exception& e)
     {

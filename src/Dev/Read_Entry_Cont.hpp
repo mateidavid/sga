@@ -100,6 +100,7 @@ public:
     ~Read_Entry_Cont() { ASSERT(size() == 0); }
 
     USING_INTRUSIVE_CONT(Base)
+    friend class Graph;
 
     /** Insert Read_Entry into container.
      * @param re_bptr Pointer to Read_Entry object.

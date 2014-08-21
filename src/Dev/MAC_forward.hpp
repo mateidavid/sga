@@ -35,6 +35,7 @@ class Mutation_Chunk_Adapter;
 class Read_Chunk;
 class Read_Entry;
 class Contig_Entry;
+class Graph;
 
 typedef bounded::Factory< Mutation > Mutation_Fact;
 typedef Mutation_Fact::ptr_type Mutation_BPtr;

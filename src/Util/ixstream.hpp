@@ -25,19 +25,23 @@ class ixstream : public boost::iostreams::filtering_istream
 {
 public:
     ixstream() {}
-    ixstream(const char* name) { open(name); }
-    ixstream(const std::string& name) { open(name.c_str()); }
+    ixstream(const std::string& name) { open(name); }
     ixstream(std::istream& is) { open(is); }
 
-    void open(const char* name)
+    ixstream(const ixstream&) = delete;
+    ixstream(ixstream&&) = delete;
+    ixstream& operator = (const ixstream&) = delete;
+    ixstream& operator = (ixstream&&) = delete;
+
+    void open(const std::string& name)
     {
-        if (strncmp(name, "-", 2) == 0)
+        if (name == "-")
         {
             open(std::cin);
         }
         else
         {
-            p_file = std::unique_ptr<std::ifstream>(new std::ifstream(name));
+            p_file = std::unique_ptr<std::ifstream>(new std::ifstream(name.c_str()));
             if (!*p_file)
             {
                 std::cerr << "error opening file [" << name << "]\n";
@@ -46,8 +50,6 @@ public:
             open(*p_file);
         }
     }
-
-    void open(const std::string& name) { open(name.c_str()); }
 
     void open(std::istream& is)
     {
@@ -63,11 +65,6 @@ public:
 private:
     // if necessary, store ifstream object, and auto-delete it when done
     std::unique_ptr<std::ifstream> p_file;
-
-    // no copy constructor & copy-assignment operator:
-    // declared private & *undefined*
-    ixstream(const ixstream&);
-    ixstream& operator = (const ixstream&);
 };
 
 

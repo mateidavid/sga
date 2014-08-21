@@ -94,6 +94,7 @@ public:
     Size_Type get_seq_len() const { return _seq_len; }
     bool have_seq() const { return _seq.size() == _seq_len; }
     const Seq_Type& get_seq() const { return _seq; }
+    Seq_Type& seq() { return _seq; }
     /**@}*/
 
     /** Find bounded pointer to this object.

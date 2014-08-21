@@ -1652,23 +1652,108 @@ void Graph::dump_detailed_counts(ostream& os) const
     }
 }
 
-/*
-ostream& operator << (ostream& os, const Graph& g)
-{
-    os << indent::tab << "(Graph\n" << indent::inc
-       << indent::tab << "Read_Entry_Cont:\n" << indent::inc;
-    print_seq(os, g._re_cont, "");
-    os << indent::dec << indent::tab << "Contig_Entry_Cont:\n" << indent::inc;
-    print_seq(os, g._ce_cont, "");
-    os << indent::dec << indent::dec << indent::tab << ")\n";
-    return os;
-}
-*/
-
 boost::property_tree::ptree Graph::to_ptree() const
 {
     return ptree().put("re_cont", cont_to_ptree(re_cont()))
                   .put("ce_cont", cont_to_ptree(ce_cont()));
+}
+
+void Graph::save(std::ostream& os) const
+{
+    ASSERT(_re_cont.header_ptr().to_int() == 0);
+    ASSERT(_ce_cont.get_root_node().to_int() == 0);
+    // dump the 5 factories
+    _mut_fact.save(os);
+    _mca_fact.save(os);
+    _rc_fact.save(os);
+    _re_fact.save(os);
+    _ce_fact.save(os);
+    // dump re_cont and ce_cont
+    os.write(reinterpret_cast< const char* >(&_re_cont), sizeof(_re_cont));
+    os.write(reinterpret_cast< const char* >(&_ce_cont), sizeof(_ce_cont));
+    // save relevant strings in huge a list, resetting entry contents
+    // list order:
+    // - for every read entry in _re_cont:
+    //   - read name
+    // - for every contig entry in _ce_cont:
+    //   - base sequence
+    //   - for every mutation in its mut_cont
+    //     - alternate sequence
+    size_t n_strings = 0;
+    size_t n_bytes = 0;
+    for (const auto re_cbref : _re_cont)
+    {
+        Read_Entry_CBPtr re_cbptr = &re_cbref;
+        os.write(re_cbptr->get_name().c_str(), re_cbptr->get_name().size() + 1);
+        ++n_strings;
+        n_bytes += re_cbptr->get_name().size() + 1;
+    }
+    for (const auto ce_cbref : _ce_cont)
+    {
+        Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
+        os.write(ce_cbptr->seq().c_str(), ce_cbptr->seq().size() + 1);
+        ++n_strings;
+        n_bytes += ce_cbptr->seq().size() + 1;
+        for (const auto mut_cbref : ce_cbptr->mut_cont())
+        {
+            Mutation_CBPtr mut_cbptr = &mut_cbref;
+            os.write(mut_cbptr->get_seq().c_str(), mut_cbptr->get_seq().size() + 1);
+            ++n_strings;
+            n_bytes += mut_cbptr->get_seq().size() + 1;
+        }
+    }
+    logger("io", info) << "saving graph: n_strings=" << n_strings << ", n_bytes=" << n_bytes << "\n";
+}
+
+void Graph::load(std::istream& is)
+{
+    ASSERT(_re_cont.header_ptr().to_int() == 0);
+    ASSERT(_ce_cont.get_root_node().to_int() == 0);
+    ASSERT(_re_cont.size() == 0);
+    ASSERT(_ce_cont.size() == 0);
+    // load 5 factories
+    _mut_fact.load(is);
+    _mca_fact.load(is);
+    _rc_fact.load(is);
+    _re_fact.load(is);
+    _ce_fact.load(is);
+    // load re_cont and ce_cont
+    is.read(reinterpret_cast< char* >(&_re_cont), sizeof(_re_cont));
+    is.read(reinterpret_cast< char* >(&_ce_cont), sizeof(_ce_cont));
+    // construct in-place empty strings in container headers (ow, destruction causes SEGV)
+    new (&_re_cont.header_ptr()->name()) string();
+    new (&_ce_cont.get_root_node()->seq()) string();
+    new (&_ce_cont.get_root_node()->mut_cont().header_ptr()->seq()) string();
+    // load strings
+    size_t n_strings = 0;
+    size_t n_bytes = 0;
+    for (auto re_bref : _re_cont)
+    {
+        Read_Entry_BPtr re_bptr = &re_bref;
+        new (&re_bptr->name()) string();
+        getline(is, re_bptr->name(), '\0');
+        ++n_strings;
+        n_bytes += re_bptr->name().size() + 1;
+    }
+    for (auto ce_bref : _ce_cont)
+    {
+        Contig_Entry_BPtr ce_bptr = &ce_bref;
+        new (&ce_bptr->seq()) string();
+        new (&ce_bptr->mut_cont().header_ptr()->seq()) string();
+        getline(is, ce_bptr->seq(), '\0');
+        ++n_strings;
+        n_bytes += ce_bptr->seq().size() + 1;
+        for (auto mut_bref : ce_bptr->mut_cont())
+        {
+            Mutation_BPtr mut_bptr = &mut_bref;
+            new (&mut_bptr->seq()) string();
+            getline(is, mut_bptr->seq(), '\0');
+            ++n_strings;
+            n_bytes += mut_bptr->seq().size() + 1;
+        }
+    }
+    logger("io", info) << "loading graph: n_strings=" << n_strings << ", n_bytes=" << n_bytes << "\n";
+    ASSERT(check_all());
 }
 
 

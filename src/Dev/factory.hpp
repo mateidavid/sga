@@ -353,6 +353,37 @@ public:
     static size_t size() { ASSERT(active_ptr()); return active_ptr()->ns_size(); }
     static size_t unused() { ASSERT(active_ptr()); return active_ptr()->ns_unused(); }
 
+    void save(std::ostream& os) const
+    {
+        os.write(reinterpret_cast< const char* >(&_next_free_idn), sizeof(_next_free_idn));
+        uint64_t sz = _cont.size();
+        os.write(reinterpret_cast< const char* >(&sz), sizeof(sz));
+        size_t bytes = 0;
+        for (const auto& e : _cont)
+        {
+            os.write(reinterpret_cast< const char* >(&e), sizeof(e));
+            bytes += sizeof(e);
+        }
+        logger("io", info) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
+            << ": saving: _next_free_idn=" << _next_free_idn.to_int() << ", sz=" << sz << ", bytes=" << bytes << "\n";
+    }
+
+    void load(std::istream& is)
+    {
+        is.read(reinterpret_cast< char* >(&_next_free_idn), sizeof(_next_free_idn));
+        uint64_t sz;
+        is.read(reinterpret_cast< char* >(&sz), sizeof(sz));
+        _cont.resize(sz);
+        size_t bytes = 0;
+        for (auto& e : _cont)
+        {
+            is.read(reinterpret_cast< char* >(&e), sizeof(e));
+            bytes += sizeof(e);
+        }
+        logger("io", info) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
+            << ": loading: _next_free_idn=" << _next_free_idn.to_int() << ", sz=" << sz << ", bytes=" << bytes << "\n";
+    }
+
 private:
     /** Allocate space for new element. */
     ptr_type ns_allocate()
@@ -368,7 +399,7 @@ private:
             _cont.push_back(wrapper_type());
             res._idn._idx = _cont.size() - 1;
         }
-        logger("factory", debug1) << "Factory<" << typeid(Value).name() << "> @" << static_cast< void* >(this)
+        logger("factory", debug1) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
             << ": allocating element at: " << res._idn._idx << "\n";
         return res;
     }
@@ -376,7 +407,7 @@ private:
     /** Deallocate element. */
     void ns_deallocate(const_ptr_type elem_cptr)
     {
-        logger("factory", debug1) << "Factory<" << typeid(Value).name() << "> @" << static_cast< void* >(this)
+        logger("factory", debug1) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
             << ": deallocating element at: " << elem_cptr._idn._idx << "\n";
         _cont.at(elem_cptr._idn._idx)._next_free_idn = _next_free_idn;
         _next_free_idn = elem_cptr._idn;

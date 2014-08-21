@@ -87,6 +87,7 @@ public:
 
     USING_INTRUSIVE_CONT(Base)
     using Base::check;
+    friend class Graph;
 
     // check it is empty before deallocating
     ~Mutation_Cont() { ASSERT(size() == 0); }

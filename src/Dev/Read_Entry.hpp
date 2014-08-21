@@ -99,6 +99,7 @@ public:
     /** @name Getters */
     /**@{*/
     const std::string& get_name() const { return _name; }
+    std::string& name() { return _name; }
     Size_Type get_len() const { return _len; }
     const Read_Chunk_RE_Cont& chunk_cont() const { return _chunk_cont; }
     Read_Chunk_RE_Cont& chunk_cont() { return _chunk_cont; }

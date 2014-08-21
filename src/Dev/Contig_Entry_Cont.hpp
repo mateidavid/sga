@@ -75,6 +75,7 @@ public:
     ~Contig_Entry_Cont() { ASSERT(size() == 0); }
 
     USING_INTRUSIVE_CONT(Base)
+    friend class Graph;
 
     /** Insert Contig_Entry into container.
      * @param ce_bptr Pointer to Contig_Entry object.

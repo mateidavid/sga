@@ -451,23 +451,6 @@ bool Contig_Entry::check_colour(bool dir) const
 }
 */
 
-/*
-ostream& operator << (ostream& os, const Contig_Entry& rhs)
-{
-    os << indent::tab << "(Contig_Entry &=" << (void*)&rhs
-       << indent::inc << indent::nl << "seq=\"" << rhs.seq() << "\",len=" << rhs.get_len()
-       << ",col=" << rhs.colour() << ",is_unmappable=" << (int)rhs.is_unmappable()
-       << indent::nl << "mut_cont:"
-       << indent::inc << '\n';
-    print_seq(os, rhs._mut_cont, indent::nl, indent::tab, '\n');
-    os << indent::dec << indent::tab << "chunk_cont:"
-       << indent::inc << '\n';
-    print_seq(os, rhs._chunk_cont, indent::nl, indent::tab, '\n');
-    os << indent::dec << indent::dec << indent::tab << ")" << '\n';
-    return os;
-}
-*/
-
 boost::property_tree::ptree Contig_Entry::to_ptree() const
 {
     return ptree().put("addr", (void*)this)
@@ -478,5 +461,6 @@ boost::property_tree::ptree Contig_Entry::to_ptree() const
                   .put("mut_cont", cont_to_ptree(mut_cont()))
                   .put("chunk_cont", cont_to_ptree(chunk_cont()));
 }
+
 
 } // namespace MAC

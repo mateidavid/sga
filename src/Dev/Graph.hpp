@@ -117,6 +117,9 @@ public:
     //friend std::ostream& operator << (std::ostream&, const Graph&);
     boost::property_tree::ptree to_ptree() const;
 
+    void save(std::ostream&) const;
+    void load(std::istream&);
+
 private:
     Mutation_Fact _mut_fact;
     Mutation_Chunk_Adapter_Fact _mca_fact;
