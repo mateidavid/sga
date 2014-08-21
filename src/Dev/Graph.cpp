@@ -1658,6 +1658,16 @@ boost::property_tree::ptree Graph::to_ptree() const
                   .put("ce_cont", cont_to_ptree(ce_cont()));
 }
 
+boost::property_tree::ptree Graph::factory_stats() const
+{
+    return ptree()
+        .put("Factory<Read_Entry>", _re_fact.stats())
+        .put("Factory<Contig_Entry>", _ce_fact.stats())
+        .put("Factory<Read_Chunk>", _rc_fact.stats())
+        .put("Factory<Mutation>", _mut_fact.stats())
+        .put("Factory<Mutation_Chunk_Adapter>", _mca_fact.stats());
+}
+
 void Graph::save(std::ostream& os) const
 {
     ASSERT(_re_cont.header_ptr().to_int() == 0);

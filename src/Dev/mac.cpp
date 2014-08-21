@@ -160,6 +160,7 @@ int real_main(const Program_Options& po)
         logger(info) << ptree("loading").put("load_file", po.load_file);
         g.load(ifs);
     }
+    logger("mac", info) << ptree("factory_stats", g.factory_stats());
 
     if (po.cat_at_end)
     {
@@ -213,6 +214,7 @@ int real_main(const Program_Options& po)
         g.save(ofs);
     }
 
+    logger("mac", info) << ptree("factory_stats", g.factory_stats());
     g.clear_and_dispose();
     logger(info) << ptree("graph_cleared");
 

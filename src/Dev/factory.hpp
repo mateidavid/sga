@@ -353,6 +353,11 @@ public:
     static size_t size() { ASSERT(active_ptr()); return active_ptr()->ns_size(); }
     static size_t unused() { ASSERT(active_ptr()); return active_ptr()->ns_unused(); }
 
+    boost::property_tree::ptree stats() const
+    {
+        return ptree().put("size", ns_size()).put("unused", ns_unused());
+    }
+
     void save(std::ostream& os) const
     {
         os.write(reinterpret_cast< const char* >(&_next_free_idn), sizeof(_next_free_idn));

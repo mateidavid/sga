@@ -116,6 +116,7 @@ public:
 
     //friend std::ostream& operator << (std::ostream&, const Graph&);
     boost::property_tree::ptree to_ptree() const;
+    boost::property_tree::ptree factory_stats() const;
 
     void save(std::ostream&) const;
     void load(std::istream&);
