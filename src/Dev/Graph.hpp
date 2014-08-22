@@ -90,7 +90,12 @@ public:
     void print_supercontig_lengths(std::ostream& os);
     void print_supercontig_lengths_2(std::ostream& os);
     */
+
+    /** Unmap read chunks not mapped to lone contigs. */
     void unmap_single_chunks();
+
+    /** Unmap read ends not mapped to anything else. */
+    void unmap_read_ends();
 
     /** Clear CE and RE containers and deallocate all objects. */
     void clear_and_dispose();
@@ -228,6 +233,12 @@ private:
     void find_unmappable_regions(Read_Chunk_CBPtr rc_cbptr, Range_Cont< Size_Type >& region_cont) const;
 
     void cat_read_contigs(Read_Entry_BPtr re_bptr);
+
+    /** Unmap terminal read chunk if it is mapped to contig end with no other supporting chunk.
+     * @param rc_bptr Chunk to check.
+     * @param r_start Bool; true: unmap in the direction of read start; false: unmap in the direction of read end.
+     */
+    void unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start);
 }; // class Graph
 
 } // namespace MAC

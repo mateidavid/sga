@@ -24,8 +24,7 @@ namespace bo = boost::program_options;
 struct Program_Options
 {
     string input_file;
-    string stats_file_1;
-    string stats_file_2;
+    string stats_file;
     string supercontig_lengths_file;
     string mutations_file;
     string unmappable_contigs_file;
@@ -37,6 +36,7 @@ struct Program_Options
     vector< string > log_level;
     bool cat_at_step;
     bool cat_at_end;
+    bool unmap_read_ends;
     bool print_at_step;
     bool print_at_end;
 
@@ -45,8 +45,7 @@ struct Program_Options
         return ptree().put("input file", input_file)
                       .put("load file", load_file)
                       .put("save file", save_file)
-                      .put("stats file 1", stats_file_1)
-                      .put("stats file 2", stats_file_2)
+                      .put("stats file", stats_file)
                       .put("supercontig lengths file", supercontig_lengths_file)
                       .put("mutations file", mutations_file)
                       .put("unmappable contigs file", unmappable_contigs_file)
@@ -55,6 +54,7 @@ struct Program_Options
                       .put("log levels", cont_to_ptree< vector<string>, string >(log_level, [] (const string& s) { return boost::property_tree::ptree(s); }))
                       .put("cat contigs at each step", cat_at_step)
                       .put("cat contigs at end", cat_at_end)
+                      .put("unmap read ends", unmap_read_ends)
                       .put("print graph at each step", print_at_step)
                       .put("print graph at end", print_at_end)
                       .put("seed", seed)
@@ -64,6 +64,7 @@ struct Program_Options
 
 void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
 {
+    logger("io", info) << ptree("load_asqg_start");
     string line;
     size_t line_count = 0;
     while (getline(is, line))
@@ -119,11 +120,8 @@ void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
         }
         //ASSERT(g.check_all());
     }
-    logger(info) << ptree("done_loop");
-    g.unmap_single_chunks();
-    g.set_contig_ids();
+    logger("io", info) << ptree("load_asqg_end");
     ASSERT(g.check_all());
-    logger(info) << ptree("done_postprocessing");
 }
 
 
@@ -162,20 +160,20 @@ int real_main(const Program_Options& po)
     }
     logger("mac", info) << ptree("factory_stats", g.factory_stats());
 
+    if (po.unmap_read_ends)
+    {
+        g.unmap_read_ends();
+        ASSERT(g.check_all());
+    }
     if (po.cat_at_end)
     {
-        if (not po.stats_file_2.empty())
-        {
-            ofstream stats_2_ofs(po.stats_file_2);
-            g.dump_detailed_counts(stats_2_ofs);
-        }
         g.cat_all_read_contigs();
         ASSERT(g.check_all());
     }
-    if (not po.stats_file_1.empty())
+    if (not po.stats_file.empty())
     {
-        ofstream stats_1_ofs(po.stats_file_1);
-        g.dump_detailed_counts(stats_1_ofs);
+        ofstream stats_ofs(po.stats_file);
+        g.dump_detailed_counts(stats_ofs);
     }
     if (not po.supercontig_lengths_file.empty())
     {
@@ -239,8 +237,7 @@ int main(int argc, char* argv[])
         ;
         config_opts_desc.add_options()
         ("input-file,i", bo::value< string >(&po.input_file), "input file")
-        ("stats-file-1,x", bo::value< string >(&po.stats_file_1), "stats file 1")
-        ("stats-file-2,y", bo::value< string >(&po.stats_file_2), "stats file 2")
+        ("stats-file,x", bo::value< string >(&po.stats_file), "stats file")
         ("supercontig-lengths-file,l", bo::value< string >(&po.supercontig_lengths_file), "supercontig lengths file")
         ("mutations-file,M", bo::value< string >(&po.mutations_file), "mutations file")
         ("unmappable-contigs-file,U", bo::value< string >(&po.unmappable_contigs_file), "unmappable contigs file")
@@ -248,6 +245,7 @@ int main(int argc, char* argv[])
         ("unmap-trigger-len,u", bo::value< size_t >(&po.unmap_trigger_len)->default_value(9), "unmap trigger len")
         ("cat-each-step,s", bo::bool_switch(&po.cat_at_step), "cat contigs at each step")
         ("cat-end,e", bo::bool_switch(&po.cat_at_end), "cat contigs at end")
+        ("unmap-read-ends", bo::bool_switch(&po.unmap_read_ends), "unmap read ends")
         ("print-at-step,G", bo::bool_switch(&po.print_at_step), "print graph at each step")
         ("print-at-end,g", bo::bool_switch(&po.print_at_end), "print graph at end")
         ("log-level,d", bo::value< vector< string > >(&po.log_level)->composing(), "default log level")

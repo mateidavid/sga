@@ -17,7 +17,7 @@ namespace MAC
 
 void Graph::add_read(string&& name, Seq_Type&& seq)
 {
-    logger(info) << ptree("add_read").put("name", name);
+    logger(debug) << ptree("add_read").put("name", name);
 
     // create read entry and place it in container
     Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(std::move(name), seq.size());
@@ -38,7 +38,7 @@ void Graph::add_read(string&& name, Seq_Type&& seq)
 
 bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
-    logger(debug) << ptree("cut_contig_entry")
+    logger(debug1) << ptree("cut_contig_entry")
         .put("ce_ptr", ce_bptr.to_ptree())
         .put("c_brk", c_brk)
         .put("mut_left_ptr", mut_left_cbptr.to_ptree());
@@ -121,7 +121,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
 
 bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
 {
-    logger(debug) << ptree("cut_read_chunk")
+    logger(debug1) << ptree("cut_read_chunk")
         .put("rc_ptr", rc_bptr.to_ptree())
         .put("r_brk", r_brk);
 
@@ -212,7 +212,7 @@ bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
 
 bool Graph::cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk)
 {
-    logger(debug) << ptree("cut_read_entry")
+    logger(debug1) << ptree("cut_read_entry")
         .put("re_ptr", re_bptr.to_ptree())
         .put("r_brk", r_brk);
 
@@ -246,7 +246,7 @@ void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPt
         return;
     }
 
-    logger(debug) << ptree("merge_chunk_contigs")
+    logger(debug1) << ptree("merge_chunk_contigs")
         .put("c1rc1_chunk_bptr", c1rc1_chunk_bptr.to_int())
         .put("c1", (*c1_ce_bptr).to_ptree())
         .put("c2rc2_chunk_bptr", c2rc2_chunk_bptr.to_int())
@@ -604,7 +604,7 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
                         const string& cigar_string,
                         bool cat_at_step)
 {
-    logger(info) << ptree("add_overlap_start")
+    logger(debug) << ptree("add_overlap_start")
         .put("r1_name", r1_name)
         .put("r2_name", r2_name)
         .put("r1_start", r1_start)
@@ -646,7 +646,7 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
 
     string r1_seq = re1_bptr->get_seq();
     string r2_seq = re2_bptr->get_seq();
-    logger(debug) << ptree("add_overlap_before_disambiguate")
+    logger(debug1) << ptree("add_overlap_before_disambiguate")
         .put("re1", r1_seq.substr(r1_start, r1_len))
         .put("re2", (not cigar.is_reversed()?
                      r2_seq.substr(r2_start, r2_len)
@@ -654,7 +654,7 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
         .put("cigar", cigar.to_ptree());
 
     cigar.disambiguate(r1_seq.substr(r1_start, r1_len), r2_seq.substr(r2_start, r2_len));
-    logger(debug) << ptree("add_overlap_after_disambiguate").put("cigar", cigar.to_ptree());
+    logger(debug1) << ptree("add_overlap_after_disambiguate").put("cigar", cigar.to_ptree());
 
     // cut r1 & r2 at the ends of the match region
     // NOTE: unmappable chunks are never cut
@@ -780,6 +780,7 @@ void Graph::cat_read_contigs(Read_Entry_BPtr re_bptr)
 
 void Graph::cat_all_read_contigs()
 {
+    logger("graph", info) << ptree("cat_all_read_contigs");
     for (auto re_bref : re_cont())
     {
         Read_Entry_BPtr re_bptr = &re_bref;
@@ -1258,8 +1259,10 @@ void Graph::print_supercontig_lengths(ostream& os)
         os << supercontig_left_len + supercontig_right_len + ce_cptr->get_len() << '\n';
     }
 }
+*/
 
-void Graph::print_supercontig_lengths_2(ostream& os)
+/*
+void Graph::print_supercontig_lengths(ostream& os)
 {
     for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
     {
@@ -1384,25 +1387,108 @@ void Graph::set_contig_ids()
 
 void Graph::unmap_single_chunks()
 {
-    for (const auto re_cbref : _re_cont)
+    logger("graph", info) << ptree("unmap_single_chunks");
+    for (auto re_bref : _re_cont)
     {
-        Read_Entry_CBPtr re_cbptr = &re_cbref;
+        Read_Entry_BPtr re_bptr = &re_bref;
         bool done = false;
         while (not done)
         {
             done = true;
-            for (const auto rc_cbref : re_cbptr->chunk_cont())
+            for (auto rc_bref : re_bptr->chunk_cont())
             {
-                Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
-                Contig_Entry_CBPtr ce_cbptr = rc_cbptr->ce_bptr();
-                if (not ce_cbptr->is_unmappable() and ce_cbptr->chunk_cont().size() == 1)
+                Read_Chunk_BPtr rc_bptr = &rc_bref;
+                Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
+                if (not ce_bptr->is_unmappable() and ce_bptr->chunk_cont().size() == 1)
                 {
-                    unmap_chunk(rc_cbptr.unconst());
+                    unmap_chunk(rc_bptr);
                     done = false;
                     break;
                 }
             }
         }
+    }
+}
+
+void Graph::unmap_read_ends()
+{
+    logger("graph", info) << ptree("unmap_read_ends");
+    for (auto re_bref : _re_cont)
+    {
+        Read_Entry_BPtr re_bptr = &re_bref;
+        unmap_single_terminal_chunk(&*re_bptr->chunk_cont().begin(), true);
+        unmap_single_terminal_chunk(&*re_bptr->chunk_cont().rbegin(), false);
+    }
+}
+
+void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
+{
+    ASSERT(not rc_bptr->re_bptr()->chunk_cont().get_sibling(rc_bptr, true, not r_start));
+    if (rc_bptr->is_unmappable())
+    {
+        return;
+    }
+    if (rc_bptr->ce_bptr()->chunk_cont().size() == 1)
+    {
+        unmap_chunk(rc_bptr);
+        return;
+    }
+    Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
+    Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
+    bool c_start = (r_start != rc_bptr->get_rc());
+    if (c_start)
+    {
+        if (// chunk does not span c_start
+            rc_bptr->get_c_start() > 0
+            // or it's not the first in the chunk container
+            or &*ce_bptr->chunk_cont().begin() != rc_bptr
+            // or a second chunk exists and starts at c_start
+            or (ce_bptr->chunk_cont().size() > 1 and (++ce_bptr->chunk_cont().begin())->get_c_start() == 0))
+        {
+            return;
+        }
+        Size_Type c_brk = (++ce_bptr->chunk_cont().begin())->get_c_start();
+        // there can be no mutations on rc_bptr before c_brk
+        ASSERT(rc_bptr->mut_ptr_cont().empty()
+               or rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->get_start() >= c_brk);
+        cut_contig_entry(ce_bptr, c_brk, nullptr);
+        rc_bptr = r_start? &*re_bptr->chunk_cont().begin() : &*re_bptr->chunk_cont().rbegin();
+        unmap_chunk(rc_bptr);
+    }
+    else
+    {
+        if (// chunk does not span c_end
+            rc_bptr->get_c_end() < ce_bptr->get_len())
+        {
+            return;
+        }
+        // this is trickier than the c_start==true case
+        // because chunks are not in the order of their end pos
+        auto rg = ce_bptr->chunk_cont().iintersect(ce_bptr->get_len(), ce_bptr->get_len());
+        // at least rc_bptr must span c_end
+        ASSERT(rg.begin() != rg.end());
+        if (++rg.begin() != rg.end())
+        {
+            // more than 2 chunks span c_end
+            return;
+        }
+        ASSERT(&*rg.begin() == rc_bptr);
+        Size_Type c_brk = ce_bptr->chunk_cont().max_end(ce_bptr->get_len() - 1);
+        // max_end smaller than contig end must exist because chunk_cont.size() >= 2 and rg.size() == 1
+        ASSERT(c_brk < ce_bptr->get_len());
+        // there can be no mutations in rc_bptr past c_brk
+        ASSERT(rc_bptr->mut_ptr_cont().empty()
+               or rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->get_end() <= c_brk);
+        Mutation_CBPtr mut_left_cbptr = nullptr;
+        if (not rc_bptr->mut_ptr_cont().empty()
+            and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->is_ins()
+            and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->get_start() == c_brk)
+        {
+            mut_left_cbptr = rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr();
+        }
+        cut_contig_entry(ce_bptr, c_brk, mut_left_cbptr);
+        rc_bptr = r_start? &*re_bptr->chunk_cont().begin() : &*re_bptr->chunk_cont().rbegin();
+        unmap_chunk(rc_bptr);
     }
 }
 
@@ -1446,6 +1532,7 @@ void Graph::clear_and_dispose()
 
 bool Graph::check_all() const
 {
+    logger("graph", info) << ptree("check_all");
     size_t chunks_count_1 = 0;
     size_t chunks_count_2 = 0;
     // check read entry objects
@@ -1524,6 +1611,7 @@ bool Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry
 
 void Graph::dump_detailed_counts(ostream& os) const
 {
+    logger("graph", info) << ptree("dump_detailed_counts");
     // First read stats
     os << "RE\tname\tlen\tnum.chunks\tchunk.lens\tcontigs\n";
     for (const auto re_cbref : re_cont())
