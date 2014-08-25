@@ -28,6 +28,7 @@ struct Program_Options
     string supercontig_lengths_file;
     string mutations_file;
     string unmappable_contigs_file;
+    string terminal_reads_file;
     string save_file;
     string load_file;
     size_t progress_count;
@@ -49,6 +50,7 @@ struct Program_Options
                       .put("supercontig lengths file", supercontig_lengths_file)
                       .put("mutations file", mutations_file)
                       .put("unmappable contigs file", unmappable_contigs_file)
+                      .put("terminal reads file", terminal_reads_file)
                       .put("progress count", progress_count)
                       .put("unmap trigger length", unmap_trigger_len)
                       .put("log levels", cont_to_ptree< vector<string>, string >(log_level, [] (const string& s) { return boost::property_tree::ptree(s); }))
@@ -188,6 +190,16 @@ int real_main(const Program_Options& po)
         //ofstream mutations_ofs(po.mutations_file);
         //g.print_separated_het_mutations(mutations_ofs, 2, 20);
     }
+    if (not po.terminal_reads_file.empty())
+    {
+        ofstream ofs(po.terminal_reads_file);
+        if (not ofs)
+        {
+            cerr << "error opening file: " << po.terminal_reads_file << "\n";
+            exit(EXIT_FAILURE);
+        }
+        g.get_scontig_terminal_reads(ofs);
+    }
     if (po.print_at_end)
     {
         cout << g.to_ptree();
@@ -241,6 +253,7 @@ int main(int argc, char* argv[])
         ("supercontig-lengths-file,l", bo::value< string >(&po.supercontig_lengths_file), "supercontig lengths file")
         ("mutations-file,M", bo::value< string >(&po.mutations_file), "mutations file")
         ("unmappable-contigs-file,U", bo::value< string >(&po.unmappable_contigs_file), "unmappable contigs file")
+        ("terminal-reads", bo::value< string >(&po.terminal_reads_file), "terminal reads file")
         ("progress-count,c", bo::value< size_t >(&po.progress_count)->default_value(0), "progress count")
         ("unmap-trigger-len,u", bo::value< size_t >(&po.unmap_trigger_len)->default_value(9), "unmap trigger len")
         ("cat-each-step,s", bo::bool_switch(&po.cat_at_step), "cat contigs at each step")

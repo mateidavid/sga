@@ -1854,5 +1854,39 @@ void Graph::load(std::istream& is)
     ASSERT(check_all());
 }
 
+void Graph::get_scontig_terminal_reads(ostream& os) const
+{
+    for (auto ce_cbref : ce_cont())
+    {
+        Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
+        for (int dir = 0; dir < 2; ++dir)
+        {
+            bool c_right = (dir == 1);
+            auto tmp = ce_cbptr->out_chunks_dir(c_right, 3);
+            if (tmp.empty())
+            {
+                // scontig ends in direction dir
+                Read_Chunk_CBPtr rc_cbptr = (not c_right?
+                                             &*ce_cbptr->chunk_cont().begin()
+                                             : &*ce_cbptr->chunk_cont().iintersect(ce_cbptr->get_len(), ce_cbptr->get_len()).begin());
+                Read_Entry_CBPtr re_cbptr = rc_cbptr->re_bptr();
+                if (c_right == rc_cbptr->get_rc())
+                {
+                    // scontig ends with negative strand of read
+                    os << ">" << re_cbptr->get_name() << " 1\n"
+                       << reverseComplement(re_cbptr->get_seq()) << "\n";
+                }
+                else
+                {
+                    // scontig ends with positive strand of read
+                    os << ">" << re_cbptr->get_name() << " 0\n"
+                       << re_cbptr->get_seq() << "\n";
+                }
+            }
+        }
+    }
+
+}
+
 
 } // namespace MAC

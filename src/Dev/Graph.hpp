@@ -78,6 +78,14 @@ public:
 
     void set_contig_ids();
 
+    /** Get reads beyond which coverage drops (that is, supercontigs end with out-degree zero).
+     * For each such read, we print the strand with which the coverage ends.
+     * Thus, to extend the current supercontig, one should find mappings beyond the 3' end
+     * of the sequences included in the output. A read's positive and negative strand may both appear in the output.
+     * @param os Output stream.
+     */
+    void get_scontig_terminal_reads(std::ostream& os) const;
+
     /** Clear contig colors. */
     //void clear_contig_colours();
     //void clear_contig_visit();
