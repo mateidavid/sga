@@ -5,11 +5,7 @@
 #include <list>
 #include <boost/program_options.hpp>
 
-#include "globals.hpp"
-#include "global_assert.hpp"
-#include "shortcuts.hpp"
 #include "Graph.hpp"
-#include "indent.hpp"
 #include "ixstream.hpp"
 #include "logger.hpp"
 

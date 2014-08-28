@@ -2,8 +2,6 @@
 
 #include "globals.hpp"
 #include "Cigar.hpp"
-#include "indent.hpp"
-#include "print_seq.hpp"
 #include "../Util/Util.h"
 #include "logger.hpp"
 

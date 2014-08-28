@@ -8,7 +8,6 @@
 #include "Mutation.hpp"
 #include "Read_Chunk.hpp"
 #include "Read_Entry.hpp"
-#include "print_seq.hpp"
 #include "../Util/Util.h"
 
 using namespace std;

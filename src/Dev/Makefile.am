@@ -42,7 +42,6 @@ libmac_la_SOURCES = \
         Read_Entry.cpp \
         Contig_Entry.cpp \
         Cigar.cpp \
-        indent.cpp \
         Graph.cpp
 libmac_la_CPPFLAGS = -I$(top_srcdir)/boost-intrusive/include -I$(top_srcdir)/interval-tree/include $(AM_CPPFLAGS)
 libmac_la_CXXFLAGS = $(AM_CXXFLAGS) -Wno-ignored-qualifiers

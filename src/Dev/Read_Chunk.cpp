@@ -9,12 +9,8 @@
 #include "Mutation.hpp"
 #include "Read_Entry.hpp"
 #include "Contig_Entry.hpp"
-#include "print_seq.hpp"
-#include "indent.hpp"
 #include "../Util/Util.h"
 #include "logger.hpp"
-
-#define LOG_FACILITY "Read_Chunk"
 
 using namespace std;
 
@@ -348,7 +344,7 @@ Read_Chunk::make_relative_chunk(Read_Chunk_CBPtr rc1_cbptr,
 std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >
 Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
-    logger(debug1) << ptree("split")
+    logger("Read_Chunk", debug1) << ptree("split")
         .put("rc", rc_bptr->to_ptree())
         .put("c_brk", c_brk)
         .put("mut_left_ptr", mut_left_cbptr.to_ptree());
@@ -1033,33 +1029,6 @@ bool Read_Chunk::check() const
     }
     return true;
 }
-
-/*
-ostream& operator << (ostream& os, const Read_Chunk_Pos& pos)
-{
-    os << "(c_pos=" << (size_t)pos.c_pos << ",r_pos=" << (size_t)pos.r_pos
-       << ",mut=" << pos.mut() << ",mut_offset=" << (size_t)pos.mut_offset << ")";
-    return os;
-}
-
-ostream& operator << (ostream& os, const Read_Chunk& rhs)
-{
-    os << indent::tab << "(Read_Chunk &=" << (void*)&rhs
-       << indent::inc << indent::nl << "re_bptr=" << (void*)rhs._re_bptr.raw()
-       << ",ce_bptr=" << (void*)rhs._ce_bptr.raw()
-       << ",is_unmappable=" << (int)rhs._is_unmappable
-       << indent::nl << "r_start=" << rhs.get_r_start()
-       << ",r_len=" << rhs.get_r_len()
-       << ",c_start=" << rhs.get_c_start()
-       << ",c_len=" << rhs.get_c_len()
-       << ",rc=" << (int)rhs.get_rc()
-       << indent::nl << "mut_cptr_cont:"
-       << indent::inc << '\n';
-    //print_seq(os, rhs._mut_ptr_cont, indent::nl, indent::tab, '\n');
-    os << indent::dec << indent::dec << indent::tab << ")\n";
-    return os;
-}
-*/
 
 boost::property_tree::ptree Read_Chunk_Pos::to_ptree() const
 {

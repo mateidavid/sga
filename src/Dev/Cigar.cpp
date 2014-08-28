@@ -3,9 +3,8 @@
 #include <sstream>
 #include <cstdlib>
 
-#include "indent.hpp"
-#include "print_seq.hpp"
 #include "../Util/Util.h"
+#include "logger.hpp"
 
 using namespace std;
 
@@ -174,9 +173,10 @@ void Cigar::disambiguate(const string& rf_seq, const string& qr_seq)
     ASSERT(rf_seq.size() == _rf_len);
     ASSERT(qr_seq.size() == _qr_len);
 
-    //cerr << indent::tab << "disambiguating cigar:\n" << indent::inc << *this << indent::dec
-    //     << indent::tab << "rf_seq= " << rf_seq
-    //     << indent::nl << "qr_seq= " << (not is_reversed()? qr_seq : reverseComplement(qr_seq)) << '\n';
+    logger("cigar", debug) << ptree("disambiguate_start")
+        .put("cigar", this->to_ptree())
+        .put("rf_seq", rf_seq)
+        .put("qr_seq", (not is_reversed()? qr_seq : reverseComplement(qr_seq)));
 
     auto get_qr_pos = [&] (Size_Type pos) -> char {
         ASSERT(_reversed or pos < _qr_len);
@@ -219,7 +219,8 @@ void Cigar::disambiguate(const string& rf_seq, const string& qr_seq)
             i += v.size() - 1;
         }
     }
-    //cerr << indent::tab << "result:\n" << indent::inc << *this << indent::dec;
+    logger("cigar", debug) << ptree("disambiguate_end")
+        .put("cigar", this->to_ptree());
 }
 
 bool Cigar::check(const string& rf_seq, const string& qr_seq) const
@@ -251,27 +252,6 @@ bool Cigar::check(const string& rf_seq, const string& qr_seq) const
     ASSERT(check_qr_len == get_qr_len());
     return true;
 }
-
-/*
-ostream& operator << (ostream& os, const Cigar_Op& rhs)
-{
-    os << '(' << (size_t)rhs.len << rhs.op << ",rf_offset=" << (size_t)rhs.rf_offset << ",qr_offset=" << (size_t)rhs.qr_offset << ')';
-    return os;
-}
-
-ostream& operator << (ostream& os, const Cigar& rhs)
-{
-    os << indent::tab << "(Cigar" << indent::inc
-       << indent::nl << "rf_start=" << rhs._rf_start << ",rf_len=" << rhs._rf_len
-       << indent::nl << "qr_start=" << rhs._qr_start << ",qr_len=" << rhs._qr_len
-       << indent::nl << "reversed=" << rhs._reversed
-       << indent::nl << "ops:" << indent::inc << '\n';
-    print_seq(os, rhs._op_vect, indent::nl, indent::tab, '\n');
-    os << indent::dec << indent::dec << indent::tab << ")\n";
-    //os << rhs.to_ptree();
-    return os;
-}
-*/
 
 boost::property_tree::ptree Cigar_Op::to_ptree() const
 {

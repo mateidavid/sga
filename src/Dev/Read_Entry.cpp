@@ -7,9 +7,6 @@
 #include "Read_Entry.hpp"
 #include "Contig_Entry.hpp"
 
-#include "print_seq.hpp"
-#include "indent.hpp"
-
 using namespace std;
 
 
@@ -65,19 +62,6 @@ bool Read_Entry::check() const
     return true;
 }
 
-/*
-ostream& operator << (ostream& os, const Read_Entry& rhs)
-{
-    os << indent::tab << "(Read_Entry &=" << (void*)&rhs
-       << indent::inc << indent::nl << "name=\"" << rhs.get_name() << "\",len=" << rhs.get_len()
-       << indent::nl << "chunk_cont:\n"
-       << indent::inc;
-    print_seq(os, rhs._chunk_cont, "");
-    os << indent::dec << indent::dec << indent::tab << ")\n";
-    return os;
-}
-*/
-
 boost::property_tree::ptree Read_Entry::to_ptree() const
 {
     return ptree().put("name", get_name())
@@ -85,5 +69,4 @@ boost::property_tree::ptree Read_Entry::to_ptree() const
                   .put("chunk_cont", cont_to_ptree(chunk_cont()));
 }
 
-
-}
+} // namespace MAC

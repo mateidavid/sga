@@ -17,7 +17,6 @@ add_library(mac STATIC
     Read_Entry.cpp
     Contig_Entry.cpp
     Cigar.cpp
-    indent.cpp
     Graph.cpp
 )
 #set_target_properties(mac PROPERTIES LINK_FLAGS "${BOOST_LDFLAGS}")
