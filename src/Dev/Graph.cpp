@@ -1852,8 +1852,9 @@ void Graph::load(std::istream& is)
     ASSERT(check_all());
 }
 
-void Graph::get_scontig_terminal_reads(ostream& os) const
+void Graph::get_terminal_reads(ostream& os) const
 {
+    logger("graph", info) << ptree("get_terminal_reads");
     for (auto ce_cbref : ce_cont())
     {
         Contig_Entry_CBPtr ce_cbptr = &ce_cbref;

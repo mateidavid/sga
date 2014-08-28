@@ -13,12 +13,9 @@
 #define __IXSTREAM_HPP
 
 
-#include <cstdlib>
-#include <iostream>
-#include <fstream>
-
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
+#include "fstr.hpp"
 
 
 class ixstream : public boost::iostreams::filtering_istream
@@ -41,13 +38,8 @@ public:
         }
         else
         {
-            p_file = std::unique_ptr<std::ifstream>(new std::ifstream(name.c_str()));
-            if (!*p_file)
-            {
-                std::cerr << "error opening file [" << name << "]\n";
-                exit(EXIT_FAILURE);
-            }
-            open(*p_file);
+            fstr_ptr_ = std::unique_ptr< fstr >(new fstr(name));
+            open(*fstr_ptr_);
         }
     }
 
@@ -64,7 +56,7 @@ public:
 
 private:
     // if necessary, store ifstream object, and auto-delete it when done
-    std::unique_ptr<std::ifstream> p_file;
+    std::unique_ptr< fstr > fstr_ptr_;
 };
 
 

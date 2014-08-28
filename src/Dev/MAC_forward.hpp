@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "shortcuts.hpp"
+#include "globals.hpp"
 #include "global_assert.hpp"
 #include "factory.hpp"
 #include "ptree.hpp"

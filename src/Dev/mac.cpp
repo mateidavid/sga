@@ -7,10 +7,8 @@
 
 #include "Graph.hpp"
 #include "ixstream.hpp"
+#include "fstr.hpp"
 #include "logger.hpp"
-
-#define LOG_FACILITY "mac"
-
 
 using namespace std;
 using namespace MAC;
@@ -67,7 +65,7 @@ void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
     size_t line_count = 0;
     while (getline(is, line))
     {
-        logger(debug) << ptree("op").put("line", line);
+        logger("mac", debug) << ptree("op").put("line", line);
         istringstream iss(line + "\n");
         string rec_type;
         iss >> rec_type;
@@ -108,12 +106,12 @@ void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
             global::assert_message = string("ED ") + r1_id + " " + r2_id;
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5), po.cat_at_step);
         }
-        logger(debug2) << g.to_ptree();
+        logger("mac", debug2) << g.to_ptree();
         if (po.progress_count > 0)
         {
             if ((++line_count % po.progress_count) == 0)
             {
-                logger(info) << ptree("progress").put("count", line_count);
+                logger("mac", info) << ptree("progress").put("count", line_count);
             }
         }
         //ASSERT(g.check_all());
@@ -127,33 +125,23 @@ int real_main(const Program_Options& po)
 {
     Graph g;
 
-    logger(info) << ptree("settings", po.to_ptree());
+    logger("mac", info) << ptree("settings", po.to_ptree());
 
     if (po.input_file.empty() == po.load_file.empty())
     {
         cerr << "exactly 1 of input file or load file must be specified\n";
-        exit(EXIT_FAILURE);
+        abort();
     }
     if (not po.input_file.empty())
     {
-        ixstream ixs(po.input_file);
-        if (not ixs)
-        {
-            cerr << "error opening file: " << po.input_file << '\n';
-            return EXIT_FAILURE;
-        }
-        logger(info) << ptree("loading").put("input_file", po.input_file);
-        load_asqg(ixs, po, g);
+        logger("mac", info) << ptree("loading").put("input_file", po.input_file);
+        ixstream tmp_fs(po.input_file);
+        load_asqg(tmp_fs, po, g);
     }
     else
     {
-        ifstream ifs(po.load_file, ios_base::in | ios_base::binary);
-        if (not ifs)
-        {
-            cerr << "error opening file: " << po.load_file << '\n';
-            return EXIT_FAILURE;
-        }
-        logger(info) << ptree("loading").put("load_file", po.load_file);
+        logger("mac", info) << ptree("loading").put("load_file", po.load_file);
+        fstr ifs(po.load_file, ios_base::in | ios_base::binary);
         g.load(ifs);
     }
     logger("mac", info) << ptree("factory_stats", g.factory_stats());
@@ -170,8 +158,9 @@ int real_main(const Program_Options& po)
     }
     if (not po.stats_file.empty())
     {
-        ofstream stats_ofs(po.stats_file);
-        g.dump_detailed_counts(stats_ofs);
+        logger("mac", info) << ptree("dump_detailed_counts").put("file", po.stats_file);
+        fstr tmp_fs(po.stats_file, ios_base::out);
+        g.dump_detailed_counts(tmp_fs);
     }
     if (not po.supercontig_lengths_file.empty())
     {
@@ -188,13 +177,9 @@ int real_main(const Program_Options& po)
     }
     if (not po.terminal_reads_file.empty())
     {
-        ofstream ofs(po.terminal_reads_file);
-        if (not ofs)
-        {
-            cerr << "error opening file: " << po.terminal_reads_file << "\n";
-            exit(EXIT_FAILURE);
-        }
-        g.get_scontig_terminal_reads(ofs);
+        logger("mac", info) << ptree("get_terminal_reads").put("file", po.terminal_reads_file);
+        fstr tmp_fs(po.terminal_reads_file, ios_base::out);
+        g.get_terminal_reads(tmp_fs);
     }
     if (po.print_at_end)
     {
@@ -206,23 +191,18 @@ int real_main(const Program_Options& po)
         //ofstream unmappable_contigs_ofs(po.unmappable_contigs_file);
         //g.print_unmappable_contigs(unmappable_contigs_ofs);
     }
-    logger(info) << ptree("done_output");
+    logger("mac", info) << ptree("done_output");
 
     if (not po.save_file.empty())
     {
-        ofstream ofs(po.save_file.c_str(), ios_base::out | ios_base::binary);
-        if (not ofs)
-        {
-            cerr << "error opening file: " << po.save_file << '\n';
-            return EXIT_FAILURE;
-        }
-        logger(info) << ptree("saving").put("save_file", po.save_file);
-        g.save(ofs);
+        logger("mac", info) << ptree("saving").put("save_file", po.save_file);
+        fstr tmp_fs(po.save_file, ios_base::out | ios_base::binary);
+        g.save(tmp_fs);
     }
 
     logger("mac", info) << ptree("factory_stats", g.factory_stats());
     g.clear_and_dispose();
-    logger(info) << ptree("graph_cleared");
+    logger("mac", info) << ptree("graph_cleared");
 
     return EXIT_SUCCESS;
 }
@@ -230,20 +210,18 @@ int real_main(const Program_Options& po)
 
 int main(int argc, char* argv[])
 {
+    Program_Options po;
     global::program_name = argv[0];
 
-    Program_Options po;
-    try
-    {
-        bo::options_description generic_opts_desc("Generic options");
-        bo::options_description config_opts_desc("Configuration options");
-        bo::options_description hidden_opts_desc("Hidden options");
-        bo::options_description cmdline_opts_desc;
-        bo::options_description visible_opts_desc("Allowed options");
-        generic_opts_desc.add_options()
+    bo::options_description generic_opts_desc("Generic options");
+    bo::options_description config_opts_desc("Configuration options");
+    bo::options_description hidden_opts_desc("Hidden options");
+    bo::options_description cmdline_opts_desc;
+    bo::options_description visible_opts_desc("Allowed options");
+    generic_opts_desc.add_options()
         ("help,?", "produce help message")
         ;
-        config_opts_desc.add_options()
+    config_opts_desc.add_options()
         ("input-file,i", bo::value< string >(&po.input_file), "input file")
         ("stats-file,x", bo::value< string >(&po.stats_file), "stats file")
         ("supercontig-lengths-file,l", bo::value< string >(&po.supercontig_lengths_file), "supercontig lengths file")
@@ -262,43 +240,40 @@ int main(int argc, char* argv[])
         ("load,L", bo::value< string >(&po.load_file), "load file")
         ("seed", bo::value< long >(&po.seed), "RNG seed")
         ;
-        cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
-        visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
-        bo::variables_map vm;
-        store(bo::command_line_parser(argc, argv).options(cmdline_opts_desc).run(), vm);
-        notify(vm);
+    cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
+    visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
+    bo::variables_map vm;
+    store(bo::command_line_parser(argc, argv).options(cmdline_opts_desc).run(), vm);
+    notify(vm);
 
-        if (vm.count("help"))
-        {
-            cout << visible_opts_desc;
-            exit(EXIT_SUCCESS);
-        }
-
-        // set log levels
-        for (const auto& l : po.log_level)
-        {
-           size_t i = l.find(':');
-           if (i == string::npos)
-           {
-              Logger::set_default_level(Logger::level_from_string(l));
-              clog << "set default log level to: " << static_cast< int >(Logger::get_default_level()) << "\n";
-           }
-           else
-           {
-              Logger::set_facility_level(l.substr(0, i), Logger::level_from_string(l.substr(i + 1)));
-              clog << "set log level of '" << l.substr(0, i) << "' to: "
-                   << static_cast< int >(Logger::get_facility_level(l.substr(0, i))) << "\n";
-           }
-        }
-        if (po.seed == 0)
-        {
-            po.seed = time(nullptr);
-        }
-    }
-    catch(exception& e)
+    // if help requested, print it and stop
+    if (vm.count("help"))
     {
-        cout << e.what() << "\n";
-        return EXIT_FAILURE;
+        cout << visible_opts_desc;
+        exit(EXIT_SUCCESS);
     }
+    // set log levels
+    for (const auto& l : po.log_level)
+    {
+        size_t i = l.find(':');
+        if (i == string::npos)
+        {
+            Logger::set_default_level(Logger::level_from_string(l));
+            clog << "set default log level to: "
+                 << static_cast< int >(Logger::get_default_level()) << "\n";
+        }
+        else
+        {
+            Logger::set_facility_level(l.substr(0, i), Logger::level_from_string(l.substr(i + 1)));
+            clog << "set log level of '" << l.substr(0, i) << "' to: "
+                 << static_cast< int >(Logger::get_facility_level(l.substr(0, i))) << "\n";
+        }
+    }
+    // set random seed
+    if (po.seed == 0)
+    {
+        po.seed = time(nullptr);
+    }
+
     return real_main(po);
 }
