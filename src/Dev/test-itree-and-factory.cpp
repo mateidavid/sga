@@ -9,6 +9,7 @@
 
 using namespace std;
 namespace bi = boost::intrusive;
+namespace bo = boost::program_options;
 
 namespace detail
 {
@@ -347,7 +348,7 @@ void real_main(const Program_Options& po)
                         clog << v << '\n';
                     }
                     print_tree(t);
-                    exit(EXIT_FAILURE);
+                    abort();
                 }
                 clog << "intersection ok, size = " << res_list << " / " << l.size() << '\n';
                 f.del_elem(a);
@@ -376,69 +377,58 @@ void real_main(const Program_Options& po)
             }
         }
         clog << "----- clearing list\n";
-        /*
-        while (l.size() > 0)
-        {
-            auto it = l.begin();
-            ptr_type a = &*it;
-            l.erase(it);
-            t.erase(t.iterator_to(*a));
-            f.del_elem(a);
-        }
-        */
         t.clear();
         l.clear_and_dispose(fact_type::disposer_type());
     }
     if (f.unused() != f.size())
     {
         clog << "factory not empty on exit!\n"; // << f;
-        exit(EXIT_FAILURE);
+        abort();
     }
     clog << "----- success\n";
 }
 
 int main(int argc, char* argv[])
 {
-    namespace bo = boost::program_options;
     Program_Options po;
-    try
+
+    bo::options_description generic_opts_desc("Generic options");
+    bo::options_description config_opts_desc("Configuration options");
+    bo::options_description hidden_opts_desc("Hidden options");
+    bo::options_description cmdline_opts_desc;
+    bo::options_description visible_opts_desc("Allowed options");
+    generic_opts_desc.add_options()
+        ("help,?", "produce help message")
+        ;
+    config_opts_desc.add_options()
+        ("max-load", bo::value<size_t>(&po.max_load)->default_value(100), "maximum load of the interval tree")
+        ("range-max", bo::value<size_t>(&po.range_max)->default_value(20), "maximum endpoint")
+        ("n-ops", bo::value<size_t>(&po.n_ops)->default_value(1000), "number of operations")
+        ("seed", bo::value<size_t>(&po.seed)->default_value(0), "random number generator seed")
+        ("print-tree", "print tree after each operation")
+        ;
+    cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
+    visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
+    bo::variables_map vm;
+    store(bo::command_line_parser(argc, argv).options(cmdline_opts_desc).run(), vm);
+    notify(vm);
+    if (vm.count("help"))
     {
-        bo::options_description generic_opts_desc("Generic options");
-        bo::options_description config_opts_desc("Configuration options");
-        bo::options_description hidden_opts_desc("Hidden options");
-        bo::options_description cmdline_opts_desc;
-        bo::options_description visible_opts_desc("Allowed options");
-        generic_opts_desc.add_options()
-            ("help,h", "produce help message")
-            ;
-        config_opts_desc.add_options()
-            ("max-load", bo::value<size_t>(&po.max_load)->default_value(100), "maximum load of the interval tree")
-            ("range-max", bo::value<size_t>(&po.range_max)->default_value(20), "maximum endpoint")
-            ("n-ops", bo::value<size_t>(&po.n_ops)->default_value(1000), "number of operations")
-            ("seed", bo::value<size_t>(&po.seed)->default_value(0), "random number generator seed")
-            ("print-tree", "print tree after each operation")
-            ;
-        cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
-        visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
-        bo::variables_map vm;
-        store(bo::command_line_parser(argc, argv).options(cmdline_opts_desc).run(), vm);
-        notify(vm);
-        if (vm.count("help"))
-        {
-            cout << visible_opts_desc;
-            exit(EXIT_SUCCESS);
-        }
-        if (po.seed == 0)
-        {
-            po.seed = time(NULL);
-        }
-        po.print_tree_each_op = vm.count("print-tree") > 0;
+        cout << "Test intrusive itree and list with bounded pointers.\n"
+            "The program tests the data structures by performing a series of random operations, such as:\n"
+            "- insert new element\n"
+            "- delete existing element\n"
+            "- compute intersection with some interval\n"
+            "- check max_end fields\n"
+            "- clone tree\n\n";
+        cout << visible_opts_desc;
+        exit(EXIT_SUCCESS);
     }
-    catch(exception& e)
+    if (po.seed == 0)
     {
-        cout << e.what() << "\n";
-        return EXIT_FAILURE;
+        po.seed = time(NULL);
     }
+    po.print_tree_each_op = vm.count("print-tree") > 0;
+
     real_main(po);
-    return EXIT_SUCCESS;
 }
