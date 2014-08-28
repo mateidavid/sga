@@ -253,6 +253,21 @@ void real_main(const Program_Options& po)
          << "\nn_ops=" << po.n_ops
          << "\nseed=" << po.seed << '\n';
 
+    clog << "--- type names:"
+         << "\nValue: " << typeid(Value).name()
+         << "\nconst Value: " << typeid(const Value).name()
+         << "\nFactory< Value >: " << typeid(bounded::Factory< Value >).name()
+         << "\nPointer< Value >: " << typeid(bounded::Pointer< Value >).name()
+         << "\nPointer< const Value >: " << typeid(bounded::Pointer< const Value >).name()
+         << "\nReference< Value >: " << typeid(bounded::Reference< Value >).name()
+         << "\nReference< const Value >: " << typeid(bounded::Reference< const Value >).name()
+         << '\n';
+
+    clog << "--- type sizes:\n"
+         << "sizeof(val_type)=" << sizeof(fact_type::val_type) << '\n'
+         << "sizeof(ptr_type)=" << sizeof(ptr_type) << '\n'
+         << "sizeof(ref_type)=" << sizeof(fact_type::ref_type) << '\n';
+
     clog << "----- constructing factory\n";
     fact_type f(true);
 
