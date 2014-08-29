@@ -97,17 +97,7 @@ public:
      */
     void clear_and_dispose()
     {
-        Base::clear_and_dispose([] (Contig_Entry_BPtr ce_bptr)
-        {
-            // remove chunks from their RE cont
-            ce_bptr->chunk_cont().erase_from_re_cont();
-            // deallocate chunks and mca-s
-            ce_bptr->chunk_cont().clear_and_dispose();
-            // deallocate mutations
-            ce_bptr->mut_cont().clear_and_dispose();
-            // deallocate CE
-            Contig_Entry_Fact::del_elem(ce_bptr);
-        });
+        Base::clear_and_dispose(Contig_Entry::dispose);
     }
 };
 

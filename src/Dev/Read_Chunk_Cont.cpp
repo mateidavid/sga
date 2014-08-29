@@ -46,7 +46,10 @@ void Read_Chunk_CE_Cont::erase_from_re_cont() const
     {
         Read_Chunk_BPtr rc_bptr = (&rc_bref).unconst();
         Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
-        re_bptr->chunk_cont().erase(rc_bptr);
+        if (re_bptr)
+        {
+            re_bptr->chunk_cont().erase(rc_bptr);
+        }
     }
 }
 
