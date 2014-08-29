@@ -154,7 +154,7 @@ void Read_Chunk_Pos::decrement(Size_Type brk, bool on_contig)
     {
         on_contig = true;
     }
-    ASSERT(on_contig? brk <= c_pos : (not rc_cptr->get_rc()? brk < r_pos : r_pos < brk));
+    ASSERT(on_contig? (brk == 0 || brk < c_pos) : (not rc_cptr->get_rc()? brk < r_pos : r_pos < brk));
     if (mut_offset != 0
             or (mut_offset == 0 and past_first_mut()
                 and c_pos == prev_mut().get_end()))
