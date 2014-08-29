@@ -4,9 +4,11 @@
 #include "Read_Chunk.hpp"
 #include "Contig_Entry.hpp"
 #include "Read_Entry.hpp"
+#include "fstr.hpp"
 
 using namespace std;
 using namespace MAC;
+
 
 typedef std::list< std::vector< size_t > > Pos_List;
 
@@ -75,19 +77,42 @@ void test_traversal(Read_Chunk_BPtr rc_bptr, bool forward, Size_Type brk, bool o
     }
 }
 
-Pos_List get_expected_pos_list(const Cigar& cigar)
+Pos_List get_expected_pos_list(Read_Chunk_CBPtr rc_cbptr)
 {
     Pos_List res;
-    for (size_t i = 0; i <= cigar.get_n_ops(); ++i)
+    bool same_dir = not rc_cbptr->get_rc();
+    Size_Type c_pos = rc_cbptr->get_c_start();
+    Size_Type r_pos = same_dir? rc_cbptr->get_r_start() : rc_cbptr->get_r_end();
+    if (rc_cbptr->mut_ptr_cont().empty()
+        or rc_cbptr->mut_ptr_cont().begin()->mut_cbptr()->get_start() > rc_cbptr->get_c_start())
     {
-        res.emplace_back(std::vector< size_t >({
-            cigar.get_rf_offset(i),
-            cigar.get_qr_offset(i),
-            static_cast< size_t >(i > 0 and not cigar.is_match(i - 1)? 1 : 0),
-            0}));
+        res.emplace_back(std::vector< size_t >({ c_pos, r_pos, 0, 0 }));
+    }
+    for (auto mca_cbref : rc_cbptr->mut_ptr_cont())
+    {
+        Mutation_CBPtr mut_cbptr = (&mca_cbref)->mut_cbptr();
+        assert(mut_cbptr->get_start() >= c_pos);
+        Size_Type skip_len = mut_cbptr->get_start() - c_pos;
+        assert(not res.empty() or skip_len == 0);
+        c_pos += skip_len;
+        r_pos = same_dir? r_pos + skip_len : r_pos - skip_len;
+        res.emplace_back(std::vector< size_t >({ c_pos, r_pos, 0, 0 }));
+        c_pos += mut_cbptr->get_len();
+        r_pos = same_dir? r_pos + mut_cbptr->get_seq_len() : r_pos - mut_cbptr->get_seq_len();
+        res.emplace_back(std::vector< size_t >({ c_pos, r_pos, 1, 0 }));
+    }
+    if (rc_cbptr->mut_ptr_cont().empty()
+        or rc_cbptr->mut_ptr_cont().rbegin()->mut_cbptr()->get_end() < rc_cbptr->get_c_end())
+    {
+        Size_Type skip_len = rc_cbptr->get_c_end() - c_pos;
+        assert(skip_len > 0);
+        c_pos += skip_len;
+        r_pos = same_dir? r_pos + skip_len : r_pos - skip_len;
+        res.emplace_back(std::vector< size_t >({ c_pos, r_pos, 0, 0 }));
     }
     return res;
 }
+
 
 Pos_List reverse_pos_list(const Pos_List& pos_list)
 {
@@ -178,9 +203,88 @@ Pos_List add_brk_to_fwd_pos_list(const Pos_List& pos_list, Size_Type brk, bool o
     return res;
 }
 
+void test_cigar(const std::string& cigar_string,
+                const std::map< std::string, std::vector< size_t > >& init_settings_map = std::map< std::string, std::vector< size_t > >())
+{
+    std::map< std::string, std::vector< size_t > > settings_map(init_settings_map);
+    if (settings_map.count("cigar_orientation_v") == 0)
+    {
+        settings_map.emplace("cigar_orientation_v", std::vector< size_t >({ 0, 1 }) );
+    }
+    if (settings_map.count("rf_start_v") == 0)
+    {
+        settings_map.emplace("rf_start_v", std::vector< size_t >({ 0, 10 }) );
+    }
+    if (settings_map.count("qr_start_v") == 0)
+    {
+        settings_map.emplace("qr_start_v", std::vector< size_t >({ 0, 10 }) );
+    }
 
+    for (auto cigar_orientation : settings_map["cigar_orientation_v"])
+    for (auto rf_start : settings_map["rf_start_v"])
+    for (auto qr_start : settings_map["qr_start_v"])
+    {
+        // construct cigar
+        Cigar cigar(cigar_string, cigar_orientation, rf_start, qr_start);
+        Seq_Type rf_seq; for (size_t i = 0; i < cigar.get_rf_len(); ++i) rf_seq += "A";
+        Seq_Type qr_seq; for (size_t i = 0; i < cigar.get_qr_len(); ++i) qr_seq += "A";
+        // construct graph structures
+        Read_Chunk_BPtr chunk_bptr;
+        chunk_bptr = Read_Chunk::make_chunk_from_cigar(cigar, Seq_Type(rf_seq), qr_seq);
+        // compute original (no-breakpoint, forward direction) position list
+        Pos_List fwd_pos_list = get_expected_pos_list(chunk_bptr);
+        // compute breakpoint positions if not specified
+        if (settings_map.count("rel_c_brk_v") == 0)
+        {
+            settings_map.emplace("rel_c_brk_v", std::vector< size_t >({ 0 }) );
+            for (Size_Type c_brk = 1; c_brk < cigar.get_rf_len(); ++c_brk)
+            {
+                settings_map["rel_c_brk_v"].push_back(c_brk);
+            }
+        }
+        for (auto rel_c_brk : settings_map["rel_c_brk_v"])
+        {
+            Size_Type c_brk = rel_c_brk > 0? rf_start + rel_c_brk : 0;
+            Pos_List pos_list = add_brk_to_fwd_pos_list(fwd_pos_list, c_brk, true);
+            test_traversal(chunk_bptr, true, c_brk, true, cigar, pos_list);
+            Pos_List rev_pos_list = reverse_pos_list(pos_list);
+            test_traversal(chunk_bptr, false, c_brk, true, cigar, rev_pos_list);
+        }
+        if (settings_map.count("rel_r_brk_v") == 0)
+        {
+            for (Size_Type r_brk = 1; r_brk < cigar.get_qr_len(); ++r_brk)
+            {
+                settings_map["rel_r_brk_v"].push_back(r_brk);
+            }
+        }
+        for (auto rel_r_brk : settings_map["rel_r_brk_v"])
+        {
+            Size_Type r_brk = rel_r_brk > 0? qr_start + rel_r_brk : 0;
+            Pos_List pos_list = add_brk_to_fwd_pos_list(fwd_pos_list, r_brk, false);
+            test_traversal(chunk_bptr, true, r_brk, false, cigar, pos_list);
+            Pos_List rev_pos_list = reverse_pos_list(pos_list);
+            test_traversal(chunk_bptr, false, r_brk, false, cigar, rev_pos_list);
+        }
+        // destroy graph structures
+        Contig_Entry::dispose(chunk_bptr->ce_bptr());
+    }
+}
 
-int main()
+void usage(std::ostream& os, const std::string& prog_name)
+{
+    os << "use: " << prog_name << " [ <file> ]\n\n"
+       << "For each cigar string, the program constructs a Read_Chunk object and checks its traversal using\n"
+       << "Read_Chunk_Pos::increment() and decrement() methods. For each cigar the following combinations\n"
+       << "of parameters are tested:\n"
+       << "- same or reversed cigar orientation\n"
+       << "- rf_start in {0, 10}\n"
+       << "- qr_start in {0, 10}\n"
+       << "- all possible contig breakpoints, including no breakpoint\n"
+       << "- all possible read breakpoints\n"
+       << "- foward or backward traversal\n";
+}
+
+int main(int argc, char* argv[])
 {
     Mutation_Fact mut_fact;
     Mutation_Chunk_Adapter_Fact mca_fact;
@@ -188,65 +292,39 @@ int main()
     Contig_Entry_Fact ce_fact;
     Read_Entry_Fact re_fact;
 
-    //string cigar_string;
-
-    //while (cin >> cigar_string)
-    for (auto cigar_string : std::list< std::string >({"1=", "1D", "1I", "1D1=", "1I1=", "3=2D3=2I3="}))
+    if (argc > 2)
     {
-        for (int cigar_reversed = 0; cigar_reversed < 2; ++cigar_reversed)
+        usage(std::cerr, argv[0]);
+        abort();
+    }
+    if (argc == 2)
+    {
+        string filename(argv[1]);
+        if (filename == "-?" or filename == "--help")
         {
-            for (const auto& p : std::vector< std::pair< Size_Type, Size_Type > >({
-                std::make_pair(0, 0),
-                std::make_pair(0, 10),
-                std::make_pair(10, 0),
-                std::make_pair(10, 10)
-            }))
-            {
-                Size_Type rf_start;
-                Size_Type qr_start;
-                std::tie(rf_start, qr_start) = p;
-                Cigar cigar(cigar_string, cigar_reversed, rf_start, qr_start);
-                Seq_Type rf_seq; for (size_t i = 0; i < cigar.get_rf_len(); ++i) rf_seq += "A";
-                Seq_Type qr_seq; for (size_t i = 0; i < cigar.get_qr_len(); ++i) qr_seq += "A";
-                Read_Chunk_BPtr chunk_bptr;
-                Contig_Entry_BPtr ce_bptr;
-                chunk_bptr = Read_Chunk::make_chunk_from_cigar(cigar, Seq_Type(rf_seq), qr_seq);
-                ce_bptr = chunk_bptr->ce_bptr();
-
-                /*
-                clog << ptree("test")
-                    .put("chunk", chunk_bptr->to_ptree())
-                    .put("mut_cont", cont_to_ptree(ce_bptr->mut_cont()));
-                */
-
-                // check traversal with no breakpoints
-                Pos_List fwd_pos_list = get_expected_pos_list(cigar);
-                test_traversal(chunk_bptr, true, 0, true, cigar, fwd_pos_list);
-                auto rev_pos_list = reverse_pos_list(fwd_pos_list);
-                test_traversal(chunk_bptr, false, 0, true, cigar, rev_pos_list);
-
-                // check breakpoints on contig
-                for (Size_Type c_brk = cigar.get_rf_start() + 1; c_brk < cigar.get_rf_end(); ++c_brk)
-                {
-                    auto pos_list = add_brk_to_fwd_pos_list(fwd_pos_list, c_brk, true);
-                    test_traversal(chunk_bptr, true, c_brk, true, cigar, pos_list);
-                    rev_pos_list = reverse_pos_list(pos_list);
-                    test_traversal(chunk_bptr, false, c_brk, true, cigar, rev_pos_list);
-                }
-
-                // check breakpoints on read
-                for (Size_Type r_brk = not cigar_reversed? cigar.get_qr_start() + 1 : (cigar.get_qr_end() > 0? cigar.get_qr_end() - 1 : 0);
-                     not cigar_reversed? r_brk < cigar.get_qr_end() : r_brk > cigar.get_qr_start();
-                     not cigar_reversed? ++r_brk : --r_brk)
-                {
-                    auto pos_list = add_brk_to_fwd_pos_list(fwd_pos_list, r_brk, false);
-                    test_traversal(chunk_bptr, true, r_brk, false, cigar, pos_list);
-                    rev_pos_list = reverse_pos_list(pos_list);
-                    test_traversal(chunk_bptr, false, r_brk, false, cigar, rev_pos_list);
-                }
-            }
+            usage(std::cout, argv[0]);
+            exit(EXIT_SUCCESS);
+        }
+        fstr tmp_fs(filename);
+        string cigar_string;
+        while (tmp_fs >> cigar_string)
+        {
+            test_cigar(cigar_string);
+        }
+    }
+    else
+    {
+        for (auto cigar_string : std::list< std::string >({
+            "1=", "3=", "1D", "3D", "1I", "3I",
+            "1D1=", "3D1=", "1D3=", "3D3=",
+            "1I1=", "3I1=", "1I3=", "3I3=",
+            "1D1I", "3D1I", "1D3I", "3D3I",
+            "1=1X", "1=3X", "3=1X", "3=3X",
+            "1=1X1D1I1X1D1I1D1I1=1=1X",
+            "3=2D3=2I3="}))
+        {
+            test_cigar(cigar_string);
         }
     }
     clog << "all good\n";
-    return 0;
 }
