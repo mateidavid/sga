@@ -45,4 +45,18 @@ target_link_libraries(test-itree-and-factory
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
 
+add_executable(test-Read_Chunk-traversal
+    test-Read_Chunk-traversal.cpp
+    globals.cpp
+    global_assert.cpp
+)
+target_link_libraries(test-Read_Chunk-traversal
+    mac
+    util
+    thirdparty
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    ${ZLIB_LIBRARIES}
+)
+
+
 file(COPY factory.gdb mac-gdb.gdb DESTINATION .)
