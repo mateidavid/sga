@@ -47,8 +47,10 @@ public:
     size_t get_n_ops() const { return _op_vect.size(); }
     Size_Type get_rf_start() const { return _rf_start; }
     Size_Type get_rf_len() const { return _rf_len; }
+    Size_Type get_rf_end() const { return _rf_start + _rf_len; }
     Size_Type get_qr_start() const { return _qr_start; }
     Size_Type get_qr_len() const { return _qr_len; }
+    Size_Type get_qr_end() const { return _qr_start + _qr_len; }
 
     /** Get operation. */
     char get_op(size_t i) const
