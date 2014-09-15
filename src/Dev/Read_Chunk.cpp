@@ -833,12 +833,12 @@ void Read_Chunk::cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bp
         rc_bptr->mut_ptr_cont().erase(left_mca_bptr);
         rc_next_bptr->mut_ptr_cont().erase(right_mca_bptr);
         // if the old Mutations are no longer used, erase&deallocate them
-        if (left_mut_bptr->chunk_ptr_cont().size() == 0)
+        if (left_mut_bptr->chunk_ptr_cont().empty())
         {
             mut_cont.erase(left_mut_bptr);
             Mutation_Fact::del_elem(left_mut_bptr);
         }
-        if (right_mut_bptr->chunk_ptr_cont().size() == 0)
+        if (right_mut_bptr->chunk_ptr_cont().empty())
         {
             mut_cont.erase(right_mut_bptr);
             Mutation_Fact::del_elem(right_mut_bptr);

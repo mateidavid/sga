@@ -71,12 +71,14 @@ struct Read_Chunk_Ptr_List_Value_Traits
 class Read_Chunk_Ptr_Cont
     : private bi::list< Mutation_Chunk_Adapter,
                         bi::value_traits< detail::Read_Chunk_Ptr_List_Value_Traits >,
+                        bi::constant_time_size< false >,
                         bi::header_holder_type< bounded::Pointer_Holder< Mutation_Chunk_Adapter > >
                       >
 {
 private:
     typedef bi::list< Mutation_Chunk_Adapter,
                       bi::value_traits< detail::Read_Chunk_Ptr_List_Value_Traits >,
+                      bi::constant_time_size< false >,
                       bi::header_holder_type< bounded::Pointer_Holder< Mutation_Chunk_Adapter > >
                     > Base;
     typedef detail::MCA_Read_Chunk_Ptr_Cloner Cloner;
@@ -92,7 +94,9 @@ public:
     using Base::splice;
 
     // check it is empty when deallocating
-    ~Read_Chunk_Ptr_Cont() { ASSERT(size() == 0); }
+    ~Read_Chunk_Ptr_Cont() { ASSERT(empty()); }
+
+    Base::size_type size() = delete;
 
     /** Insert read chunk in this container. */
     void insert(Mutation_Chunk_Adapter_BPtr mca_bptr)

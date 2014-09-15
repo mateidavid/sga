@@ -32,7 +32,7 @@ void Contig_Entry::cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size
     mut_cont().insert(new_mut_bptr);
 
     // clone Read_Chunk_Ptr container from original Mutation
-    ASSERT(new_mut_bptr->chunk_ptr_cont().size() == 0);
+    ASSERT(new_mut_bptr->chunk_ptr_cont().empty());
     new_mut_bptr->chunk_ptr_cont().clone_from(mut_bptr->chunk_ptr_cont(), new_mut_bptr);
 
     // insert new Mutation in the Mutation_Ptr containers of the affected Read_Chunk objects
