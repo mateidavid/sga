@@ -152,7 +152,7 @@ bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
             {
                 // if chunk ends in insertion, keep it on lhs, along with the rest of the chunk
                 Mutation_CBPtr mut_left_cbptr = nullptr;
-                if (rc_bptr->mut_ptr_cont().size() > 0
+                if (not rc_bptr->mut_ptr_cont().empty()
                     and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->get_start() == rc_bptr->get_c_end())
                 {
                     mut_left_cbptr = rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr();
@@ -803,7 +803,7 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
     ASSERT(rc_bptr->get_r_end() == rc_end);
     ce_bptr = rc_bptr->ce_bptr();
     Mutation_CBPtr last_ins_cbptr = NULL;
-    if (rc_bptr->mut_ptr_cont().size() > 0
+    if (not rc_bptr->mut_ptr_cont().empty()
         and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->is_ins()
         and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->get_start() == rc_bptr->get_c_end())
     {

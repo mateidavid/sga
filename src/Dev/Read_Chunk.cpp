@@ -360,7 +360,7 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
         // or at c_brk, and:
         or (rc_bptr->get_c_end() == c_brk
             and (// there are no mutations
-                 rc_bptr->mut_ptr_cont().size() == 0
+                 rc_bptr->mut_ptr_cont().empty()
                  // or last mutation is not an insertion
                  or not rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->is_ins()
                  // or last insertion is not at c_brk
@@ -377,7 +377,7 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
              // or at c_brk, and:
              or (c_brk == rc_bptr->get_c_start()
                  and (// there are no mutations
-                      rc_bptr->mut_ptr_cont().size() == 0
+                      rc_bptr->mut_ptr_cont().empty()
                       // or first mutation is not the insertion selected to stay on lhs
                       or rc_bptr->mut_ptr_cont().begin()->mut_cbptr() != mut_left_cbptr)))
     {
@@ -801,8 +801,8 @@ void Read_Chunk::cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bp
     rc_bptr->_c_len += rc_next_bptr->_c_len;
     rc_bptr->_r_len += rc_next_bptr->_r_len;
     // if there are touching mutations across the break, merge them
-    if (rc_bptr->mut_ptr_cont().size() > 0
-        and rc_next_bptr->mut_ptr_cont().size() > 0
+    if (not rc_bptr->mut_ptr_cont().empty()
+        and not rc_next_bptr->mut_ptr_cont().empty()
         and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->get_end()
             == rc_next_bptr->mut_ptr_cont().begin()->mut_cbptr()->get_start())
     {

@@ -76,12 +76,14 @@ struct Mutation_Ptr_List_Value_Traits
 class Mutation_Ptr_Cont
     : private bi::list< Mutation_Chunk_Adapter,
                                       bi::value_traits< detail::Mutation_Ptr_List_Value_Traits >,
+                                      bi::constant_time_size< false >,
                                       bi::header_holder_type< bounded::Pointer_Holder< Mutation_Chunk_Adapter > >
                                     >
 {
 private:
     typedef bi::list< Mutation_Chunk_Adapter,
                                     bi::value_traits< detail::Mutation_Ptr_List_Value_Traits >,
+                                    bi::constant_time_size< false >,
                                     bi::header_holder_type< bounded::Pointer_Holder< Mutation_Chunk_Adapter > >
                                   > Base;
 //public:
@@ -107,7 +109,9 @@ public:
     using Base::reverse;
 
     // check it is empty when deallocating
-    ~Mutation_Ptr_Cont() { ASSERT(size() == 0); }
+    ~Mutation_Ptr_Cont() { ASSERT(empty()); }
+
+    Base::size_type size() = delete;
 
     /** Construct a Mutation_Ptr_Cont from a Mutation_Cont.
      * Pre: Mutations may not touch in reference.
@@ -226,8 +230,8 @@ public:
      */
     void splice_right(Mutation_Ptr_Cont& other_cont, Read_Chunk_CBPtr rc_cbptr)
     {
-        ASSERT(size() == 0
-               or other_cont.size() == 0
+        ASSERT(empty()
+               or other_cont.empty()
                or rbegin()->mut_cbptr()->get_end() < other_cont.begin()->mut_cbptr()->get_start());
         for (auto mca_bref : other_cont)
         {
