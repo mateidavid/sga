@@ -71,11 +71,13 @@ struct Mutation_ITree_Value_Traits
 class Mutation_Cont
     : private bi::itree< Mutation,
                          bi::value_traits< detail::Mutation_ITree_Value_Traits >,
+                         bi::constant_time_size< false >,
                          bi::header_holder_type< bounded::Pointer_Holder< Mutation > > >
 {
 private:
     typedef bi::itree< Mutation,
                        bi::value_traits< detail::Mutation_ITree_Value_Traits >,
+                       bi::constant_time_size< false >,
                        bi::header_holder_type< bounded::Pointer_Holder< Mutation > > > Base;
 public:
     // allow move only
@@ -90,7 +92,9 @@ public:
     friend class Graph;
 
     // check it is empty before deallocating
-    ~Mutation_Cont() { ASSERT(size() == 0); }
+    ~Mutation_Cont() { ASSERT(empty()); }
+
+    Base::size_type size() = delete;
 
     /** Create a Mutation container using mutations from a cigar string.
      * Pre: Cigar contains no 'M' operations (use disambiguate() first).

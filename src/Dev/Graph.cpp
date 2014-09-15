@@ -47,7 +47,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
         // cut is at the end, and:
         or (c_brk == ce_bptr->get_len()
             and (// there are no mutations
-                ce_bptr->mut_cont().size() == 0
+                ce_bptr->mut_cont().empty()
                 // or the last one is not an insertion
                 or not ce_bptr->mut_cont().rbegin()->is_ins()
                 // or the last insertion is not at the end

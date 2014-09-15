@@ -1025,7 +1025,7 @@ bool Read_Chunk::check() const
         ASSERT(_mut_ptr_cont.size() == 0);
         ASSERT(_ce_bptr->chunk_cont().size() == 1);
         ASSERT((&*(_ce_bptr->chunk_cont().begin())).raw() == this);
-        ASSERT(_ce_bptr->mut_cont().size() == 0);
+        ASSERT(_ce_bptr->mut_cont().empty());
     }
     return true;
 }
