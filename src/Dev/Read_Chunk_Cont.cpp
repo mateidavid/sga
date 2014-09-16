@@ -19,7 +19,7 @@ Read_Chunk_CE_Cont Read_Chunk_CE_Cont::split(Size_Type c_brk, Mutation_CBPtr mut
     Read_Chunk_CE_Cont lhs_cont;
     Read_Chunk_CE_Cont rhs_cont;
 
-    while (size() > 0)
+    while (not empty())
     {
         Read_Chunk_BPtr left_rc_bptr;
         Read_Chunk_BPtr right_rc_bptr;

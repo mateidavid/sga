@@ -82,8 +82,8 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
 
     // split Read_Chunk_Cont, save rhs in new Contig_Entry
     ce_new_bptr->chunk_cont() = ce_bptr->chunk_cont().split(c_brk, mut_left_cbptr);
-    ASSERT(ce_bptr->chunk_cont().size() == 0 or ce_bptr->chunk_cont().max_end() <= c_brk);
-    ASSERT(ce_new_bptr->chunk_cont().size() == 0 or c_brk <= ce_new_bptr->chunk_cont().begin()->get_c_start());
+    ASSERT(ce_bptr->chunk_cont().empty() or ce_bptr->chunk_cont().max_end() <= c_brk);
+    ASSERT(ce_new_bptr->chunk_cont().empty() or c_brk <= ce_new_bptr->chunk_cont().begin()->get_c_start());
 
     // rebase all mutations and read chunks from the rhs to the breakpoint
     ce_new_bptr->mut_cont().shift(-int(c_brk));
@@ -100,13 +100,13 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
 
     // if either contig has no read chunks mapped to it, remove it
     set< Contig_Entry_CBPtr > ce_to_check = { ce_bptr, ce_new_bptr };
-    if (ce_bptr->chunk_cont().size() == 0)
+    if (ce_bptr->chunk_cont().empty())
     {
         ce_to_check.erase(ce_bptr);
         ce_cont().erase(ce_bptr);
         Contig_Entry_Fact::del_elem(ce_bptr);
     }
-    if (ce_new_bptr->chunk_cont().size() == 0)
+    if (ce_new_bptr->chunk_cont().empty())
     {
         ce_to_check.erase(ce_new_bptr);
         ce_cont().erase(ce_new_bptr);
@@ -291,14 +291,14 @@ void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPt
     // next, deallocate temporary structures
     // rc1rc2_chunk_bptr:
     Contig_Entry_BPtr rc1_ce_bptr = rc1rc2_chunk_bptr->ce_bptr();
-    ASSERT(rc1_ce_bptr->chunk_cont().size() == 1);
+    ASSERT(rc1_ce_bptr->chunk_cont().single_node());
     rc1_ce_bptr->chunk_cont().clear_and_dispose();
     rc1_ce_bptr->mut_cont().clear_and_dispose();
     Contig_Entry_Fact::del_elem(rc1_ce_bptr);
 
     // rc2c2_chunk_bptr
     Contig_Entry_BPtr rc2_ce_bptr = rc2c2_chunk_bptr->ce_bptr();
-    ASSERT(rc2_ce_bptr->chunk_cont().size() == 1);
+    ASSERT(rc2_ce_bptr->chunk_cont().single_node());
     rc2_ce_bptr->chunk_cont().clear_and_dispose();
     rc2_ce_bptr->mut_cont().clear_and_dispose();
     Contig_Entry_Fact::del_elem(rc2_ce_bptr);
@@ -1397,7 +1397,7 @@ void Graph::unmap_single_chunks()
             {
                 Read_Chunk_BPtr rc_bptr = &rc_bref;
                 Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
-                if (not ce_bptr->is_unmappable() and ce_bptr->chunk_cont().size() == 1)
+                if (not ce_bptr->is_unmappable() and ce_bptr->chunk_cont().single_node())
                 {
                     unmap_chunk(rc_bptr);
                     done = false;
@@ -1426,7 +1426,7 @@ void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
     {
         return;
     }
-    if (rc_bptr->ce_bptr()->chunk_cont().size() == 1)
+    if (rc_bptr->ce_bptr()->chunk_cont().single_node())
     {
         unmap_chunk(rc_bptr);
         return;
@@ -1441,7 +1441,7 @@ void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
             // or it's not the first in the chunk container
             or &*ce_bptr->chunk_cont().begin() != rc_bptr
             // or a second chunk exists and starts at c_start
-            or (ce_bptr->chunk_cont().size() > 1 and (++ce_bptr->chunk_cont().begin())->get_c_start() == 0))
+            or (not ce_bptr->chunk_cont().empty() and not ce_bptr->chunk_cont().single_node() and (++ce_bptr->chunk_cont().begin())->get_c_start() == 0))
         {
             return;
         }

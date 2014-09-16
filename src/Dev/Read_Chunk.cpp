@@ -1022,8 +1022,8 @@ bool Read_Chunk::check() const
     // unmappable contigs have no mutations and a single chunk
     if (_is_unmappable)
     {
-        ASSERT(_mut_ptr_cont.size() == 0);
-        ASSERT(_ce_bptr->chunk_cont().size() == 1);
+        ASSERT(_mut_ptr_cont.empty());
+        ASSERT(_ce_bptr->chunk_cont().single_node());
         ASSERT((&*(_ce_bptr->chunk_cont().begin())).raw() == this);
         ASSERT(_ce_bptr->mut_cont().empty());
     }

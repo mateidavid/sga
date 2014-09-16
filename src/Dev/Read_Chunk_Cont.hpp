@@ -69,12 +69,14 @@ struct Read_Chunk_ITree_Value_Traits
 class Read_Chunk_CE_Cont
     : private bi::itree< Read_Chunk,
                          bi::value_traits< detail::Read_Chunk_ITree_Value_Traits >,
+                         bi::constant_time_size< false >,
                          bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
                        >
 {
 private:
     typedef bi::itree< Read_Chunk,
                        bi::value_traits< detail::Read_Chunk_ITree_Value_Traits >,
+                       bi::constant_time_size< false >,
                        bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
                      > Base;
 
@@ -86,9 +88,6 @@ public:
     DELETE_COPY_ASOP(Read_Chunk_CE_Cont)
     DEFAULT_MOVE_ASOP(Read_Chunk_CE_Cont)
 
-    // check it is empty when deallocating
-    ~Read_Chunk_CE_Cont() { ASSERT(size() == 0); }
-
     USING_INTRUSIVE_CONT(Base)
     using typename Base::intersection_const_iterator;
     using typename Base::intersection_const_iterator_range;
@@ -96,6 +95,17 @@ public:
     using Base::max_end;
     using Base::clear_and_dispose;
     using Base::check;
+
+    // check it is empty when deallocating
+    ~Read_Chunk_CE_Cont() { ASSERT(empty()); }
+
+    Base::size_type size() = delete;
+    bool single_node() const
+    {
+        return not empty()
+            and not Base::node_traits::get_left(Base::node_traits::get_parent(Base::header_ptr()))
+            and not Base::node_traits::get_right(Base::node_traits::get_parent(Base::header_ptr()));
+    }
 
     /** Insert Read_Chunk in this container. */
     void insert(Read_Chunk_BPtr rc_bptr) { Base::insert(*rc_bptr); }

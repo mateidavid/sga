@@ -36,7 +36,7 @@ Seq_Type Read_Entry::get_seq() const
 bool Read_Entry::check() const
 {
     // name not empty
-    ASSERT(_name.size() > 0);
+    ASSERT(not _name.empty());
     for (auto rc_cit = _chunk_cont.begin(); rc_cit != _chunk_cont.end(); ++rc_cit)
     {
         Read_Chunk_CBPtr rc_cbptr = &*rc_cit;
