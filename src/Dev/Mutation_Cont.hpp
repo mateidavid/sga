@@ -24,7 +24,7 @@ struct Mutation_ITree_Node_Traits
     typedef Mutation_Fact fact_type;
     typedef typename fact_type::ptr_type node_ptr;
     typedef typename fact_type::const_ptr_type const_node_ptr;
-    typedef int color;
+    typedef uint8_t color;
     typedef Size_Type key_type;
 
     static node_ptr get_parent(const_node_ptr n) { return n->_parent; }
@@ -33,12 +33,35 @@ struct Mutation_ITree_Node_Traits
     static void set_left(node_ptr n, node_ptr ptr) { n->_l_child = ptr; }
     static node_ptr get_right(const_node_ptr n) { return n->_r_child; }
     static void set_right(node_ptr n, node_ptr ptr) { n->_r_child = ptr; }
-    static color get_color(const_node_ptr n) { return n->_col; }
-    static void set_color(node_ptr n, color c) { n->_col = c ; }
     static color black() { return 0; }
     static color red() { return 1; }
-    static key_type get_max_end(const_node_ptr n) { return n->_max_end; }
-    static void set_max_end(node_ptr n, key_type k) { n->_max_end = k ; }
+    static color get_color(const_node_ptr n)
+    {
+        return static_cast< color >(n->_col_n_max_end >> (8 * sizeof(key_type) - 1));
+    }
+    static void clear_color(node_ptr n)
+    {
+        n->_col_n_max_end &= ~(static_cast< key_type >(1) << (8 * sizeof(key_type) - 1));
+    }
+    static void set_cleared_color(node_ptr n, color c)
+    {
+        n->_col_n_max_end |= (static_cast< key_type >(c) << (8 * sizeof(key_type) - 1));
+    }
+    static void set_color(node_ptr n, color c)
+    {
+        clear_color(n);
+        set_cleared_color(n, c);
+    }
+    static key_type get_max_end(const_node_ptr n)
+    {
+        return ((n->_col_n_max_end << 1) >> 1);
+    }
+    static void set_max_end(node_ptr n, key_type k)
+    {
+        color c = get_color(n);
+        n->_col_n_max_end = k;
+        set_cleared_color(n, c);
+    }
 };
 
 struct Mutation_ITree_Value_Traits

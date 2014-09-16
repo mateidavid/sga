@@ -238,21 +238,19 @@ public:
     boost::property_tree::ptree to_ptree() const;
 
 private:
-    Seq_Type _seq;
-    Size_Type _start;
-    Size_Type _len;
-    Size_Type _seq_len;
-
-    Read_Chunk_Ptr_Cont _chunk_ptr_cont;
-
     /** Hooks for storage in intrusive interval trees inside Contig_Entry objects. */
     friend struct detail::Mutation_ITree_Node_Traits;
+    bool is_unlinked() const { return not(_parent or _l_child or _r_child); }
+
+    Seq_Type _seq;
+    Size_Type _start;
+    Size_Type _col_n_max_end;
+    Read_Chunk_Ptr_Cont _chunk_ptr_cont;
     Mutation_BPtr _parent;
     Mutation_BPtr _l_child;
     Mutation_BPtr _r_child;
-    Size_Type _max_end;
-    int _col;
-    bool is_unlinked() const { return not(_parent or _l_child or _r_child); }
+    uint32_t _len;
+    uint32_t _seq_len;
 }; // class Mutation
 
 } // namespace MAC
