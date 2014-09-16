@@ -57,12 +57,14 @@ struct Contig_Entry_List_Value_Traits
 class Contig_Entry_Cont
     : private bi::list< Contig_Entry,
                         bi::value_traits< detail::Contig_Entry_List_Value_Traits >,
+                        bi::constant_time_size< false >,
                         bi::header_holder_type< bounded::Pointer_Holder< Contig_Entry > >
                       >
 {
 private:
     typedef bi::list< Contig_Entry,
                       bi::value_traits< detail::Contig_Entry_List_Value_Traits >,
+                      bi::constant_time_size< false >,
                       bi::header_holder_type< bounded::Pointer_Holder< Contig_Entry > >
                     > Base;
 public:
@@ -71,11 +73,14 @@ public:
     DEFAULT_MOVE_CTOR(Contig_Entry_Cont)
     DELETE_COPY_ASOP(Contig_Entry_Cont)
     DEFAULT_MOVE_ASOP(Contig_Entry_Cont)
-    // check it is empty when deallocating
-    ~Contig_Entry_Cont() { ASSERT(size() == 0); }
 
     USING_INTRUSIVE_CONT(Base)
     friend class Graph;
+
+    // check it is empty when deallocating
+    ~Contig_Entry_Cont() { ASSERT(empty()); }
+
+    Base::size_type size() = delete;
 
     /** Insert Contig_Entry into container.
      * @param ce_bptr Pointer to Contig_Entry object.
