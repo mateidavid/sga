@@ -385,7 +385,7 @@ void Contig_Entry::print_separated_het_mutations(
 bool Contig_Entry::check() const
 {
     // check there are chunks mapped to this contig
-    ASSERT(_chunk_cont.size() > 0);
+    ASSERT(not _chunk_cont.empty());
     // check mutation container itree
     mut_cont().check();
     // mutations:

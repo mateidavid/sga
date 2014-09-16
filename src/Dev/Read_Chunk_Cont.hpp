@@ -280,10 +280,12 @@ public:
     DELETE_COPY_ASOP(Read_Chunk_RE_Cont)
     DEFAULT_MOVE_ASOP(Read_Chunk_RE_Cont)
 
-    // check it is empty when deallocating
-    ~Read_Chunk_RE_Cont() { ASSERT(size() == 0); }
-
     USING_INTRUSIVE_CONT(Base)
+
+    // check it is empty when deallocating
+    ~Read_Chunk_RE_Cont() { ASSERT(empty()); }
+
+    Base::size_type size() = delete;
 
     /** Insert read chunk in this container. */
     void insert(Read_Chunk_BPtr rc_bptr)
@@ -303,7 +305,7 @@ public:
      */
     Read_Chunk_CBPtr get_chunk_with_pos(Size_Type r_pos) const
     {
-        ASSERT(size() > 0);
+        ASSERT(not empty());
         ASSERT(begin()->re_bptr());
         if (r_pos >= begin()->get_read_len())
         {
