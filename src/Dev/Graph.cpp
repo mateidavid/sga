@@ -1805,8 +1805,8 @@ void Graph::load(std::istream& is)
 {
     ASSERT(_re_cont.header_ptr().to_int() == 0);
     ASSERT(_ce_cont.get_root_node().to_int() == 0);
-    ASSERT(_re_cont.size() == 0);
-    ASSERT(_ce_cont.size() == 0);
+    ASSERT(_re_cont.empty());
+    ASSERT(_ce_cont.empty());
     // load 5 factories
     _mut_fact.load(is);
     _mca_fact.load(is);

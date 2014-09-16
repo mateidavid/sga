@@ -81,6 +81,7 @@ class Read_Entry_Cont
     : private bi::set< Read_Entry,
                        bi::compare< Read_Entry_Comparator >,
                        bi::value_traits< detail::Read_Entry_Set_Value_Traits >,
+                       bi::constant_time_size< false >,
                        bi::header_holder_type< bounded::Pointer_Holder< Read_Entry > >
                      >
 {
@@ -88,6 +89,7 @@ private:
     typedef bi::set< Read_Entry,
                      bi::compare< Read_Entry_Comparator >,
                      bi::value_traits< detail::Read_Entry_Set_Value_Traits >,
+                     bi::constant_time_size< false >,
                      bi::header_holder_type< bounded::Pointer_Holder< Read_Entry > >
                    > Base;
 public:
@@ -96,11 +98,14 @@ public:
     DEFAULT_MOVE_CTOR(Read_Entry_Cont)
     DELETE_COPY_ASOP(Read_Entry_Cont)
     DEFAULT_MOVE_ASOP(Read_Entry_Cont)
-    // check it is empty when deallocating
-    ~Read_Entry_Cont() { ASSERT(size() == 0); }
 
     USING_INTRUSIVE_CONT(Base)
     friend class Graph;
+
+    // check it is empty when deallocating
+    ~Read_Entry_Cont() { ASSERT(empty()); }
+
+    Base::size_type size() = delete;
 
     /** Insert Read_Entry into container.
      * @param re_bptr Pointer to Read_Entry object.
