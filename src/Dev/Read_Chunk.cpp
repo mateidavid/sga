@@ -275,16 +275,16 @@ void Read_Chunk_Pos::advance_past_del(bool forward)
 }
 
 Read_Chunk::Read_Chunk(Read_Entry_BPtr re_bptr, Contig_Entry_BPtr ce_bptr)
-    : _re_bptr(re_bptr),
-      _ce_bptr(ce_bptr),
-      _r_start(0),
+    : _r_start(0),
       _r_len(re_bptr->get_len()),
       _c_start(0),
       _c_len(ce_bptr->get_len()),
-      _rc(false),
-      _is_unmappable(false)
+      _re_bptr(re_bptr),
+      _ce_bptr(ce_bptr)
 {
     ASSERT(_r_len == _c_len);
+    _set_rc(false);
+    _set_is_unmappable(false);
 }
 
 Size_Type Read_Chunk::get_read_len() const
@@ -314,7 +314,7 @@ Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf, const Seq_T
     rc_bptr->_c_len = cigar.get_rf_len();
     rc_bptr->_r_start = cigar.get_qr_start();
     rc_bptr->_r_len = cigar.get_qr_len();
-    rc_bptr->_rc = cigar.is_reversed();
+    rc_bptr->_set_rc(cigar.is_reversed());
 
     // fix cross-pointers
     rc_bptr->_ce_bptr = ce_bptr;
@@ -457,13 +457,13 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
             ASSERT(rc_bptr->get_r_start() < pos.r_pos and pos.r_pos < rc_bptr->get_r_end());
             right_rc_bptr = Read_Chunk_Fact::new_elem();
             // fix inner fields of both chunks
-            right_rc_bptr->_rc = rc_bptr->_rc;
+            right_rc_bptr->_set_rc(rc_bptr->get_rc());
             right_rc_bptr->_re_bptr = rc_bptr->_re_bptr;
             right_rc_bptr->_ce_bptr = rc_bptr->_ce_bptr;
             right_rc_bptr->_c_start = c_brk;
             right_rc_bptr->_c_len = rc_bptr->_c_start + rc_bptr->_c_len - c_brk;
             rc_bptr->_c_len -= right_rc_bptr->_c_len;
-            if (not rc_bptr->_rc)
+            if (not rc_bptr->get_rc())
             {
                 right_rc_bptr->_r_start = pos.r_pos;
                 right_rc_bptr->_r_len = rc_bptr->_r_start + rc_bptr->_r_len - pos.r_pos;
@@ -492,10 +492,10 @@ Read_Chunk::collapse_mapping(Read_Chunk_BPtr c1rc1_cbptr, Read_Chunk_BPtr rc1rc2
     Read_Chunk_BPtr c1rc2_bptr = Read_Chunk_Fact::new_elem();
     c1rc2_bptr->_r_start = rc1rc2_cbptr->get_r_start();
     c1rc2_bptr->_r_len = rc1rc2_cbptr->get_r_len();
-    c1rc2_bptr->_rc = (c1rc1_cbptr->get_rc() != rc1rc2_cbptr->get_rc());
+    c1rc2_bptr->_set_rc(c1rc1_cbptr->get_rc() != rc1rc2_cbptr->get_rc());
     c1rc2_bptr->re_bptr() = rc1rc2_cbptr->re_bptr();
     c1rc2_bptr->ce_bptr() = c1rc1_cbptr->ce_bptr();
-    c1rc2_bptr->_is_unmappable = false;
+    c1rc2_bptr->_set_is_unmappable(false);
 
     // traverse c1 left-to-right; traverse rc1 left-to-right if not _rc, r-to-l ow;
     Pos pos = c1rc1_cbptr->get_start_pos();
@@ -724,7 +724,7 @@ Read_Chunk_BPtr Read_Chunk::invert_mapping(Read_Chunk_CBPtr rc_cbptr)
     new_rc_bptr->_r_len = rc_cbptr->get_c_len();
     new_rc_bptr->_c_start = rc_cbptr->get_r_start();
     new_rc_bptr->_c_len = rc_cbptr->get_r_len();
-    new_rc_bptr->_rc = rc_cbptr->get_rc();
+    new_rc_bptr->_set_rc(rc_cbptr->get_rc());
     new_rc_bptr->ce_bptr() = new_ce_bptr;
     // iterate over contig sequence and create reversed mutations
     Pos pos = rc_cbptr->get_start_pos();
@@ -776,7 +776,7 @@ Read_Chunk_BPtr Read_Chunk::invert_mapping(Read_Chunk_CBPtr rc_cbptr)
 
 void Read_Chunk::reverse()
 {
-    _rc = not _rc;
+    _set_rc(not get_rc());
     _c_start = _ce_bptr->get_len() - (_c_start + _c_len);
 }
 
@@ -936,8 +936,8 @@ void Read_Chunk::make_unmappable(Read_Chunk_BPtr rc_bptr)
     rc_bptr->ce_bptr() = ce_new_bptr;
     rc_bptr->_c_start = 0;
     rc_bptr->_c_len = rc_bptr->_r_len;
-    rc_bptr->_rc = false;
-    rc_bptr->_is_unmappable = true;
+    rc_bptr->_set_rc(false);
+    rc_bptr->_set_is_unmappable(true);
     ce_new_bptr->chunk_cont().insert(rc_bptr);
 }
 
@@ -945,23 +945,23 @@ Seq_Type Read_Chunk::get_seq() const
 {
     Seq_Type res;
     // start with start_pos iff not rc
-    Pos pos = (not _rc? get_start_pos() : get_end_pos());
-    while (pos != (not _rc? get_end_pos() : get_start_pos()))
+    Pos pos = (not get_rc()? get_start_pos() : get_end_pos());
+    while (pos != (not get_rc()? get_end_pos() : get_start_pos()))
     {
         Pos next_pos = pos;
-        next_pos.advance(not _rc);
+        next_pos.advance(not get_rc());
         ASSERT(next_pos.mut_offset == 0);
-        Size_Type match_len = pos.get_match_len(not _rc);
+        Size_Type match_len = pos.get_match_len(not get_rc());
         if (match_len > 0)
         {
             // match stretch follows
-            string tmp = _ce_bptr->substr((not _rc? pos.c_pos : next_pos.c_pos) - _ce_bptr->get_seq_offset(), match_len);
-            res += (not _rc? tmp : reverseComplement(tmp));
+            string tmp = _ce_bptr->substr((not get_rc()? pos.c_pos : next_pos.c_pos) - _ce_bptr->get_seq_offset(), match_len);
+            res += (not get_rc()? tmp : reverseComplement(tmp));
         }
         else if (pos.r_pos != next_pos.r_pos)
         {
             // mutation follows
-            if (not _rc)
+            if (not get_rc())
             {
                 ASSERT(not pos.past_last_mut());
                 res += pos.mut().get_seq().substr(0, next_pos.r_pos - pos.r_pos);
@@ -1020,7 +1020,7 @@ bool Read_Chunk::check() const
                : get_c_start() == 0));
 #endif
     // unmappable contigs have no mutations and a single chunk
-    if (_is_unmappable)
+    if (is_unmappable())
     {
         ASSERT(_mut_ptr_cont.empty());
         ASSERT(_ce_bptr->chunk_cont().single_node());

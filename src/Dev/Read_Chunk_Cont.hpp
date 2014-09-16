@@ -22,7 +22,7 @@ struct Read_Chunk_ITree_Node_Traits
     typedef Read_Chunk_Fact fact_type;
     typedef fact_type::ptr_type node_ptr;
     typedef fact_type::const_ptr_type const_node_ptr;
-    typedef int color;
+    typedef bool color;
     typedef Size_Type key_type;
 
     static node_ptr get_parent(const_node_ptr n) { return n->_ce_parent; }
@@ -31,10 +31,10 @@ struct Read_Chunk_ITree_Node_Traits
     static void set_left(node_ptr n, node_ptr ptr) { n->_ce_l_child = ptr; }
     static node_ptr get_right(const_node_ptr n) { return n->_ce_r_child; }
     static void set_right(node_ptr n, node_ptr ptr) { n->_ce_r_child = ptr; }
-    static color get_color(const_node_ptr n) { return n->_ce_col; }
-    static void set_color(node_ptr n, color c) { n->_ce_col = c ; }
-    static color black() { return 0; }
-    static color red() { return 1; }
+    static color get_color(const_node_ptr n) { return n->_get_ce_col(); }
+    static void set_color(node_ptr n, color c) { n->_set_ce_col(c); }
+    static color black() { return false; }
+    static color red() { return true; }
     static key_type get_max_end(const_node_ptr n) { return n->_ce_max_end; }
     static void set_max_end(node_ptr n, key_type k) { n->_ce_max_end = k ; }
 };
@@ -206,7 +206,7 @@ struct Read_Chunk_Set_Node_Traits
     typedef Read_Chunk_Fact fact_type;
     typedef fact_type::ptr_type node_ptr;
     typedef fact_type::const_ptr_type const_node_ptr;
-    typedef int color;
+    typedef bool color;
 
     static node_ptr get_parent(const_node_ptr n) { return n->_re_parent; }
     static void set_parent(node_ptr n, node_ptr ptr) { n->_re_parent = ptr; }
@@ -214,10 +214,10 @@ struct Read_Chunk_Set_Node_Traits
     static void set_left(node_ptr n, node_ptr ptr) { n->_re_l_child = ptr; }
     static node_ptr get_right(const_node_ptr n) { return n->_re_r_child; }
     static void set_right(node_ptr n, node_ptr ptr) { n->_re_r_child = ptr; }
-    static color get_color(const_node_ptr n) { return n->_re_col; }
-    static void set_color(node_ptr n, color c) { n->_re_col = c ; }
-    static color black() { return 0; }
-    static color red() { return 1; }
+    static color get_color(const_node_ptr n) { return n->_get_re_col(); }
+    static void set_color(node_ptr n, color c) { n->_set_re_col(c); }
+    static color black() { return false; }
+    static color red() { return true; }
 };
 
 struct Read_Chunk_Set_Value_Traits

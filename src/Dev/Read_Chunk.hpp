@@ -173,30 +173,34 @@ private:
     /**@{*/
     /** Empty constructor. */
     Read_Chunk()
-        : _re_bptr(nullptr),
-          _ce_bptr(nullptr),
-          _mut_ptr_cont(),
-          _r_start(0),
+        : _r_start(0),
           _r_len(0),
           _c_start(0),
           _c_len(0),
-          _rc(false),
-          _is_unmappable(false) {}
+          _re_bptr(nullptr),
+          _ce_bptr(nullptr),
+          _mut_ptr_cont()
+    {
+        _set_rc(false);
+        _set_is_unmappable(false);
+    }
 
     /** Constructs a single read chunk from a read, and maps it to a new contig.
      * @param re_ptr Pointer to read entry where this chunk comes from.
      * @param len Length of the read.
      */
     Read_Chunk(Read_Entry_BPtr re_bptr, Size_Type len)
-        : _re_bptr(re_bptr),
-          _ce_bptr(NULL),
-          _mut_ptr_cont(),
-          _r_start(0),
+        : _r_start(0),
           _r_len(len),
           _c_start(0),
           _c_len(len),
-          _rc(false),
-          _is_unmappable(false) {}
+          _re_bptr(re_bptr),
+          _ce_bptr(NULL),
+          _mut_ptr_cont()
+    {
+        _set_rc(false);
+        _set_is_unmappable(false);
+    }
 
     /** Construct chunk mapping full read to single contig.
      * Pre: Read and contig must be of the same length.
@@ -231,8 +235,7 @@ public:
             _r_len = std::move(rhs._r_len);
             _c_start = std::move(rhs._c_start);
             _c_len = std::move(rhs._c_len);
-            _rc = std::move(rhs._rc);
-            _is_unmappable = std::move(rhs._is_unmappable);
+            _bits = std::move(rhs._bits);
         }
         return *this;
     }
@@ -250,12 +253,12 @@ public:
     Size_Type get_c_len() const { return _c_len; }
     Size_Type& c_len() { return _c_len; }
     Size_Type get_c_end() const { return _c_start + _c_len; }
-    bool get_rc() const { return _rc; }
+    bool get_rc() const { return _get_rc(); }
     const Mutation_Ptr_Cont& mut_ptr_cont() const { return _mut_ptr_cont; }
     Mutation_Ptr_Cont& mut_ptr_cont() { return _mut_ptr_cont; }
     Seq_Type get_seq() const;
     Seq_Type substr(Size_Type start, Size_Type len) const;
-    bool is_unmappable() const { return _is_unmappable; }
+    bool is_unmappable() const { return _get_is_unmappable(); }
     Size_Type get_read_len() const;
     /**@}*/
 
@@ -263,13 +266,13 @@ public:
     /** Get mapping start position. */
     Pos get_start_pos() const
     {
-        return Pos(get_c_start(), (not _rc? get_r_start() : get_r_end()), _mut_ptr_cont.begin(), 0, this);
+        return Pos(get_c_start(), (not get_rc()? get_r_start() : get_r_end()), _mut_ptr_cont.begin(), 0, this);
     }
 
     /** Get mapping end position. */
     Pos get_end_pos() const
     {
-        return Pos(get_c_end(), (not _rc? get_r_end() : get_r_start()), _mut_ptr_cont.end(), 0, this);
+        return Pos(get_c_end(), (not get_rc()? get_r_end() : get_r_start()), _mut_ptr_cont.end(), 0, this);
     }
 
     /** Find bounded pointer to this object.
@@ -426,32 +429,77 @@ public:
     boost::property_tree::ptree to_ptree() const;
 
 private:
-    Read_Entry_BPtr _re_bptr;
-    Contig_Entry_BPtr _ce_bptr;
-    Mutation_Ptr_Cont _mut_ptr_cont;
-    Size_Type _r_start;
-    Size_Type _r_len;
-    Size_Type _c_start;
-    Size_Type _c_len;
-    bool _rc;
-    bool _is_unmappable;
-
     /** Hooks for storage:
      * 1. in intrusive interval trees inside Contig_Entry objects.
      * 2. in intrusive trees inside Read_Entry objects.
      */
     friend struct detail::Read_Chunk_ITree_Node_Traits;
     friend struct detail::Read_Chunk_Set_Node_Traits;
+    bool is_unlinked() const { return not(_ce_parent or _ce_l_child or _ce_r_child or _re_parent or _re_l_child or _re_r_child); }
+
+    Size_Type _r_start;
+    Size_Type _r_len;
+    Size_Type _c_start;
+    Size_Type _c_len;
+    Size_Type _ce_max_end;
+
+    Read_Entry_BPtr _re_bptr;
+    Contig_Entry_BPtr _ce_bptr;
+    Mutation_Ptr_Cont _mut_ptr_cont;
     Read_Chunk_BPtr _ce_parent;
     Read_Chunk_BPtr _ce_l_child;
     Read_Chunk_BPtr _ce_r_child;
     Read_Chunk_BPtr _re_parent;
     Read_Chunk_BPtr _re_l_child;
     Read_Chunk_BPtr _re_r_child;
-    Size_Type _ce_max_end;
-    bool _ce_col;
-    bool _re_col;
-    bool is_unlinked() const { return not(_ce_parent or _ce_l_child or _ce_r_child or _re_parent or _re_l_child or _re_r_child); }
+
+    int _bits;
+
+    static const uint8_t _rc_bit = 1u;
+    static const uint8_t _is_unmappable_bit = 2u;
+    static const uint8_t _ce_col_bit = 4u;
+    static const uint8_t _re_col_bit = 8u;
+
+    bool _get_rc() const
+    {
+        bool res = (_bits & _rc_bit) != 0;
+        return res;
+    }
+    void _set_rc(bool c)
+    {
+        _bits &= ~_rc_bit;
+        _bits |= (static_cast< uint8_t >(c) * _rc_bit);
+    }
+    bool _get_is_unmappable() const
+    {
+        bool res = (_bits & _is_unmappable_bit) != 0;
+        return res;
+    }
+    void _set_is_unmappable(bool c)
+    {
+        _bits &= ~_is_unmappable_bit;
+        _bits |= (static_cast< uint8_t >(c) * _is_unmappable_bit);
+    }
+    bool _get_ce_col() const
+    {
+        bool res = (_bits & _ce_col_bit) != 0;
+        return res;
+    }
+    void _set_ce_col(bool c)
+    {
+        _bits &= ~_ce_col_bit;
+        _bits |= (static_cast< uint8_t >(c) * _ce_col_bit);
+    }
+    bool _get_re_col() const
+    {
+        bool res = (_bits & _re_col_bit) != 0;
+        return res;
+    }
+    void _set_re_col(bool c)
+    {
+        _bits &= ~_re_col_bit;
+        _bits |= (static_cast< uint8_t >(c) * _re_col_bit);
+    }
 }; // class Read_Chunk
 
 } // namespace MAC
