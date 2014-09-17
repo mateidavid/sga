@@ -111,6 +111,7 @@ void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
         if (po.check_at_step)
         {
             g.check_all();
+            g.check_leaks();
         }
         logger("mac", debug2) << g.to_ptree();
         if (po.progress_count > 0)
@@ -120,10 +121,10 @@ void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
                 logger("mac", info) << ptree("progress").put("count", line_count);
             }
         }
-        //ASSERT(g.check_all());
     }
     logger("io", info) << ptree("load_asqg_end");
-    ASSERT(g.check_all());
+    g.check_all();
+    g.check_leaks();
 }
 
 
@@ -155,12 +156,12 @@ int real_main(const Program_Options& po)
     if (po.unmap_read_ends)
     {
         g.unmap_read_ends();
-        ASSERT(g.check_all());
+        g.check_all();
     }
     if (po.cat_at_end)
     {
         g.cat_all_read_contigs();
-        ASSERT(g.check_all());
+        g.check_all();
     }
     if (not po.stats_file.empty())
     {
