@@ -34,6 +34,7 @@ struct Program_Options
     bool unmap_read_ends;
     bool print_at_step;
     bool print_at_end;
+    bool check_at_step;
 
     boost::property_tree::ptree to_ptree() const
     {
@@ -53,6 +54,7 @@ struct Program_Options
                       .put("unmap read ends", unmap_read_ends)
                       .put("print graph at each step", print_at_step)
                       .put("print graph at end", print_at_end)
+                      .put("check graph at each step", check_at_step)
                       .put("seed", seed)
                       ;
     }
@@ -105,6 +107,10 @@ void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
             ++r2_end;
             global::assert_message = string("ED ") + r1_id + " " + r2_id;
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5), po.cat_at_step);
+        }
+        if (po.check_at_step)
+        {
+            g.check_all();
         }
         logger("mac", debug2) << g.to_ptree();
         if (po.progress_count > 0)
@@ -235,6 +241,7 @@ int main(int argc, char* argv[])
         ("unmap-read-ends", bo::bool_switch(&po.unmap_read_ends), "unmap read ends")
         ("print-at-step,G", bo::bool_switch(&po.print_at_step), "print graph at each step")
         ("print-at-end,g", bo::bool_switch(&po.print_at_end), "print graph at end")
+        ("check-at-step,C", bo::bool_switch(&po.check_at_step), "check graph at each step")
         ("log-level,d", bo::value< vector< string > >(&po.log_level)->composing(), "default log level")
         ("save,S", bo::value< string >(&po.save_file), "save file")
         ("load,L", bo::value< string >(&po.load_file), "load file")
