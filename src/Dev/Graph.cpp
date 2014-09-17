@@ -713,7 +713,7 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
         // we reverse one of the contigs
         // reversal modifications are done in-place, so chunk vectors are still valid
         ce_bptr->reverse();
-        ASSERT(ce_bptr->check());
+        ce_bptr->check();
         c_right = not c_right;
         same_orientation = true;
     }
@@ -734,7 +734,7 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
 
     ce_cont().erase(ce_next_bptr);
     Contig_Entry::cat_c_right(ce_bptr, ce_next_bptr, rc_cbptr_cont);
-    ASSERT(ce_bptr->check());
+    ce_bptr->check();
 
     //cerr << "merging contigs result\n" << *ce_cptr;
 
@@ -760,7 +760,7 @@ void Graph::cat_read_contigs(Read_Entry_BPtr re_bptr)
             {
                 if (cat_contigs(ce_bptr, rc_bptr->get_rc()))
                 {
-                    ASSERT(re_bptr->check());
+                    re_bptr->check();
                     done = false;
                     break;
                 }
@@ -768,7 +768,7 @@ void Graph::cat_read_contigs(Read_Entry_BPtr re_bptr)
             // then every contig to the right of its chunk
             if (cat_contigs(ce_bptr, not rc_bptr->get_rc()))
             {
-                ASSERT(re_bptr->check());
+                re_bptr->check();
                 done = false;
                 break;
             }
@@ -1533,17 +1533,17 @@ bool Graph::check_all() const
     size_t chunks_count_1 = 0;
     size_t chunks_count_2 = 0;
     // check read entry objects
-    for (const auto& re_cbref : _re_cont)
+    for (auto re_cbref : _re_cont)
     {
         Read_Entry_CBPtr re_cbptr = &re_cbref;
-        ASSERT(re_cbptr->check());
+        re_cbptr->check();
         chunks_count_1 += re_cbptr->chunk_cont().size();
     }
     // check contig entry objects
-    for (const auto& ce_cbref : _ce_cont)
+    for (auto ce_cbref : _ce_cont)
     {
         Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
-        ASSERT(ce_cbptr->check());
+        ce_cbptr->check();
         chunks_count_2 += ce_cbptr->chunk_cont().size();
     }
     ASSERT(chunks_count_1 == chunks_count_2);
@@ -1578,7 +1578,7 @@ bool Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry
     // check read entry objects
     for (const auto& re_cbptr : re_set)
     {
-        ASSERT(re_cbptr->check());
+        re_cbptr->check();
     }
     for (const auto& re_cbptr : re_extra_set)
     {
@@ -1586,13 +1586,13 @@ bool Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry
         {
             continue;
         }
-        ASSERT(re_cbptr->check());
+        re_cbptr->check();
     }
 
     // check contig entry objects
     for (const auto& ce_cbptr : ce_set)
     {
-        ASSERT(ce_cbptr->check());
+        ce_cbptr->check();
     }
     for (const auto& ce_cbptr : ce_extra_set)
     {
@@ -1600,7 +1600,7 @@ bool Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry
         {
             continue;
         }
-        ASSERT(ce_cbptr->check());
+        ce_cbptr->check();
     }
 
     return true;
@@ -1615,7 +1615,10 @@ void Graph::dump_detailed_counts(ostream& os) const
     {
         Read_Entry_CBPtr re_cbptr = &re_cbref;
 
-        os << "RE\t" << re_cbptr->get_name() << '\t' << re_cbptr->get_len() << '\t' << re_cbptr->chunk_cont().size() << '\t';
+        os << "RE\t"
+           << re_cbptr->name() << '\t'
+           << re_cbptr->get_len() << '\t'
+           << re_cbptr->chunk_cont().size() << '\t';
         for (const auto rc_cbref : re_cbptr->chunk_cont())
         {
             Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
@@ -1638,24 +1641,31 @@ void Graph::dump_detailed_counts(ostream& os) const
         os << '\n';
     }
     // next, contig stats
-    os << "CE\tid\tlen\tnum.chunks\tbp.chunks\tnum.mut\tnum.mut.chunks"
-       << "\tnum.snp\tnum.ins\tnum.del\tnum.mnp\tbp.mut"
-       << "\tcovg.left\tdeg.left\tcovg.right\tdeg.right\tunmappable"
+    os << "CE\tid\tlen\tunmappable"
+       << "\tnum.chunks\tnum.muts\tbp.chunks\tnum.muts.chunks"
+       << "\tnum.snp\tnum.ins\tnum.del\tnum.mnp\tbp.muts"
+       << "\tcovg.left\tdeg.left\tcovg.right\tdeg.right"
        << "\tdeg.left.skip\tdeg.right.skip\tcontigs.left.skip\tcontigs.right.skip\n";
     for (const auto ce_cbref : ce_cont())
     {
         Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
 
-        os << "CE\t" << ce_cbptr->contig_id() << '\t' << ce_cbptr->get_len() << '\t' << ce_cbptr->chunk_cont().size() << '\t';
-        size_t reads_bp = 0;
-        size_t total_muts_reads = 0;
+        os << "CE\t"
+           << ce_cbptr->contig_id() << '\t'
+           << ce_cbptr->get_len() << '\t'
+           << static_cast< int >(ce_cbptr->is_unmappable()) << '\t'
+           << ce_cbptr->chunk_cont().size() << '\t'
+           << ce_cbptr->mut_cont().size() << '\t';
+        size_t num_bp_chunks = 0;
+        size_t num_muts_chunks = 0;
         for (const auto rc_cbref : ce_cbptr->chunk_cont())
         {
             Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
-            reads_bp += rc_cbptr->get_r_len();
-            total_muts_reads += rc_cbptr->mut_ptr_cont().size();
+            num_bp_chunks += rc_cbptr->get_r_len();
+            num_muts_chunks += rc_cbptr->mut_ptr_cont().size();
         }
-        os << reads_bp << '\t' << ce_cbptr->mut_cont().size() << '\t' << total_muts_reads << '\t';
+        os << num_bp_chunks << '\t'
+           << num_muts_chunks << '\t';
         size_t n_snp = 0;
         size_t n_ins = 0;
         size_t n_del = 0;
@@ -1682,14 +1692,20 @@ void Graph::dump_detailed_counts(ostream& os) const
             }
             total_mut_bp += mut_cbptr->get_len() + mut_cbptr->get_seq_len();
         }
-        os << n_snp << '\t' << n_ins << '\t' << n_del << '\t' << n_mnp << '\t' << total_mut_bp << '\t';
+        os << n_snp << '\t'
+           << n_ins << '\t'
+           << n_del << '\t'
+           << n_mnp << '\t'
+           << total_mut_bp << '\t';
         size_t cnt_0;
         size_t uniq_0;
         size_t cnt_1;
         size_t uniq_1;
         std::tie(cnt_0, uniq_0, cnt_1, uniq_1) = ce_cbptr->get_out_degrees(1);
-        os << cnt_0 << '\t' << uniq_0 << '\t' << cnt_1 << '\t' << uniq_1 << '\t';
-        os << (int)ce_cbptr->is_unmappable() << '\t';
+        os << cnt_0 << '\t'
+           << uniq_0 << '\t'
+           << cnt_1 << '\t'
+           << uniq_1 << '\t';
         if (ce_cbptr->is_unmappable())
         {
             os << ".\t.\t.\t.";
@@ -1779,9 +1795,9 @@ void Graph::save(std::ostream& os) const
     for (const auto re_cbref : _re_cont)
     {
         Read_Entry_CBPtr re_cbptr = &re_cbref;
-        os.write(re_cbptr->get_name().c_str(), re_cbptr->get_name().size() + 1);
+        os.write(re_cbptr->name().c_str(), re_cbptr->name().size() + 1);
         ++n_strings;
-        n_bytes += re_cbptr->get_name().size() + 1;
+        n_bytes += re_cbptr->name().size() + 1;
     }
     for (const auto ce_cbref : _ce_cont)
     {
@@ -1871,13 +1887,13 @@ void Graph::get_terminal_reads(ostream& os) const
                 if (c_right == rc_cbptr->get_rc())
                 {
                     // scontig ends with negative strand of read
-                    os << ">" << re_cbptr->get_name() << " 1\n"
+                    os << ">" << re_cbptr->name() << " 1\n"
                        << reverseComplement(re_cbptr->get_seq()) << "\n";
                 }
                 else
                 {
                     // scontig ends with positive strand of read
-                    os << ">" << re_cbptr->get_name() << " 0\n"
+                    os << ">" << re_cbptr->name() << " 0\n"
                        << re_cbptr->get_seq() << "\n";
                 }
             }

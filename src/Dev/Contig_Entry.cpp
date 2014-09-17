@@ -53,7 +53,7 @@ void Contig_Entry::cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size
         ASSERT(new_mca_it == new_mut_bptr->chunk_ptr_cont().end());
     }
 
-    ASSERT(check());
+    check();
 }
 
 void Contig_Entry::reverse()
@@ -382,52 +382,56 @@ void Contig_Entry::print_separated_het_mutations(
 }
 */
 
-bool Contig_Entry::check() const
+void Contig_Entry::check() const
 {
-    // check there are chunks mapped to this contig
-    ASSERT(not _chunk_cont.empty());
-    // check mutation container itree
+#ifndef BOOST_DISABLE_ASSERTS
+    // there are chunks mapped to this contig
+    ASSERT(not chunk_cont().empty());
+    // check mutation container
     mut_cont().check();
     // mutations:
-    for (const auto& mut_cbref : mut_cont())
+    for (auto mut_cbref : mut_cont())
     {
         Mutation_CBPtr mut_cbptr = &mut_cbref;
-        // check base coordinates
+        // base coordinates
         ASSERT(mut_cbptr->get_start() <= seq().size() and mut_cbptr->get_end() <= seq().size());
-        // check no empty mutations
+        // no empty mutations
         ASSERT(not mut_cbptr->is_empty());
+        // read chunk ptr container
+        mut_cbptr->chunk_ptr_cont().check();
+        // mutations must be observed by chunks
+        ASSERT(not mut_cbptr->chunk_ptr_cont().empty());
         // check read_chunk_ptr_cont
-        for (const auto& mca_cbref : mut_cbptr->chunk_ptr_cont())
+        for (auto mca_cbref : mut_cbptr->chunk_ptr_cont())
         {
             Mutation_Chunk_Adapter_CBPtr mca_cbptr = &mca_cbref;
-            // check mutation back pointers
+            // Mutation back pointers
             ASSERT(mca_cbptr->mut_cbptr() == mut_cbptr);
-            // check read chunk part of current contig
+            // Read_Chunk part of current contig
             ASSERT(mca_cbptr->chunk_cbptr()->ce_bptr().raw() == this);
         }
     }
-    // check chunk container itree
+    // check chunk container
     chunk_cont().check();
     // read chunks:
-    auto ce_bptr = bptr_to();
-    for (const auto& rc_cbref : chunk_cont())
+    for (auto rc_cbref : chunk_cont())
     {
         Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
-        // check contig entry pointers
-        ASSERT(rc_cbptr->ce_bptr() == ce_bptr);
-        // check contig coordinates
+        // contig entry pointers
+        ASSERT(rc_cbptr->ce_bptr() and rc_cbptr->ce_bptr().raw() == this);
+        // contig coordinates
         ASSERT(rc_cbptr->get_c_end() <= seq().size());
         // mutation pointers:
-        for (const auto& mca_cbref : rc_cbptr->mut_ptr_cont())
+        for (auto mca_cbref : rc_cbptr->mut_ptr_cont())
         {
             Mutation_Chunk_Adapter_CBPtr mca_cbptr = &mca_cbref;
-            // check back Read_Chunk pointers
+            // Read_Chunk back pointers
             ASSERT(mca_cbptr->chunk_cbptr() == rc_cbptr);
-            // check Mutation pointers point inside Mutation container
+            // Mutation pointers point inside Mutation container
             ASSERT(mut_cont().find(mca_cbptr->mut_cbptr(), true));
         }
     }
-    return true;
+#endif
 }
 
 /*

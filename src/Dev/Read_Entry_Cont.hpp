@@ -65,15 +65,15 @@ struct Read_Entry_Comparator
 {
     bool operator () (const Read_Entry& lhs, const Read_Entry& rhs) const
     {
-        return lhs.get_name() < rhs.get_name();
+        return lhs.name() < rhs.name();
     }
     bool operator () (const Read_Entry& lhs, const std::string& rhs_name) const
     {
-        return lhs.get_name() < rhs_name;
+        return lhs.name() < rhs_name;
     }
     bool operator () (const std::string& lhs_name, const Read_Entry& rhs) const
     {
-        return lhs_name < rhs.get_name();
+        return lhs_name < rhs.name();
     }
 };
 

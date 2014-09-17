@@ -281,6 +281,7 @@ public:
     DEFAULT_MOVE_ASOP(Read_Chunk_RE_Cont)
 
     USING_INTRUSIVE_CONT(Base)
+    using Base::check;
 
     // check it is empty when deallocating
     ~Read_Chunk_RE_Cont() { ASSERT(empty()); }

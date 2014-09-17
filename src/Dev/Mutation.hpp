@@ -97,34 +97,6 @@ public:
     Seq_Type& seq() { return _seq; }
     /**@}*/
 
-    /** Find bounded pointer to this object.
-     * Pre: Must be linked.
-     */
-    /*
-    Mutation_CBPtr bptr_to() const
-    {
-        ASSERT(not is_unlinked());
-        if (_parent->_l_child.raw() == this)
-        {
-            return _parent->_l_child;
-        }
-        if (_parent->_r_child.raw() == this)
-        {
-            return _parent->_r_child;
-        }
-        if (_parent->_parent.raw() == this)
-        {
-            return _parent->_parent;
-        }
-        ASSERT(false);
-        return nullptr;
-    }
-    Mutation_BPtr bptr_to()
-    {
-        return static_cast< Mutation_BPtr >(const_cast< const Mutation* >(this)->bptr_to());
-    }
-    */
-
     /** @name Basic queries */
     /**@{*/
     bool is_ins() const { return _len == 0 and _seq_len > 0; }

@@ -98,20 +98,6 @@ public:
     bool is_unmappable() const { return _chunk_cont.size() == 1 and _chunk_cont.begin()->is_unmappable(); }
     /**@}*/
 
-    /** Find bounded pointer to this object.
-     * Pre: Must be linked.
-     */
-    Contig_Entry_CBPtr bptr_to() const
-    {
-        ASSERT(not is_unlinked());
-        return _next->_previous;
-    }
-    Contig_Entry_BPtr bptr_to()
-    {
-        return boost::intrusive::pointer_traits< Contig_Entry_BPtr >::const_cast_from(
-            const_cast< const Contig_Entry* >(this)->bptr_to());
-    }
-
     /** Cut mutation at given offsets.
      * Read chunks containing the original Mutation will get instead 2 adjacent mutations.
      * @param mut_bptr Mutation to cut.
@@ -220,7 +206,7 @@ public:
     }
 
     /** Integrity check. */
-    bool check() const;
+    void check() const;
     //bool check_colour(bool dir) const;
 
     //friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);

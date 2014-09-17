@@ -107,6 +107,7 @@ public:
 
     USING_INTRUSIVE_CONT(Base)
     using Base::reverse;
+    using Base::check;
 
     // check it is empty when deallocating
     ~Mutation_Ptr_Cont() { ASSERT(empty()); }

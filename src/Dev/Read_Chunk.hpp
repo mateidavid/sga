@@ -137,7 +137,7 @@ public:
     void advance_past_del(bool forward = true);
 
     /** Asserts that Pos object is valid. */
-    bool check() const;
+    void check() const;
 
     /** To stream. */
     //friend std::ostream& operator << (std::ostream&, const Read_Chunk_Pos&);
@@ -275,33 +275,6 @@ public:
         return Pos(get_c_end(), (not get_rc()? get_r_end() : get_r_start()), _mut_ptr_cont.end(), 0, this);
     }
 
-    /** Find bounded pointer to this object.
-     * Pre: Must be linked.
-     */
-    Read_Chunk_CBPtr bptr_to() const
-    {
-        ASSERT(not is_unlinked());
-        if (_re_parent->_re_l_child.raw() == this)
-        {
-            return _re_parent->_re_l_child;
-        }
-        if (_re_parent->_re_r_child.raw() == this)
-        {
-            return _re_parent->_re_r_child;
-        }
-        if (_re_parent->_re_parent.raw() == this)
-        {
-            return _re_parent->_re_parent;
-        }
-        ASSERT(false);
-        return nullptr;
-    }
-    Read_Chunk_BPtr bptr_to()
-    {
-        return boost::intrusive::pointer_traits< Read_Chunk_BPtr >::const_cast_from(
-            const_cast< const Read_Chunk* >(this)->bptr_to());
-    }
-
     /** Split Read_Chunk based on contig position.
      * Pre: No Mutation may span c_brk.
      * Pre: Read_Chunk must be unlinked from all containers.
@@ -423,7 +396,8 @@ public:
      */
     static void make_unmappable(Read_Chunk_BPtr rc_bptr);
 
-    bool check() const;
+    /** Integrity check. */
+    void check() const;
 
     //friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
     boost::property_tree::ptree to_ptree() const;

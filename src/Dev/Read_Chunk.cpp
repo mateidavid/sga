@@ -44,8 +44,9 @@ bool Read_Chunk_Pos::past_first_mut() const
     return mca_cit != rc_cptr->mut_ptr_cont().begin();
 }
 
-bool Read_Chunk_Pos::check() const
+void Read_Chunk_Pos::check() const
 {
+#ifndef BOOST_DISABLE_ASSERTS
     ASSERT(rc_cptr != NULL);
     ASSERT(rc_cptr->get_c_start() <= c_pos and c_pos <= rc_cptr->get_c_end());
     ASSERT(rc_cptr->get_r_start() <= r_pos and r_pos <= rc_cptr->get_r_end());
@@ -58,12 +59,12 @@ bool Read_Chunk_Pos::check() const
     ASSERT(not (mut_offset != 0)
            or (not past_last_mut()
                and c_pos == mut().get_start() + min(mut_offset, mut().get_len())));
-    return true;
+#endif
 }
 
 inline Size_Type Read_Chunk_Pos::get_match_len(bool forward) const
 {
-    ASSERT(check());
+    check();
     if (mut_offset != 0)
     {
         return 0;
@@ -80,7 +81,7 @@ inline Size_Type Read_Chunk_Pos::get_match_len(bool forward) const
 
 void Read_Chunk_Pos::increment(Size_Type brk, bool on_contig)
 {
-    ASSERT(check());
+    check();
     ASSERT(*this != rc_cptr->get_end_pos());
     if (brk == 0)
     {
@@ -148,7 +149,7 @@ void Read_Chunk_Pos::increment(Size_Type brk, bool on_contig)
 
 void Read_Chunk_Pos::decrement(Size_Type brk, bool on_contig)
 {
-    ASSERT(check());
+    check();
     ASSERT(*this != rc_cptr->get_start_pos());
     if (brk == 0)
     {
@@ -215,7 +216,7 @@ void Read_Chunk_Pos::decrement(Size_Type brk, bool on_contig)
 
 Read_Chunk_Pos& Read_Chunk_Pos::jump_to_brk(Size_Type brk, bool on_contig)
 {
-    ASSERT(check());
+    check();
     ASSERT(not on_contig or (rc_cptr->get_c_start() <= brk and brk <= rc_cptr->get_c_end()));
     ASSERT(on_contig or (rc_cptr->get_r_start() <= brk and brk <= rc_cptr->get_r_end()));
     bool forward = (on_contig?
@@ -982,8 +983,11 @@ Seq_Type Read_Chunk::substr(Size_Type start, Size_Type len) const
     return get_seq().substr(start - _r_start, len);
 }
 
-bool Read_Chunk::check() const
+void Read_Chunk::check() const
 {
+#ifndef BOOST_DISABLE_ASSERTS
+    // check integrity of mutation pointer container
+    mut_ptr_cont().check();
     // no empty chunks
     ASSERT(get_r_len() > 0);
     // contigs coordinates
@@ -995,17 +999,18 @@ bool Read_Chunk::check() const
     Size_Type r_len = get_r_end() - get_r_start();
     long long delta = 0;
     Mutation_CBPtr last_mut_cbptr = nullptr;
-    for (const auto& mca_cbref : _mut_ptr_cont)
+    for (auto mca_cbref : mut_ptr_cont())
     {
         Mutation_CBPtr mut_cbptr = mca_cbref.raw().mut_cbptr();
         // no empty mutations
         ASSERT(not mut_cbptr->is_empty());
         // mutations must be in contig order
-        //ASSERT(not last_mut_cbptr or last_mut_cbptr->get_end() <= mut_cbptr->get_start());
+        ASSERT(not last_mut_cbptr or last_mut_cbptr->get_end() <= mut_cbptr->get_start());
 #ifndef ALLOW_CONSECUTIVE_MUTATIONS
         ASSERT(not last_mut_cbptr or last_mut_cbptr->get_end() < mut_cbptr->get_start());
 #endif
         delta += (long long)mut_cbptr->get_seq_len() - (long long)mut_cbptr->get_len();
+        last_mut_cbptr = mut_cbptr;
     }
     ASSERT((long long)c_len + delta == (long long)r_len);
 #ifndef ALLOW_PART_MAPPED_INNER_CHUNKS
@@ -1022,12 +1027,12 @@ bool Read_Chunk::check() const
     // unmappable contigs have no mutations and a single chunk
     if (is_unmappable())
     {
-        ASSERT(_mut_ptr_cont.empty());
-        ASSERT(_ce_bptr->chunk_cont().single_node());
-        ASSERT((&*(_ce_bptr->chunk_cont().begin())).raw() == this);
-        ASSERT(_ce_bptr->mut_cont().empty());
+        ASSERT(mut_ptr_cont().empty());
+        ASSERT(ce_bptr()->chunk_cont().single_node());
+        ASSERT((&*(ce_bptr()->chunk_cont().begin())).raw() == this);
+        ASSERT(ce_bptr()->mut_cont().empty());
     }
-    return true;
+#endif
 }
 
 boost::property_tree::ptree Read_Chunk_Pos::to_ptree() const

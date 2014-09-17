@@ -69,36 +69,9 @@ public:
         return *this;
     }
 
-    /** Find bounded pointer to this object.
-     * Pre: Must be linked.
-     */
-    Read_Entry_CBPtr bptr_to() const
-    {
-        ASSERT(not is_unlinked());
-        if (_parent->_l_child.raw() == this)
-        {
-            return _parent->_l_child;
-        }
-        if (_parent->_r_child.raw() == this)
-        {
-            return _parent->_r_child;
-        }
-        if (_parent->_parent.raw() == this)
-        {
-            return _parent->_parent;
-        }
-        ASSERT(false);
-        return nullptr;
-    }
-    Read_Entry_BPtr bptr_to()
-    {
-        return boost::intrusive::pointer_traits< Read_Entry_BPtr >::const_cast_from(
-            const_cast< const Read_Entry* >(this)->bptr_to());
-    }
-
     /** @name Getters */
     /**@{*/
-    const std::string& get_name() const { return _name; }
+    const std::string& name() const { return _name; }
     std::string& name() { return _name; }
     Size_Type get_len() const { return _len; }
     const Read_Chunk_RE_Cont& chunk_cont() const { return _chunk_cont; }
@@ -113,7 +86,7 @@ public:
     bool is_terminal(bool check_start) const;
 
     /** Integrity check. */
-    bool check() const;
+    void check() const;
 
     //friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);
     boost::property_tree::ptree to_ptree() const;

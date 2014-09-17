@@ -92,6 +92,7 @@ public:
 
     USING_INTRUSIVE_CONT(Base)
     using Base::splice;
+    using Base::check;
 
     // check it is empty when deallocating
     ~Read_Chunk_Ptr_Cont() { ASSERT(empty()); }

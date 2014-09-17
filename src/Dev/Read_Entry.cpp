@@ -33,38 +33,47 @@ Seq_Type Read_Entry::get_seq() const
     return res;
 }
 
-bool Read_Entry::check() const
+void Read_Entry::check() const
 {
+#ifndef BOOST_DISABLE_ASSERTS
     // name not empty
-    ASSERT(not _name.empty());
-    for (auto rc_cit = _chunk_cont.begin(); rc_cit != _chunk_cont.end(); ++rc_cit)
+    ASSERT(not name().empty());
+    // check integrity of Read_Chunk container
+    chunk_cont().check();
+    // check Read_Chunk contiguity
+    for (auto rc_cit = chunk_cont().begin(); rc_cit != chunk_cont().end(); ++rc_cit)
     {
         Read_Chunk_CBPtr rc_cbptr = &*rc_cit;
-        // re_ptr
-        ASSERT(rc_cbptr->re_bptr() == this->bptr_to());
+        // re_bptr points here
+        ASSERT(rc_cbptr->re_bptr() and rc_cbptr->re_bptr().raw() == this);
         // read start&end bounds
-        if (rc_cit == _chunk_cont.begin())
+        if (rc_cit == chunk_cont().begin())
         {
             ASSERT(rc_cbptr->get_r_start() == 0);
         }
         auto rc_next_cit = rc_cit;
         rc_next_cit++;
-        if (rc_next_cit == _chunk_cont.end())
+        if (rc_next_cit == chunk_cont().end())
         {
-            ASSERT(rc_cbptr->get_r_end() == _len);
+            ASSERT(rc_cbptr->get_r_end() == get_len());
         }
-         if (rc_next_cit != _chunk_cont.end())
-         {
-             ASSERT(rc_cbptr->get_r_end() == rc_next_cit->get_r_start());
-         }
-         ASSERT(rc_cbptr->check());
+        else
+        {
+            ASSERT(rc_cbptr->get_r_end() == rc_next_cit->get_r_start());
+        }
     }
-    return true;
+    // check individual chunks
+    for (auto rc_cbref : chunk_cont())
+    {
+        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
+        rc_cbptr->check();
+    }
+#endif
 }
 
 boost::property_tree::ptree Read_Entry::to_ptree() const
 {
-    return ptree().put("name", get_name())
+    return ptree().put("name", name())
                   .put("len", get_len())
                   .put("chunk_cont", cont_to_ptree(chunk_cont()));
 }
