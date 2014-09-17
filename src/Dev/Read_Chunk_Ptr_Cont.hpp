@@ -98,6 +98,7 @@ public:
     ~Read_Chunk_Ptr_Cont() { ASSERT(empty()); }
 
     Base::size_type size() = delete;
+    Base::size_type nonconst_size() const { return Base::size(); }
 
     /** Insert read chunk in this container. */
     void insert(Mutation_Chunk_Adapter_BPtr mca_bptr)

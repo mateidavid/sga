@@ -100,6 +100,7 @@ public:
     ~Read_Chunk_CE_Cont() { ASSERT(empty()); }
 
     Base::size_type size() = delete;
+    Base::size_type nonconst_size() const { return Base::size(); }
     bool single_node() const
     {
         return not empty()
@@ -287,6 +288,7 @@ public:
     ~Read_Chunk_RE_Cont() { ASSERT(empty()); }
 
     Base::size_type size() = delete;
+    Base::size_type nonconst_size() const { return Base::size(); }
 
     /** Insert read chunk in this container. */
     void insert(Read_Chunk_BPtr rc_bptr)

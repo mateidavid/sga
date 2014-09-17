@@ -118,6 +118,7 @@ public:
     ~Mutation_Cont() { ASSERT(empty()); }
 
     Base::size_type size() = delete;
+    Base::size_type nonconst_size() const { return Base::size(); }
 
     /** Create a Mutation container using mutations from a cigar string.
      * Pre: Cigar contains no 'M' operations (use disambiguate() first).

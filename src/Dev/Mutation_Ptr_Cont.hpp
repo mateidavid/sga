@@ -113,6 +113,7 @@ public:
     ~Mutation_Ptr_Cont() { ASSERT(empty()); }
 
     Base::size_type size() = delete;
+    Base::size_type nonconst_size() const { return Base::size(); }
 
     /** Construct a Mutation_Ptr_Cont from a Mutation_Cont.
      * Pre: Mutations may not touch in reference.
