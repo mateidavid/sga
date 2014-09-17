@@ -836,6 +836,7 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
     // done with old Contig_Entry
     ce_bptr->mut_cont().clear_and_dispose();
     ce_cont().erase(ce_bptr);
+    Contig_Entry_Fact::del_elem(ce_bptr);
 
     // for all read chunks made unmappable, try to merge them with nearby unmappable chunks
     set< Read_Entry_CBPtr > re_set;
