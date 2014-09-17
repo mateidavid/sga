@@ -110,13 +110,14 @@ public:
     void clear_and_dispose();
 
     /** Integrity checks. */
-    bool check_all() const;
-    bool check(const std::set< Read_Entry_CBPtr >& re_set,
+    void check_all() const;
+    void check(const std::set< Read_Entry_CBPtr >& re_set,
                const std::set< Contig_Entry_CBPtr >& ce_set = std::set< Contig_Entry_CBPtr >()) const;
-    bool check(const std::set< Contig_Entry_CBPtr >& ce_set) const
+    void check(const std::set< Contig_Entry_CBPtr >& ce_set) const
     {
-        return check(std::set< Read_Entry_CBPtr >(), ce_set);
+        check(std::set< Read_Entry_CBPtr >(), ce_set);
     }
+    void check_leaks() const;
     //bool check_colours() const;
 
     /** Stats. */

@@ -31,7 +31,7 @@ void Graph::add_read(string&& name, Seq_Type&& seq)
     re_bptr->chunk_cont().insert(rc_bptr);
     ce_bptr->chunk_cont().insert(rc_bptr);
 
-    ASSERT(check(set< Read_Entry_CBPtr >( { re_bptr })));
+    check(set< Read_Entry_CBPtr >( { re_bptr }));
 }
 
 bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
@@ -113,7 +113,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
         Contig_Entry_Fact::del_elem(ce_new_bptr);
     }
 
-    ASSERT(check(ce_to_check));
+    check(ce_to_check);
     return true;
 } // cut_contig_entry
 
@@ -315,7 +315,7 @@ void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPt
     Contig_Entry_Fact::del_elem(c2_ce_bptr);
 
     //cerr << "after merging read chunks:\n" << *this;
-    ASSERT(check(set< Contig_Entry_CBPtr >( { c1_ce_bptr })));
+    check(set< Contig_Entry_CBPtr >( { c1_ce_bptr }));
 }
 
 vector< std::tuple< Size_Type, Size_Type, Cigar > >
@@ -681,14 +681,14 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     auto region_cont = find_unmappable_regions(re1_bptr, r1_start, r1_start + r1_len);
     unmap_regions(re1_bptr, region_cont);
 
-    ASSERT(check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr })));
+    check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr }));
 
     if (cat_at_step)
     {
         //cerr << "before merging:\n" << *this;
         cat_read_contigs(re1_bptr);
         //cerr << "after merging:\n" << *this;
-        ASSERT(check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr })));
+        check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr }));
     }
 }
 
@@ -848,7 +848,7 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
         //TODO: this should be done as a separate graph operation
         extend_unmapped_chunk(re_bptr, rc_start, rc_end);
     }
-    ASSERT(check(re_set));
+    check(re_set);
 } // unmap_chunk
 
 void Graph::unmap_regions(Read_Entry_BPtr re_bptr, const Range_Cont< Size_Type >& region_cont)
@@ -980,7 +980,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
             } // else (global::unmap_trigger_len < leftover_bp)
         } // else (next_rc_bptr not unmappable)
     } // while (leftover_bp > 0)
-    ASSERT(check(set< Read_Entry_CBPtr >( { re_bptr })));
+    check(set< Read_Entry_CBPtr >( { re_bptr }));
 } // extend_unmapped_chunk_dir
 
 void Graph::extend_unmapped_chunk(Read_Entry_BPtr re_bptr, Size_Type rc_start, Size_Type rc_end)
@@ -1527,8 +1527,9 @@ void Graph::clear_and_dispose()
     re_cont().clear_and_dispose();
 }
 
-bool Graph::check_all() const
+void Graph::check_all() const
 {
+#ifndef BOOST_DISABLE_ASSERTS
     logger("graph", info) << ptree("check_all");
     size_t chunks_count_1 = 0;
     size_t chunks_count_2 = 0;
@@ -1547,19 +1548,17 @@ bool Graph::check_all() const
         chunks_count_2 += ce_cbptr->chunk_cont().size();
     }
     ASSERT(chunks_count_1 == chunks_count_2);
-    return true;
+#endif
 }
 
-bool Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry_CBPtr >& ce_set) const
+void Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry_CBPtr >& ce_set) const
 {
-#ifdef NO_GRAPH_CHECKS
-    return true;
-#endif
+#ifndef BOOST_DISABLE_ASSERTS
     // compute contig entries referenced by the selected read entries
     set< Contig_Entry_CBPtr > ce_extra_set;
     for (const auto& re_cbptr : re_set)
     {
-        for (const auto& rc_cbref : re_cbptr->chunk_cont())
+        for (auto rc_cbref : re_cbptr->chunk_cont())
         {
             ce_extra_set.insert(rc_cbref.raw().ce_bptr());
         }
@@ -1569,7 +1568,7 @@ bool Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry
     set< Read_Entry_CBPtr > re_extra_set;
     for (const auto& ce_cbptr : ce_set)
     {
-        for (const auto& rc_cbref : ce_cbptr->chunk_cont())
+        for (auto rc_cbref : ce_cbptr->chunk_cont())
         {
             re_extra_set.insert(rc_cbref.raw().re_bptr());
         }
@@ -1602,9 +1601,45 @@ bool Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry
         }
         ce_cbptr->check();
     }
-
-    return true;
+#endif
 }
+
+void Graph::check_leaks() const
+{
+#ifndef BOOST_DISABLE_ASSERTS
+    // check Read_Entry factory
+    //   in addition to Read_Entry objects in the graph, there is 1
+    //   in the unique Read_Entry_Cont header node
+    ASSERT(Read_Entry_Fact::size() - Read_Entry_Fact::unused() == re_cont().size() + 1);
+    // check Contig_Entry factory
+    //   in addition to Contig_Entry objects in the graph, there is 1
+    //   in the unique Contig_Entry_Cont header node
+    ASSERT(Contig_Entry_Fact::size() - Contig_Entry_Fact::unused() == ce_cont().size() + 1);
+    // check Read_Chunk factory
+    //   in addition to Read_Chunk objects in the graph, there is 1
+    //   in each Read_Chunk_Cont header node;
+    //   and there is 1 Read_Chunk_Cont in each Read_Entry & each Contig_Entry object
+    size_t num_chunks = 0;
+    for (auto re_cbref : re_cont())
+    {
+        num_chunks += re_cbref.raw().chunk_cont().nonconst_size();
+    }
+    ASSERT(Read_Chunk_Fact::size() - Read_Chunk_Fact::unused()
+           == num_chunks + (re_cont().size() + 1) + (ce_cont().size() + 1));
+    // check Mutation factory:
+    //   in addition to Mutation objects in the graph, there is 1
+    //   in each Mutation_Cont header node;
+    //   and there is 1 Mutation_Cont in each Contig_Entry object
+    size_t num_muts = 0;
+    for (auto ce_cbref : ce_cont())
+    {
+        num_muts += ce_cbref.raw().mut_cont().nonconst_size();
+    }
+    ASSERT(Mutation_Fact::size() - Mutation_Fact::unused()
+           == num_muts + (ce_cont().size() + 1));
+#endif
+}
+
 
 void Graph::dump_detailed_counts(ostream& os) const
 {
@@ -1864,7 +1899,7 @@ void Graph::load(std::istream& is)
         }
     }
     logger("io", info) << "loading graph: n_strings=" << n_strings << ", n_bytes=" << n_bytes << "\n";
-    ASSERT(check_all());
+    check_all();
 }
 
 void Graph::get_terminal_reads(ostream& os) const
