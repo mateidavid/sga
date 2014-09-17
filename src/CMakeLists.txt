@@ -130,9 +130,13 @@ if(OPENMP_FOUND)
 endif()
 message(STATUS "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 
-# compile flags for debug build
+# compile flags for Debug build
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g3 -fno-inline")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g3 -fno-inline")
+
+# compile flags for Release build
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -DBOOST_DISABLE_ASSERTS")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DBOOST_DISABLE_ASSERTS")
 
 # link flags
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath=$ENV{LD_RUN_PATH}")
