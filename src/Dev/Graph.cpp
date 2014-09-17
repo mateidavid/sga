@@ -794,6 +794,11 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
     Size_Type rc_end = rc_bptr->get_r_end();
     Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
 
+    logger("graph", debug2) << ptree("unmap_chunk")
+        .put("re_name", re_bptr->name())
+        .put("start", rc_start)
+        .put("end", rc_end);
+
     // trim contig entry to the extent of the read chunk
     cut_contig_entry(ce_bptr, rc_bptr->get_c_start(), NULL);
     //rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rc_start);
