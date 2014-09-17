@@ -335,7 +335,7 @@ private:
 
 public:
     // disable copy & move
-    Storage(bool activate = true) : _cont(), _next_free_idn() { if (activate) { make_active(); } }
+    Storage(bool activate = true) : _cont(), _next_free_idn(), _load(0) { if (activate) { make_active(); } }
     DELETE_COPY_CTOR(Storage)
     DELETE_MOVE_CTOR(Storage)
     DELETE_COPY_ASOP(Storage)
@@ -404,6 +404,7 @@ private:
             _cont.push_back(wrapper_type());
             res._idn._idx = _cont.size() - 1;
         }
+        ++_load;
         logger("factory", debug1) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
             << ": allocating element at: " << res._idn._idx << "\n";
         return res;
@@ -416,6 +417,7 @@ private:
             << ": deallocating element at: " << elem_cptr._idn._idx << "\n";
         _cont.at(elem_cptr._idn._idx)._next_free_idn = _next_free_idn;
         _next_free_idn = elem_cptr._idn;
+        --_load;
     }
 
     /** Dereference element. */
@@ -430,12 +432,7 @@ private:
     /** Get number of unused entries. */
     size_t ns_unused() const
     {
-        size_t res = 0;
-        for (auto crt = _next_free_idn; crt; crt = ns_wrapper_at(crt)._next_free_idn)
-        {
-            ++res;
-        }
-        return res;
+        return _cont.size() - _load;
     }
 
     /** Dereference wrapper. */
@@ -446,6 +443,7 @@ private:
 
     std::deque< wrapper_type > _cont;
     idn_type _next_free_idn;
+    size_t _load;
 
     static Storage* _active_ptr;
 }; // class Storage
