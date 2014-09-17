@@ -1375,11 +1375,10 @@ void Graph::print_supercontig_lengths(ostream& os)
 
 void Graph::set_contig_ids()
 {
-    size_t contig_id = 0;
     for (auto ce_bref : ce_cont())
     {
         Contig_Entry_BPtr ce_bptr = &ce_bref;
-        ce_bptr->contig_id() = contig_id++;
+        ce_bptr->contig_id() = ce_bptr.to_int();
     }
 }
 
