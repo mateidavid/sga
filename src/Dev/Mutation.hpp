@@ -105,30 +105,6 @@ public:
     bool is_empty() const { return _len == 0 and _seq_len == 0; }
     /**@}*/
 
-    /** Merge with given Mutation.
-     * Pre: Mutations must be unlinked, adjacent on rf, and appear in the same read chunks.
-     * @param rhs Next Mutation.
-     */
-    /*
-    void merge(Mutation&& rhs)
-    {
-        ASSERT(is_unlinked() and rhs.is_unlinked());
-        ASSERT(_chunk_ptr_cont.size() == rhs._chunk_ptr_cont.size());
-        if (is_empty())
-        {
-            *this = std::move(rhs);
-        }
-        else
-        {
-            ASSERT(get_end() == rhs.get_start());
-            ASSERT(have_seq() == rhs.have_seq());
-            _len += rhs._len;
-            _seq_len += rhs._seq_len;
-            _seq += rhs._seq;
-        }
-    }
-    */
-
     /** Extend Mutation.
      * Pre: This Mutation is unlinked.
      * Pre: Mutation contains its alternate sequence.
@@ -149,6 +125,27 @@ public:
         _seq += extra_seq;
         _seq_len += extra_seq.size();
     }
+
+    /** Extend Mutation.
+     * Pre: This Mutation is unlinked.
+     * Pre: Mutation contains its alternate sequence.
+     * @param start Reference position.
+     * @param extra_len Extra reference length.
+     * @param extra_seq Extra alternate sequence.
+     */
+    void extend(Size_Type start, Size_Type extra_len, Size_Type extra_seq_size)
+    {
+        ASSERT(is_unlinked());
+        ASSERT(_seq.empty());
+        if (is_empty())
+        {
+            _start = start;
+        }
+        ASSERT(get_end() == start);
+        _len += extra_len;
+        _seq_len += extra_seq_size;
+    }
+
     /** Extend Mutation; if empty, copy the given Mutation.
      * Pre: This Mutation is unlinked.
      * Pre: Both Mutations contain alternate sequences.

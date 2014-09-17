@@ -642,8 +642,8 @@ Read_Chunk::collapse_mapping(Read_Chunk_BPtr c1rc1_cbptr, Read_Chunk_BPtr rc1rc2
                 Mutation_Chunk_Adapter_BPtr mca_bptr = Mutation_Chunk_Adapter_Fact::new_elem(crt_mut_bptr, c1rc2_bptr);
                 crt_mut_bptr->chunk_ptr_cont().insert(mca_bptr);
                 c1rc2_bptr->mut_ptr_cont().push_back(mca_bptr);
+                crt_mut_bptr = Mutation_Fact::new_elem();
             }
-            crt_mut_bptr = Mutation_Fact::new_elem();
             c_muts.clear();
             r_muts.clear();
 
