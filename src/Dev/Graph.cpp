@@ -1622,33 +1622,89 @@ void Graph::check_leaks() const
     // check Read_Entry factory
     //   in addition to Read_Entry objects in the graph, there is 1
     //   in the unique Read_Entry_Cont header node
-    ASSERT(Read_Entry_Fact::size() - Read_Entry_Fact::unused() == re_cont().size() + 1);
+    ASSERT(Read_Entry_Fact::used() == re_cont().size() + 1);
     // check Contig_Entry factory
     //   in addition to Contig_Entry objects in the graph, there is 1
     //   in the unique Contig_Entry_Cont header node
-    ASSERT(Contig_Entry_Fact::size() - Contig_Entry_Fact::unused() == ce_cont().size() + 1);
+    ASSERT(Contig_Entry_Fact::used() == ce_cont().size() + 1);
     // check Read_Chunk factory
     //   in addition to Read_Chunk objects in the graph, there is 1
     //   in each Read_Chunk_Cont header node;
     //   and there is 1 Read_Chunk_Cont in each Read_Entry & each Contig_Entry object
     size_t num_chunks = 0;
-    for (auto re_cbref : re_cont())
-    {
-        num_chunks += re_cbref.raw().chunk_cont().nonconst_size();
-    }
-    ASSERT(Read_Chunk_Fact::size() - Read_Chunk_Fact::unused()
-           == num_chunks + (re_cont().size() + 1) + (ce_cont().size() + 1));
-    // check Mutation factory:
-    //   in addition to Mutation objects in the graph, there is 1
-    //   in each Mutation_Cont header node;
-    //   and there is 1 Mutation_Cont in each Contig_Entry object
     size_t num_muts = 0;
+    size_t num_mca = 0;
     for (auto ce_cbref : ce_cont())
     {
+        num_chunks += ce_cbref.raw().chunk_cont().nonconst_size();
         num_muts += ce_cbref.raw().mut_cont().nonconst_size();
+        for (auto rc_cbref : ce_cbref.raw().chunk_cont())
+        {
+            num_mca += rc_cbref.raw().mut_ptr_cont().nonconst_size();
+        }
     }
-    ASSERT(Mutation_Fact::size() - Mutation_Fact::unused()
-           == num_muts + (ce_cont().size() + 1));
+    ASSERT(Read_Chunk_Fact::used()
+           == num_chunks + Read_Entry_Fact::used() + Contig_Entry_Fact::used());
+    // check Mutation factory:
+    //   in addition to Mutation objects in the graph
+    //   there is 1 in
+    //   - every Mutation_Cont header node: 1 Mutation_Cont in every Contig_Entry object
+    ASSERT(Mutation_Fact::used()
+           == num_muts + Contig_Entry_Fact::used());
+    // check MCA factory:
+    //   in addition to MCA objects in the graph,
+    //   there is 1 MCA object in:
+    //   - every Mutation_Ptr_Cont header: 1 in every Read_Chunk object
+    //   - every Read_Chunk_Ptr_Cont header: 1 in every Mutation object
+    ASSERT(Mutation_Chunk_Adapter_Fact::used()
+           == num_mca + Read_Chunk_Fact::used() + Mutation_Fact::used());
+    /*
+    if (Mutation_Chunk_Adapter_Fact::used()
+       != num_mca + Read_Chunk_Fact::used() + Mutation_Fact::used())
+    {
+        std::set< Mutation_Chunk_Adapter_Fact::index_type > s;
+
+        s.insert(_re_cont.header_ptr()->chunk_cont().header_ptr()->mut_ptr_cont().get_root_node().to_int());
+        for (auto re_cbref : re_cont())
+        {
+            s.insert(re_cbref.raw().chunk_cont().header_ptr()->mut_ptr_cont().get_root_node().to_int());
+        }
+
+        s.insert(_ce_cont.get_root_node()->mut_cont().header_ptr()->chunk_ptr_cont().get_root_node().to_int());
+        s.insert(_ce_cont.get_root_node()->chunk_cont().header_ptr()->mut_ptr_cont().get_root_node().to_int());
+        for (auto ce_cbref : ce_cont())
+        {
+            s.insert(ce_cbref.raw().mut_cont().header_ptr()->chunk_ptr_cont().get_root_node().to_int());
+            s.insert(ce_cbref.raw().chunk_cont().header_ptr()->mut_ptr_cont().get_root_node().to_int());
+            for (auto rc_cbref : ce_cbref.raw().chunk_cont())
+            {
+                s.insert(rc_cbref.raw().mut_ptr_cont().get_root_node().to_int());
+                for (auto mca_cbref : rc_cbref.raw().mut_ptr_cont())
+                {
+                    s.insert((&mca_cbref).to_int());
+                }
+            }
+            for (auto mut_cbref : ce_cbref.raw().mut_cont())
+            {
+                s.insert(mut_cbref.raw().chunk_ptr_cont().get_root_node().to_int());
+            }
+        }
+        ASSERT(s.size() == num_mca + Read_Chunk_Fact::used() + Mutation_Fact::used());
+        // next, add mca-s which were freed
+        for (auto crt = _mca_fact._next_free_idn; crt; crt = _mca_fact.ns_wrapper_at(crt)._next_free_idn)
+        {
+            s.insert(crt.to_int());
+        }
+        for (Mutation_Chunk_Adapter_Fact::index_type i = 0; i < _mca_fact._cont.size(); ++i)
+        {
+            if (s.count(i) == 0)
+            {
+                std::cerr << "mca_bptr=" << i << " leaked\n";
+                abort();
+            }
+        }
+    }
+    */
 #endif
 }
 
