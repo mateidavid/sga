@@ -694,6 +694,10 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
 
 bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
 {
+    logger("graph", debug1) << ptree("cat_contigs")
+        .put("ce_ptr", ce_bptr.to_int())
+        .put("c_right", c_right);
+
     auto tmp = ce_bptr->can_cat_dir(c_right);
     Contig_Entry_BPtr ce_next_bptr = std::get<0>(tmp).unconst();
     bool same_orientation = std::get<1>(tmp);
@@ -743,6 +747,8 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
 
 void Graph::cat_read_contigs(Read_Entry_BPtr re_bptr)
 {
+    logger("graph", debug1) << ptree("cat_read_contigs").put("re", re_bptr.to_int());
+
     bool done = false;
     while (not done)
     {

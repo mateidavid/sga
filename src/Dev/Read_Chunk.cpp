@@ -786,6 +786,10 @@ void Read_Chunk::reverse()
 void Read_Chunk::cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bptr,
                              Mutation_Cont& mut_cont)
 {
+    logger("Read_Chunk", debug1) << ptree("cat_c_right")
+        .put("rc_ptr", rc_bptr.to_int())
+        .put("rc_next_ptr", rc_next_bptr.to_int());
+
     ASSERT(rc_next_bptr);
     ASSERT(rc_next_bptr->re_bptr() == rc_bptr->re_bptr());
     ASSERT(rc_next_bptr->ce_bptr() == rc_bptr->ce_bptr());

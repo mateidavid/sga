@@ -220,6 +220,10 @@ Contig_Entry::can_cat_dir(bool c_right) const
 void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_next_bptr,
                                vector< MAC::Read_Chunk_CBPtr >& rc_cbptr_cont)
 {
+    logger("Contig_Entry", debug1) << ptree("cat_c_right")
+        .put("ce_ptr", ce_bptr.to_int())
+        .put("ce_next_ptr", ce_next_bptr.to_int());
+
     ASSERT(ce_bptr->_seq_offset == 0 and ce_next_bptr->_seq_offset == 0);
     ASSERT(ce_next_bptr->is_unlinked());
     // first, shift all mutations and chunks from the second Contig_Entry
