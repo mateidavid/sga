@@ -232,7 +232,7 @@ bool Graph::cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk)
 
 void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPtr c2rc2_chunk_bptr, Cigar& rc1rc2_cigar)
 {
-    ASSERT(rc1rc2_cigar.check(c1rc1_chunk_bptr->get_seq(), c2rc2_chunk_bptr->get_seq()));
+    rc1rc2_cigar.check(c1rc1_chunk_bptr->get_seq(), c2rc2_chunk_bptr->get_seq());
     ASSERT(c1rc1_chunk_bptr->get_c_start() == 0 and c1rc1_chunk_bptr->get_c_end() == c1rc1_chunk_bptr->ce_bptr()->get_len());
     ASSERT(c2rc2_chunk_bptr->get_c_start() == 0 and c2rc2_chunk_bptr->get_c_end() == c2rc2_chunk_bptr->ce_bptr()->get_len());
     // do not do anything if the chunks are already mapped to the same contig

@@ -223,8 +223,9 @@ void Cigar::disambiguate(const string& rf_seq, const string& qr_seq)
         .put("cigar", this->to_ptree());
 }
 
-bool Cigar::check(const string& rf_seq, const string& qr_seq) const
+void Cigar::check(const string& rf_seq, const string& qr_seq) const
 {
+#ifndef BOOST_DISABLE_ASSERTS
     ASSERT(rf_seq.size() == get_rf_len());
     ASSERT(qr_seq.size() == get_qr_len());
     Size_Type check_rf_len = 0;
@@ -250,7 +251,7 @@ bool Cigar::check(const string& rf_seq, const string& qr_seq) const
     }
     ASSERT(check_rf_len == get_rf_len());
     ASSERT(check_qr_len == get_qr_len());
-    return true;
+#endif
 }
 
 boost::property_tree::ptree Cigar_Op::to_ptree() const
