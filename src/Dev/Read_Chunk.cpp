@@ -281,7 +281,9 @@ Read_Chunk::Read_Chunk(Read_Entry_BPtr re_bptr, Contig_Entry_BPtr ce_bptr)
       _c_start(0),
       _c_len(ce_bptr->get_len()),
       _re_bptr(re_bptr),
-      _ce_bptr(ce_bptr)
+      _ce_bptr(ce_bptr),
+      _mut_ptr_cont(),
+      _bits(0)
 {
     ASSERT(_r_len == _c_len);
     _set_rc(false);

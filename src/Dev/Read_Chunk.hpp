@@ -179,7 +179,8 @@ private:
           _c_len(0),
           _re_bptr(nullptr),
           _ce_bptr(nullptr),
-          _mut_ptr_cont()
+          _mut_ptr_cont(),
+          _bits(0)
     {
         _set_rc(false);
         _set_is_unmappable(false);
@@ -196,7 +197,8 @@ private:
           _c_len(len),
           _re_bptr(re_bptr),
           _ce_bptr(NULL),
-          _mut_ptr_cont()
+          _mut_ptr_cont(),
+          _bits(0)
     {
         _set_rc(false);
         _set_is_unmappable(false);
