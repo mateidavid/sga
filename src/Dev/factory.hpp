@@ -352,6 +352,7 @@ public:
     static val_type& elem_at(idn_type idn) { ASSERT(active_ptr()); return active_ptr()->ns_elem_at(idn); }
     static size_t size() { ASSERT(active_ptr()); return active_ptr()->ns_size(); }
     static size_t unused() { ASSERT(active_ptr()); return active_ptr()->ns_unused(); }
+    static size_t used() { ASSERT(active_ptr()); return active_ptr()->ns_used(); }
 
     boost::property_tree::ptree stats() const
     {
@@ -430,10 +431,10 @@ private:
     size_t ns_size() const { return _cont.size(); }
 
     /** Get number of unused entries. */
-    size_t ns_unused() const
-    {
-        return _cont.size() - _load;
-    }
+    size_t ns_unused() const { return _cont.size() - _load; }
+
+    /** Get number of unused entries. */
+    size_t ns_used() const { return _load; }
 
     /** Dereference wrapper. */
     wrapper_type& ns_wrapper_at(idn_type idn) const
