@@ -7,7 +7,6 @@ include_directories(BEFORE ${CMAKE_SOURCE_DIR}/interval-tree/include)
 include_directories(BEFORE ${CMAKE_SOURCE_DIR}/boost-intrusive/include) # <-first
 
 add_library(mac STATIC
-    globals.cpp
     global_assert.cpp
     Mutation_Chunk_Adapter.cpp
     Mutation.cpp
@@ -38,7 +37,6 @@ target_link_libraries(mac-bin
 
 add_executable(test-itree-and-factory
     test-itree-and-factory.cpp
-    globals.cpp
     global_assert.cpp
 )
 target_link_libraries(test-itree-and-factory

@@ -85,7 +85,7 @@ void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
             string r_seq;
             iss >> r_id >> r_seq;
             ASSERT(not iss.eof());
-            global::assert_message = string("VT ") + r_id;
+            global::assert_message() = string("VT ") + r_id;
             g.add_read(std::move(r_id), std::move(r_seq));
         }
         else if (rec_type == "ED")
@@ -105,7 +105,7 @@ void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
             // switch to open interval ends
             ++r1_end;
             ++r2_end;
-            global::assert_message = string("ED ") + r1_id + " " + r2_id;
+            global::assert_message() = string("ED ") + r1_id + " " + r2_id;
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5), po.cat_at_step);
         }
         if (po.check_at_step)
@@ -143,6 +143,7 @@ int real_main(const Program_Options& po)
     {
         logger("mac", info) << ptree("loading").put("input_file", po.input_file);
         ixstream tmp_fs(po.input_file);
+        g.unmap_trigger_len() = po.unmap_trigger_len;
         load_asqg(tmp_fs, po, g);
     }
     else
@@ -218,7 +219,7 @@ int real_main(const Program_Options& po)
 int main(int argc, char* argv[])
 {
     Program_Options po;
-    global::program_name = argv[0];
+    global::program_name() = argv[0];
 
     bo::options_description generic_opts_desc("Generic options");
     bo::options_description config_opts_desc("Configuration options");

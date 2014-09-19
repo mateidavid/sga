@@ -46,6 +46,8 @@ public:
     Read_Entry_Cont& re_cont() { return _re_cont; }
     const Contig_Entry_Cont& ce_cont() const { return _ce_cont; }
     Contig_Entry_Cont& ce_cont() { return _ce_cont; }
+    const Size_Type& unmap_trigger_len() const { return _unmap_trigger_len; }
+    Size_Type& unmap_trigger_len() { return _unmap_trigger_len; }
 
     /** Add a read.
      * Create basic Read_Entry, Read_Chunk, and Contig_Entry objects,
@@ -145,6 +147,8 @@ private:
 
     Read_Entry_Cont _re_cont;
     Contig_Entry_Cont _ce_cont;
+
+    Size_Type _unmap_trigger_len;
 
     /** Cut Read_Entry at given read coordinate.
      * NOTE: A cut must be forced iff it is at the edge of a read.

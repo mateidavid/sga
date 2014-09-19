@@ -1,6 +1,5 @@
 #include "Graph.hpp"
 
-#include "globals.hpp"
 #include "Cigar.hpp"
 #include "../Util/Util.h"
 #include "logger.hpp"
@@ -946,7 +945,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
         else // next_rc_bptr not unmappable
         {
             // next chunk is mappable
-            if (leftover_bp <= global::unmap_trigger_len)
+            if (leftover_bp <= unmap_trigger_len())
             {
                 unmap_chunk(next_rc_bptr);
                 continue;
@@ -959,7 +958,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
                 list< std::tuple< Size_Type, Size_Type > > skipped_chunks;
                 Size_Type skipped_len = 0;
                 while (not next_rc_bptr->is_unmappable()
-                       and skipped_len + next_rc_bptr->get_r_len() <= global::unmap_trigger_len)
+                       and skipped_len + next_rc_bptr->get_r_len() <= unmap_trigger_len())
                 {
                     skipped_chunks.push_back(std::make_tuple(next_rc_bptr->get_r_start(), next_rc_bptr->get_r_end()));
                     skipped_len += next_rc_bptr->get_r_len();
@@ -967,7 +966,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
                     // since skipped_len < unmap_trigger_len < leftover_bp
                     ASSERT(next_rc_bptr);
                 }
-                ASSERT(skipped_len <= global::unmap_trigger_len);
+                ASSERT(skipped_len <= unmap_trigger_len());
                 if (next_rc_bptr->is_unmappable())
                 {
                     // unmap all skipped chunks (if they are not modified in previous iterations)
