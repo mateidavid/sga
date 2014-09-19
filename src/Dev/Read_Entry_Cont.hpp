@@ -109,6 +109,7 @@ public:
     void insert(Read_Entry_BPtr re_bptr)
     {
         auto res = Base::insert(*re_bptr);
+        static_cast< void >(res);
         ASSERT(res.second);
     }
 
