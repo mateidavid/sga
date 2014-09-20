@@ -1,0 +1,28 @@
+From 89f7d9727a16f4eb1b95a48a1a06444c24c59fc4 Mon Sep 17 00:00:00 2001
+From: Matei David <matei@cs.toronto.edu>
+Date: Fri, 11 Jul 2014 18:06:16 -0400
+Subject: [PATCH] upstream fix: only integral static consts can be initialized
+ in-class
+
+---
+ src/SGA/preqc.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/SGA/preqc.cpp b/src/SGA/preqc.cpp
+index 7e7346f..1d6a8d9 100644
+--- a/src/SGA/preqc.cpp
++++ b/src/SGA/preqc.cpp
+@@ -58,8 +58,9 @@ struct ModelParameters
+     double mean_read_starts;
+     double mean_error_kmer_depth;
+     double error_rate;
+-    static const double error_rate_prior = 0.02;
++    static const double error_rate_prior;
+ };
++const double ModelParameters::error_rate_prior = 0.02;
+ 
+ // struct to store posterior probabilities calculated
+ // by the model
+-- 
+1.9.1
+

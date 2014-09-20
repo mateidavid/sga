@@ -1,0 +1,25 @@
+From 9df8eb79d370700c039da502e05d61fc5ba11e6e Mon Sep 17 00:00:00 2001
+From: Matei David <matei@cs.toronto.edu>
+Date: Fri, 11 Jul 2014 18:05:17 -0400
+Subject: [PATCH] upstream fix: typo
+
+---
+ src/Algorithm/ConnectProcess.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/Algorithm/ConnectProcess.h b/src/Algorithm/ConnectProcess.h
+index ba8ab7b..7ba0c43 100644
+--- a/src/Algorithm/ConnectProcess.h
++++ b/src/Algorithm/ConnectProcess.h
+@@ -7,7 +7,7 @@
+ // ConnectProcess - Wrapper to resolve the sequence
+ // connecting two ends of a paired end read
+ //
+-#ifndef CONNECTROCESS_H
++#ifndef CONNECTPROCESS_H
+ #define CONNECTPROCESS_H
+ 
+ #include "Util.h"
+-- 
+1.9.1
+

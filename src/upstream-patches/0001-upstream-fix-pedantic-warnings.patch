@@ -1,0 +1,394 @@
+From 2874f75d5679f5f93db81bf937be7b0390ebefa4 Mon Sep 17 00:00:00 2001
+From: Matei David <matei@cs.toronto.edu>
+Date: Fri, 11 Jul 2014 18:04:58 -0400
+Subject: [PATCH] upstream fix: pedantic warnings
+
+---
+ src/Algorithm/ExtensionDP.h                | 2 +-
+ src/Algorithm/HaplotypeBuilder.h           | 2 +-
+ src/Algorithm/KmerOverlaps.h               | 2 +-
+ src/Algorithm/LRAlignment.cpp              | 2 +-
+ src/Algorithm/LRAlignment.h                | 2 +-
+ src/Algorithm/OverlapTools.h               | 2 +-
+ src/Algorithm/VariationBuilderCommon.h     | 2 +-
+ src/Concurrency/SequenceProcessFramework.h | 2 +-
+ src/GraphDiff/DindelUtil.h                 | 2 +-
+ src/GraphDiff/HapgenUtil.h                 | 2 +-
+ src/SGA/OverlapCommon.h                    | 2 +-
+ src/SGA/connect.cpp                        | 2 +-
+ src/SQG/ASQG.h                             | 2 +-
+ src/SQG/SQG.h                              | 2 +-
+ src/Scaffold/ScaffoldAlgorithms.h          | 2 +-
+ src/Scaffold/ScaffoldSearch.h              | 2 +-
+ src/Scaffold/ScaffoldVisitors.h            | 2 +-
+ src/StringGraph/RemovalAlgorithm.h         | 2 +-
+ src/StringGraph/SGAlgorithms.h             | 2 +-
+ src/StringGraph/SGSearch.h                 | 2 +-
+ src/StringGraph/SGUtil.h                   | 2 +-
+ src/SuffixTools/BWTAlgorithms.h            | 2 +-
+ src/SuffixTools/BWTCABauerCoxRosone.h      | 2 +-
+ src/SuffixTools/BWTCARopebwt.h             | 2 +-
+ src/SuffixTools/BWTReader.h                | 2 +-
+ src/Util/Alphabet.h                        | 6 +++---
+ src/Util/StdAlnTools.h                     | 2 +-
+ src/Util/VCFUtil.h                         | 2 +-
+ 28 files changed, 30 insertions(+), 30 deletions(-)
+
+diff --git a/src/Algorithm/ExtensionDP.h b/src/Algorithm/ExtensionDP.h
+index aa88aa0..7c00c13 100644
+--- a/src/Algorithm/ExtensionDP.h
++++ b/src/Algorithm/ExtensionDP.h
+@@ -125,6 +125,6 @@ namespace ExtensionDP
+ 
+     // Print the full scoring matrix
+     void printMatrix(const BandedDPColumnPtrVector& columnPtrVec);
+-};
++}
+ 
+ #endif
+diff --git a/src/Algorithm/HaplotypeBuilder.h b/src/Algorithm/HaplotypeBuilder.h
+index 7283992..946a33f 100644
+--- a/src/Algorithm/HaplotypeBuilder.h
++++ b/src/Algorithm/HaplotypeBuilder.h
+@@ -43,7 +43,7 @@ enum HaplotypeBuilderReturnCode
+     HBRC_OK,
+     HBRC_TOO_MANY_VERTICES,
+     HBRC_NO_PATH,
+-    HBRC_WALK_FAILED,
++    HBRC_WALK_FAILED
+ };
+ 
+ //
+diff --git a/src/Algorithm/KmerOverlaps.h b/src/Algorithm/KmerOverlaps.h
+index 5085091..d29e0b7 100644
+--- a/src/Algorithm/KmerOverlaps.h
++++ b/src/Algorithm/KmerOverlaps.h
+@@ -52,6 +52,6 @@ SequenceOverlapPairVector approximateMatch(const std::string& query,
+                                            int bandwidth, 
+                                            int max_interval,
+                                            const BWTIndexSet& indices);
+-};
++}
+ 
+ #endif
+diff --git a/src/Algorithm/LRAlignment.cpp b/src/Algorithm/LRAlignment.cpp
+index b05e18f..8da448a 100644
+--- a/src/Algorithm/LRAlignment.cpp
++++ b/src/Algorithm/LRAlignment.cpp
+@@ -1140,4 +1140,4 @@ void extendHitFullLength(LRHit& hit, uint8_t* pQueryPacked, uint8_t* pTargetPack
+ 
+ 
+ 
+-};
++}
+diff --git a/src/Algorithm/LRAlignment.h b/src/Algorithm/LRAlignment.h
+index cbf9ef9..4d22e7e 100644
+--- a/src/Algorithm/LRAlignment.h
++++ b/src/Algorithm/LRAlignment.h
+@@ -226,6 +226,6 @@ void extendHitFullLength(LRHit& hit, uint8_t* pQueryPacked, uint8_t* pTargetPack
+                          int query_length, int target_length, AlnParam* pStdAlnPar);
+ 
+ 
+-};
++}
+ 
+ #endif
+diff --git a/src/Algorithm/OverlapTools.h b/src/Algorithm/OverlapTools.h
+index a7c5e96..d51642b 100644
+--- a/src/Algorithm/OverlapTools.h
++++ b/src/Algorithm/OverlapTools.h
+@@ -37,6 +37,6 @@ namespace OverlapTools
+                                 int minOverlap, double maxErrorRate, const DPAlignment& dpAlign,
+                                 Match& outMatch);
+ 
+-};
++}
+ 
+ #endif
+diff --git a/src/Algorithm/VariationBuilderCommon.h b/src/Algorithm/VariationBuilderCommon.h
+index 819ae65..d849ac1 100644
+--- a/src/Algorithm/VariationBuilderCommon.h
++++ b/src/Algorithm/VariationBuilderCommon.h
+@@ -76,6 +76,6 @@ std::string makeDeBruijnVertex(const std::string& v, char edgeBase, EdgeDir dire
+ // Add a de Bruijn graph edge to the given graph betwee pX and pY.
+ void addSameStrandDeBruijnEdges(StringGraph* pGraph, const Vertex* pX, const Vertex* pY, EdgeDir direction);
+ 
+-};
++}
+ 
+ #endif
+diff --git a/src/Concurrency/SequenceProcessFramework.h b/src/Concurrency/SequenceProcessFramework.h
+index fa60151..35736ed 100644
+--- a/src/Concurrency/SequenceProcessFramework.h
++++ b/src/Concurrency/SequenceProcessFramework.h
+@@ -387,6 +387,6 @@ size_t processSequencesParallelOpenMP(const std::string& readsFile, std::vector<
+ }
+ 
+ 
+-};
++}
+ 
+ #endif
+diff --git a/src/GraphDiff/DindelUtil.h b/src/GraphDiff/DindelUtil.h
+index f1ca353..3c8dfe5 100644
+--- a/src/GraphDiff/DindelUtil.h
++++ b/src/GraphDiff/DindelUtil.h
+@@ -71,6 +71,6 @@ namespace DindelUtil
+ 
+     void initializeCodeCounts(int counts[DRC_NUM_CODES]);
+     void printReturnReport(const int counts[DRC_NUM_CODES]);
+-};
++}
+ 
+ #endif
+diff --git a/src/GraphDiff/HapgenUtil.h b/src/GraphDiff/HapgenUtil.h
+index cd0a373..578b346 100644
+--- a/src/GraphDiff/HapgenUtil.h
++++ b/src/GraphDiff/HapgenUtil.h
+@@ -136,6 +136,6 @@ namespace HapgenUtil
+     // Print an alignment to a reference
+     void printAlignment(const std::string& query, const HapgenAlignment& aln, const ReadTable* pRefTable);
+ 
+-};
++}
+ 
+ #endif
+diff --git a/src/SGA/OverlapCommon.h b/src/SGA/OverlapCommon.h
+index ac8c48a..d8c6207 100644
+--- a/src/SGA/OverlapCommon.h
++++ b/src/SGA/OverlapCommon.h
+@@ -30,6 +30,6 @@ void parseHitsString(const std::string& hitString,
+                      size_t& sumBlockSize,
+                      OverlapVector& outVector, 
+                      bool& isSubstring);
+-};
++}
+ 
+ #endif
+diff --git a/src/SGA/connect.cpp b/src/SGA/connect.cpp
+index dae571b..8c4adf7 100644
+--- a/src/SGA/connect.cpp
++++ b/src/SGA/connect.cpp
+@@ -88,7 +88,7 @@ namespace opt
+ 
+ static const char* shortopts = "p:m:e:t:l:s:o:d:v";
+ 
+-enum { OPT_HELP = 1, OPT_VERSION, OPT_METRICS, OPT_HETSV, OPT_CONNECTED_ONLY, };
++enum { OPT_HELP = 1, OPT_VERSION, OPT_METRICS, OPT_HETSV, OPT_CONNECTED_ONLY };
+ 
+ static const struct option longopts[] = {
+     { "verbose",         no_argument,       NULL, 'v' },
+diff --git a/src/SQG/ASQG.h b/src/SQG/ASQG.h
+index 3f9ddd5..378f3bc 100644
+--- a/src/SQG/ASQG.h
++++ b/src/SQG/ASQG.h
+@@ -115,6 +115,6 @@ namespace ASQG
+ 
+     // Writing functions
+     void writeFields(std::ostream& out, const StringVector& fields);
+-};
++}
+ 
+ #endif
+diff --git a/src/SQG/SQG.h b/src/SQG/SQG.h
+index c5b31cb..79152ce 100644
+--- a/src/SQG/SQG.h
++++ b/src/SQG/SQG.h
+@@ -96,6 +96,6 @@ namespace SQG
+     typedef TagValue<int> IntTag;
+     typedef TagValue<float> FloatTag;
+     typedef TagValue<std::string> StringTag;
+-};
++}
+ 
+ #endif
+diff --git a/src/Scaffold/ScaffoldAlgorithms.h b/src/Scaffold/ScaffoldAlgorithms.h
+index ffaafeb..1fadadc 100644
+--- a/src/Scaffold/ScaffoldAlgorithms.h
++++ b/src/Scaffold/ScaffoldAlgorithms.h
+@@ -67,6 +67,6 @@ namespace ScaffoldAlgorithms
+     // Returns all the vertices contained on the cycle
+     ScaffoldVertexVector checkForStrictCycle(ScaffoldVertex* pVertex);
+     ScaffoldEdge* _cycleDFSBothDir(ScaffoldVertex* pVertex, LayoutEdgeMap& predMap);
+-};
++}
+ 
+ #endif
+diff --git a/src/Scaffold/ScaffoldSearch.h b/src/Scaffold/ScaffoldSearch.h
+index 284be11..1632858 100644
+--- a/src/Scaffold/ScaffoldSearch.h
++++ b/src/Scaffold/ScaffoldSearch.h
+@@ -70,6 +70,6 @@ namespace ScaffoldSearch
+ 
+     void printWalks(const ScaffoldWalkVector& walkVector);
+ 
+-};
++}
+ 
+ #endif
+diff --git a/src/Scaffold/ScaffoldVisitors.h b/src/Scaffold/ScaffoldVisitors.h
+index 0aeae4c..6166e8a 100644
+--- a/src/Scaffold/ScaffoldVisitors.h
++++ b/src/Scaffold/ScaffoldVisitors.h
+@@ -21,7 +21,7 @@ namespace ScaffoldAlgorithms
+                                              int& dist, double& sd, EdgeDir& dir_yz, 
+                                              EdgeDir& dir_zy, EdgeComp& comp);
+ 
+-};
++}
+ 
+ // Write summary statistics of the scaffold graph to stdout
+ class ScaffoldStatsVisitor
+diff --git a/src/StringGraph/RemovalAlgorithm.h b/src/StringGraph/RemovalAlgorithm.h
+index 877329b..4604318 100644
+--- a/src/StringGraph/RemovalAlgorithm.h
++++ b/src/StringGraph/RemovalAlgorithm.h
+@@ -28,6 +28,6 @@ void findPotentialOverlaps(const Vertex* pX, const Edge* pRemovalEdge, double ma
+ void eliminateReachableEdges(const Vertex* pVertex, const Edge* pRemovalEdge, double maxER, int minLength, SGAlgorithms::EdgeDescOverlapMap& outMap);
+ void enqueueEdges(const Vertex* pY, EdgeDir dirY, const Overlap& ovrXY, const EdgeDesc& edXY, int minOverlap, ExploreQueue& outQueue, EdgeDescSet* pSeenSet);
+ 
+-};
++}
+ 
+ #endif
+diff --git a/src/StringGraph/SGAlgorithms.h b/src/StringGraph/SGAlgorithms.h
+index ac2c648..54e916f 100644
+--- a/src/StringGraph/SGAlgorithms.h
++++ b/src/StringGraph/SGAlgorithms.h
+@@ -73,6 +73,6 @@ EdgeDesc getEdgeDescFromEdge(Edge* pEdge);
+ 
+ void printOverlapMap(const EdgeDescOverlapMap& overlapMap);
+ 
+-};
++}
+ 
+ #endif
+diff --git a/src/StringGraph/SGSearch.h b/src/StringGraph/SGSearch.h
+index 0f26786..0750dba 100644
+--- a/src/StringGraph/SGSearch.h
++++ b/src/StringGraph/SGSearch.h
+@@ -77,6 +77,6 @@ namespace SGSearch
+ 
+     // Returns true if all the endpoints of the edges in epv are in vertexSet
+     bool checkEndpointsInSet(EdgePtrVec& epv, std::set<Vertex*>& vertexSet);
+-};
++}
+ 
+ #endif
+diff --git a/src/StringGraph/SGUtil.h b/src/StringGraph/SGUtil.h
+index e5c2582..bccd76f 100644
+--- a/src/StringGraph/SGUtil.h
++++ b/src/StringGraph/SGUtil.h
+@@ -28,5 +28,5 @@ StringGraph* loadASQG(const std::string& filename, const unsigned int minOverlap
+ StringGraph* loadFASTA(const std::string& filename);
+ 
+ 
+-};
++}
+ #endif
+diff --git a/src/SuffixTools/BWTAlgorithms.h b/src/SuffixTools/BWTAlgorithms.h
+index a4cb868..e2e860a 100644
+--- a/src/SuffixTools/BWTAlgorithms.h
++++ b/src/SuffixTools/BWTAlgorithms.h
+@@ -192,6 +192,6 @@ std::string sampleRandomString(const BWT* pBWT);
+ // Returns a randomly chosen substring from the BWT 
+ std::string sampleRandomSubstring(const BWT* pBWT, size_t len);
+ 
+-};
++}
+ 
+ #endif
+diff --git a/src/SuffixTools/BWTCABauerCoxRosone.h b/src/SuffixTools/BWTCABauerCoxRosone.h
+index 3aae253..05676b9 100644
+--- a/src/SuffixTools/BWTCABauerCoxRosone.h
++++ b/src/SuffixTools/BWTCABauerCoxRosone.h
+@@ -70,6 +70,6 @@ namespace BWTCA
+ 
+     // Calculate absolute position for each element of the nvector
+     void calculateAbsolutePositions(BCRVector& bcrVector, const AlphaCount64& suffixSymbolCounts);
+-};
++}
+ 
+ #endif
+diff --git a/src/SuffixTools/BWTCARopebwt.h b/src/SuffixTools/BWTCARopebwt.h
+index 5b84173..e7add98 100644
+--- a/src/SuffixTools/BWTCARopebwt.h
++++ b/src/SuffixTools/BWTCARopebwt.h
+@@ -16,6 +16,6 @@ namespace BWTCA
+ {
+     void runRopebwt(const std::string& input_filename, const std::string& bwt_out_name, 
+                     bool use_threads, bool do_reverse);
+-};
++}
+ 
+ #endif
+diff --git a/src/SuffixTools/BWTReader.h b/src/SuffixTools/BWTReader.h
+index 8113544..cdb86c9 100644
+--- a/src/SuffixTools/BWTReader.h
++++ b/src/SuffixTools/BWTReader.h
+@@ -51,6 +51,6 @@ class IBWTReader
+ namespace BWTReader
+ {
+     IBWTReader* createReader(const std::string& filename);
+-};
++}
+ 
+ #endif
+diff --git a/src/Util/Alphabet.h b/src/Util/Alphabet.h
+index 779ce3d..04fa5db 100644
+--- a/src/Util/Alphabet.h
++++ b/src/Util/Alphabet.h
+@@ -71,7 +71,7 @@ namespace DNA_ALPHABET
+     }
+ 
+     static const uint8_t size = 4;
+-};
++}
+ 
+ namespace BWT_ALPHABET
+ {
+@@ -105,7 +105,7 @@ namespace BWT_ALPHABET
+     {
+         return RANK_ALPHABET[idx];
+     }
+-};
++}
+ 
+ // IUPAC ambiguity alphabet
+ namespace IUPAC
+@@ -122,7 +122,7 @@ namespace IUPAC
+     // Returns a string defining the possible unambiguous bases for each symbol
+     // in the alphabet
+     std::string getPossibleSymbols(char c);
+-};
++}
+ 
+ //
+ // A simple class holding the count for each base of a DNA string (plus the terminator)
+diff --git a/src/Util/StdAlnTools.h b/src/Util/StdAlnTools.h
+index ee33fac..88af31a 100644
+--- a/src/Util/StdAlnTools.h
++++ b/src/Util/StdAlnTools.h
+@@ -125,6 +125,6 @@ namespace StdAlnTools
+ 
+     // Print the padded aligned strings
+     void printPaddedStrings(const std::string& s1, const std::string& s2, const std::string& m, int colSize = 120);
+-};
++}
+ 
+ #endif
+diff --git a/src/Util/VCFUtil.h b/src/Util/VCFUtil.h
+index dcdba7b..ae705bb 100644
+--- a/src/Util/VCFUtil.h
++++ b/src/Util/VCFUtil.h
+@@ -115,6 +115,6 @@ namespace VCFUtil
+     // constants
+     static const int HOMOPOLYMER_ANNOTATE_THRESHOLD = 5;
+ 
+-};
++}
+ 
+ #endif
+-- 
+1.9.1
+

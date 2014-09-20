@@ -1,0 +1,24 @@
+From 71d1b2f9755dd81395625c4c85cbd0a3243552c4 Mon Sep 17 00:00:00 2001
+From: Matei David <matei@cs.toronto.edu>
+Date: Fri, 11 Jul 2014 18:06:56 -0400
+Subject: [PATCH] upstream fix: explicitly include omp header
+
+---
+ src/SGA/overlap-long.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/SGA/overlap-long.cpp b/src/SGA/overlap-long.cpp
+index 81c9652..7af017d 100644
+--- a/src/SGA/overlap-long.cpp
++++ b/src/SGA/overlap-long.cpp
+@@ -10,6 +10,7 @@
+ #include <fstream>
+ #include <sstream>
+ #include <iterator>
++#include <omp.h>
+ #include "Util.h"
+ #include "overlap-long.h"
+ #include "SuffixArray.h"
+-- 
+1.9.1
+
