@@ -56,5 +56,7 @@ target_link_libraries(test-Read_Chunk-traversal
     ${ZLIB_LIBRARIES}
 )
 
+add_executable(check-assert check-assert.cpp global_assert.cpp)
+
 
 file(COPY factory.gdb mac-gdb.gdb DESTINATION .)
