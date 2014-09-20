@@ -7,6 +7,7 @@
 #include <iostream>
 #include <limits>
 #include <deque>
+#include <vector>
 #include <type_traits>
 #include <boost/intrusive/pointer_traits.hpp>
 #include <boost/mpl/if.hpp>
@@ -50,9 +51,156 @@ struct Cloner;
 template < typename, typename >
 struct Disposer;
 template < typename, typename >
-class Storage;
-template < typename, typename >
 class Factory;
+
+
+/** Wrapper type used by Storage objects to store free node list without overhead. */
+template < typename Value, typename Index = uint32_t >
+union Value_Wrapper
+{
+    typedef Value val_type;
+    typedef Index index_type;
+
+    val_type _val;
+    index_type _idx;
+
+    Value_Wrapper() : _idx() {}
+    Value_Wrapper(const Value_Wrapper& rhs) : _idx(rhs._idx) {}
+    //Value_Wrapper(Value_Wrapper&& rhs) : _idx(rhs._idx) {}
+    ~Value_Wrapper() { (&(this->_idx))->~index_type(); }
+};
+
+template < typename Value, typename Index = uint32_t >
+class Storage
+{
+public:
+    typedef Value val_type;
+    typedef Index index_type;
+    static_assert(not std::is_const< val_type >::value, "Storage instantiated with const type");
+private:
+    typedef Value_Wrapper< val_type, index_type > wrapper_type;
+
+public:
+    // disable copy & move
+    Storage(bool activate = true) : _cont(), _next_free_idx(0), _load(0) { if (activate) { make_active(); } }
+    DELETE_COPY_CTOR(Storage)
+    DELETE_MOVE_CTOR(Storage)
+    DELETE_COPY_ASOP(Storage)
+    DELETE_MOVE_ASOP(Storage)
+
+    void make_active() { active_ptr() = this; }
+
+    /** Get and set active storage. */
+    static Storage*& active_ptr()
+    {
+        static Storage* _active_ptr = nullptr;
+        return _active_ptr;
+    }
+
+    /** Static methods that use active storage. */
+    static index_type allocate() { ASSERT(active_ptr()); return active_ptr()->ns_allocate(); }
+    static void deallocate(index_type idx) { ASSERT(active_ptr()); active_ptr()->ns_deallocate(idx); }
+    static val_type& elem_at(index_type idx) { ASSERT(active_ptr()); return active_ptr()->ns_wrapper_at(idx)._val; }
+    static size_t size() { ASSERT(active_ptr()); return active_ptr()->ns_size(); }
+    static size_t unused() { ASSERT(active_ptr()); return active_ptr()->ns_unused(); }
+    static size_t used() { ASSERT(active_ptr()); return active_ptr()->ns_used(); }
+
+    boost::property_tree::ptree stats() const
+    {
+        return ptree().put("size", ns_size()).put("unused", ns_unused());
+    }
+
+    void save(std::ostream& os) const
+    {
+        os.write(reinterpret_cast< const char* >(&_next_free_idx), sizeof(_next_free_idx));
+        uint64_t sz = _cont.size();
+        os.write(reinterpret_cast< const char* >(&sz), sizeof(sz));
+        size_t bytes = 0;
+        for (const auto& e : _cont)
+        {
+            os.write(reinterpret_cast< const char* >(&e), sizeof(e));
+            bytes += sizeof(e);
+        }
+        logger("io", info) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
+            << ": saving: _next_free_idx=" << _next_free_idx << ", sz=" << sz << ", bytes=" << bytes << "\n";
+    }
+
+    void load(std::istream& is)
+    {
+        is.read(reinterpret_cast< char* >(&_next_free_idx), sizeof(_next_free_idx));
+        uint64_t sz;
+        is.read(reinterpret_cast< char* >(&sz), sizeof(sz));
+        _cont.resize(sz);
+        size_t bytes = 0;
+        for (auto& e : _cont)
+        {
+            is.read(reinterpret_cast< char* >(&e), sizeof(e));
+            bytes += sizeof(e);
+        }
+        logger("io", info) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
+            << ": loading: _next_free_idx=" << _next_free_idx << ", sz=" << sz << ", bytes=" << bytes << "\n";
+    }
+
+private:
+    /** Dereference wrapper. */
+    wrapper_type& ns_wrapper_at(index_type idx) const
+    {
+        return const_cast< wrapper_type& >(
+#ifndef NDEBUG
+            _cont.at(idx)
+#else
+            _cont[idx]
+#endif
+            );
+    }
+
+    /** Allocate space for new element. */
+    index_type ns_allocate()
+    {
+        ASSERT(_next_free_idx <= _cont.size());
+        index_type idx = _next_free_idx;
+        if (_next_free_idx < _cont.size())
+        {
+            _next_free_idx = ns_wrapper_at(_next_free_idx)._idx;
+        }
+        else
+        {
+            _cont.push_back(wrapper_type());
+            ++_next_free_idx;
+        }
+        ++_load;
+        logger("factory", debug1) << ptree("allocate")
+            .put("type", typeid(Value).name())
+            .put("addr", static_cast< const void* >(this))
+            .put("idx", idx);
+        return idx;
+    }
+
+    /** Deallocate element. */
+    void ns_deallocate(index_type idx)
+    {
+        logger("factory", debug1) << ptree("deallocate")
+            .put("type", typeid(Value).name())
+            .put("addr", static_cast< const void* >(this))
+            .put("idx", idx);
+        ns_wrapper_at(idx)._idx = _next_free_idx;
+        _next_free_idx = idx;
+        --_load;
+    }
+
+    /** Get currently allocated size. */
+    size_t ns_size() const { return _cont.size(); }
+    /** Get number of unused entries. */
+    size_t ns_unused() const { return _cont.size() - _load; }
+    /** Get number of unused entries. */
+    size_t ns_used() const { return _load; }
+
+    std::deque< wrapper_type > _cont;
+    //std::vector< wrapper_type > _cont;
+    index_type _next_free_idx;
+    size_t _load;
+}; // class Storage
+
 
 template < typename Value, typename Index = uint32_t >
 struct Identifier
@@ -67,7 +215,7 @@ struct Identifier
 
     static index_type const null_val = std::numeric_limits< index_type >::max();
 
-    Identifier() : _idx(null_val) {}
+    Identifier(index_type idx = null_val) : _idx(idx) {}
 
     // allow copy & move
     DEFAULT_COPY_CTOR(Identifier)
@@ -80,7 +228,7 @@ struct Identifier
     raw_ref_type dereference() const
     {
         ASSERT(*this);
-        return storage_type::elem_at(*this);
+        return storage_type::elem_at(_idx);
     }
 
     /** Bool conversion: via pointer to private member fcn. */
@@ -150,7 +298,8 @@ public:
     CONST_CONVERSIONS(Pointer, val_type)
 
     /** Raw pointer conversion. */
-    raw_ptr_type raw() const { return *this? &_idn.dereference() : nullptr; }
+    //raw_ptr_type raw() const { return *this? &_idn.dereference() : nullptr; }
+    raw_ptr_type raw() const { return &_idn.dereference(); }
 
     /** Dereferencing operators. */
     reference operator * () const { ASSERT(*this); return reference(_idn); }
@@ -187,9 +336,9 @@ public:
 private:
     template < typename, typename > friend class Pointer;
     friend class Reference< val_type, index_type >;
-    friend class Storage< unqual_val_type, index_type >;
+    friend class Factory< unqual_val_type, index_type >;
 
-    Pointer(const idn_type& idn) : _idn(idn) {}
+    static Pointer from_index(const index_type& idx) { Pointer p; p._idn._idx = idx; return p; }
 
     idn_type _idn;
 };
@@ -241,7 +390,7 @@ public:
     raw_ref_type raw() const { ASSERT(_idn); return _idn.dereference(); }
 
     // address-of operator returns bounded pointer
-    ptr_type operator & () const { return ptr_type(_idn); }
+    ptr_type operator & () const { return ptr_type::from_index(_idn._idx); }
 
     // implicit conversion to raw reference
     operator raw_ref_type () const { return raw(); }
@@ -278,7 +427,6 @@ struct Cloner
     typedef Index index_type;
     static_assert(not std::is_const< val_type >::value, "Cloner instantiated with const type");
     static_assert(std::is_copy_constructible< val_type >::value, "Cloner instantiated with non-copy-construtible type");
-    typedef Identifier< val_type, index_type > idn_type;
     typedef Pointer< val_type, index_type > ptr_type;
     typedef Factory< val_type, index_type > fact_type;
 
@@ -294,7 +442,6 @@ struct Disposer
     typedef Value val_type;
     typedef Index index_type;
     static_assert(not std::is_const< val_type >::value, "Disposer instantiated with const type");
-    typedef Identifier< val_type, index_type > idn_type;
     typedef Pointer< val_type, index_type > ptr_type;
     typedef Factory< val_type, index_type > fact_type;
 
@@ -303,154 +450,6 @@ struct Disposer
         fact_type::del_elem(ptr);
     }
 };
-
-/** Wrapper type used by Factory objects to store free node list without overhead. */
-template < typename Value, typename Index = uint32_t >
-union Value_Wrapper
-{
-    typedef Value val_type;
-    typedef Index index_type;
-    typedef Identifier< val_type, index_type > idn_type;
-
-    val_type _key;
-    idn_type _next_free_idn;
-
-    Value_Wrapper() : _next_free_idn() {}
-    Value_Wrapper(const Value_Wrapper& rhs) : _next_free_idn(rhs._next_free_idn) {}
-    ~Value_Wrapper() { (&(this->_next_free_idn))->~idn_type(); }
-};
-
-template < typename Value, typename Index = uint32_t >
-class Storage
-{
-public:
-    typedef Value val_type;
-    typedef Index index_type;
-    static_assert(not std::is_const< val_type >::value, "Storage instantiated with const type");
-    typedef Pointer< val_type, index_type > ptr_type;
-    typedef Pointer< const val_type, index_type > const_ptr_type;
-private:
-    typedef Identifier< val_type, index_type > idn_type;
-    typedef Value_Wrapper< val_type, index_type > wrapper_type;
-
-public:
-    // disable copy & move
-    Storage(bool activate = true) : _cont(), _next_free_idn(), _load(0) { if (activate) { make_active(); } }
-    DELETE_COPY_CTOR(Storage)
-    DELETE_MOVE_CTOR(Storage)
-    DELETE_COPY_ASOP(Storage)
-    DELETE_MOVE_ASOP(Storage)
-
-    void make_active() { active_ptr() = this; }
-
-    /** Get and set active storage. */
-    static Storage*& active_ptr() { return _active_ptr; }
-
-    /** Static methods that use active storage. */
-    static ptr_type allocate() { ASSERT(active_ptr()); return active_ptr()->ns_allocate(); }
-    static void deallocate(const_ptr_type elem_cptr) { ASSERT(active_ptr()); active_ptr()->ns_deallocate(elem_cptr); }
-    static val_type& elem_at(idn_type idn) { ASSERT(active_ptr()); return active_ptr()->ns_elem_at(idn); }
-    static size_t size() { ASSERT(active_ptr()); return active_ptr()->ns_size(); }
-    static size_t unused() { ASSERT(active_ptr()); return active_ptr()->ns_unused(); }
-    static size_t used() { ASSERT(active_ptr()); return active_ptr()->ns_used(); }
-
-    boost::property_tree::ptree stats() const
-    {
-        return ptree().put("size", ns_size()).put("unused", ns_unused());
-    }
-
-    void save(std::ostream& os) const
-    {
-        os.write(reinterpret_cast< const char* >(&_next_free_idn), sizeof(_next_free_idn));
-        uint64_t sz = _cont.size();
-        os.write(reinterpret_cast< const char* >(&sz), sizeof(sz));
-        size_t bytes = 0;
-        for (const auto& e : _cont)
-        {
-            os.write(reinterpret_cast< const char* >(&e), sizeof(e));
-            bytes += sizeof(e);
-        }
-        logger("io", info) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
-            << ": saving: _next_free_idn=" << _next_free_idn.to_int() << ", sz=" << sz << ", bytes=" << bytes << "\n";
-    }
-
-    void load(std::istream& is)
-    {
-        is.read(reinterpret_cast< char* >(&_next_free_idn), sizeof(_next_free_idn));
-        uint64_t sz;
-        is.read(reinterpret_cast< char* >(&sz), sizeof(sz));
-        _cont.resize(sz);
-        size_t bytes = 0;
-        for (auto& e : _cont)
-        {
-            is.read(reinterpret_cast< char* >(&e), sizeof(e));
-            bytes += sizeof(e);
-        }
-        logger("io", info) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
-            << ": loading: _next_free_idn=" << _next_free_idn.to_int() << ", sz=" << sz << ", bytes=" << bytes << "\n";
-    }
-
-private:
-    /** Allocate space for new element. */
-    ptr_type ns_allocate()
-    {
-        ptr_type res;
-        if (_next_free_idn)
-        {
-            res._idn = _next_free_idn;
-            _next_free_idn = _cont.at(_next_free_idn._idx)._next_free_idn;
-        }
-        else
-        {
-            _cont.push_back(wrapper_type());
-            res._idn._idx = _cont.size() - 1;
-        }
-        ++_load;
-        logger("factory", debug1) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
-            << ": allocating element at: " << res._idn._idx << "\n";
-        return res;
-    }
-
-    /** Deallocate element. */
-    void ns_deallocate(const_ptr_type elem_cptr)
-    {
-        logger("factory", debug1) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
-            << ": deallocating element at: " << elem_cptr._idn._idx << "\n";
-        _cont.at(elem_cptr._idn._idx)._next_free_idn = _next_free_idn;
-        _next_free_idn = elem_cptr._idn;
-        --_load;
-    }
-
-    /** Dereference element. */
-    val_type& ns_elem_at(idn_type idn) const
-    {
-        return ns_wrapper_at(idn)._key;
-    }
-
-    /** Get currently allocated size. */
-    size_t ns_size() const { return _cont.size(); }
-
-    /** Get number of unused entries. */
-    size_t ns_unused() const { return _cont.size() - _load; }
-
-    /** Get number of unused entries. */
-    size_t ns_used() const { return _load; }
-
-    /** Dereference wrapper. */
-    wrapper_type& ns_wrapper_at(idn_type idn) const
-    {
-        return const_cast< wrapper_type& >(_cont.at(idn._idx));
-    }
-
-    std::deque< wrapper_type > _cont;
-    idn_type _next_free_idn;
-    size_t _load;
-
-    static Storage* _active_ptr;
-}; // class Storage
-
-template < typename Value, typename Index >
-Storage< Value, Index >* Storage< Value, Index >::_active_ptr = nullptr;
 
 /** Factory class that manages storage for objects of type T. */
 template < typename Value, typename Index = uint32_t >
@@ -491,7 +490,7 @@ public:
     template < typename ...Args >
     static ptr_type new_elem(Args&& ...args)
     {
-        ptr_type res = Base::allocate(); // use active storage
+        ptr_type res = ptr_type::from_index(Base::allocate()); // use active storage
         new (res.raw()) val_type(std::forward<Args>(args)...);
         return res;
     }
@@ -500,7 +499,7 @@ public:
     static void del_elem(const_ptr_type elem_cptr)
     {
         elem_cptr->~val_type();
-        Base::deallocate(elem_cptr); // use active storage
+        Base::deallocate(elem_cptr._idn._idx); // use active storage
     }
 }; // class Factory
 
