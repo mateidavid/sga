@@ -164,6 +164,10 @@ int real_main(const Program_Options& po)
         g.cat_all_read_contigs();
         g.check_all();
     }
+
+    logger("mac", info) << ptree("setting_contig_ids");
+    g.set_contig_ids();
+
     if (not po.stats_file.empty())
     {
         logger("mac", info) << ptree("dump_detailed_counts").put("file", po.stats_file);
