@@ -128,8 +128,10 @@ public:
     /*
     void print_separated_het_mutations(
         std::ostream& os, size_t min_support_report, Size_Type min_separation) const;
-        void print_unmappable_contigs(std::ostream& os) const;
     */
+
+    /** Print unmappable contigs between each pair of mappable ones. */
+    void print_unmappable_contigs(std::ostream& os) const;
 
     //friend std::ostream& operator << (std::ostream&, const Graph&);
     boost::property_tree::ptree to_ptree() const;

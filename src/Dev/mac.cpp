@@ -199,9 +199,9 @@ int real_main(const Program_Options& po)
     }
     if (not po.unmappable_contigs_file.empty())
     {
-        //TODO
-        //ofstream unmappable_contigs_ofs(po.unmappable_contigs_file);
-        //g.print_unmappable_contigs(unmappable_contigs_ofs);
+        logger("mac", info) << ptree("print_unmappable_contigs").put("file", po.unmappable_contigs_file);
+        fstr tmp_fs(po.unmappable_contigs_file, ios_base::out);
+        g.print_unmappable_contigs(tmp_fs);
     }
     logger("mac", info) << ptree("done_output");
 

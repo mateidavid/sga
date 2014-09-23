@@ -1508,18 +1508,55 @@ void Graph::print_separated_het_mutations(ostream& os, size_t min_support_report
         ce.print_separated_het_mutations(os, min_support_report, min_separation);
     }
 }
+*/
 
 void Graph::print_unmappable_contigs(ostream& os) const
 {
-    for (const auto& ce : _ce_cont)
+    for (auto ce_cbref : ce_cont())
     {
-        if (ce.is_unmappable())
+        Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
+        if (ce_cbptr->is_unmappable())
         {
-            os << '>' << ce.get_contig_id() << '\n' << ce.get_seq() << '\n';
+            continue;
+        }
+        for (int dir = 0; dir < 2; ++dir)
+        {
+            bool c_right = (dir == 1);
+            auto cks = ce_cbptr->out_chunks_dir(c_right, 3);
+            for (auto& t : cks)
+            {
+                Contig_Entry_CBPtr ce_next_cbptr;
+                bool same_orientation;
+                vector< Read_Chunk_CBPtr > chunk_v;
+                std::tie(ce_next_cbptr, same_orientation) = std::move(t.first);
+                chunk_v = std::move(t.second);
+                if (ce_next_cbptr.to_int() < ce_cbptr.to_int())
+                {
+                    continue;
+                }
+                ostringstream tmp_os;
+                for (auto& rc_cbptr : chunk_v)
+                {
+                    Read_Chunk_CBPtr rc_next_cbptr =
+                        rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, false, c_right);
+                    ASSERT(rc_next_cbptr);
+                    if (rc_next_cbptr->is_unmappable())
+                    {
+                        tmp_os << (not rc_cbptr->get_rc()? rc_next_cbptr->get_seq() : reverseComplement(rc_next_cbptr->get_seq())) << "\n";
+                    }
+                }
+                if (not tmp_os.str().empty())
+                {
+                    os << ">\t" << ce_cbptr.to_int() << "\t" << dir << "\t"
+                       << ce_next_cbptr.to_int() << "\t" << static_cast< int >(same_orientation) << "\n"
+                       << tmp_os.str();
+                }
+            }
         }
     }
 }
 
+/*
 bool Graph::check_colours() const
 {
     for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
