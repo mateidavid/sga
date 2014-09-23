@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+import sys
+
+
+def add_header():
+    print 'strict digraph graphName {'
+    print 'concentrate=true'
+    print 'rankdir="LR"'
+
+def add_footer():
+    print '}'
+
+def add_node(u, l):
+    print ('%s [label="%s"]' % (u, l))
+
+def add_edge(u, v, out_u, flip, l):
+    print ('%s -> %s [dir="both",arrowtail="%s",arrowhead="%s",label="%s"]' %
+           (u,
+            v,
+            ['normal', 'inv'][out_u],
+            ['normal', 'inv'][(out_u + flip + 1) % 2],
+            l))
+
+
+add_header()
+
+seen_header = False
+nodes = {}
+
+for line in sys.stdin:
+    a = line.strip().split()
+    # skip read entries (RE)
+    if a[0] != 'CE':
+        continue
+    # skipheader line
+    if not seen_header:
+        seen_header = True
+        continue
+    # skip unmappable contigs
+    if int(a[16]) == 1:
+        continue
+    add_node(a[1], a[1] + ':' + a[2])
+    nodes[a[1]] = True
+    if a[19] != '.':
+        for e in a[19][1:-1].split('),('):
+            b = e.split(',')
+            if b[0] in nodes:
+                add_edge(a[1], b[0], 0, int(b[1]), ','.join(b[2:]))
+    if a[20] != '.':
+        for e in a[20][1:-1].split('),('):
+            b = e.split(',')
+            if b[0] in nodes:
+                add_edge(a[1], b[0], 1, int(b[1]), ','.join(b[2:]))
+
+add_footer()
