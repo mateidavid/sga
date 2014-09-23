@@ -2041,5 +2041,27 @@ void Graph::get_terminal_reads(ostream& os) const
 
 }
 
+void Graph::interactive_commands(std::istream& is, std::ostream& os)
+{
+    os << "Entering interactive mode. Type 'quit' or Ctrl-D to exit.\n";
+    string cmd;
+    while (is >> cmd)
+    {
+        if (cmd == "help")
+        {
+            os << "available commands:\n"
+               << "  help : show this help\n";
+        }
+        else if (cmd == "quit")
+        {
+            break;
+        }
+        else
+        {
+            os << "unknown command: " << cmd << "\n";
+        }
+    }
+}
+
 
 } // namespace MAC

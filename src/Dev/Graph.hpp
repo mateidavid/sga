@@ -133,6 +133,9 @@ public:
     /** Print unmappable contigs between each pair of mappable ones. */
     void print_unmappable_contigs(std::ostream& os) const;
 
+    /** Process interactive commands. */
+    void interactive_commands(std::istream& is, std::ostream& os);
+
     //friend std::ostream& operator << (std::ostream&, const Graph&);
     boost::property_tree::ptree to_ptree() const;
     boost::property_tree::ptree factory_stats() const;
