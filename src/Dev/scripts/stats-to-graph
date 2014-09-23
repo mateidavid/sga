@@ -38,7 +38,7 @@ for line in sys.stdin:
         seen_header = True
         continue
     # skip unmappable contigs
-    if int(a[16]) == 1:
+    if int(a[3]) == 1:
         continue
     add_node(a[1], a[1] + ':' + a[2])
     nodes[a[1]] = True
