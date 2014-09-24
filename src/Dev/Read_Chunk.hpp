@@ -403,6 +403,7 @@ public:
 
     //friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
     boost::property_tree::ptree to_ptree() const;
+    static std::string to_string(Read_Chunk_CBPtr rc_cbptr, bool r_dir = true, bool forward = true);
 
 private:
     /** Hooks for storage:

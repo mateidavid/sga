@@ -1071,4 +1071,69 @@ boost::property_tree::ptree Read_Chunk::to_ptree() const
                   .put("ce_r_child", _ce_r_child.to_ptree());
 }
 
+std::string Read_Chunk::to_string(Read_Chunk_CBPtr rc_cbptr, bool r_dir, bool forward)
+{
+    bool r_forward;
+    bool c_forward;
+    if (r_dir)
+    {
+        r_forward = forward;
+        c_forward = (r_forward != rc_cbptr->get_rc());
+    }
+    else
+    {
+        c_forward = forward;
+        r_forward = (c_forward != rc_cbptr->get_rc());
+    }
+
+    Size_Type re_len = (rc_cbptr->re_bptr()?
+                        rc_cbptr->re_bptr()->get_len() : rc_cbptr->get_r_len());
+    Size_Type ce_len = rc_cbptr->ce_bptr()->get_len();
+    std::ostringstream oss;
+    oss << Read_Entry_Fact::size();
+    size_t re_pad = oss.str().size();
+    oss.str("");
+    oss << Contig_Entry_Fact::size();
+    size_t ce_pad = oss.str().size();
+    oss.str("");
+    oss << Read_Chunk_Fact::size();
+    size_t rc_pad = oss.str().size();
+    oss.str("");
+
+    auto print_subinterval = [] (std::ostream& os,
+                                 Size_Type subint_start, Size_Type subint_end,
+                                 Size_Type int_start, Size_Type int_end, bool forward) {
+        if (forward)
+        {
+            os << (int_start == subint_start? "[" : " ")
+               << "["
+               << std::setw(5) << std::right << subint_start
+               << ","
+               << std::setw(5) << std::right << subint_end
+               << ")"
+               << (int_end == subint_end? ")" : " ");
+        }
+        else // not forward
+        {
+            os << (int_end == subint_end? "(" : " ")
+               << "("
+               << std::setw(5) << std::right << subint_end
+               << ","
+               << std::setw(5) << std::right << subint_start
+               << "]"
+               << (int_start == subint_start? "]" : " ");
+        }
+    };
+
+    oss << "rc " << std::setw(rc_pad) << std::left << rc_cbptr.to_int()
+        << " re " << std::setw(re_pad) << std::left << rc_cbptr->re_bptr().to_int() << " ";
+    print_subinterval(oss, rc_cbptr->get_r_start(), rc_cbptr->get_r_end(), 0, re_len, r_forward);
+    oss << " " << std::setw(5) << std::left
+        << (not rc_cbptr->is_unmappable()? (not rc_cbptr->get_rc()? "fwd" : "rev") : "unmap")
+        << " ce " << std::setw(ce_pad) << std::left << rc_cbptr->ce_bptr().to_int() << " ";
+    print_subinterval(oss, rc_cbptr->get_c_start(), rc_cbptr->get_c_end(), 0, ce_len, c_forward);
+    return oss.str();
+}
+
+
 } // namespace MAC
