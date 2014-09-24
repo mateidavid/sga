@@ -1,8 +1,11 @@
 #include "Graph.hpp"
 
+#include <iomanip>
+
 #include "Cigar.hpp"
 #include "../Util/Util.h"
 #include "logger.hpp"
+
 
 #define LOG_FACILITY "graph"
 
@@ -2043,18 +2046,176 @@ void Graph::get_terminal_reads(ostream& os) const
 
 void Graph::interactive_commands(std::istream& is, std::ostream& os)
 {
+    std::set< Read_Chunk_Fact::index_type > unused_rc_set = Read_Chunk_Fact::unused_set();
+    std::set< Read_Entry_Fact::index_type > unused_re_set = Read_Entry_Fact::unused_set();
+    std::set< Contig_Entry_Fact::index_type > unused_ce_set = Contig_Entry_Fact::unused_set();
+
     os << "Entering interactive mode. Type 'quit' or Ctrl-D to exit.\n";
-    string cmd;
-    while (is >> cmd)
+    string line;
+    while (std::getline(is, line))
     {
-        if (cmd == "help")
+        istringstream iss(line + "\n");
+        string cmd;
+        if (not (iss >> cmd))
+        {
+            continue;
+        }
+        else if (cmd == "h" || cmd == "help")
         {
             os << "available commands:\n"
                << "  help : show this help\n";
         }
-        else if (cmd == "quit")
+        else if (cmd == "q" || cmd == "quit")
         {
             break;
+        }
+        else if (cmd == "pt" || cmd == "ptree")
+        {
+            string tmp;
+            size_t id;
+            if (not (iss >> tmp >> id))
+            {
+                os << "use: ptree [read|contig|chunk] id\n";
+            }
+            else if (tmp == "re" || tmp == "read")
+            {
+                if (id >= Read_Entry_Fact::size() || unused_re_set.count(id) > 0)
+                {
+                    os << "Read_Entry[" << id << "]: not allocated\n";
+                }
+                else
+                {
+                    Read_Entry_CBPtr re_cbptr = Read_Entry_CBPtr::from_index(id);
+                    os << "Read_Entry[" << id << "]: " << re_cbptr->to_ptree();
+                }
+            }
+            else if (tmp == "ce" || tmp == "contig")
+            {
+                if (id >= Contig_Entry_Fact::size() || unused_ce_set.count(id) > 0)
+                {
+                    os << "Contig_Entry[" << id << "]: not allocated\n";
+                }
+                else
+                {
+                    Contig_Entry_CBPtr ce_cbptr = Contig_Entry_CBPtr::from_index(id);
+                    os << "Contig_Entry[" << id << "]: " << ce_cbptr->to_ptree();
+                }
+            }
+            else if (tmp == "rc" || tmp == "chunk")
+            {
+                if (id >= Read_Chunk_Fact::size() || unused_rc_set.count(id) > 0)
+                {
+                    os << "Read_Chunk[" << id << "]: not allocated\n";
+                }
+                else
+                {
+                    Read_Chunk_CBPtr rc_cbptr = Read_Chunk_CBPtr::from_index(id);
+                    os << "Read_Chunk[" << id << "]: " << rc_cbptr->to_ptree();
+                }
+            }
+            else
+            {
+                os << "invalid object to print: " << tmp << "\n";
+            }
+        }
+        else if (cmd == "pp" || cmd == "prettyprint")
+        {
+            string tmp;
+            size_t id;
+            if (not (iss >> tmp >> id))
+            {
+                os << "use: prettyprint [read|contig|chunk] id\n";
+            }
+            else if (tmp == "re" || tmp == "read")
+            {
+                if (id >= Read_Entry_Fact::size() || unused_re_set.count(id) > 0)
+                {
+                    os << "Read_Entry:" << id << ": not allocated\n";
+                }
+                else
+                {
+                    Read_Entry_CBPtr re_cbptr = Read_Entry_CBPtr::from_index(id);
+                    os << "Read_Entry: " << id
+                       << " name: " << re_cbptr->name()
+                       << " len: " << re_cbptr->get_len() << "\n";
+                    for (auto rc_cbref : re_cbptr->chunk_cont())
+                    {
+                        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
+                        os << "  " << Read_Chunk::to_string(rc_cbptr, true, true) << "\n";
+                    }
+                }
+            }
+            else if (tmp == "ce" || tmp == "contig")
+            {
+                if (id >= Contig_Entry_Fact::size() || unused_ce_set.count(id) > 0)
+                {
+                    os << "Contig_Entry:" << id << ": not allocated\n";
+                }
+                else
+                {
+                    Contig_Entry_CBPtr ce_cbptr = Contig_Entry_CBPtr::from_index(id);
+                    os << "Contig_Entry: " << id
+                       << " len: " << ce_cbptr->get_len() << "\n";
+                    for (auto rc_cbref : ce_cbptr->chunk_cont())
+                    {
+                        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
+                        os << "  " << Read_Chunk::to_string(rc_cbptr, false, true) << "\n";
+                    }
+                }
+            }
+            else if (tmp == "rc" || tmp == "chunk")
+            {
+                if (id >= Read_Chunk_Fact::size() || unused_rc_set.count(id) > 0)
+                {
+                    os << "Read_Chunk:" << id << ": not allocated\n";
+                }
+                else
+                {
+                    Read_Chunk_CBPtr rc_cbptr = Read_Chunk_CBPtr::from_index(id);
+                    os << "  " << Read_Chunk::to_string(rc_cbptr) << "\n";
+                }
+            }
+            else
+            {
+                os << "invalid object to print: " << tmp << "\n";
+            }
+        }
+        else if (cmd == "oc" || cmd == "outchunks")
+        {
+            size_t id;
+            int c_right;
+            int unmappable_policy = 1;
+            int ignore_threshold = 0;
+            iss >> id >> c_right;
+            if (iss.eof())
+            {
+                os << "use: outchunks ce c_right [unmappable_policy [ignore_thres]]\n";
+                continue;
+            }
+            iss >> unmappable_policy >> ignore_threshold; // might be absent
+            if (id >= Contig_Entry_Fact::size() || unused_ce_set.count(id) > 0)
+            {
+                os << "Contig_Entry:" << id << ": not allocated\n";
+                continue;
+            }
+            Contig_Entry_CBPtr ce_cbptr = Contig_Entry_CBPtr::from_index(id);
+            auto cks = ce_cbptr->out_chunks_dir(c_right, unmappable_policy, ignore_threshold);
+            for (auto t : cks)
+            {
+                Contig_Entry_CBPtr ce_next_cbptr;
+                bool same_orientation;
+                std::vector< Read_Chunk_CBPtr > rc_cbptr_v;
+                std::tie(ce_next_cbptr, same_orientation) = std::move(t.first);
+                rc_cbptr_v = std::move(t.second);
+                os << "  ce " << std::setw(9) << std::left << ce_next_cbptr.to_int()
+                   << " same_orientation " << same_orientation
+                   << " rc";
+                for (const auto& rc_cbptr : rc_cbptr_v)
+                {
+                    os << " " << rc_cbptr.to_int();
+                }
+                os << "\n";
+            }
         }
         else
         {
