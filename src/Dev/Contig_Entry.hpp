@@ -116,7 +116,8 @@ public:
      * 1: ignore issue: each such rc will appear in a bucket on its own;
      * 2: collect all such rc in a special bucket with key (NULL, false);
      * 3: skip unmappable chunks: instead of rc', continue traversing the read
-     * and use the next mappable chunk instead.
+     * and use the next mappable chunk instead; discard rc if rc' is terminal and unmappable
+     * 4: same as 3, but if rc' is terminal and unmappable, collect rc in special bucket (NULL, false)
      * @param c_right Bool; true: spanning past contig end, false: spanning past contig start.
      * @param unmappable_policy See above.
      * @param ignore_threshold Ignore contigs&orientations supported by that many

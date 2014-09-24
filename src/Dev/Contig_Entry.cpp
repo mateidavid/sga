@@ -96,20 +96,27 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
     {
         Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         Read_Entry_BPtr re_cbptr = rc_cbptr->re_bptr();
-        Read_Chunk_CBPtr rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, false, c_right);
+        // we might be skipping chunks mapped in different ways; we need read direction to be consistent
+        bool r_right = (c_right != rc_cbptr->get_rc());
+        Read_Chunk_CBPtr rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, r_right);
         if (not rc_next_cbptr)
         {
+            // rc is terminal, nothing to do
             continue;
         }
-        if (unmappable_policy == 3)
+        if (unmappable_policy == 3 or unmappable_policy == 4)
         {
             // skip unmappable chunks
             while (rc_next_cbptr and rc_next_cbptr->is_unmappable())
             {
-                rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_next_cbptr, false, c_right);
+                rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_next_cbptr, true, r_right);
             }
             if (not rc_next_cbptr)
             {
+                if ( unmappable_policy == 4)
+                {
+                    res[std::make_tuple(Contig_Entry_CBPtr(nullptr), false)].push_back(rc_cbptr);
+                }
                 continue;
             }
         }
@@ -118,7 +125,7 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
         bool same_orientation = (rc_cbptr->get_rc() == rc_next_cbptr->get_rc());
         if (rc_next_cbptr->is_unmappable())
         {
-            ASSERT(unmappable_policy != 3);
+            ASSERT(unmappable_policy != 3 and unmappable_policy != 4);
             switch (unmappable_policy)
             {
             case 0:
