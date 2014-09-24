@@ -8,6 +8,7 @@
 #include <limits>
 #include <deque>
 #include <vector>
+#include <set>
 #include <type_traits>
 #include <boost/intrusive/pointer_traits.hpp>
 #include <boost/mpl/if.hpp>
@@ -104,6 +105,7 @@ public:
     static size_t size() { ASSERT(active_ptr()); return active_ptr()->ns_size(); }
     static size_t unused() { ASSERT(active_ptr()); return active_ptr()->ns_unused(); }
     static size_t used() { ASSERT(active_ptr()); return active_ptr()->ns_used(); }
+    static std::set< index_type > unused_set() { ASSERT(active_ptr()); return active_ptr()->ns_unused_set(); }
 
     boost::property_tree::ptree stats() const
     {
@@ -194,6 +196,16 @@ private:
     size_t ns_unused() const { return _cont.size() - _load; }
     /** Get number of unused entries. */
     size_t ns_used() const { return _load; }
+    /** Get set of unused entries. */
+    std::set< index_type > ns_unused_set() const
+    {
+        std::set< index_type > res;
+        for (auto crt = _next_free_idx; crt < _cont.size(); crt = ns_wrapper_at(crt)._idx)
+        {
+            res.insert(crt);
+        }
+        return res;
+    }
 
     std::deque< wrapper_type > _cont;
     //std::vector< wrapper_type > _cont;
