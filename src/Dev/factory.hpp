@@ -309,6 +309,9 @@ public:
 
     CONST_CONVERSIONS(Pointer, val_type)
 
+    /** Constructor from index. */
+    static Pointer from_index(const index_type& idx) { Pointer p; p._idn._idx = idx; return p; }
+
     /** Raw pointer conversion. */
     //raw_ptr_type raw() const { return *this? &_idn.dereference() : nullptr; }
     raw_ptr_type raw() const { return &_idn.dereference(); }
@@ -346,14 +349,10 @@ public:
     boost::property_tree::ptree to_ptree() const { return _idn.to_ptree(); }
 
 private:
-    template < typename, typename > friend class Pointer;
-    friend class Reference< val_type, index_type >;
     friend class Factory< unqual_val_type, index_type >;
 
-    static Pointer from_index(const index_type& idx) { Pointer p; p._idn._idx = idx; return p; }
-
     idn_type _idn;
-};
+}; // class Pointer
 
 template < typename T, bool = false >
 struct to_ptree_caller_impl
