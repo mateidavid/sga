@@ -1526,6 +1526,7 @@ void Graph::print_unmappable_contigs(ostream& os) const
         {
             bool c_right = (dir == 1);
             auto cks = ce_cbptr->out_chunks_dir(c_right, 3);
+            std::multiset< std::string > seq_v;
             for (auto& t : cks)
             {
                 Contig_Entry_CBPtr ce_next_cbptr;
@@ -1537,7 +1538,6 @@ void Graph::print_unmappable_contigs(ostream& os) const
                 {
                     continue;
                 }
-                ostringstream tmp_os;
                 for (auto& rc_cbptr : chunk_v)
                 {
                     Read_Chunk_CBPtr rc_next_cbptr =
@@ -1545,14 +1545,19 @@ void Graph::print_unmappable_contigs(ostream& os) const
                     ASSERT(rc_next_cbptr);
                     if (rc_next_cbptr->is_unmappable())
                     {
-                        tmp_os << (not rc_cbptr->get_rc()? rc_next_cbptr->get_seq() : reverseComplement(rc_next_cbptr->get_seq())) << "\n";
+                        seq_v.insert(not rc_cbptr->get_rc()?
+                                     rc_next_cbptr->get_seq()
+                                     : reverseComplement(rc_next_cbptr->get_seq()));
                     }
                 }
-                if (not tmp_os.str().empty())
+                if (not seq_v.empty())
                 {
                     os << ">\t" << ce_cbptr.to_int() << "\t" << dir << "\t"
-                       << ce_next_cbptr.to_int() << "\t" << static_cast< int >(same_orientation) << "\n"
-                       << tmp_os.str();
+                       << ce_next_cbptr.to_int() << "\t" << static_cast< int >(same_orientation) << "\n";
+                    for (const auto& seq : seq_v)
+                    {
+                        os << seq << "\n";
+                    }
                 }
             }
         }
