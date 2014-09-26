@@ -1526,7 +1526,6 @@ void Graph::print_unmappable_contigs(ostream& os) const
         {
             bool c_right = (dir == 1);
             auto cks = ce_cbptr->out_chunks_dir(c_right, 3);
-            std::multiset< std::string > seq_v;
             for (auto& t : cks)
             {
                 Contig_Entry_CBPtr ce_next_cbptr;
@@ -1534,6 +1533,7 @@ void Graph::print_unmappable_contigs(ostream& os) const
                 vector< Read_Chunk_CBPtr > chunk_v;
                 std::tie(ce_next_cbptr, same_orientation) = std::move(t.first);
                 chunk_v = std::move(t.second);
+                std::multiset< std::tuple< std::string, std::string > > seq_v;
                 if (ce_next_cbptr.to_int() < ce_cbptr.to_int())
                 {
                     continue;
