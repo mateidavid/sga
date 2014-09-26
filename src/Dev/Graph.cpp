@@ -1545,18 +1545,19 @@ void Graph::print_unmappable_contigs(ostream& os) const
                     ASSERT(rc_next_cbptr);
                     if (rc_next_cbptr->is_unmappable())
                     {
-                        seq_v.insert(not rc_cbptr->get_rc()?
-                                     rc_next_cbptr->get_seq()
-                                     : reverseComplement(rc_next_cbptr->get_seq()));
+                        seq_v.insert(std::make_tuple(not rc_cbptr->get_rc()?
+                                                     rc_next_cbptr->get_seq()
+                                                     : reverseComplement(rc_next_cbptr->get_seq()),
+                                                     rc_cbptr->re_bptr()->name()));
                     }
                 }
                 if (not seq_v.empty())
                 {
                     os << ">\t" << ce_cbptr.to_int() << "\t" << dir << "\t"
                        << ce_next_cbptr.to_int() << "\t" << static_cast< int >(same_orientation) << "\n";
-                    for (const auto& seq : seq_v)
+                    for (const auto& t : seq_v)
                     {
-                        os << seq << "\n";
+                        os << get<1>(t) << ": " << get<0>(t) << "\n";
                     }
                 }
             }
