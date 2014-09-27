@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.59)
-AC_INIT(sga, 0.10.10, js18@sanger.ac.uk)
+AC_INIT(sga, 0.10.13, js18@sanger.ac.uk)
 # move aux files to subdir
 AC_CONFIG_AUX_DIR([auxfiles])
 AM_INIT_AUTOMAKE(foreign)

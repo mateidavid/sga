@@ -25,3 +25,4 @@ Makefile
 /libtool
 /GIT_VERSION
 *~
+SGA/sga

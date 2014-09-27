@@ -114,7 +114,6 @@ GraphCompareResult GraphCompare::process(const SequenceWorkItem& item) const
     GraphCompareResult result;
     SeqRecord currRead = item.read;
     std::string w = item.read.seq.toString();
-    
     int len = w.size();
     int num_kmers = len - m_parameters.kmer + 1;
 
@@ -339,8 +338,8 @@ void GraphCompare::qcVariantHaplotypes(bool bReferenceMode, StringVector& varian
             for(size_t j = 0; j < n; j++)
                 num_uncovered_bases += covered_bases.test(j) ? 0 : 1;
 
-            if(max_d < k / 2)
-                haplotype = "";
+            //if(max_d < k / 2)
+            //    haplotype = "";
 
             if(Verbosity::Instance().getPrintLevel() > 2)
             {
@@ -360,8 +359,8 @@ void GraphCompare::qcVariantHaplotypes(bool bReferenceMode, StringVector& varian
                 continue;
 
             // Calculate the largest k such that the haplotype is walk through a de Bruijn graph of this k
-            size_t max_variant_k = calculateMaxCoveringK(variant_haplotypes[i], MIN_COVERAGE, m_parameters.variantIndex);
-            size_t max_base_k = calculateMaxCoveringK(variant_haplotypes[i], MIN_COVERAGE, m_parameters.baseIndex);
+            size_t max_variant_k = HapgenUtil::calculateMaxCoveringK(variant_haplotypes[i], MIN_COVERAGE, m_parameters.variantIndex);
+            size_t max_base_k = HapgenUtil::calculateMaxCoveringK(variant_haplotypes[i], MIN_COVERAGE, m_parameters.baseIndex);
             if(Verbosity::Instance().getPrintLevel() > 2)
                 printf("HaplotypeQC hap[%zu] MVK: %zu MBK: %zu\n", i, max_variant_k, max_base_k);
 
@@ -444,36 +443,6 @@ void GraphCompare::buildParallelBaseHaplotypes(const StringVector& variant_haplo
 }
 
 //
-size_t GraphCompare::calculateMaxCoveringK(const std::string& sequence, int min_depth, const BWTIndexSet& indices) const
-{
-    size_t min_k = 15;
-    for(size_t k = 99; k >= min_k; --k)
-    {
-        if(sequence.size() < k)
-            continue;
-        bool covered = true;
-        size_t nk = sequence.size() - k + 1;
-        for(size_t i = 0; i < nk; ++i)
-        {
-            std::string kmer = sequence.substr(i, k);
-            int c = BWTAlgorithms::countSequenceOccurrences(kmer, indices);
-
-            if(c < min_depth)
-            {
-                covered = false;
-                break;
-            }
-        }
-
-        if(covered)
-            return k;
-    }
-
-    return 0;
-}
-
-
-//
 size_t GraphCompare::calculateHaplotypeBranches(const std::string& sequence, 
                                                 size_t k, 
                                                 size_t min_branch_depth, 
@@ -503,21 +472,6 @@ size_t GraphCompare::calculateHaplotypeBranches(const std::string& sequence,
     }
 
     return num_branches;
-}
-
-//
-IntVector GraphCompare::makeCountProfile(const std::string& str, size_t k, const BWT* pBWT, int max)
-{
-    IntVector out;
-    if(str.size() < k)
-        return out;
-
-    for(size_t i = 0; i < str.size() - k + 1; ++i)
-    {
-        int count = BWTAlgorithms::countSequenceOccurrences(str.substr(i, k), pBWT);
-        out.push_back(count > max ? max : count);
-    }
-    return out;
 }
 
 // test kmers from a file

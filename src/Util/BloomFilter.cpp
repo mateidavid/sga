@@ -10,11 +10,13 @@
 #include "MurmurHash3.h"
 #include "Util.h"
 
-//#define TRACK_OCCUPANCY 1
-
 //
-BloomFilter::BloomFilter() : m_occupancy(0), m_test_counter(0)
+BloomFilter::BloomFilter() : m_occupancy(0)
 {
+
+#if TRACK_OCCUPANCY
+    m_test_counter = 0;
+#endif
 
 }
 
