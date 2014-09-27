@@ -116,7 +116,7 @@ void BloomFilter::save(std::ostream& os, int version)
     save_basic_type<uint64_t>(os, version, 1);
     save_basic_type<uint64_t>(os, m_width, 1);
     save_basic_type<uint64_t>(os, m_occupancy, 1);
-    save_basic_type<uint64_t>(os, m_test_counter, 1);
+    //save_basic_type<uint64_t>(os, m_test_counter, 1);
     save_shallow_vector(os, m_hashes, version);
     m_bitvector.save(os, version);
 }
@@ -133,7 +133,7 @@ void BloomFilter::load(std::istream& is)
 
     load_basic_type(is, m_width);
     load_basic_type(is, m_occupancy);
-    load_basic_type(is, m_test_counter);
+    //load_basic_type(is, m_test_counter);
     load_shallow_vector(is, m_hashes);
     m_bitvector.load(is);
 }
