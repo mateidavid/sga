@@ -76,7 +76,7 @@ void real_main(const Program_Options& po)
         std::cout << "\n";
 
         // construct alignment
-        auto output = Overlapper::computeAlignmentAffine2(s[0], s[1], params);
+        auto output = Overlapper::computeAlignmentAffine(s[0], s[1], params);
         std::cout << "cigar='" << output.cigar << "' score=" << output.score << "\n";
 
         // check start&end positions

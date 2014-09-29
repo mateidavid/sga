@@ -180,7 +180,6 @@ SequenceOverlap extendMatch(const std::string& s1, const std::string& s2, int st
 // This can perform either "overlap" type alignments (suffix to prefix)
 // or global type alignments (end-to-end).
 SequenceOverlap computeAlignmentAffine(const std::string& s1, const std::string& s2, const OverlapperParams params = affine_default_params);
-SequenceOverlap computeAlignmentAffine2(const std::string& s1, const std::string& s2, const OverlapperParams params = affine_default_params);
 
 // Compact an expanded CIGAR string into a regular cigar string
 std::string compactCigar(const std::string& ecigar);
