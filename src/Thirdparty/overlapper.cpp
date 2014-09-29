@@ -709,6 +709,9 @@ SequenceOverlap Overlapper::computeAlignmentAffine2(const std::string& s1, const
         score_matrix[i].resize(num_rows);
 
     // Initialze first row and column
+    // Top left cell
+    score_matrix[0][0].G = 0;
+    score_matrix[0][0].Gt = FROM_DIAG;
     // Penalties in first row iff gap_s1_start==false
     int c = (gap_s1_start == false ? 1 : 0);
     for(size_t i = 1; i < num_columns; ++i) {
