@@ -19,6 +19,7 @@ struct Program_Options
 void real_main(const Program_Options& po)
 {
     srand48(po.seed);
+    std::cout << "using seed=" << po.seed << "\n";
     for (size_t i = 0; i < po.n_ops; ++i)
     {
         // construct random strings
@@ -72,10 +73,11 @@ void real_main(const Program_Options& po)
                       << params.gap_penalty << ","
                       << params.gap_ext_penalty << ")";
         }
+        std::cout << "\n";
 
         // construct alignment
         auto output = Overlapper::computeAlignmentAffine2(s[0], s[1], params);
-        std::cout << " cigar=" << output.cigar << " score=" << output.score << "\n";
+        std::cout << "cigar='" << output.cigar << "' score=" << output.score << "\n";
 
         // check start&end positions
         if (params.type == ALT_OVERLAP)
@@ -133,6 +135,7 @@ void real_main(const Program_Options& po)
         }
         assert(score == output.score);
     }
+    std::cout << "all good\n";
 }
 
 int main(int argc, char* argv[])
