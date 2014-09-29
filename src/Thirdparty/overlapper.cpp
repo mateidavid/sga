@@ -886,7 +886,6 @@ SequenceOverlap Overlapper::computeAlignmentAffine2(const std::string& s1, const
     // Compact the expanded cigar string into the canonical run length encoding
     // The backtracking produces a cigar string in reversed order, flip it
     std::reverse(cigar.begin(), cigar.end());
-    assert(!cigar.empty());
     output.cigar = compactCigar(cigar);
     return output;
 }
