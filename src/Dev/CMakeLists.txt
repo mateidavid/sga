@@ -58,5 +58,13 @@ target_link_libraries(test-Read_Chunk-traversal
 
 add_executable(check-assert check-assert.cpp global_assert.cpp)
 
+add_executable(test-affine-overlapper test-affine-overlapper.cpp)
+target_link_libraries(test-affine-overlapper
+    mac
+    util
+    thirdparty
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    ${ZLIB_LIBRARIES}
+)
 
 file(COPY factory.gdb mac-gdb.gdb DESTINATION .)
