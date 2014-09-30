@@ -91,7 +91,6 @@ public:
     DEFAULT_MOVE_ASOP(Read_Chunk_Ptr_Cont)
 
     USING_INTRUSIVE_CONT(Base)
-    using Base::splice;
     using Base::check;
 
     // check it is empty when deallocating
@@ -119,6 +118,12 @@ public:
     void erase(Mutation_Chunk_Adapter_CBPtr mca_cbptr)
     {
         Base::erase(iterator_to(*mca_cbptr));
+    }
+
+    /** Merge given container into this one at the end. */
+    void splice(Read_Chunk_Ptr_Cont& other_cont)
+    {
+        Base::splice(end(), static_cast< Base& >(other_cont));
     }
 };
 
