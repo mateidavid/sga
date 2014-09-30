@@ -330,6 +330,36 @@ Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf, const Seq_T
 }
 
 Read_Chunk_BPtr
+Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, const Seq_Type& qr, Contig_Entry_BPtr ce_bptr)
+{
+    ASSERT(ce_bptr->get_len() >= cigar.get_rf_len());
+    ASSERT(qr.size() == cigar.get_qr_len()
+           or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
+
+    Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem();
+
+    // fix lengths and rc flags
+    rc_bptr->_c_start = cigar.get_rf_start();
+    rc_bptr->_c_len = cigar.get_rf_len();
+    rc_bptr->_r_start = cigar.get_qr_start();
+    rc_bptr->_r_len = cigar.get_qr_len();
+    rc_bptr->_set_rc(cigar.is_reversed());
+
+    // fix cross-pointers
+    rc_bptr->_ce_bptr = ce_bptr;
+    ce_bptr->chunk_cont().insert(rc_bptr);
+
+    // construct mutations
+    Mutation_Cont mut_cont = Mutation_Cont(cigar, qr);
+    // set mut_ptr_cont (this adds mca-s)
+    rc_bptr->_mut_ptr_cont = Mutation_Ptr_Cont(mut_cont, rc_bptr);
+    // merge mut_cont with mutation container in ce_bptr
+    ce_bptr->mut_cont().merge(mut_cont);
+
+    return rc_bptr;
+}
+
+Read_Chunk_BPtr
 Read_Chunk::make_relative_chunk(Read_Chunk_CBPtr rc1_cbptr,
                                 Read_Chunk_CBPtr rc2_cbptr,
                                 const Cigar& cigar)
