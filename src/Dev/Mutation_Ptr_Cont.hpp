@@ -132,6 +132,7 @@ public:
             Base::push_back(*mca_bptr);
             ASSERT(mut_bptr->chunk_ptr_cont().empty());
             mut_bptr->chunk_ptr_cont().insert(mca_bptr);
+            last_mut_cbptr = mut_bptr;
         }
     }
 
