@@ -250,6 +250,44 @@ public:
             insert(mut_bptr);
         });
     }
+
+    /** Acquire Mutations from given container.
+     * In contrast to splice(), this method looks for common Mutations. If such Mutations are found,
+     * the existing copy is used, and the one in other_cont is deallocated. MCA-s are also adjusted.
+     * @param other_cont Container to clear.
+     */
+    void merge(Mutation_Cont& other_cont)
+    {
+        if (empty())
+        {
+            *this = std::move(other_cont);
+        }
+        else
+        {
+            static_cast< Base& >(other_cont).clear_and_dispose([&] (Mutation_BPtr mut_bptr)
+            {
+                auto equiv_mut_bptr = find(mut_bptr, false).unconst();
+                if (not equiv_mut_bptr)
+                {
+                    insert(mut_bptr);
+                }
+                else
+                {
+                    // an equivalent mutation exists in this container
+                    // adjust mca-s to have mut_ptr point to existing mutation
+                    for (auto mca_bref : mut_bptr->chunk_ptr_cont())
+                    {
+                        Mutation_Chunk_Adapter_BPtr mca_bptr = &mca_bref;
+                        mca_bptr->mut_cbptr() = equiv_mut_bptr;
+                    }
+                    // merge the chunk_ptr containers
+                    equiv_mut_bptr->chunk_ptr_cont().splice(mut_bptr->chunk_ptr_cont());
+                    // deallocate mutation
+                    Mutation_Fact::del_elem(mut_bptr);
+                }
+            });
+        }
+    }
 };
 
 } // namespace MAC
