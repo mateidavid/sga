@@ -306,7 +306,7 @@ public:
      * @param qr Query string (either whole, or just mapped portion).
      */
     static Read_Chunk_BPtr
-    make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf_ptr, const Seq_Type& qr = std::string());
+    make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf_ptr, const Seq_Type& qr);
 
     /** Create Read_Chunk and Contig_Entry objects from a cigar string and 2 existing Read_Chunk objects.
      * @param rc1_cbptr Read_Chunk corresponding to rf.

@@ -304,9 +304,6 @@ Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf, const Seq_T
     ASSERT(qr.size() == cigar.get_qr_len()
            or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
 
-    // create objects with default constructor
-    //shared_ptr< Read_Chunk > chunk_sptr(new Read_Chunk());
-    //shared_ptr< Contig_Entry > ce_sptr(new Contig_Entry(rf_ptr, (rf_ptr->size() == cigar.get_rf_len()? cigar.get_rf_start() : 0)));
     Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem();
     Contig_Entry_BPtr ce_bptr =
         Contig_Entry_Fact::new_elem(std::move(rf),
