@@ -65,5 +65,8 @@
     USING_ITERATOR_TO(_type) \
     USING_SIZE_MEMBERS(_type)
 
+#define T_ENABLE_IF(_cond) \
+    bool _unused = true, typename boost::enable_if_c< _unused and (_cond), int >::type = 0
+
 
 #endif

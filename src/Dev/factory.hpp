@@ -33,8 +33,6 @@
     _type< typename boost::remove_const< _t >::type >& unconst() \
     { return *reinterpret_cast< _type< typename boost::remove_const< _t >::type >* >(this); }
 
-#define T_ENABLE_IF(_cond) \
-    bool _unused = true, typename boost::enable_if_c< _unused and (_cond), int >::type = 42
 
 namespace bounded
 {
