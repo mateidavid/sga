@@ -1558,7 +1558,7 @@ void Graph::print_unmappable_contigs(ostream& os) const
                        << ce_next_cbptr.to_int() << "\t" << static_cast< int >(same_orientation) << "\n";
                     for (const auto& t : seq_v)
                     {
-                        os << get<1>(t) << ": " << get<0>(t) << "\n";
+                        os << std::get<1>(t) << ": " << std::get<0>(t) << "\n";
                     }
                 }
             }
@@ -1567,7 +1567,7 @@ void Graph::print_unmappable_contigs(ostream& os) const
 }
 
 void Graph::get_base_sequences(const std::map< std::string, size_t >& seq_cnt_map,
-                               std::map< std::string, std::tuple< size_t, std::string, long > >& seq_bseq_map,
+                               std::map< std::string, std::tuple< size_t, std::string > >& seq_bseq_map,
                                std::vector< std::string >& bseq_v)
 {
     ASSERT(seq_bseq_map.empty());
@@ -1617,12 +1617,12 @@ void Graph::get_base_sequences(const std::map< std::string, size_t >& seq_cnt_ma
         {
             const std::string& seq = t.first;
             size_t bseq_idx = bseq_v.size();
-            std::string cigar;
+            std::string cigar_string;
             long max_score = std::numeric_limits< long >::min();
             for (size_t i = 0; i < bseq_v.size(); ++i)
             {
                 // map seq to bseq
-                OverlapperParams params;
+                OverlapperParams params = affine_default_params;
                 params.type = ALT_GLOBAL;
                 params.use_m_ops = false;
                 auto output = Overlapper::computeAlignmentAffine(bseq_v[i], seq, params);
@@ -1634,23 +1634,23 @@ void Graph::get_base_sequences(const std::map< std::string, size_t >& seq_cnt_ma
                         or 100 * output.score >= 70 * params.match_score * static_cast< long >(std::min(seq.size(), bseq_v[i].size())))
                     {
                         bseq_idx = i;
-                        cigar = output.cigar;
+                        cigar_string = output.cigar;
                         max_score = output.score;
                     }
                 }
             }
             if (bseq_idx < bseq_v.size())
             {
-                seq_bseq_map[seq] = std::make_tuple(bseq_idx, cigar, max_score);
+                seq_bseq_map[seq] = std::make_tuple(bseq_idx, cigar_string);
             }
         } // for (seq : seq_cnt_map)
     } // while not all mapped
 } // Graph::get_base_sequences
 
-void Graph::resolve_unmappable_region(Contig_Entry_CBPtr ce_cbptr, bool c_right,
-                                      Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation)
+void Graph::resolve_unmappable_inner_region(Contig_Entry_CBPtr ce_cbptr, bool c_right,
+                                            Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation)
 {
-    logger("graph", debug) << ptree("resolve_unmappable_region")
+    logger("graph", debug) << ptree("resolve_unmappable_inner_region")
         .put("ce_cbptr", ce_cbptr.to_int())
         .put("c_right", c_right)
         .put("ce_next_cbptr", ce_next_cbptr.to_int())
@@ -1690,7 +1690,7 @@ void Graph::resolve_unmappable_region(Contig_Entry_CBPtr ce_cbptr, bool c_right,
         }
     }
     // construct set of base sequences
-    std::map< std::string, std::tuple< size_t, std::string, long > > seq_bseq_map;
+    std::map< std::string, std::tuple< size_t, std::string > > seq_bseq_map;
     std::vector< std::string > bseq_v;
     get_base_sequences(seq_cnt_map, seq_bseq_map, bseq_v);
     // create new contig entries
@@ -1711,8 +1711,7 @@ void Graph::resolve_unmappable_region(Contig_Entry_CBPtr ce_cbptr, bool c_right,
         string seq = (r_right? old_rc_bptr->get_seq() : reverseComplement(old_rc_bptr->get_seq()));
         size_t bseq_idx;
         std::string cigar_string;
-        long score;
-        std::tie(bseq_idx, cigar_string, score) = seq_bseq_map[seq];
+        std::tie(bseq_idx, cigar_string) = seq_bseq_map[seq];
         // cigar object that takes into account orientation and offset
         Cigar cigar(cigar_string, not r_right, 0, old_rc_bptr->get_r_start());
         // since the cigar object knows the orientation, we pass the non-reversed chunk sequence
@@ -1730,35 +1729,117 @@ void Graph::resolve_unmappable_region(Contig_Entry_CBPtr ce_cbptr, bool c_right,
         // link new chunk into its read entry container
         re_bptr->chunk_cont().insert(new_rc_bptr);
     }
+    check(std::set< Contig_Entry_CBPtr >(new_ce_bptr_v.begin(), new_ce_bptr_v.end()));
 }
 
-void Graph::resolve_unmappable_contigs()
+void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool c_right)
 {
-    // step 1: find reads with unmappable contigs in between mappable ones
-    for (auto re_cbref : re_cont())
+    logger("graph", debug) << ptree("resolve_unmappable_terminal_region")
+        .put("ce_cbptr", ce_cbptr.to_int())
+        .put("c_right", c_right);
+
+    auto out_chunks_map = ce_cbptr->out_chunks_dir(c_right, 4);
+    // this bucket contains the last chunks which are followed by terminal unmappable siblings
+    const auto rc_last_bucket = std::make_tuple( Contig_Entry_CBPtr(), false );
+    ASSERT(out_chunks_map.count(rc_last_bucket) > 0);
+    const auto& rc_last_cbptr_v = out_chunks_map[rc_last_bucket];
+    // group base sequences of the neighbouring contigs
+    std::vector< std::tuple< Contig_Entry_CBPtr, bool, Seq_Type > > ce_next_seq_v;
+    for (const auto& t : out_chunks_map)
     {
-        for (auto rc_cbref : re_cbref.raw().chunk_cont())
+        Contig_Entry_CBPtr ce_next_cbptr;
+        bool same_orientation;
+        std::tie(ce_next_cbptr, same_orientation) = t.first;
+        if (not ce_next_cbptr)
         {
-            Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
+            continue;
+        }
+        ce_next_seq_v.push_back(
+            std::make_tuple(
+                get< 0 >(t.first),
+                get< 1 >(t.first),
+                (same_orientation?
+                 ce_next_cbptr->seq() : reverseComplement(ce_next_cbptr->seq()))));
+        logger("graph", debug1) << ptree("resolve_unmappable_terminal_region")
+            .put("bseq", std::get<2>(ce_next_seq_v.back()));
+    }
+    // group unmappable chunk seqeunces
+    std::vector< std::tuple< Read_Chunk_CBPtr, bool, std::string > > rc_unmap_seq_v;
+    for (const auto& rc_last_cbptr : rc_last_cbptr_v)
+    {
+        bool r_right = (c_right != rc_last_cbptr->get_rc());
+        Read_Chunk_CBPtr rc_unmap_bptr = rc_last_cbptr->re_bptr()->chunk_cont().get_sibling(rc_last_cbptr, true, r_right);
+        ASSERT(rc_unmap_bptr);
+        ASSERT(rc_unmap_bptr->is_unmappable());
+        rc_unmap_seq_v.push_back(
+            std::make_tuple(
+                rc_unmap_bptr,
+                rc_last_cbptr->get_rc(),
+                (not rc_last_cbptr->get_rc()?
+                 rc_unmap_bptr->get_seq() : reverseComplement(rc_unmap_bptr->get_seq()))));
+        logger("graph", debug1) << ptree("resolve_unmappable_terminal_region")
+            .put("rseq", std::get<2>(rc_unmap_seq_v.back()));
+    }
+    //std::map< std::tuple< Read_Chunk_CBPtr, bool >, 
+}
+
+void Graph::resolve_unmappable_regions()
+{
+    logger("graph", info) << ptree("resolve_unmappable_regions");
+
+    // step 1: find reads with unmappable contigs in between mappable ones
+    for (auto re_bref : re_cont())
+    {
+        Read_Entry_BPtr re_bptr = &re_bref;
+        for (auto rc_bref_it = re_bptr->chunk_cont().begin(); rc_bref_it != re_bptr->chunk_cont().end(); )
+        {
+            Read_Chunk_CBPtr rc_cbptr = &*(rc_bref_it++); // loop it incremented here, before modifications to current elem
             if (not rc_cbptr->is_unmappable())
             {
                 continue;
             }
-            Read_Chunk_CBPtr rc_prev_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, false);
-            Read_Chunk_CBPtr rc_next_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, true);
+            Read_Chunk_CBPtr rc_prev_cbptr = re_bptr->chunk_cont().get_sibling(rc_cbptr, true, false);
+            Read_Chunk_CBPtr rc_next_cbptr = re_bptr->chunk_cont().get_sibling(rc_cbptr, true, true);
             if (not rc_prev_cbptr or not rc_next_cbptr)
             {
                 continue;
             }
             ASSERT(not rc_prev_cbptr->is_unmappable());
             ASSERT(not rc_next_cbptr->is_unmappable());
-            resolve_unmappable_region(rc_prev_cbptr->ce_bptr(), not rc_prev_cbptr->get_rc(),
-                                      rc_next_cbptr->ce_bptr(), rc_next_cbptr->get_rc() == rc_prev_cbptr->get_rc());
+            resolve_unmappable_inner_region(rc_prev_cbptr->ce_bptr(), not rc_prev_cbptr->get_rc(),
+                                            rc_next_cbptr->ce_bptr(), rc_next_cbptr->get_rc() == rc_prev_cbptr->get_rc());
         }
     }
+    check_all();
+
+    // step 2: find reads with terminal unmapapble contigs
+    for (auto re_bref : re_cont())
+    {
+        Read_Entry_BPtr re_bptr = &re_bref;
+        for (int r_right = 0; r_right < 2; ++r_right)
+        {
+            Read_Chunk_CBPtr rc_last_cbptr = (not r_right? &*re_bptr->chunk_cont().begin() : &*re_bptr->chunk_cont().rbegin());
+            if (not rc_last_cbptr->is_unmappable())
+            {
+                // last chunk in this dir is mappable
+                continue;
+            }
+            Read_Chunk_CBPtr rc_cbptr = re_bptr->chunk_cont().get_sibling(rc_last_cbptr, true, not r_right);
+            if (not rc_cbptr)
+            {
+                // entire read is unmappable
+                continue;
+            }
+            Contig_Entry_CBPtr ce_cbptr = rc_cbptr->ce_bptr();
+            bool c_right = (r_right != rc_cbptr->get_rc());
+            resolve_unmappable_terminal_region(ce_cbptr, c_right);
+        }
+    }
+    check_all();
 
     // step 3: cat all read contigs
-    //cat_all_read_contigs();
+    cat_all_read_contigs();
+    check_all();
 }
 
 /*

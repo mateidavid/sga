@@ -134,12 +134,14 @@ public:
     void print_unmappable_contigs(std::ostream& os) const;
 
     /** Resolve unmappable contigs. */
-    void resolve_unmappable_contigs();
-    void resolve_unmappable_region(Contig_Entry_CBPtr ce_cbptr, bool c_right,
-                                   Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation);
+    void resolve_unmappable_regions();
+    void resolve_unmappable_inner_region(Contig_Entry_CBPtr ce_cbptr, bool c_right,
+                                         Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation);
+    void resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool c_right);
     void get_base_sequences(const std::map< std::string, size_t >& seq_cnt_map,
-                            std::map< std::string, std::tuple< size_t, std::string, long > >& seq_bseq_map,
+                            std::map< std::string, std::tuple< size_t, std::string > >& seq_bseq_map,
                             std::vector< std::string >& bseq_v);
+    //void remap_partials //TODO
 
     /** Process interactive commands. */
     void interactive_commands(std::istream& is, std::ostream& os);
