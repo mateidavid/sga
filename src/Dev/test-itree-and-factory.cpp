@@ -6,6 +6,8 @@
 #include <boost/intrusive/itree.hpp>
 #include <boost/tti/tti.hpp>
 #include "factory.hpp"
+#include "ref_range.hpp"
+#include "type_str.hpp"
 
 using namespace std;
 namespace bi = boost::intrusive;
@@ -254,13 +256,13 @@ void real_main(const Program_Options& po)
          << "\nseed=" << po.seed << '\n';
 
     clog << "--- type names:"
-         << "\nValue: " << typeid(Value).name()
-         << "\nconst Value: " << typeid(const Value).name()
-         << "\nFactory< Value >: " << typeid(bounded::Factory< Value >).name()
-         << "\nPointer< Value >: " << typeid(bounded::Pointer< Value >).name()
-         << "\nPointer< const Value >: " << typeid(bounded::Pointer< const Value >).name()
-         << "\nReference< Value >: " << typeid(bounded::Reference< Value >).name()
-         << "\nReference< const Value >: " << typeid(bounded::Reference< const Value >).name()
+         << "\nValue: " << type_str< Value >()
+         << "\nconst Value: " << type_str< const Value >()
+         << "\nFactory< Value >: " << type_str< bounded::Factory< Value > >()
+         << "\nPointer< Value >: " << type_str< bounded::Pointer< Value > >()
+         << "\nPointer< const Value >: " << type_str< bounded::Pointer< const Value > >()
+         << "\nReference< Value >: " << type_str< bounded::Reference< Value > >()
+         << "\nReference< const Value >: " << type_str< bounded::Reference< const Value > >()
          << '\n';
 
     clog << "--- type sizes:\n"
