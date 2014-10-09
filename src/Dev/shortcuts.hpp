@@ -68,5 +68,16 @@
 #define T_ENABLE_IF(_cond) \
     bool _unused = true, typename boost::enable_if_c< _unused and (_cond), int >::type = 0
 
+#define GETTER(_type, _pub_id, _pri_id) \
+    const _type& _pub_id() const { return _pri_id; } \
+    _type& _pub_id() { return _pri_id; }
+
+#define BOOL_CONVERSION(_type, _access, _expr)  \
+    private: \
+        typedef void (_type::*_bool_type)() const; \
+        void _bool_type_func() const {} \
+    _access: \
+        operator _bool_type () const { return (_expr)? &_type::_bool_type_func : nullptr; }
+
 
 #endif
