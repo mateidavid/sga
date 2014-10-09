@@ -7,7 +7,11 @@
 #ifndef __MAC_FORWARD_HPP
 #define __MAC_FORWARD_HPP
 
+#include <tuple>
 #include <string>
+#include <vector>
+#include <map>
+#include <set>
 #include <functional>
 #include <utility>
 
@@ -23,11 +27,19 @@ namespace MAC
 {
 
 namespace bi = boost::intrusive;
+using std::tuple;
+using std::make_tuple;
+using std::get;
+using std::tie;
+using std::string;
+using std::vector;
+using std::map;
+using std::set;
 
 /** Type for absolute and relative offsets in read and contig sequences. */
 typedef size_t Size_Type;
 /** Type holding a read sequence. */
-typedef std::string Seq_Type;
+typedef string Seq_Type;
 /** Type holding a single base pair. */
 typedef Seq_Type::value_type Symb_Type;
 
