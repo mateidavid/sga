@@ -12,6 +12,7 @@
 #ifndef BOOST_IS_CONVERTIBLE
 #define BOOST_IS_CONVERTIBLE(T, U) (std::is_convertible<T, U>::value)
 #endif
+#include <boost/utility.hpp>
 
 
 #define DELETE_COPY_CTOR(_type) \
