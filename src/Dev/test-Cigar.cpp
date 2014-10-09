@@ -3,30 +3,31 @@
 #include "Cigar.hpp"
 
 using namespace std;
-using namespace MAC;
+using namespace cigar;
 
 
 int main()
 {
+    typedef Cigar< unsigned > cigar_type;
     string s;
     cin >> s;
     bool comp;
     cin >> comp;
-    Cigar c(s, comp);
+    cigar_type c(s, comp);
 
     cout << c << "\n";
 
-    Cigar c2 = c.complement();
+    cigar_type c2 = c.complement();
     cout << "complement:" << c2 << "\n";
 
-    Cigar c3 = c2.complement();
+    cigar_type c3 = c2.complement();
     cout << "2x complement:" << c3 << "\n";
 
     cout << "c == c3? : " << (c == c3) << "\n";
 
-    cout << "substring(c,0,0):" << c.substring(0, 0) << "\n";
-    cout << "substring(c,0,len):" << c.substring(0, c.get_n_ops()) << "\n";
-    cout << "substring(c,1,2):" << c.substring(1, 3) << "\n";
+    cout << "substring(c,0,0):" << c.subcigar(0, 0) << "\n";
+    cout << "substring(c,0,len):" << c.subcigar(0, c.n_ops()) << "\n";
+    cout << "substring(c,1,2):" << c.subcigar(1, 2) << "\n";
 
     c.cut_op(1,1);
     cout << "cut_op(1,1):" << c << "\n";
