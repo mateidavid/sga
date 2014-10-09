@@ -15,7 +15,6 @@ add_library(mac STATIC
     Read_Chunk_Cont.cpp
     Read_Entry.cpp
     Contig_Entry.cpp
-    Cigar.cpp
     Graph.cpp
 )
 #set_target_properties(mac PROPERTIES LINK_FLAGS "${BOOST_LDFLAGS}")
