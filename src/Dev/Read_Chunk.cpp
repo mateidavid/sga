@@ -299,22 +299,22 @@ Size_Type Read_Chunk::get_read_len() const
 Read_Chunk_BPtr
 Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf, const Seq_Type& qr)
 {
-    ASSERT(rf.size() == cigar.get_rf_len()
-           or rf.size() >= cigar.get_rf_start() + cigar.get_rf_len());
-    ASSERT(qr.size() == cigar.get_qr_len()
-           or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
+    ASSERT(rf.size() == cigar.rf_len()
+           or rf.size() >= cigar.rf_start() + cigar.rf_len());
+    ASSERT(qr.size() == cigar.qr_len()
+           or qr.size() >= cigar.qr_start() + cigar.qr_len());
 
     Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem();
     Contig_Entry_BPtr ce_bptr =
         Contig_Entry_Fact::new_elem(std::move(rf),
-                                    (rf.size() == cigar.get_rf_len()? cigar.get_rf_start() : 0));
+                                    (rf.size() == cigar.rf_len()? cigar.rf_start() : 0));
 
     // fix lengths and rc flags
-    rc_bptr->_c_start = cigar.get_rf_start();
-    rc_bptr->_c_len = cigar.get_rf_len();
-    rc_bptr->_r_start = cigar.get_qr_start();
-    rc_bptr->_r_len = cigar.get_qr_len();
-    rc_bptr->_set_rc(cigar.is_reversed());
+    rc_bptr->_c_start = cigar.rf_start();
+    rc_bptr->_c_len = cigar.rf_len();
+    rc_bptr->_r_start = cigar.qr_start();
+    rc_bptr->_r_len = cigar.qr_len();
+    rc_bptr->_set_rc(cigar.reversed());
 
     // fix cross-pointers
     rc_bptr->_ce_bptr = ce_bptr;
@@ -332,18 +332,18 @@ Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf, const Seq_T
 Read_Chunk_BPtr
 Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, const Seq_Type& qr, Contig_Entry_BPtr ce_bptr)
 {
-    ASSERT(ce_bptr->get_len() >= cigar.get_rf_len());
-    ASSERT(qr.size() == cigar.get_qr_len()
-           or qr.size() >= cigar.get_qr_start() + cigar.get_qr_len());
+    ASSERT(ce_bptr->get_len() >= cigar.rf_len());
+    ASSERT(qr.size() == cigar.qr_len()
+           or qr.size() >= cigar.qr_start() + cigar.qr_len());
 
     Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem();
 
     // fix lengths and rc flags
-    rc_bptr->_c_start = cigar.get_rf_start();
-    rc_bptr->_c_len = cigar.get_rf_len();
-    rc_bptr->_r_start = cigar.get_qr_start();
-    rc_bptr->_r_len = cigar.get_qr_len();
-    rc_bptr->_set_rc(cigar.is_reversed());
+    rc_bptr->_c_start = cigar.rf_start();
+    rc_bptr->_c_len = cigar.rf_len();
+    rc_bptr->_r_start = cigar.qr_start();
+    rc_bptr->_r_len = cigar.qr_len();
+    rc_bptr->_set_rc(cigar.reversed());
 
     // fix cross-pointers
     rc_bptr->_ce_bptr = ce_bptr;

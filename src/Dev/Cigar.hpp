@@ -50,6 +50,7 @@ public:
      */
     explicit Cigar(const string& cigar_string, bool reversed = false,
                    Size_Type rf_start = 0, Size_Type qr_start = 0, bool rf_neg_strand = false)
+    : _rf_start(rf_start), _qr_start(qr_start), _rf_len(0), _qr_len(0), _reversed(reversed)
     {
         std::istringstream is(cigar_string);
         cigar_op_type op;
@@ -238,7 +239,7 @@ public:
             if (op_type(i) == 'M')
             {
                 vector< cigar_op_type > v;
-                cigar_op_type op(rf_seq[op.rf_offset()] == get_qr_pos(op.qr_offset())? '=' : 'X', 1);
+                cigar_op_type op(rf_seq[op_rf_offset(i)] == get_qr_pos(op_qr_offset(i))? '=' : 'X', 1);
                 op.rf_offset() = op_rf_offset(i);
                 op.qr_offset() = op_qr_offset(i);
 
@@ -253,7 +254,7 @@ public:
                     else
                     {
                         v.push_back(op);
-                        op.op_type = (op.op == '='? 'X' : '=');
+                        op.op_type() = (op.op_type() == '='? 'X' : '=');
                         op.rf_offset() += op.len();
                         op.qr_offset() = (same_st()? op.qr_offset() + op.len() : op.qr_offset() - op.len());
                         op.len() = 1;

@@ -9,6 +9,7 @@
 
 #include <tuple>
 #include <string>
+#include <list>
 #include <vector>
 #include <map>
 #include <set>
@@ -20,21 +21,16 @@
 #include "global_assert.hpp"
 #include "factory.hpp"
 #include "ptree.hpp"
+#include "Cigar.hpp"
 
 
 /** Multi-Allelic Contig namespace. */
 namespace MAC
 {
 
+using namespace std;
 namespace bi = boost::intrusive;
-using std::tuple;
-using std::make_tuple;
-using std::get;
-using std::tie;
-using std::string;
-using std::vector;
-using std::map;
-using std::set;
+
 
 /** Type for absolute and relative offsets in read and contig sequences. */
 typedef size_t Size_Type;
@@ -42,6 +38,8 @@ typedef size_t Size_Type;
 typedef string Seq_Type;
 /** Type holding a single base pair. */
 typedef Seq_Type::value_type Symb_Type;
+
+typedef cigar::Cigar< Size_Type > Cigar;
 
 class Mutation;
 class Mutation_Chunk_Adapter;

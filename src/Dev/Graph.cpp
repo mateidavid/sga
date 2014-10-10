@@ -7,10 +7,7 @@
 #include "logger.hpp"
 #include "overlapper.h"
 
-
 #define LOG_FACILITY "graph"
-
-using namespace std;
 
 
 namespace MAC
@@ -21,11 +18,11 @@ void Graph::add_read(string&& name, Seq_Type&& seq)
     logger(debug) << ptree("add_read").put("name", name);
 
     // create read entry and place it in container
-    Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(std::move(name), seq.size());
+    Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(move(name), seq.size());
     re_cont().insert(re_bptr);
 
     // create contig entry and place it in container
-    Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(std::move(seq));
+    Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(move(seq));
     ce_cont().insert(ce_bptr);
 
     // create initial read chunk
@@ -321,21 +318,21 @@ void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPt
     check(set< Contig_Entry_CBPtr >( { c1_ce_bptr }));
 }
 
-vector< std::tuple< Size_Type, Size_Type, Cigar > >
+vector< tuple< Size_Type, Size_Type, Cigar > >
 Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
 {
-    vector< std::tuple< Size_Type, Size_Type, Cigar > > rc_mapping;
+    vector< tuple< Size_Type, Size_Type, Cigar > > rc_mapping;
 
     /// match start in re1
-    Size_Type r1_start = cigar.get_rf_start();
+    Size_Type r1_start = cigar.rf_start();
     /// match length in re1
-    Size_Type r1_len = cigar.get_rf_len();
+    Size_Type r1_len = cigar.rf_len();
     /// match start in re2
-    Size_Type r2_start = cigar.get_qr_start();
+    Size_Type r2_start = cigar.qr_start();
     /// match length in re2
-    Size_Type r2_len = cigar.get_qr_len();
+    Size_Type r2_len = cigar.qr_len();
     /// is the match between re1 and re2 reverse-complemented
-    bool r2_rc = cigar.is_reversed();
+    bool r2_rc = cigar.reversed();
     // we repeatedly cut the read entries of either read
     // until their chunks match in the way described by the cigar string
     // keep track of read chunk mapping, and cigar transformation between them
@@ -352,7 +349,7 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
         Size_Type r2_pos = (not r2_rc? r2_start : r2_start + r2_len);
         /// cigar ops matched so far: [0, op_start)
         size_t op_start = 0;
-        while (op_start < cigar.get_n_ops())
+        while (op_start < cigar.n_ops())
         {
             /// next chunk in re1
             Read_Chunk_BPtr rc1_bptr = re1_bptr->chunk_cont().get_chunk_with_pos(r1_pos).unconst();
@@ -386,81 +383,89 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
             ASSERT(r2_rc or rc2_bptr->get_r_start() + rc2_offset == r2_pos);
             ASSERT(not r2_rc or rc2_bptr->get_r_end() - rc2_offset == r2_pos);
             ASSERT(rc2_remaining_len > 0);
-            ASSERT(r1_pos == cigar.get_rf_offset(op_start));
-            ASSERT(r2_pos == cigar.get_qr_offset(op_start));
+            ASSERT(r1_pos == cigar.op_rf_pos(op_start));
+            ASSERT(r2_pos == cigar.op_qr_pos(op_start));
 
             // advance past cigar ops until either chunk ends
-            size_t op_end = op_start + 1;
-            while (op_end < cigar.get_n_ops()
-                    and (cigar.get_rf_sub_len(op_start, op_end) < rc1_remaining_len
-                         or (cigar.get_rf_sub_len(op_start, op_end) == rc1_remaining_len and cigar.is_insertion(op_end)))
-                    and (cigar.get_qr_sub_len(op_start, op_end) < rc2_remaining_len
-                         or (cigar.get_qr_sub_len(op_start, op_end) == rc2_remaining_len and cigar.is_deletion(op_end))))
+            size_t op_cnt = 1;
+            size_t op_end = op_start + op_cnt;
+            while (op_end < cigar.n_ops()
+                    and (cigar.op_rf_len(op_start, op_cnt) < rc1_remaining_len
+                         or (cigar.op_rf_len(op_start, op_cnt) == rc1_remaining_len
+                             and cigar.op_is_insertion(op_end)))
+                    and (cigar.op_qr_len(op_start, op_cnt) < rc2_remaining_len
+                         or (cigar.op_qr_len(op_start, op_cnt) == rc2_remaining_len
+                             and cigar.op_is_deletion(op_end))))
             {
+                ++op_cnt;
                 ++op_end;
             }
+            Size_Type op_rf_sub_len = cigar.op_rf_len(op_start, op_cnt);
+            Size_Type op_qr_sub_len = cigar.op_qr_len(op_start, op_cnt);
             // stop conditions: can be derived by inspecting loop
             ASSERT(// past all ops
-                   op_end == cigar.get_n_ops()
+                   op_end == cigar.n_ops()
                    // or current chunks perfectly matched by cigar
-                   or (cigar.get_rf_sub_len(op_start, op_end) == rc1_remaining_len
-                       and cigar.get_qr_sub_len(op_start, op_end) == rc2_remaining_len)
+                   or (op_rf_sub_len == rc1_remaining_len
+                       and op_qr_sub_len == rc2_remaining_len)
                    // or cigar op extends past rc1
-                   or cigar.get_rf_sub_len(op_start, op_end) > rc1_remaining_len
+                   or op_rf_sub_len > rc1_remaining_len
                    // or cigar op extends past rc2
-                   or cigar.get_qr_sub_len(op_start, op_end) > rc2_remaining_len
+                   or op_qr_sub_len > rc2_remaining_len
                    // or rc1 mapped fully, but rc2 has non-insertion op at the end
-                   or (cigar.get_rf_sub_len(op_start, op_end) == rc1_remaining_len
-                       and cigar.get_qr_sub_len(op_start, op_end) < rc2_remaining_len
-                       and not cigar.is_insertion(op_end))
+                   or (op_rf_sub_len == rc1_remaining_len
+                       and op_qr_sub_len < rc2_remaining_len
+                       and not cigar.op_is_insertion(op_end))
                    // or rc2 mapped fully, but rc1 has non-deletion op at the end
-                   or (cigar.get_rf_sub_len(op_start, op_end) < rc1_remaining_len
-                       and cigar.get_qr_sub_len(op_start, op_end) == rc2_remaining_len
-                       and not cigar.is_deletion(op_end)));
+                   or (op_rf_sub_len < rc1_remaining_len
+                       and op_qr_sub_len == rc2_remaining_len
+                       and not cigar.op_is_deletion(op_end)));
             // we previously cut the chunks at the ends of the mapping
             // cuts don't succeed only if those chunks are unmappable
-            ASSERT(op_end < cigar.get_n_ops()
-                   or cigar.get_rf_sub_len(op_start, op_end) >= rc1_remaining_len
+            ASSERT(op_end < cigar.n_ops()
+                   or op_rf_sub_len >= rc1_remaining_len
                    or rc1_bptr->is_unmappable());
-            ASSERT(op_end < cigar.get_n_ops()
-                   or cigar.get_qr_sub_len(op_start, op_end) >= rc2_remaining_len
+            ASSERT(op_end < cigar.n_ops()
+                   or op_qr_sub_len >= rc2_remaining_len
                    or rc2_bptr->is_unmappable());
-            if (cigar.get_rf_sub_len(op_start, op_end) > rc1_remaining_len)
+            if (op_rf_sub_len > rc1_remaining_len)
             {
                 // the first inequality trivially holds with <=
                 // but it can be shown it holds in fact with <
-                ASSERT(cigar.get_rf_offset(op_end - 1) < rc1_bptr->get_r_end()
-                       and rc1_bptr->get_r_end() < cigar.get_rf_offset(op_end));
+                ASSERT(cigar.op_rf_pos(op_end - 1) < rc1_bptr->get_r_end()
+                       and rc1_bptr->get_r_end() < cigar.op_rf_pos(op_end));
             }
-            if (cigar.get_qr_sub_len(op_start, op_end) > rc2_remaining_len)
+            if (op_qr_sub_len > rc2_remaining_len)
             {
                 // as with rf, the inequalities involving op_end-1 tivially hold with <=
                 // but it can be shown they hold with <
-                ASSERT(r2_rc or (cigar.get_qr_offset(op_end - 1) < rc2_bptr->get_r_end()
-                       and rc2_bptr->get_r_end() < cigar.get_qr_offset(op_end)));
-                ASSERT(not r2_rc or (cigar.get_qr_offset(op_end) < rc2_bptr->get_r_start()
-                       and rc2_bptr->get_r_start() < cigar.get_qr_offset(op_end - 1)));
+                ASSERT(r2_rc or (cigar.op_qr_pos(op_end - 1) < rc2_bptr->get_r_end()
+                       and rc2_bptr->get_r_end() < cigar.op_qr_pos(op_end)));
+                ASSERT(not r2_rc or (cigar.op_qr_pos(op_end) < rc2_bptr->get_r_start()
+                       and rc2_bptr->get_r_start() < cigar.op_qr_pos(op_end - 1)));
             }
 
             // check if either chunk ended during the last cigar op
-            if (cigar.get_rf_sub_len(op_start, op_end) > rc1_remaining_len
-                or cigar.get_qr_sub_len(op_start, op_end) > rc2_remaining_len)
+            if (op_rf_sub_len > rc1_remaining_len
+                or op_qr_sub_len > rc2_remaining_len)
             {
                 // find out which of the 2 ended earlier, cut the cigar op at that position
                 Size_Type r1_break_len = 0;
-                if (cigar.get_rf_sub_len(op_start, op_end) > rc1_remaining_len and not cigar.is_insertion(op_end - 1))
+                if (op_rf_sub_len > rc1_remaining_len
+                    and not cigar.op_is_insertion(op_end - 1))
                 {
                     r1_break_len = cigar.get_rf_op_prefix_len(op_end - 1, rc1_bptr->get_r_end());
-                    ASSERT(0 < r1_break_len and r1_break_len < cigar.get_rf_op_len(op_end - 1));
+                    ASSERT(0 < r1_break_len and r1_break_len < cigar.op_rf_len(op_end - 1));
                 }
 
                 Size_Type r2_break_len = 0;
-                if (cigar.get_qr_sub_len(op_start, op_end) > rc2_remaining_len and not cigar.is_deletion(op_end -1))
+                if (op_qr_sub_len > rc2_remaining_len
+                    and not cigar.op_is_deletion(op_end -1))
                 {
                     r2_break_len = cigar.get_qr_op_prefix_len(op_end - 1, (not r2_rc?
                                                                            rc2_bptr->get_r_end()
                                                                            : rc2_bptr->get_r_start()));
-                    ASSERT(0 < r2_break_len and r2_break_len < cigar.get_qr_op_len(op_end - 1));
+                    ASSERT(0 < r2_break_len and r2_break_len < cigar.op_qr_len(op_end - 1));
                 }
 
                 ASSERT(r1_break_len > 0 or r2_break_len > 0);
@@ -469,30 +474,33 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
                                           : (r2_break_len == 0?
                                              r1_break_len
                                              : min(r1_break_len, r2_break_len))));
+                // recompute sub-lengths after the cut
+                op_rf_sub_len = cigar.op_rf_len(op_start, op_cnt);
+                op_qr_sub_len = cigar.op_qr_len(op_start, op_cnt);
             }
 
-            ASSERT(cigar.get_rf_sub_len(op_start, op_end) <= rc1_remaining_len
-                   and cigar.get_qr_sub_len(op_start, op_end) <= rc2_remaining_len);
+            ASSERT(op_rf_sub_len <= rc1_remaining_len
+                   and op_qr_sub_len <= rc2_remaining_len);
             // now we are sure the op ends on at least one of the read chunk boundaries
             // unless these are the last chunks and they are both unmappable
-            if (op_end == cigar.get_n_ops() and rc1_bptr->is_unmappable() and rc2_bptr->is_unmappable())
+            if (op_end == cigar.n_ops() and rc1_bptr->is_unmappable() and rc2_bptr->is_unmappable())
             {
                 ASSERT(done);
                 break;
             }
-            ASSERT(cigar.get_rf_sub_len(op_start, op_end) == rc1_remaining_len
-                   or cigar.get_qr_sub_len(op_start, op_end) == rc2_remaining_len);
+            ASSERT(op_rf_sub_len == rc1_remaining_len
+                   or op_qr_sub_len == rc2_remaining_len);
             // if it doesn't end on both, we might need to cut the other
-            if (cigar.get_qr_sub_len(op_start, op_end) < rc2_remaining_len)
+            if (op_qr_sub_len < rc2_remaining_len)
             {
                 // it follows from main stop condition that the next op is not an insertion
-                ASSERT(op_end == cigar.get_n_ops() or not cigar.is_insertion(op_end));
-                if (cigar.get_qr_sub_len(op_start, op_end) == 0)
+                ASSERT(op_end == cigar.n_ops() or not cigar.op_is_insertion(op_end));
+                if (op_qr_sub_len == 0)
                 {
                     // no progress on rc2: rc1 is mapped entirely to a deletion
                     // move on to next chunk on read 1
-                    ASSERT(cigar.get_rf_sub_len(op_start, op_end) == rc1_remaining_len
-                           and cigar.get_rf_sub_len(op_start, op_end) > 0);
+                    ASSERT(op_rf_sub_len == rc1_remaining_len
+                           and op_rf_sub_len > 0);
                     r1_pos = rc1_bptr->get_r_end();
                     op_start = op_end;
                     continue;
@@ -512,29 +520,29 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
                         // we advance both
                         r1_pos = rc1_bptr->get_r_end();
                         r2_pos = (not r2_rc?
-                                  r2_pos + cigar.get_qr_sub_len(op_start, op_end)
-                                  : r2_pos - cigar.get_qr_sub_len(op_start, op_end));
+                                  r2_pos + op_qr_sub_len
+                                  : r2_pos - op_qr_sub_len);
                         op_start = op_end;
                         continue;
                     }
                 }
                 else
                 {
-                    cut_read_entry(re2_bptr, cigar.get_qr_offset(op_end));
+                    cut_read_entry(re2_bptr, cigar.op_qr_pos(op_end));
                     done = false;
                     break;
                 }
             }
-            if (cigar.get_rf_sub_len(op_start, op_end) < rc1_remaining_len)
+            if (op_rf_sub_len < rc1_remaining_len)
             {
                 // it follows from main stop condition that the next op is not a deletion
-                ASSERT(op_end == cigar.get_n_ops() or not cigar.is_deletion(op_end));
-                if (cigar.get_rf_sub_len(op_start, op_end) == 0)
+                ASSERT(op_end == cigar.n_ops() or not cigar.op_is_deletion(op_end));
+                if (op_rf_sub_len == 0)
                 {
                     // no progress on rc1: rc2 mapped entirely to an insertion
                     // move on to next chunk on read 2
-                    ASSERT(cigar.get_qr_sub_len(op_start, op_end) == rc2_remaining_len
-                           and cigar.get_qr_sub_len(op_start, op_end) > 0);
+                    ASSERT(op_qr_sub_len == rc2_remaining_len
+                           and op_qr_sub_len > 0);
                     r2_pos = (not r2_rc? rc2_bptr->get_r_end() : rc2_bptr->get_r_start());
                     op_start = op_end;
                     continue;
@@ -552,7 +560,7 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
                     else // both rc1 and rc2 are unmappable
                     {
                         // we advance both
-                        r1_pos += cigar.get_rf_sub_len(op_start, op_end);
+                        r1_pos += op_rf_sub_len;
                         r2_pos = (not r2_rc? rc2_bptr->get_r_end() : rc2_bptr->get_r_start());
                         op_start = op_end;
                         continue;
@@ -560,14 +568,14 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
                 }
                 else
                 {
-                    cut_read_entry(re1_bptr, cigar.get_rf_offset(op_end));
+                    cut_read_entry(re1_bptr, cigar.op_rf_pos(op_end));
                     done = false;
                     break;
                 }
             }
             // reached when both rc1 and rc2 end at the current cigar op
-            ASSERT(cigar.get_rf_sub_len(op_start, op_end) == rc1_remaining_len
-                   and cigar.get_qr_sub_len(op_start, op_end) == rc2_remaining_len);
+            ASSERT(op_rf_sub_len == rc1_remaining_len
+                   and op_qr_sub_len == rc2_remaining_len);
             if (rc1_bptr->is_unmappable() and not rc2_bptr->is_unmappable())
             {
                 unmap_chunk(rc2_bptr);
@@ -584,13 +592,13 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
             if (not rc1_bptr->is_unmappable())
             {
                 // add read chunk mapping
-                rc_mapping.push_back(std::make_tuple(rc1_bptr->get_r_start(), rc2_bptr->get_r_start(), cigar.substring(op_start, op_end)));
+                rc_mapping.push_back(make_tuple(rc1_bptr->get_r_start(), rc2_bptr->get_r_start(), cigar.subcigar(op_start, op_cnt)));
             }
             // advance both chunks and cigar
             r1_pos = rc1_bptr->get_r_end();
             r2_pos = (not r2_rc? rc2_bptr->get_r_end() : rc2_bptr->get_r_start());
             op_start = op_end;
-        } // while (op_start < cigar.get_n_ops())
+        } // while (op_start < cigar.n_ops())
         if (done)
         {
             break;
@@ -617,22 +625,22 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
 
     // construct cigar object
     Cigar cigar(cigar_string, r2_rc, r1_start, r2_start);
-    ASSERT(r1_len == cigar.get_rf_len());
-    ASSERT(r2_len == cigar.get_qr_len());
+    ASSERT(r1_len == cigar.rf_len());
+    ASSERT(r2_len == cigar.qr_len());
 
     // discard indels at either end of the cigar string
-    while (cigar.get_n_ops() > 0 and not cigar.is_match(0))
+    while (cigar.n_ops() > 0 and not cigar.op_is_match(0))
     {
-        cigar = cigar.substring(1, cigar.get_n_ops() - 1);
+        cigar = cigar.subcigar(1, cigar.n_ops() - 1);
     }
-    while (cigar.get_n_ops() > 0 and not cigar.is_match(cigar.get_n_ops() - 1))
+    while (cigar.n_ops() > 0 and not cigar.op_is_match(cigar.n_ops() - 1))
     {
-        cigar = cigar.substring(0, cigar.get_n_ops() - 1);
+        cigar = cigar.subcigar(0, cigar.n_ops() - 1);
     }
-    r1_start = cigar.get_rf_start();
-    r1_len = cigar.get_rf_len();
-    r2_start = cigar.get_qr_start();
-    r2_len = cigar.get_qr_len();
+    r1_start = cigar.rf_start();
+    r1_len = cigar.rf_len();
+    r2_start = cigar.qr_start();
+    r2_len = cigar.qr_len();
 
     // if no match is left, nothing to do
     if (r1_len == 0)
@@ -649,7 +657,7 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     string r2_seq = re2_bptr->get_seq();
     logger(debug1) << ptree("add_overlap_before_disambiguate")
         .put("re1", r1_seq.substr(r1_start, r1_len))
-        .put("re2", (not cigar.is_reversed()?
+        .put("re2", (not cigar.reversed()?
                      r2_seq.substr(r2_start, r2_len)
                      : reverseComplement(r2_seq.substr(r2_start, r2_len))))
         .put("cigar", cigar.to_ptree());
@@ -672,7 +680,7 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
         Size_Type rc1_start;
         Size_Type rc2_start;
         Cigar rc1rc2_cigar;
-        std::tie(rc1_start, rc2_start, rc1rc2_cigar) = std::move(tmp);
+        tie(rc1_start, rc2_start, rc1rc2_cigar) = move(tmp);
         Read_Chunk_BPtr rc1_bptr = re1_bptr->chunk_cont().get_chunk_with_pos(rc1_start).unconst();
         ASSERT(rc1_bptr->get_r_start() == rc1_start);
         Read_Chunk_BPtr rc2_bptr = re2_bptr->chunk_cont().get_chunk_with_pos(rc2_start).unconst();
@@ -702,9 +710,9 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
         .put("c_right", c_right);
 
     auto tmp = ce_bptr->can_cat_dir(c_right);
-    Contig_Entry_BPtr ce_next_bptr = std::get<0>(tmp).unconst();
-    bool same_orientation = std::get<1>(tmp);
-    vector< Read_Chunk_CBPtr > rc_cbptr_cont = std::move(std::get<2>(tmp));
+    Contig_Entry_BPtr ce_next_bptr = get<0>(tmp).unconst();
+    bool same_orientation = get<1>(tmp);
+    vector< Read_Chunk_CBPtr > rc_cbptr_cont = move(get<2>(tmp));
     if (not ce_next_bptr)
     {
         return false;
@@ -729,7 +737,7 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
         swap(ce_bptr, ce_next_bptr);
         c_right = true;
         auto tmp2 = ce_bptr->can_cat_dir(true);
-        rc_cbptr_cont = std::move(std::get<2>(tmp2));
+        rc_cbptr_cont = move(get<2>(tmp2));
         ASSERT(not rc_cbptr_cont.empty());
     }
     // at this point:
@@ -836,9 +844,9 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
 
     // chunks mapping to this contig are remapped to individual contigs, with unmappable flag set
     // we also save them in a list using Read_Entry and offsets
-    vector< std::tuple< Read_Entry_BPtr, Size_Type, Size_Type > > l;
+    vector< tuple< Read_Entry_BPtr, Size_Type, Size_Type > > l;
     ce_bptr->chunk_cont().clear_and_dispose([&] (Read_Chunk_BPtr other_rc_bptr) {
-        l.push_back(std::make_tuple(other_rc_bptr->re_bptr(), other_rc_bptr->get_r_start(), other_rc_bptr->get_r_end()));
+        l.push_back(make_tuple(other_rc_bptr->re_bptr(), other_rc_bptr->get_r_start(), other_rc_bptr->get_r_end()));
         Read_Chunk::make_unmappable(other_rc_bptr);
         ce_cont().insert(other_rc_bptr->ce_bptr());
     });
@@ -850,7 +858,7 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
     // for all read chunks made unmappable, try to merge them with nearby unmappable chunks
     set< Read_Entry_CBPtr > re_set;
     for (auto& e : l) {
-        std::tie(re_bptr, rc_start, rc_end) = e;
+        tie(re_bptr, rc_start, rc_end) = e;
         re_set.insert(re_bptr);
         rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rc_start).unconst();
         ASSERT(rc_bptr->is_unmappable());
@@ -872,7 +880,7 @@ void Graph::unmap_regions(Read_Entry_BPtr re_bptr, const Range_Cont< Size_Type >
     {
         Size_Type rg_r_start;
         Size_Type rg_r_end;
-        std::tie(rg_r_start, rg_r_end) = region;
+        tie(rg_r_start, rg_r_end) = region;
         // regions should be non-empty
         ASSERT(rg_r_start < rg_r_end);
         Size_Type pos = rg_r_start;
@@ -959,12 +967,12 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
                 // check there is a minimum of mappable bp
                 // if not, unmap small intermediate chunks and merge them
                 // skip small mappable chunks
-                list< std::tuple< Size_Type, Size_Type > > skipped_chunks;
+                list< tuple< Size_Type, Size_Type > > skipped_chunks;
                 Size_Type skipped_len = 0;
                 while (not next_rc_bptr->is_unmappable()
                        and skipped_len + next_rc_bptr->get_r_len() <= unmap_trigger_len())
                 {
-                    skipped_chunks.push_back(std::make_tuple(next_rc_bptr->get_r_start(), next_rc_bptr->get_r_end()));
+                    skipped_chunks.push_back(make_tuple(next_rc_bptr->get_r_start(), next_rc_bptr->get_r_end()));
                     skipped_len += next_rc_bptr->get_r_len();
                     next_rc_bptr = re_bptr->chunk_cont().get_sibling(next_rc_bptr, true, r_right).unconst();
                     // since skipped_len < unmap_trigger_len < leftover_bp
@@ -978,7 +986,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
                     {
                         Size_Type rc_start;
                         Size_Type rc_end;
-                        std::tie(rc_start, rc_end) = *it;
+                        tie(rc_start, rc_end) = *it;
                         rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rc_start).unconst();
                         if (rc_bptr->get_r_start() != rc_start or rc_bptr->get_r_end() != rc_end or rc_bptr->is_unmappable())
                         {
@@ -1089,7 +1097,7 @@ Graph::find_unmappable_regions(Read_Chunk_CBPtr orig_rc_cbptr, Range_Cont< Size_
         Size_Type rc_start;
         Size_Type rc_end;
         re_cptr = *re_it;
-        std::tie(rc_start, rc_end) = *pos_it;
+        tie(rc_start, rc_end) = *pos_it;
         Read_Chunk_CPtr rc_cptr = re_cptr->get_chunk_with_pos(rc_start);
         // either the chunk has the same boundaries as when it was discovered
         // or it was marked unmappable in previous iterations
@@ -1126,11 +1134,11 @@ void Graph::clear_contig_visit()
     }
 }
 
-std::tuple< Size_Type, bool> Graph::visit_contig(const Contig_Entry* ce_cptr, bool dir)
+tuple< Size_Type, bool> Graph::visit_contig(const Contig_Entry* ce_cptr, bool dir)
 {
     if ((ce_cptr->get_colour() & 0x1) != 0)
     {
-        return std::make_tuple(0, (ce_cptr->get_colour() & (dir == false? 0x4 : 0x8)) != 0);
+        return make_tuple(0, (ce_cptr->get_colour() & (dir == false? 0x4 : 0x8)) != 0);
     }
     auto neighbours_sptr = ce_cptr->get_neighbours(dir);
     ASSERT(neighbours_sptr->size() > 0);
@@ -1139,7 +1147,7 @@ std::tuple< Size_Type, bool> Graph::visit_contig(const Contig_Entry* ce_cptr, bo
         modify_contig_entry(ce_cptr, [&] (Contig_Entry& ce) {
             ce.colour() |= (dir == false? 0x4 : 0x8);
         });
-        return std::make_tuple(0, true);
+        return make_tuple(0, true);
     }
     ASSERT(neighbours_sptr->size() == 1);
     modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) {
@@ -1152,8 +1160,8 @@ std::tuple< Size_Type, bool> Graph::visit_contig(const Contig_Entry* ce_cptr, bo
     {
         const Contig_Entry* ce_next_cptr;
         bool flip;
-        std::tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
-        std::tie(tmp, dead_end) = visit_contig(ce_next_cptr, (not dir) == flip);
+        tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
+        tie(tmp, dead_end) = visit_contig(ce_next_cptr, (not dir) == flip);
     }
     if (neighbours_sptr->size() != 1 or dead_end)
     {
@@ -1161,11 +1169,11 @@ std::tuple< Size_Type, bool> Graph::visit_contig(const Contig_Entry* ce_cptr, bo
             ce.colour() |= (not dir == false? 0x4 : 0x8);
         });
     }
-    return std::make_tuple(ce_cptr->get_len() + tmp, false);
+    return make_tuple(ce_cptr->get_len() + tmp, false);
 }
 
 void Graph::dfs_scontig(const Contig_Entry* ce_cptr, bool ce_endpoint, bool dir,
-                        list< std::tuple< const Contig_Entry*, size_t, size_t, bool > >& l, bool& cycle)
+                        list< tuple< const Contig_Entry*, size_t, size_t, bool > >& l, bool& cycle)
 {
     while (true)
     {
@@ -1189,7 +1197,7 @@ void Graph::dfs_scontig(const Contig_Entry* ce_cptr, bool ce_endpoint, bool dir,
             ce.colour() |= 0x1;
         });
         {
-            auto t = std::make_tuple(ce_cptr, ce_cptr->get_len(), ce_cptr->get_len(), dir == ce_endpoint);
+            auto t = make_tuple(ce_cptr, ce_cptr->get_len(), ce_cptr->get_len(), dir == ce_endpoint);
             not dir? l.push_front(t) : l.push_back(t);
         }
         neighbours_sptr = ce_cptr->get_neighbours(not ce_endpoint);
@@ -1200,11 +1208,11 @@ void Graph::dfs_scontig(const Contig_Entry* ce_cptr, bool ce_endpoint, bool dir,
             unsigned int tmp_support;
             Size_Type min_skipped_len;
             Size_Type max_skipped_len;
-            std::tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
-            std::tie(tmp_support, min_skipped_len, max_skipped_len) = neighbours_sptr->begin()->second;
+            tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
+            tie(tmp_support, min_skipped_len, max_skipped_len) = neighbours_sptr->begin()->second;
             if (max_skipped_len > 0)
             {
-                auto t = std::make_tuple((const Contig_Entry*)NULL, min_skipped_len, max_skipped_len, false);
+                auto t = make_tuple((const Contig_Entry*)NULL, min_skipped_len, max_skipped_len, false);
                 not dir? l.push_front(t) : l.push_back(t);
             }
             ce_cptr = ce_next_cptr;
@@ -1247,8 +1255,8 @@ void Graph::print_supercontig_lengths(ostream& os)
         auto neighbours_sptr = ce_cptr->get_neighbours(false);
         if (neighbours_sptr->size() == 1)
         {
-            std::tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
-            std::tie(supercontig_left_len, dead_end) = visit_contig(ce_next_cptr, false == flip);
+            tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
+            tie(supercontig_left_len, dead_end) = visit_contig(ce_next_cptr, false == flip);
         }
         if (neighbours_sptr->size() != 1 or dead_end)
         {
@@ -1260,8 +1268,8 @@ void Graph::print_supercontig_lengths(ostream& os)
         dead_end = false;
         if (neighbours_sptr->size() == 1)
         {
-            std::tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
-            std::tie(supercontig_right_len, dead_end) = visit_contig(ce_next_cptr, true == flip);
+            tie(ce_next_cptr, flip) = neighbours_sptr->begin()->first;
+            tie(supercontig_right_len, dead_end) = visit_contig(ce_next_cptr, true == flip);
         }
         if (neighbours_sptr->size() != 1 or dead_end)
         {
@@ -1293,9 +1301,9 @@ void Graph::print_supercontig_lengths(ostream& os)
         modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) {
             ce.colour() |= 0x1;
         });
-        list< std::tuple< const Contig_Entry*, Size_Type, Size_Type, bool > > l[2];
+        list< tuple< const Contig_Entry*, Size_Type, Size_Type, bool > > l[2];
         bool cycle[2];
-        shared_ptr< map< std::tuple< const Contig_Entry*, bool >, std::tuple< unsigned int, Size_Type, Size_Type > > >
+        shared_ptr< map< tuple< const Contig_Entry*, bool >, tuple< unsigned int, Size_Type, Size_Type > > >
         neighbours_sptr[2];
         for (int side = 0; side < 2; ++side)
         {
@@ -1314,14 +1322,14 @@ void Graph::print_supercontig_lengths(ostream& os)
             {
                 const Contig_Entry* ce_next_cptr;
                 bool flip;
-                std::tie(ce_next_cptr, flip) = neighbours_sptr[side]->begin()->first;
+                tie(ce_next_cptr, flip) = neighbours_sptr[side]->begin()->first;
                 unsigned int tmp_support;
                 Size_Type min_skipped_len;
                 Size_Type max_skipped_len;
-                std::tie(tmp_support, min_skipped_len, max_skipped_len) = neighbours_sptr[side]->begin()->second;
+                tie(tmp_support, min_skipped_len, max_skipped_len) = neighbours_sptr[side]->begin()->second;
                 if (max_skipped_len > 0)
                 {
-                    auto t = std::make_tuple((const Contig_Entry*)NULL, min_skipped_len, max_skipped_len, false);
+                    auto t = make_tuple((const Contig_Entry*)NULL, min_skipped_len, max_skipped_len, false);
                     side == 0? l[side].push_front(t) : l[side].push_back(t);
                 }
                 dfs_scontig(ce_next_cptr, (side == 1) == flip, side == 1, l[side], cycle[side]);
@@ -1339,7 +1347,7 @@ void Graph::print_supercontig_lengths(ostream& os)
                 Size_Type min_skipped_len;
                 Size_Type max_skipped_len;
                 bool flip;
-                std::tie(tmp_ce_cptr, min_skipped_len, max_skipped_len, flip) = *it;
+                tie(tmp_ce_cptr, min_skipped_len, max_skipped_len, flip) = *it;
                 if (tmp_ce_cptr != NULL)
                 {
                     scon_len += tmp_ce_cptr->get_len();
@@ -1372,7 +1380,7 @@ void Graph::print_supercontig_lengths(ostream& os)
                 Size_Type min_skipped_len;
                 Size_Type max_skipped_len;
                 bool flip;
-                std::tie(tmp_ce_cptr, min_skipped_len, max_skipped_len, flip) = *it;
+                tie(tmp_ce_cptr, min_skipped_len, max_skipped_len, flip) = *it;
                 if (tmp_ce_cptr != NULL)
                 {
                     os << '(' << tmp_ce_cptr->get_contig_id() << ',' << tmp_ce_cptr->get_len() << ',' << int(flip) << ')';
@@ -1532,9 +1540,9 @@ void Graph::print_unmappable_contigs(ostream& os) const
                 Contig_Entry_CBPtr ce_next_cbptr;
                 bool same_orientation;
                 vector< Read_Chunk_CBPtr > chunk_v;
-                std::tie(ce_next_cbptr, same_orientation) = std::move(t.first);
-                chunk_v = std::move(t.second);
-                std::multiset< std::tuple< std::string, std::string > > seq_v;
+                tie(ce_next_cbptr, same_orientation) = move(t.first);
+                chunk_v = move(t.second);
+                multiset< tuple< string, string > > seq_v;
                 if (ce_next_cbptr.to_int() < ce_cbptr.to_int())
                 {
                     continue;
@@ -1546,7 +1554,7 @@ void Graph::print_unmappable_contigs(ostream& os) const
                     ASSERT(rc_next_cbptr);
                     if (rc_next_cbptr->is_unmappable())
                     {
-                        seq_v.insert(std::make_tuple(not rc_cbptr->get_rc()?
+                        seq_v.insert(make_tuple(not rc_cbptr->get_rc()?
                                                      rc_next_cbptr->get_seq()
                                                      : reverseComplement(rc_next_cbptr->get_seq()),
                                                      rc_cbptr->re_bptr()->name()));
@@ -1558,7 +1566,7 @@ void Graph::print_unmappable_contigs(ostream& os) const
                        << ce_next_cbptr.to_int() << "\t" << static_cast< int >(same_orientation) << "\n";
                     for (const auto& t : seq_v)
                     {
-                        os << std::get<1>(t) << ": " << std::get<0>(t) << "\n";
+                        os << get<1>(t) << ": " << get<0>(t) << "\n";
                     }
                 }
             }
@@ -1566,21 +1574,22 @@ void Graph::print_unmappable_contigs(ostream& os) const
     }
 }
 
-void Graph::get_base_sequences(const std::map< std::string, size_t >& seq_cnt_map,
-                               std::map< std::string, std::tuple< size_t, std::string > >& seq_bseq_map,
-                               std::vector< std::string >& bseq_v)
+void Graph::resolve_unmappable_fully_mapped(
+    const map< string, size_t >& seq_cnt_map,
+    vector< string >& bseq_v,
+    map< string, tuple< size_t, string > >& seq_bseq_map)
 {
-    ASSERT(seq_bseq_map.empty());
     ASSERT(bseq_v.empty());
+    ASSERT(seq_bseq_map.empty());
     while (seq_bseq_map.size() < seq_cnt_map.size())
     {
         // find most popular and longest sequences not yet mapped
-        std::string most_pop_candidate_seq;
+        string most_pop_candidate_seq;
         size_t most_pop_candidate_seq_count = 0;
-        std::string longest_candidate_seq;
+        string longest_candidate_seq;
         for (const auto& t : seq_cnt_map)
         {
-            const std::string& seq = t.first;
+            const string& seq = t.first;
             const size_t& seq_count = t.second;
             if (seq_bseq_map.count(seq) == 0)
             {
@@ -1615,10 +1624,10 @@ void Graph::get_base_sequences(const std::map< std::string, size_t >& seq_cnt_ma
         seq_bseq_map.clear();
         for (const auto& t : seq_cnt_map)
         {
-            const std::string& seq = t.first;
+            const string& seq = t.first;
             size_t bseq_idx = bseq_v.size();
-            std::string cigar_string;
-            long max_score = std::numeric_limits< long >::min();
+            string cigar_string;
+            long max_score = numeric_limits< long >::min();
             for (size_t i = 0; i < bseq_v.size(); ++i)
             {
                 // map seq to bseq
@@ -1631,7 +1640,7 @@ void Graph::get_base_sequences(const std::map< std::string, size_t >& seq_cnt_ma
                     // HEURISTIC for allowing this mapping:
                     // - (edit distance < 5) OR (score >= 70% * max_score)
                     if (output.edit_distance < 5
-                        or 100 * output.score >= 70 * params.match_score * static_cast< long >(std::min(seq.size(), bseq_v[i].size())))
+                        or 100 * output.score >= 70 * params.match_score * static_cast< long >(min(seq.size(), bseq_v[i].size())))
                     {
                         bseq_idx = i;
                         cigar_string = output.cigar;
@@ -1641,14 +1650,15 @@ void Graph::get_base_sequences(const std::map< std::string, size_t >& seq_cnt_ma
             }
             if (bseq_idx < bseq_v.size())
             {
-                seq_bseq_map[seq] = std::make_tuple(bseq_idx, cigar_string);
+                seq_bseq_map[seq] = make_tuple(bseq_idx, cigar_string);
             }
         } // for (seq : seq_cnt_map)
     } // while not all mapped
 } // Graph::get_base_sequences
 
-void Graph::resolve_unmappable_inner_region(Contig_Entry_CBPtr ce_cbptr, bool c_right,
-                                            Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation)
+void Graph::resolve_unmappable_inner_region(
+    Contig_Entry_CBPtr ce_cbptr, bool c_right,
+    Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation)
 {
     logger("graph", debug) << ptree("resolve_unmappable_inner_region")
         .put("ce_cbptr", ce_cbptr.to_int())
@@ -1657,44 +1667,44 @@ void Graph::resolve_unmappable_inner_region(Contig_Entry_CBPtr ce_cbptr, bool c_
         .put("same_orientation", same_orientation);
 
     auto oc_map = ce_cbptr->out_chunks_dir(c_right, 3);
-    ASSERT(oc_map.count(std::make_tuple(ce_next_cbptr, same_orientation)) == 1);
-    const auto& out_chunks_v = oc_map.at(std::make_tuple(ce_next_cbptr, same_orientation));
+    const auto& out_chunks_v = oc_map.at(make_tuple(ce_next_cbptr, same_orientation));
     // collect unmappable chunks, along with their orientation, in unmappable_chunks_v
-    std::vector< std::tuple< Read_Chunk_BPtr, bool > > unmappable_chunks_v;
+    vector< tuple< Read_Chunk_BPtr, bool > > unmappable_chunks_v;
     // collect sequences along with occurrence count in seq_map
-    std::map< std::string, size_t > seq_cnt_map;
+    map< string, size_t > seq_cnt_map;
     for (const auto& rc_cbptr : out_chunks_v)
     {
         bool r_right = (c_right != rc_cbptr->get_rc());
         Read_Chunk_CBPtr rc_next_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, r_right);
         ASSERT(rc_next_cbptr);
-        if (rc_next_cbptr->is_unmappable())
+        if (not rc_next_cbptr->is_unmappable())
         {
-            unmappable_chunks_v.push_back(std::make_tuple(rc_next_cbptr.unconst(), r_right));
-            string seq = (r_right? rc_next_cbptr->get_seq() : reverseComplement(rc_next_cbptr->get_seq()));
-            if (seq_cnt_map.count(seq) > 0)
-            {
-                ++seq_cnt_map.at(seq);
-            }
-            else
-            {
-                seq_cnt_map[seq] = 1;
-            }
-            // check next next exists and is mapped to ce_next
-            Read_Chunk_CBPtr rc_next_next_cbptr = rc_next_cbptr->re_bptr()->chunk_cont().get_sibling(rc_next_cbptr, true, r_right);
-            static_cast< void >(rc_next_next_cbptr); // silence unused warnings when assertions disabled
-            ASSERT(rc_next_next_cbptr);
-            ASSERT(not rc_next_next_cbptr->is_unmappable());
-            ASSERT(rc_next_next_cbptr->ce_bptr() == ce_next_cbptr);
-            ASSERT((rc_next_next_cbptr->get_rc() == rc_cbptr->get_rc()) == same_orientation);
+            continue;
         }
+        unmappable_chunks_v.push_back(make_tuple(rc_next_cbptr.unconst(), r_right));
+        string seq = (r_right? rc_next_cbptr->get_seq() : reverseComplement(rc_next_cbptr->get_seq()));
+        if (seq_cnt_map.count(seq) > 0)
+        {
+            ++seq_cnt_map.at(seq);
+        }
+        else
+        {
+            seq_cnt_map[seq] = 1;
+        }
+        // check next next exists and is mapped to ce_next
+        Read_Chunk_CBPtr rc_next_next_cbptr = rc_next_cbptr->re_bptr()->chunk_cont().get_sibling(rc_next_cbptr, true, r_right);
+        static_cast< void >(rc_next_next_cbptr); // silence unused warnings when assertions disabled
+        ASSERT(rc_next_next_cbptr);
+        ASSERT(not rc_next_next_cbptr->is_unmappable());
+        ASSERT(rc_next_next_cbptr->ce_bptr() == ce_next_cbptr);
+        ASSERT((rc_next_next_cbptr->get_rc() == rc_cbptr->get_rc()) == same_orientation);
     }
     // construct set of base sequences
-    std::map< std::string, std::tuple< size_t, std::string > > seq_bseq_map;
-    std::vector< std::string > bseq_v;
-    get_base_sequences(seq_cnt_map, seq_bseq_map, bseq_v);
+    map< string, tuple< size_t, string > > seq_bseq_map;
+    vector< string > bseq_v;
+    resolve_unmappable_fully_mapped(seq_cnt_map, bseq_v, seq_bseq_map);
     // create new contig entries
-    std::vector< Contig_Entry_BPtr > new_ce_bptr_v;
+    vector< Contig_Entry_BPtr > new_ce_bptr_v;
     for (const auto& bseq : bseq_v)
     {
         Contig_Entry_BPtr new_ce_bptr = Contig_Entry_Fact::new_elem(Seq_Type(bseq));
@@ -1706,12 +1716,12 @@ void Graph::resolve_unmappable_inner_region(Contig_Entry_CBPtr ce_cbptr, bool c_
         // create new read chunk mapped to new contig entry
         Read_Chunk_CBPtr old_rc_bptr;
         bool r_right;
-        std::tie(old_rc_bptr, r_right) = unmappable_chunks_v[i];
+        tie(old_rc_bptr, r_right) = unmappable_chunks_v[i];
         // seq as considered during base seq selection
         string seq = (r_right? old_rc_bptr->get_seq() : reverseComplement(old_rc_bptr->get_seq()));
         size_t bseq_idx;
-        std::string cigar_string;
-        std::tie(bseq_idx, cigar_string) = seq_bseq_map[seq];
+        string cigar_string;
+        tie(bseq_idx, cigar_string) = seq_bseq_map.at(seq);
         // cigar object that takes into account orientation and offset
         Cigar cigar(cigar_string, not r_right, 0, old_rc_bptr->get_r_start());
         // since the cigar object knows the orientation, we pass the non-reversed chunk sequence
@@ -1729,7 +1739,52 @@ void Graph::resolve_unmappable_inner_region(Contig_Entry_CBPtr ce_cbptr, bool c_
         // link new chunk into its read entry container
         re_bptr->chunk_cont().insert(new_rc_bptr);
     }
-    check(std::set< Contig_Entry_CBPtr >(new_ce_bptr_v.begin(), new_ce_bptr_v.end()));
+    check(set< Contig_Entry_CBPtr >(new_ce_bptr_v.begin(), new_ce_bptr_v.end()));
+}
+
+void Graph::resolve_unmappable_partially_mapped(
+    const set< tuple< string, bool > >& seq_set,
+    const vector< string >& bseq_v,
+    map< tuple< string, bool >, tuple< size_t, string > >& seq_bseq_map)
+{
+    ASSERT(seq_bseq_map.empty());
+    ASSERT(not bseq_v.empty());
+    for (const auto& t : seq_set)
+    {
+        const string& seq = get<0>(t);
+        const bool bseq_right = get<1>(t);
+        size_t bseq_idx = bseq_v.size();
+        string cigar_string;
+        long max_score = numeric_limits< long >::min();
+        OverlapperParams params = affine_default_params;
+        params.type = ALT_CUSTOM;
+        params.use_m_ops = false;
+        params.gap_s2_start = false;
+        params.gap_s2_end = false;
+        for (size_t i = 0; i < bseq_v.size(); ++i)
+        {
+            params.gap_s1_start = bseq_right;
+            params.gap_s1_end = not bseq_right;
+            const auto output = Overlapper::computeAlignmentAffine(bseq_v[i], seq, params);
+            if (output.score > max_score)
+            {
+                // HEURISTIC for allowing this mapping:
+                // - (edit distance < 5) OR (score >= 70% * max_score)
+                const long perfect_score = params.match_score * static_cast< long >(min(seq.size(), bseq_v[i].size()));
+                if (output.edit_distance < 5
+                    or 100 * output.score >= 70 * perfect_score)
+                {
+                    bseq_idx = i;
+                    cigar_string = output.cigar;
+                    max_score = output.score;
+                }
+            }
+        }
+        if (bseq_idx < bseq_v.size())
+        {
+            seq_bseq_map[t] = make_tuple(bseq_idx, cigar_string);
+        }
+    }
 }
 
 void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool c_right)
@@ -1740,47 +1795,80 @@ void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool
 
     auto out_chunks_map = ce_cbptr->out_chunks_dir(c_right, 4);
     // this bucket contains the last chunks which are followed by terminal unmappable siblings
-    const auto rc_last_bucket = std::make_tuple( Contig_Entry_CBPtr(), false );
-    ASSERT(out_chunks_map.count(rc_last_bucket) > 0);
-    const auto& rc_last_cbptr_v = out_chunks_map[rc_last_bucket];
+    const auto rc_last_bucket = make_tuple(Contig_Entry_CBPtr(), false);
+    const auto& rc_last_cbptr_v = out_chunks_map.at(rc_last_bucket);
     // group base sequences of the neighbouring contigs
-    std::vector< std::tuple< Contig_Entry_CBPtr, bool, Seq_Type > > ce_next_seq_v;
+    vector< tuple< Contig_Entry_CBPtr, bool > > ce_next_v;
+    vector< Seq_Type > ce_next_seq_v;
     for (const auto& t : out_chunks_map)
     {
         Contig_Entry_CBPtr ce_next_cbptr;
         bool same_orientation;
-        std::tie(ce_next_cbptr, same_orientation) = t.first;
+        tie(ce_next_cbptr, same_orientation) = t.first;
         if (not ce_next_cbptr)
         {
             continue;
         }
-        ce_next_seq_v.push_back(
-            std::make_tuple(
-                get< 0 >(t.first),
-                get< 1 >(t.first),
-                (same_orientation?
-                 ce_next_cbptr->seq() : reverseComplement(ce_next_cbptr->seq()))));
+        ce_next_v.push_back(t.first);
+        ce_next_seq_v.push_back(same_orientation? ce_next_cbptr->seq() : reverseComplement(ce_next_cbptr->seq()));
         logger("graph", debug1) << ptree("resolve_unmappable_terminal_region")
-            .put("bseq", std::get<2>(ce_next_seq_v.back()));
+            .put("bseq", ce_next_seq_v.back());
     }
     // group unmappable chunk seqeunces
-    std::vector< std::tuple< Read_Chunk_CBPtr, bool, std::string > > rc_unmap_seq_v;
+    set< tuple< string, bool > > rc_unmap_seq_set;
+    vector< tuple< Read_Chunk_CBPtr, bool, decltype(rc_unmap_seq_set)::const_iterator > > rc_unmap_v;
     for (const auto& rc_last_cbptr : rc_last_cbptr_v)
     {
         bool r_right = (c_right != rc_last_cbptr->get_rc());
         Read_Chunk_CBPtr rc_unmap_bptr = rc_last_cbptr->re_bptr()->chunk_cont().get_sibling(rc_last_cbptr, true, r_right);
         ASSERT(rc_unmap_bptr);
         ASSERT(rc_unmap_bptr->is_unmappable());
-        rc_unmap_seq_v.push_back(
-            std::make_tuple(
-                rc_unmap_bptr,
-                rc_last_cbptr->get_rc(),
+        auto t = rc_unmap_seq_set.insert(
+            make_tuple(
                 (not rc_last_cbptr->get_rc()?
-                 rc_unmap_bptr->get_seq() : reverseComplement(rc_unmap_bptr->get_seq()))));
+                 rc_unmap_bptr->get_seq() : reverseComplement(rc_unmap_bptr->get_seq())),
+                not c_right));
+        rc_unmap_v.push_back(make_tuple(rc_unmap_bptr, rc_last_cbptr->get_rc(), t.first));
         logger("graph", debug1) << ptree("resolve_unmappable_terminal_region")
-            .put("rseq", std::get<2>(rc_unmap_seq_v.back()));
+            .put("rseq", get<0>(*get<2>(rc_unmap_v.back())));
     }
-    //std::map< std::tuple< Read_Chunk_CBPtr, bool >, 
+    map< tuple< string, bool >, tuple< size_t, string > > seq_bseq_map;
+    resolve_unmappable_partially_mapped(rc_unmap_seq_set, ce_next_seq_v, seq_bseq_map);
+    /*
+    for (size_t i = 0; i < rc_unmap_v; ++i)
+    {
+        Read_Chunk_CBPtr rc_cbptr;
+        bool r_strand;
+        decltype(seq_bseq_map)::iterator map_it;
+        tie(rc_cbptr, r_strand, map_it) = rc_unmap_v[i];
+        const auto& t = *map_it;
+        if (seq_bseq_map.count(t) == 0)
+        {
+            logger("graph", debug) << ptree("resolve_unmappable_terminal_region")
+                .put("drop_rseq", get<0>(t));
+            //Read_Chunk_BPtr rc_bptr = rc_cbptr.unconst();
+            //rc_bptr->ce_bptr()->set_ignored(); //TODO
+            continue;
+        }
+        size_t bseq_idx;
+        string cigar_string;
+        tie(bseq_idx, cigar_string) = seq_bseq_map[t];
+        Contig_Entry_CBPtr ce_cbptr;
+        bool same_orientation;
+        tie(ce_cbptr, same_orientation) = ce_next_v[bseq_idx];
+        bool c_strand = not same_orientation;
+        Cigar cigar = Cigar(cigar_string, c_strand != r_strand, 0, rc_cbptr->get_r_start());
+        if ((not c_strand
+        {
+            ASSERT(same_orientation);
+            size_t rf_len = tmp_cigar.rf_len();
+            rf_offset = (c_right? 0 : ce_cbptr->get_len() - rf_len);
+        }
+        else
+        {
+        }
+    }
+    */
 }
 
 void Graph::resolve_unmappable_regions()
@@ -1984,7 +2072,7 @@ void Graph::check_leaks() const
     if (Mutation_Chunk_Adapter_Fact::used()
        != num_mca + Read_Chunk_Fact::used() + Mutation_Fact::used())
     {
-        std::set< Mutation_Chunk_Adapter_Fact::index_type > s;
+        set< Mutation_Chunk_Adapter_Fact::index_type > s;
 
         s.insert(_re_cont.header_ptr()->chunk_cont().header_ptr()->mut_ptr_cont().get_root_node().to_int());
         for (auto re_cbref : re_cont())
@@ -2021,7 +2109,7 @@ void Graph::check_leaks() const
         {
             if (s.count(i) == 0)
             {
-                std::cerr << "mca_bptr=" << i << " leaked\n";
+                cerr << "mca_bptr=" << i << " leaked\n";
                 abort();
             }
         }
@@ -2126,7 +2214,7 @@ void Graph::dump_detailed_counts(ostream& os) const
         size_t uniq_0;
         size_t cnt_1;
         size_t uniq_1;
-        std::tie(cnt_0, uniq_0, cnt_1, uniq_1) = ce_cbptr->get_out_degrees(1);
+        tie(cnt_0, uniq_0, cnt_1, uniq_1) = ce_cbptr->get_out_degrees(1);
         os << cnt_0 << '\t'
            << uniq_0 << '\t'
            << cnt_1 << '\t'
@@ -2158,10 +2246,10 @@ void Graph::dump_detailed_counts(ostream& os) const
                         first = false;
                         Contig_Entry_CBPtr tmp_ce_cbptr;
                         bool tmp_flip;
-                        std::tie(tmp_ce_cbptr, tmp_flip) = p.first;
+                        tie(tmp_ce_cbptr, tmp_flip) = p.first;
                         Size_Type min_skipped_len;
                         Size_Type max_skipped_len;
-                        std::tie(min_skipped_len, max_skipped_len) = ce_cbptr->unmappable_neighbour_range(c_right, p.second);
+                        tie(min_skipped_len, max_skipped_len) = ce_cbptr->unmappable_neighbour_range(c_right, p.second);
                         os << '(' << tmp_ce_cbptr->contig_id()
                            << ',' << int(tmp_flip)
                            << ',' << p.second.size()
@@ -2194,7 +2282,7 @@ boost::property_tree::ptree Graph::factory_stats() const
         .put("Factory<Mutation_Chunk_Adapter>", _mca_fact.stats());
 }
 
-void Graph::save(std::ostream& os) const
+void Graph::save(ostream& os) const
 {
     ASSERT(_re_cont.header_ptr().to_int() == 0);
     ASSERT(_ce_cont.get_root_node().to_int() == 0);
@@ -2241,7 +2329,7 @@ void Graph::save(std::ostream& os) const
     logger("io", info) << "saving graph: n_strings=" << n_strings << ", n_bytes=" << n_bytes << "\n";
 }
 
-void Graph::load(std::istream& is)
+void Graph::load(istream& is)
 {
     ASSERT(_re_cont.header_ptr().to_int() == 0);
     ASSERT(_ce_cont.get_root_node().to_int() == 0);
@@ -2327,15 +2415,15 @@ void Graph::get_terminal_reads(ostream& os) const
 
 }
 
-void Graph::interactive_commands(std::istream& is, std::ostream& os)
+void Graph::interactive_commands(istream& is, ostream& os)
 {
-    std::set< Read_Chunk_Fact::index_type > unused_rc_set = Read_Chunk_Fact::unused_set();
-    std::set< Read_Entry_Fact::index_type > unused_re_set = Read_Entry_Fact::unused_set();
-    std::set< Contig_Entry_Fact::index_type > unused_ce_set = Contig_Entry_Fact::unused_set();
+    set< Read_Chunk_Fact::index_type > unused_rc_set = Read_Chunk_Fact::unused_set();
+    set< Read_Entry_Fact::index_type > unused_re_set = Read_Entry_Fact::unused_set();
+    set< Contig_Entry_Fact::index_type > unused_ce_set = Contig_Entry_Fact::unused_set();
 
     os << "Entering interactive mode. Type 'quit' or Ctrl-D to exit.\n";
     string line;
-    while (std::getline(is, line))
+    while (getline(is, line))
     {
         istringstream iss(line + "\n");
         string cmd;
@@ -2487,10 +2575,10 @@ void Graph::interactive_commands(std::istream& is, std::ostream& os)
             {
                 Contig_Entry_CBPtr ce_next_cbptr;
                 bool same_orientation;
-                std::vector< Read_Chunk_CBPtr > rc_cbptr_v;
-                std::tie(ce_next_cbptr, same_orientation) = std::move(t.first);
-                rc_cbptr_v = std::move(t.second);
-                os << "  ce " << std::setw(9) << std::left << ce_next_cbptr.to_int()
+                vector< Read_Chunk_CBPtr > rc_cbptr_v;
+                tie(ce_next_cbptr, same_orientation) = move(t.first);
+                rc_cbptr_v = move(t.second);
+                os << "  ce " << setw(9) << left << ce_next_cbptr.to_int()
                    << " same_orientation " << same_orientation
                    << " rc";
                 for (const auto& rc_cbptr : rc_cbptr_v)

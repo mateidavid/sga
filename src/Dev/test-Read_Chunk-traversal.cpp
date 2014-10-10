@@ -39,8 +39,8 @@ void test_traversal(Read_Chunk_BPtr rc_bptr, bool forward, Size_Type brk, bool o
         .put("on_contig", on_contig)
         .put("res", oss.str());
 
-    clog << "checking: cigar=" << cigar.to_string() << " same_dir=" << not cigar.is_reversed()
-         << " rf_start=" << cigar.get_rf_start() << " qr_start=" << cigar.get_qr_start()
+    clog << "checking: cigar=" << cigar.to_string() << " same_dir=" << not cigar.reversed()
+         << " rf_start=" << cigar.rf_start() << " qr_start=" << cigar.qr_start()
          << " forward=" << forward << " brk=" << brk << " on_contig=" << on_contig
          << " res=" << res << "\n";
 
@@ -226,8 +226,8 @@ void test_cigar(const std::string& cigar_string,
     {
         // construct cigar
         Cigar cigar(cigar_string, cigar_orientation, rf_start, qr_start);
-        Seq_Type rf_seq; for (size_t i = 0; i < cigar.get_rf_len(); ++i) rf_seq += "A";
-        Seq_Type qr_seq; for (size_t i = 0; i < cigar.get_qr_len(); ++i) qr_seq += "A";
+        Seq_Type rf_seq; for (size_t i = 0; i < cigar.rf_len(); ++i) rf_seq += "A";
+        Seq_Type qr_seq; for (size_t i = 0; i < cigar.qr_len(); ++i) qr_seq += "A";
         // construct graph structures
         Read_Chunk_BPtr chunk_bptr;
         chunk_bptr = Read_Chunk::make_chunk_from_cigar(cigar, Seq_Type(rf_seq), qr_seq);
@@ -237,7 +237,7 @@ void test_cigar(const std::string& cigar_string,
         if (settings_map.count("rel_c_brk_v") == 0)
         {
             settings_map.emplace("rel_c_brk_v", std::vector< size_t >({ 0 }) );
-            for (Size_Type c_brk = 1; c_brk < cigar.get_rf_len(); ++c_brk)
+            for (Size_Type c_brk = 1; c_brk < cigar.rf_len(); ++c_brk)
             {
                 settings_map["rel_c_brk_v"].push_back(c_brk);
             }
@@ -252,7 +252,7 @@ void test_cigar(const std::string& cigar_string,
         }
         if (settings_map.count("rel_r_brk_v") == 0)
         {
-            for (Size_Type r_brk = 1; r_brk < cigar.get_qr_len(); ++r_brk)
+            for (Size_Type r_brk = 1; r_brk < cigar.qr_len(); ++r_brk)
             {
                 settings_map["rel_r_brk_v"].push_back(r_brk);
             }

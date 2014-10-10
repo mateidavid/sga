@@ -55,7 +55,7 @@ public:
      * @param name_ptr String with read name. (Read container takes ownership.)
      * @param seq_ptr Read sequence. (Contig container takes ownership.)
      */
-    void add_read(std::string&& name, Seq_Type&& seq);
+    void add_read(string&& name, Seq_Type&& seq);
 
     /** Add an overlap between 2 reads.
      * The contigs holding overlapping chunks of each read are collapsed into one.
@@ -70,10 +70,10 @@ public:
      * @param cigar Cigar string (r1:reference, r2:query).
      * @param cat_at_step Catenate contigs after adding the overlap.
      */
-    void add_overlap(const std::string& r1_name, const std::string& r2_name,
+    void add_overlap(const string& r1_name, const string& r2_name,
                      Size_Type r1_start, Size_Type r1_len,
                      Size_Type r2_start, Size_Type r2_len, bool r2_rc,
-                     const std::string& cigar, bool cat_at_step);
+                     const string& cigar, bool cat_at_step);
 
     /** Merge all contigs. */
     void cat_all_read_contigs();
@@ -87,7 +87,7 @@ public:
      * appear in the output.
      * @param os Output stream.
      */
-    void get_terminal_reads(std::ostream& os) const;
+    void get_terminal_reads(ostream& os) const;
 
     /** Clear contig colors. */
     //void clear_contig_colours();
@@ -95,11 +95,11 @@ public:
 
     /** Mark contig endpoints and branches. */
     /*
-    std::tuple< Size_Type, bool > visit_contig(const Contig_Entry* ce_cptr, bool dir);
+    tuple< Size_Type, bool > visit_contig(const Contig_Entry* ce_cptr, bool dir);
     void dfs_scontig(const Contig_Entry* ce_cptr, bool ce_endpoint, bool dir,
-                     std::list< std::tuple< const Contig_Entry*, size_t, size_t, bool > >& l, bool& cycle);
-    void print_supercontig_lengths(std::ostream& os);
-    void print_supercontig_lengths_2(std::ostream& os);
+                     list< tuple< const Contig_Entry*, size_t, size_t, bool > >& l, bool& cycle);
+    void print_supercontig_lengths(ostream& os);
+    void print_supercontig_lengths_2(ostream& os);
     */
 
     /** Unmap read chunks not mapped to lone contigs. */
@@ -113,45 +113,63 @@ public:
 
     /** Integrity checks. */
     void check_all() const;
-    void check(const std::set< Read_Entry_CBPtr >& re_set,
-               const std::set< Contig_Entry_CBPtr >& ce_set = std::set< Contig_Entry_CBPtr >()) const;
-    void check(const std::set< Contig_Entry_CBPtr >& ce_set) const
+    void check(const set< Read_Entry_CBPtr >& re_set,
+               const set< Contig_Entry_CBPtr >& ce_set = set< Contig_Entry_CBPtr >()) const;
+    void check(const set< Contig_Entry_CBPtr >& ce_set) const
     {
-        check(std::set< Read_Entry_CBPtr >(), ce_set);
+        check(set< Read_Entry_CBPtr >(), ce_set);
     }
     void check_leaks() const;
     //bool check_colours() const;
 
     /** Stats. */
-    void dump_detailed_counts(std::ostream& os) const;
+    void dump_detailed_counts(ostream& os) const;
 
     /*
     void print_separated_het_mutations(
-        std::ostream& os, size_t min_support_report, Size_Type min_separation) const;
+        ostream& os, size_t min_support_report, Size_Type min_separation) const;
     */
 
     /** Print unmappable contigs between each pair of mappable ones. */
-    void print_unmappable_contigs(std::ostream& os) const;
+    void print_unmappable_contigs(ostream& os) const;
 
     /** Resolve unmappable contigs. */
     void resolve_unmappable_regions();
     void resolve_unmappable_inner_region(Contig_Entry_CBPtr ce_cbptr, bool c_right,
                                          Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation);
     void resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool c_right);
-    void get_base_sequences(const std::map< std::string, size_t >& seq_cnt_map,
-                            std::map< std::string, std::tuple< size_t, std::string > >& seq_bseq_map,
-                            std::vector< std::string >& bseq_v);
-    //void remap_partials //TODO
+
+    /** Assign unmappable read sequences to a set of base sequences.
+     * Base sequences are picked from the set of read sequences, the rest of read sequences
+     * are mapped to these base sequences.
+     * @param seq_cnt_map Read sequences, with count of appearances.
+     * @param bseq_v Vector of base sequences.
+     * @param seq_bseq_map Mapping (read sequence) -> (index of bseq, cigar_string).
+     */
+    void resolve_unmappable_fully_mapped(
+        const map< string, size_t >& seq_cnt_map,
+        vector< string >& bseq_v,
+        map< string, tuple< size_t, string > >& seq_bseq_map);
+    /** Remap set of unmappable seq ends to a set of base sequences.
+     * @param seq_set Set of pairs (sequence, side):
+     * the mapping of sequence to abse sequences should be anchored on side.
+     * @param bseq_v Vector of base sequences to choose from
+     * @param seq_bseq_map Mapping (seq, side) -> (index of bseq, cigar_string).
+     */
+    void resolve_unmappable_partially_mapped(
+        const set< tuple< string, bool > >& seq_set,
+        const vector< string >& bseq_v,
+        map< tuple< string, bool >, tuple< size_t, string > >& seq_bseq_map);
 
     /** Process interactive commands. */
-    void interactive_commands(std::istream& is, std::ostream& os);
+    void interactive_commands(istream& is, ostream& os);
 
-    //friend std::ostream& operator << (std::ostream&, const Graph&);
+    //friend ostream& operator << (ostream&, const Graph&);
     boost::property_tree::ptree to_ptree() const;
     boost::property_tree::ptree factory_stats() const;
 
-    void save(std::ostream&) const;
-    void load(std::istream&);
+    void save(ostream&) const;
+    void load(istream&);
 
 private:
     Mutation_Fact _mut_fact;
@@ -195,7 +213,7 @@ private:
      * @param cigar Cigar string describing the mapping.
      * @return Vector of tuples of the form (chunk r_start, chunk r_start, cigar).
      */
-    std::vector< std::tuple< Size_Type, Size_Type, Cigar > >
+    vector< tuple< Size_Type, Size_Type, Cigar > >
     chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar);
 
     /** Make chunk unmappable.

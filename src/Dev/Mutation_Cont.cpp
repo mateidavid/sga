@@ -15,9 +15,9 @@ namespace MAC
 Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
 {
     Mutation_BPtr accum_mut_bptr;
-    for (size_t i = 0; i <= cigar.get_n_ops(); ++i)
+    for (size_t i = 0; i <= cigar.n_ops(); ++i)
     {
-        if (i == cigar.get_n_ops() or cigar.get_op(i) == '=')
+        if (i == cigar.n_ops() or cigar.op_type(i) == '=')
         {
             // if we're keeping track of a mutation, add it to container
             if (accum_mut_bptr)
@@ -29,9 +29,9 @@ Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
         else
         {
             // disallow ambigous 'M' operation
-            ASSERT(cigar.get_op(i) != 'M');
+            ASSERT(cigar.op_type(i) != 'M');
             // accumulator is either empty, or it extends to the start of this mutation
-            ASSERT(not accum_mut_bptr or accum_mut_bptr->get_end() == cigar.get_rf_offset(i));
+            ASSERT(not accum_mut_bptr or accum_mut_bptr->get_end() == cigar.op_rf_pos(i));
             if (not accum_mut_bptr)
             {
                 accum_mut_bptr = Mutation_Fact::new_elem();
@@ -40,28 +40,28 @@ Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
             {
                 // accept either the matched part of the query (length = cigar.qr_len)
                 // or entire query (length > cigar.qr_len)
-                ASSERT(qr.size() >= cigar.get_qr_len());
-                Size_Type qr_offset = (not cigar.is_reversed()?
-                                       cigar.get_qr_offset(i)
-                                       : cigar.get_qr_offset(i) - cigar.get_qr_op_len(i));
-                if (qr.size() == cigar.get_qr_len())
+                ASSERT(qr.size() >= cigar.qr_len());
+                Size_Type qr_offset = (not cigar.reversed()?
+                                       cigar.op_qr_pos(i)
+                                       : cigar.op_qr_pos(i) - cigar.op_qr_len(i));
+                if (qr.size() == cigar.qr_len())
                 {
                     // assume the query sequence before qr_start is missing
-                    qr_offset -= cigar.get_qr_start();
+                    qr_offset -= cigar.qr_start();
                 }
                 accum_mut_bptr->extend(
-                    cigar.get_rf_offset(i),
-                    cigar.get_rf_op_len(i),
-                    (not cigar.is_reversed()?
-                     qr.substr(qr_offset, cigar.get_qr_op_len(i))
-                     : reverseComplement(qr.substr(qr_offset, cigar.get_qr_op_len(i)))));
+                    cigar.op_rf_pos(i),
+                    cigar.op_rf_len(i),
+                    (not cigar.reversed()?
+                     qr.substr(qr_offset, cigar.op_qr_len(i))
+                     : reverseComplement(qr.substr(qr_offset, cigar.op_qr_len(i)))));
             }
             else
             {
                 accum_mut_bptr->extend(
-                    cigar.get_rf_offset(i),
-                    cigar.get_rf_op_len(i),
-                    cigar.get_qr_op_len(i));
+                    cigar.op_rf_pos(i),
+                    cigar.op_rf_len(i),
+                    cigar.op_qr_len(i));
             }
         }
     }

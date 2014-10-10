@@ -6,7 +6,7 @@
 #include "Cigar.hpp"
 
 namespace bo = boost::program_options;
-
+typedef cigar::Cigar<> Cigar;
 
 struct Program_Options
 {
@@ -110,27 +110,27 @@ void real_main(const Program_Options& po)
         }
 
         // check cigar length
-        MAC::Cigar cigar(output.cigar);
-        assert(static_cast< long >(cigar.get_rf_len()) == output.match[0].end - output.match[0].start + 1);
-        assert(static_cast< long >(cigar.get_qr_len()) == output.match[1].end - output.match[1].start + 1);
+        Cigar cigar(output.cigar);
+        assert(static_cast< long >(cigar.rf_len()) == output.match[0].end - output.match[0].start + 1);
+        assert(static_cast< long >(cigar.qr_len()) == output.match[1].end - output.match[1].start + 1);
 
         // check scores
         cigar.disambiguate(s[0].substr(output.match[0].start, output.match[0].end - output.match[0].start + 1),
                            s[1].substr(output.match[1].start, output.match[1].end - output.match[1].start + 1));
         int score = 0;
-        for (size_t j = 0; j < cigar.get_n_ops(); ++j)
+        for (size_t j = 0; j < cigar.n_ops(); ++j)
         {
-            if (cigar.get_op(j) == '=')
+            if (cigar.op_type(j) == '=')
             {
-                score += cigar.get_op_len(j) * params.match_score;
+                score += cigar.op_len(j) * params.match_score;
             }
-            else if (cigar.get_op(j) == 'X')
+            else if (cigar.op_type(j) == 'X')
             {
-                score += cigar.get_op_len(j) * params.mismatch_penalty;
+                score += cigar.op_len(j) * params.mismatch_penalty;
             }
-            else if (cigar.get_op(j) == 'I' || cigar.get_op(j) == 'D')
+            else if (cigar.op_type(j) == 'I' || cigar.op_type(j) == 'D')
             {
-                score += params.gap_penalty + cigar.get_op_len(j) * params.gap_ext_penalty;
+                score += params.gap_penalty + cigar.op_len(j) * params.gap_ext_penalty;
             }
         }
         assert(score == output.score);
