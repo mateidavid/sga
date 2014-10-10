@@ -66,4 +66,12 @@ target_link_libraries(test-affine-overlapper
     ${ZLIB_LIBRARIES}
 )
 
+add_executable(test-DNA_Sequence test-DNA_Sequence.cpp)
+target_link_libraries(test-DNA_Sequence
+    util
+    thirdparty
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    ${ZLIB_LIBRARIES}
+)
+
 file(COPY factory.gdb mac-gdb.gdb DESTINATION .)
