@@ -127,8 +127,8 @@ public:
      * two chunks have the same orientation if they are both mapped to the positive or negative
      * strand of their respective contigs.
      */
-    std::map< std::tuple< Contig_Entry_CBPtr, bool >, std::vector< Read_Chunk_CBPtr > >
-    out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_threshold = 0) const;
+    typedef map< tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > > out_chunks_dir_type;
+    out_chunks_dir_type out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_threshold = 0) const;
 
     /** Get out-edges counts.
      * @param unmappable_policy See above.
