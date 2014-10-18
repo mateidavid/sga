@@ -15,6 +15,7 @@
 #include <set>
 #include <functional>
 #include <utility>
+#include <boost/range/adaptor/map.hpp>
 
 #include "shortcuts.hpp"
 #include "global.hpp"
@@ -30,6 +31,7 @@ namespace MAC
 
 using namespace std;
 namespace bi = boost::intrusive;
+namespace ba = boost::adaptors;
 
 
 /** Type for absolute and relative offsets in read and contig sequences. */
