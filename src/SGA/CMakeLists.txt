@@ -31,6 +31,9 @@ add_executable(sga
     rewrite-evidence-bam.cpp
     haplotype-filter.cpp
     OverlapCommon.cpp
+    graph-concordance.cpp
+    somatic-variant-filters.cpp
+    kmer-count.cpp
 )
 add_dependencies(sga version)
 target_link_libraries(sga

@@ -27,4 +27,5 @@ add_library(util STATIC
     VCFUtil.cpp
     QualityTable.cpp
     BloomFilter.cpp
+    VariantIndex.cpp
 )
