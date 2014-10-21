@@ -1741,8 +1741,11 @@ void Graph::resolve_unmappable_fully_mapped(
 
     // pick base sequences:
     //   greedily choose the one closer than thres_dist to most others
-    //   repeat until all sequences are within thres_dist to a chosen one
+    //   repeat as long as there exists a sequence st:
+    //   - more than thres_dist to every chosen one AND
+    //   - max(length(seq),length(bseq)) > thres_len
     static const double thres_dist = .4;
+    static const size_t thres_len = 10;
     OverlapperParams params = affine_default_params;
     params.type = ALT_GLOBAL;
     params.use_m_ops = false;
@@ -1785,7 +1788,8 @@ void Graph::resolve_unmappable_fully_mapped(
         // map sequences not already mapped to the new base sequence
         for (size_t i = 0; i < seq_v.size(); ++i)
         {
-            if (seq_bseq_map.count(seq_v[i]) > 0 or dist[idx][i] >= thres_dist)
+            if (seq_bseq_map.count(seq_v[i]) > 0
+                or (dist[idx][i] >= thres_dist and max(seq_v[i].size(), bseq.size()) > thres_len))
             {
                 // already mapped or too far
                 continue;
