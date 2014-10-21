@@ -1414,16 +1414,14 @@ void Graph::set_contig_ids()
 void Graph::unmap_single_chunks()
 {
     logger("graph", info) << ptree("unmap_single_chunks");
-    for (auto re_bref : _re_cont)
+    for (auto re_bptr : _re_cont | referenced)
     {
-        Read_Entry_BPtr re_bptr = &re_bref;
         bool done = false;
         while (not done)
         {
             done = true;
-            for (auto rc_bref : re_bptr->chunk_cont())
+            for (auto rc_bptr : re_bptr->chunk_cont() | referenced)
             {
-                Read_Chunk_BPtr rc_bptr = &rc_bref;
                 Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
                 if (not ce_bptr->is_unmappable() and ce_bptr->chunk_cont().single_node())
                 {

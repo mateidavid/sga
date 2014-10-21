@@ -37,6 +37,7 @@ struct Program_Options
     bool check_at_step;
     bool interactive;
     bool resolve_unmappable_regions;
+    bool unmap_single_chunks;
 
     boost::property_tree::ptree to_ptree() const
     {
@@ -58,6 +59,7 @@ struct Program_Options
                       .put("print graph at end", print_at_end)
                       .put("check graph at each step", check_at_step)
                       .put("resolve unmappable regions", resolve_unmappable_regions)
+                      .put("unmap_single_chunks", unmap_single_chunks)
                       .put("interactive", interactive)
                       .put("seed", seed)
                       ;
@@ -172,6 +174,10 @@ int real_main(const Program_Options& po)
     {
         g.resolve_unmappable_regions();
     }
+    if (po.unmap_single_chunks)
+    {
+        g.unmap_single_chunks();
+    }
 
     logger("mac", info) << ptree("setting_contig_ids");
     g.set_contig_ids();
@@ -262,6 +268,7 @@ int main(int argc, char* argv[])
         ("print-at-end,g", bo::bool_switch(&po.print_at_end), "print graph at end")
         ("check-at-step,C", bo::bool_switch(&po.check_at_step), "check graph at each step")
         ("resolve-unmappable", bo::bool_switch(&po.resolve_unmappable_regions), "resolve unmappable regions")
+        ("unmap-single-chunks", bo::bool_switch(&po.unmap_single_chunks), "unmap single chunks")
         ("interactive", bo::bool_switch(&po.interactive), "run interactive commands")
         ("log-level,d", bo::value< vector< string > >(&po.log_level)->composing(), "default log level")
         ("save,S", bo::value< string >(&po.save_file), "save file")
