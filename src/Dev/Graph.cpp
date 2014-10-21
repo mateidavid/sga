@@ -818,6 +818,7 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
 
     logger("graph", debug2) << ptree("unmap_chunk")
         .put("re_name", re_bptr->name())
+        .put("re_ptr", re_bptr.to_int())
         .put("start", rc_start)
         .put("end", rc_end);
 
@@ -1666,6 +1667,8 @@ void Graph::resolve_unmappable_fully_mapped(
     vector< string > seq_v;
     for (const auto& t : seq_cnt_map)
     {
+        logger("graph", debug1) << ptree("resolve_unmappable_fully_mapped")
+            .put("rseq", t.first);
         seq_v.emplace_back(t.first);
     }
 
