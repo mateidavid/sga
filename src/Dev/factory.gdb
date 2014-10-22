@@ -68,10 +68,14 @@ def factory_raw_ptr(p, idx=None):
     if idx >= int(sz):
         return boost_print.parse_and_eval(
             '(' + str(p.type.template_argument(0)) + ' *)0')
+    #res = boost_print.parse_and_eval(
+    #    '(' + str(p.type.template_argument(0)) + ' *)(& bounded::detail::Storage< ' +
+    #    str(gdb.types.get_basic_type(p.type.template_argument(0))) + ', ' +
+    #    str(p.type.template_argument(1)) + ' >::active_ptr()->_cont.at(' + str(idx) + '))')
     res = boost_print.parse_and_eval(
-        '(' + str(p.type.template_argument(0)) + ' *)(& bounded::detail::Storage< ' +
+        '& bounded::detail::Storage< ' +
         str(gdb.types.get_basic_type(p.type.template_argument(0))) + ', ' +
-        str(p.type.template_argument(1)) + ' >::active_ptr()->_cont.at(' + str(idx) + '))')
+        str(p.type.template_argument(1)) + ' >::elem_at(' + str(idx) + ')')
     #print('got: ' + str(res), file=sys.stderr)
     return res
 
