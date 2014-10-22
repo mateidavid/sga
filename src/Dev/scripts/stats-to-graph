@@ -15,12 +15,14 @@ def add_node(u, l, is_unmap):
     print ('%s [label="%s"%s]' % (u, l, ['', ', style=dashed'][is_unmap]))
 
 def add_edge(u, v, out_u, same_orient, l):
-    print ('%s -> %s [dir="both",arrowtail="%s",arrowhead="%s",label="%s"]' %
+    print ('%s -> %s [dir="both",arrowtail="%s",arrowhead="%s",label="%s"%s]' %
            (u,
             v,
             ['normal', 'inv'][out_u],
             ['normal', 'inv'][(out_u + same_orient) % 2],
-            l))
+            l,
+            ['', ', style=dashed'][nodes[u] == 1 or nodes[v] == 1]
+        ))
 
 
 add_header()
@@ -38,7 +40,7 @@ for line in sys.stdin:
         seen_header = True
         continue
     add_node(a[1], a[1] + ':' + a[2], int(a[3]))
-    nodes[a[1]] = True
+    nodes[a[1]] = int(a[3])
     if a[15] != '.':
         for e in a[15][1:-1].split('),('):
             b = e.split(',')
