@@ -7,12 +7,6 @@
 #ifndef __READ_ENTRY_HPP
 #define __READ_ENTRY_HPP
 
-#include <string>
-#include <iostream>
-#include <vector>
-#include <memory>
-#include <functional>
-
 #include "MAC_forward.hpp"
 #include "Read_Chunk.hpp"
 #include "Read_Chunk_Cont.hpp"

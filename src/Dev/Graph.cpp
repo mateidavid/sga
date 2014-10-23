@@ -3,9 +3,6 @@
 #include <iomanip>
 #include <cmath>
 
-#include "Cigar.hpp"
-#include "../Util/Util.h"
-#include "logger.hpp"
 #include "overlapper.h"
 #include "ref_range.hpp"
 

@@ -6,13 +6,8 @@
 
 #include "Read_Chunk.hpp"
 
-#include "Mutation.hpp"
 #include "Read_Entry.hpp"
 #include "Contig_Entry.hpp"
-#include "../Util/Util.h"
-#include "logger.hpp"
-
-using namespace std;
 
 
 namespace MAC

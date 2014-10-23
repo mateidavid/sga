@@ -7,8 +7,6 @@
 #ifndef __READ_CHUNK_PTR_CONT_HPP
 #define __READ_CHUNK_PTR_CONT_HPP
 
-#include <boost/intrusive/list.hpp>
-
 #include "Mutation_Chunk_Adapter.hpp"
 
 

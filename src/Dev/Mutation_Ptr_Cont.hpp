@@ -7,8 +7,6 @@
 #ifndef __MUTATION_PTR_CONT_HPP
 #define __MUTATION_PTR_CONT_HPP
 
-#include <boost/intrusive/list.hpp>
-
 #include "MAC_forward.hpp"
 #include "Mutation.hpp"
 #include "Mutation_Chunk_Adapter.hpp"

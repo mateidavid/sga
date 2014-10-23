@@ -7,13 +7,6 @@
 #ifndef __CONTIG_ENTRY_HPP
 #define __CONTIG_ENTRY_HPP
 
-#include <string>
-#include <iostream>
-#include <vector>
-#include <map>
-#include <memory>
-#include <functional>
-
 #include "MAC_forward.hpp"
 #include "Mutation.hpp"
 #include "Mutation_Cont.hpp"

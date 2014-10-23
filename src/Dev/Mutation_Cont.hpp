@@ -7,10 +7,8 @@
 #ifndef __MUTATION_CONT_HPP
 #define __MUTATION_CONT_HPP
 
-#include "shortcuts.hpp"
-#include <boost/intrusive/itree.hpp>
-
 #include "Mutation.hpp"
+
 
 namespace MAC
 {

@@ -7,12 +7,8 @@
 #ifndef __MUTATION_HPP
 #define __MUTATION_HPP
 
-#include <iostream>
-
 #include "MAC_forward.hpp"
 #include "Read_Chunk_Ptr_Cont.hpp"
-#include "Cigar.hpp"
-#include "../Util/Util.h"
 
 
 namespace MAC

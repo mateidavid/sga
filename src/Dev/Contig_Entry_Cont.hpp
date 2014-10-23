@@ -7,8 +7,6 @@
 #ifndef __CONTIG_ENTRY_CONT_HPP
 #define __CONTIG_ENTRY_CONT_HPP
 
-#include <boost/intrusive/list.hpp>
-
 #include "MAC_forward.hpp"
 #include "Contig_Entry.hpp"
 

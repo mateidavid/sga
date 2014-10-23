@@ -6,8 +6,6 @@
 
 #include "Mutation_Cont.hpp"
 
-using namespace std;
-
 
 namespace MAC
 {

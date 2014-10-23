@@ -6,11 +6,6 @@
 
 #include "Mutation.hpp"
 
-#include <iostream>
-#include "../Util/Util.h"
-
-using namespace std;
-
 
 namespace MAC
 {

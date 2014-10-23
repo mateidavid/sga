@@ -435,7 +435,7 @@ struct Cloner
     typedef Value val_type;
     typedef Index index_type;
     static_assert(not std::is_const< val_type >::value, "Cloner instantiated with const type");
-    static_assert(std::is_copy_constructible< val_type >::value, "Cloner instantiated with non-copy-construtible type");
+    static_assert(std::is_copy_constructible< val_type >::value, "Cloner instantiated with non-copy-constructible type");
     typedef Pointer< val_type, index_type > ptr_type;
     typedef Factory< val_type, index_type > fact_type;
 

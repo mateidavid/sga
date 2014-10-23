@@ -7,20 +7,9 @@
 #ifndef __READ_CHUNK_HPP
 #define __READ_CHUNK_HPP
 
-#include <iostream>
-#include <tuple>
-#include <vector>
-#include <set>
-#include <map>
-#include <memory>
-#include <functional>
-#include <boost/intrusive/set.hpp>
-#include <boost/intrusive/itree.hpp>
-
 #include "MAC_forward.hpp"
 #include "Mutation.hpp"
 #include "Mutation_Ptr_Cont.hpp"
-#include "Cigar.hpp"
 
 
 namespace MAC

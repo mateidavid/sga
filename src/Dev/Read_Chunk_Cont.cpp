@@ -7,8 +7,6 @@
 #include "Read_Chunk_Cont.hpp"
 #include "Read_Entry.hpp"
 
-using namespace std;
-
 
 namespace MAC
 {

@@ -7,8 +7,6 @@
 #ifndef __READ_ENTRY_CONT_HPP
 #define __READ_ENTRY_CONT_HPP
 
-#include <boost/intrusive/set.hpp>
-
 #include "Read_Entry.hpp"
 
 

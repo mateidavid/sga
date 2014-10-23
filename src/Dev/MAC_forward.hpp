@@ -13,8 +13,12 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <memory>
 #include <functional>
 #include <utility>
+#include <iostream>
+#include <boost/intrusive/list.hpp>
+#include <boost/intrusive/set.hpp>
 #include <boost/range/adaptor/map.hpp>
 
 #include "shortcuts.hpp"
@@ -22,7 +26,11 @@
 #include "global_assert.hpp"
 #include "factory.hpp"
 #include "ptree.hpp"
+#include "logger.hpp"
 #include "Cigar.hpp"
+#include "Util.h"
+
+#include <boost/intrusive/itree.hpp>
 
 
 /** Multi-Allelic Contig namespace. */

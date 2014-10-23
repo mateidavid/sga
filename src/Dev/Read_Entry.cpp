@@ -7,8 +7,6 @@
 #include "Read_Entry.hpp"
 #include "Contig_Entry.hpp"
 
-using namespace std;
-
 
 namespace MAC
 {
