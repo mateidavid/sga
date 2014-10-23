@@ -28,7 +28,7 @@ class Graph
 {
 public:
     /** Default constructor. */
-    Graph() {}
+    Graph() : _unmap_trigger_len(9) {}
 
     // disallow copy or move
     DELETE_COPY_CTOR(Graph)

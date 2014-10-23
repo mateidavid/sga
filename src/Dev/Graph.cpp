@@ -866,10 +866,10 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
     for (auto& e : l) {
         tie(re_bptr, rc_start, rc_end) = e;
         re_set.insert(re_bptr);
-        rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rc_start).unconst();
-        ASSERT(rc_bptr->is_unmappable());
-        ASSERT(rc_bptr->get_r_start() <= rc_start and rc_end <= rc_bptr->get_r_end());
-        if (rc_bptr->get_r_start() != rc_start or rc_bptr->get_r_end() != rc_end)
+        Read_Chunk_BPtr other_rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rc_start).unconst();
+        ASSERT(other_rc_bptr->is_unmappable());
+        ASSERT(other_rc_bptr->get_r_start() <= rc_start and rc_end <= other_rc_bptr->get_r_end());
+        if (other_rc_bptr->get_r_start() != rc_start or other_rc_bptr->get_r_end() != rc_end)
         {
             // already been merged with other unmappable chunks
             continue;
@@ -932,6 +932,12 @@ void Graph::unmap_regions(Read_Entry_BPtr re_bptr, const Range_Cont< Size_Type >
 
 void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bool r_right)
 {
+    logger("graph", debug2) << ptree("extend_unmap_chunk_dir")
+        .put("re_name", re_bptr->name())
+        .put("re_ptr", re_bptr.to_int())
+        .put("pos", pos)
+        .put("r_right", r_right);
+
     bool r_left = not r_right;
     Size_Type leftover_bp = (r_left? pos : re_bptr->get_len() - pos);
     while (leftover_bp > 0)
@@ -1423,9 +1429,15 @@ void Graph::unmap_single_chunks()
             for (auto rc_bptr : re_bptr->chunk_cont() | referenced)
             {
                 Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
+                logger("graph", debug1) << ptree("unmap_single_chunks_loop")
+                    .put("ce_bptr", ce_bptr.to_int())
+                    .put("is_unmappable", ce_bptr->is_unmappable())
+                    .put("single_node", ce_bptr->chunk_cont().single_node());
                 if (not ce_bptr->is_unmappable() and ce_bptr->chunk_cont().single_node())
                 {
+                    logger("graph", debug1) << ptree("unmap_single_chunks_unmap_start").put("re_bptr", re_bptr.to_int());
                     unmap_chunk(rc_bptr);
+                    logger("graph", debug1) << ptree("unmap_single_chunks_unmap_end").put("re_bptr", re_bptr.to_int());
                     done = false;
                     break;
                 }
