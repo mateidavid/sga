@@ -22,17 +22,6 @@
 #include "ptree.hpp"
 #include "logger.hpp"
 
-#define CONST_CONVERSIONS(_type, _t) \
-    operator const _type< typename boost::add_const< _t >::type >& () const \
-    { return *reinterpret_cast< const _type< typename boost::add_const< _t >::type >* >(this); } \
-    operator _type< typename boost::add_const< _t >::type >& () \
-    { return *reinterpret_cast< _type< typename boost::add_const< _t >::type >* >(this); } \
-    \
-    const _type< typename boost::remove_const< _t >::type >& unconst() const \
-    { return *reinterpret_cast< const _type< typename boost::remove_const< _t >::type >* >(this); } \
-    _type< typename boost::remove_const< _t >::type >& unconst() \
-    { return *reinterpret_cast< _type< typename boost::remove_const< _t >::type >* >(this); }
-
 
 namespace bounded
 {
@@ -242,11 +231,7 @@ struct Identifier
     }
 
     /** Bool conversion: via pointer to private member fcn. */
-private:
-    typedef void (Identifier::*unspecified_bool_type)() const;
-    void unspecified_bool_type_func() const {}
-public:
-    operator unspecified_bool_type () const { return _idx != null_val? &Identifier::unspecified_bool_type_func : nullptr; }
+    BOOL_CONVERSION(Identifier, public, (_idx != null_val))
 
     /** Increment & decrement operators. */
     Identifier& operator ++ ()    { ++_idx; return *this; }
@@ -305,7 +290,17 @@ public:
     DEFAULT_COPY_ASOP(Pointer)
     DEFAULT_MOVE_ASOP(Pointer)
 
-    CONST_CONVERSIONS(Pointer, val_type)
+    //CONST_CONVERSIONS(Pointer, val_type)
+    // construct const Pointer from non-const Pointer
+    template < typename Other_Value,
+               T_ENABLE_IF((std::is_same< Value, const unqual_val_type >::value
+                            and std::is_same< Other_Value, unqual_val_type >::value)) >
+    Pointer(const Pointer< Other_Value, Index >& other) : _idn(other._idn) {}
+
+    /** Remove constness of referred type */
+    const Pointer< unqual_val_type, Index >& unconst() const
+    { return *reinterpret_cast< const Pointer< unqual_val_type, Index >* >(this); }
+    NONCONST_METHOD((Pointer< unqual_val_type, Index >&), unconst)
 
     /** Constructor from index. */
     static Pointer from_index(const index_type& idx) { Pointer p; p._idn._idx = idx; return p; }
@@ -323,11 +318,7 @@ public:
     static Pointer const_cast_from(const Pointer< const val_type >& other) { return other.unconst(); }
 
     /** Bool conversion: via pointer to private member fcn. */
-private:
-    typedef void (Pointer::*unspecified_bool_type)() const;
-    void unspecified_bool_type_func() const {}
-public:
-    operator unspecified_bool_type () const { return _idn? &Pointer::unspecified_bool_type_func : nullptr; }
+    BOOL_CONVERSION(Pointer, public, (_idn))
 
     /** Increment & decrement operators. */
     Pointer& operator ++ ()    { ++(this->_idn); return *this; }
@@ -348,6 +339,7 @@ public:
 
 private:
     friend class Factory< unqual_val_type, index_type >;
+    friend class Pointer< const unqual_val_type, index_type >;
 
     idn_type _idn;
 }; // class Pointer
@@ -393,7 +385,17 @@ public:
     DEFAULT_MOVE_CTOR(Reference)
     DELETE_MOVE_ASOP(Reference)
 
-    CONST_CONVERSIONS(Reference, val_type)
+    //CONST_CONVERSIONS(Reference, val_type)
+    // construct const Reference from non-const Reference
+    template < typename Other_Value,
+               T_ENABLE_IF((std::is_same< Value, const unqual_val_type >::value
+                            and std::is_same< Other_Value, unqual_val_type >::value)) >
+    Reference(const Reference< Other_Value, Index >& other) : _idn(other._idn) {}
+
+    /** Remove constness of referred type */
+    const Reference< unqual_val_type, Index >& unconst() const
+    { return *reinterpret_cast< const Reference< unqual_val_type, Index >* >(this); }
+    NONCONST_METHOD((Reference< unqual_val_type, Index >&), unconst)
 
     // get raw reference
     raw_ref_type raw() const { ASSERT(_idn); return _idn.dereference(); }
@@ -423,6 +425,7 @@ public:
 
 private:
     friend class Pointer< val_type, index_type >;
+    friend class Reference< const unqual_val_type, index_type >;
 
     Reference(const idn_type& idn) : _idn(idn) {}
 
