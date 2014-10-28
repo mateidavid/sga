@@ -440,26 +440,6 @@ void Contig_Entry::check() const
 #endif
 }
 
-/*
-bool Contig_Entry::check_colour(bool dir) const
-{
-    if (is_unmappable())
-    {
-        return true;
-    }
-    auto neighbours_sptr = get_neighbours(dir);
-    if (neighbours_sptr->size() == 1)
-    {
-        ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) == 0);
-    }
-    else
-    {
-        ASSERT((get_colour() & (dir == false? 0x4 : 0x8)) != 0);
-    }
-    return true;
-}
-*/
-
 boost::property_tree::ptree Contig_Entry::to_ptree() const
 {
     return ptree().put("addr", (void*)this)

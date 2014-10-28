@@ -120,7 +120,6 @@ public:
         check(set< Read_Entry_CBPtr >(), ce_set);
     }
     void check_leaks() const;
-    //bool check_colours() const;
 
     /** Stats. */
     void dump_detailed_counts(ostream& os) const;

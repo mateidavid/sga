@@ -198,7 +198,6 @@ int real_main(const Program_Options& po)
         //TODO
         //ofstream lengths_file(po.supercontig_lengths_file);
         //g.print_supercontig_lengths_2(lengths_file);
-        //ASSERT(g.check_colours());
     }
     if (not po.mutations_file.empty())
     {

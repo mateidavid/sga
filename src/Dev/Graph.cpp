@@ -1405,15 +1405,6 @@ void Graph::print_supercontig_lengths(ostream& os)
 }
 */
 
-void Graph::set_contig_ids()
-{
-    for (auto ce_bref : ce_cont())
-    {
-        Contig_Entry_BPtr ce_bptr = &ce_bref;
-        ce_bptr->contig_id() = ce_bptr.to_int();
-    }
-}
-
 void Graph::unmap_single_chunks()
 {
     logger("graph", info) << ptree("unmap_single_chunks");
@@ -2102,19 +2093,6 @@ void Graph::resolve_unmappable_regions()
     cat_all_read_contigs();
     check_all();
 }
-
-/*
-bool Graph::check_colours() const
-{
-    for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
-    {
-        const Contig_Entry* ce_cptr = &*ce_it;
-        ASSERT(ce_cptr->check_colour(false));
-        ASSERT(ce_cptr->check_colour(true));
-    }
-    return true;
-}
-*/
 
 void Graph::clear_and_dispose()
 {
