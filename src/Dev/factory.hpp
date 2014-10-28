@@ -110,8 +110,12 @@ public:
             os.write(reinterpret_cast< const char* >(&e), sizeof(e));
             bytes += sizeof(e);
         }
-        logger("io", info) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
-            << ": saving: _next_free_idx=" << _next_free_idx << ", sz=" << sz << ", bytes=" << bytes << "\n";
+        logger("io", info) << ptree("factory_save")
+            .put("type", typeid(Value).name())
+            .put("addr", static_cast< const void* >(this))
+            .put("next_free_idx", _next_free_idx)
+            .put("sz", sz)
+            .put("bytes", bytes);
     }
 
     void load(std::istream& is)
@@ -126,8 +130,12 @@ public:
             is.read(reinterpret_cast< char* >(&e), sizeof(e));
             bytes += sizeof(e);
         }
-        logger("io", info) << "Factory<" << typeid(Value).name() << "> @" << static_cast< const void* >(this)
-            << ": loading: _next_free_idx=" << _next_free_idx << ", sz=" << sz << ", bytes=" << bytes << "\n";
+        logger("io", info) << ptree("factory_load")
+            .put("type", typeid(Value).name())
+            .put("addr", static_cast< const void* >(this))
+            .put("next_free_idx", _next_free_idx)
+            .put("sz", sz)
+            .put("bytes", bytes);
     }
 
 private:
