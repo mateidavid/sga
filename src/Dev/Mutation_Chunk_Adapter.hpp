@@ -42,14 +42,12 @@ private:
         : _mut_cbptr(mut_cbptr), _chunk_cbptr(chunk_cbptr) {}
 
     /** Check it is unlinked before destruction. */
-    //~Mutation_Chunk_Adapter() { ASSERT(is_unlinked()); }
+    ~Mutation_Chunk_Adapter() { ASSERT(is_unlinked()); }
 
     /** Getters. */
 public:
-    const Mutation_CBPtr& mut_cbptr() const { return _mut_cbptr; }
-    Mutation_CBPtr& mut_cbptr() { return _mut_cbptr; }
-    const Read_Chunk_CBPtr& chunk_cbptr() const { return _chunk_cbptr; }
-    Read_Chunk_CBPtr& chunk_cbptr() { return _chunk_cbptr; }
+    GETTER(Mutation_CBPtr, mut_cbptr, _mut_cbptr)
+    GETTER(Read_Chunk_CBPtr, chunk_cbptr, _chunk_cbptr)
 
     //friend std::ostream& operator << (std::ostream& os, const Mutation_Chunk_Adapter&);
     boost::property_tree::ptree to_ptree() const

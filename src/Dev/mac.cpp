@@ -179,9 +179,6 @@ int real_main(const Program_Options& po)
         g.unmap_single_chunks();
     }
 
-    logger("mac", info) << ptree("setting_contig_ids");
-    g.set_contig_ids();
-
     if (po.interactive)
     {
         g.interactive_commands(std::cin, std::cout);

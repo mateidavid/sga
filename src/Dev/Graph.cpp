@@ -2055,10 +2055,11 @@ void Graph::resolve_unmappable_regions()
     }
     check_all();
 
-    // step 2: find reads with terminal unmapapble contigs
+    // step 2: find reads with terminal unmappable contigs
+    const vector< uint64_t > visit_endpoint_mask = { 1, 2 };
     for (auto ce_bptr : ce_cont() | referenced)
     {
-        ce_bptr->colour() = 0;
+        bitmask::reset(ce_bptr->tag(), visit_endpoint_mask[0] | visit_endpoint_mask[1]);
     }
     for (auto re_bptr : re_cont() | referenced)
     {
@@ -2078,9 +2079,9 @@ void Graph::resolve_unmappable_regions()
             }
             Contig_Entry_BPtr ce_bptr = rc_cbptr->ce_bptr().unconst();
             bool c_right = (r_right != rc_cbptr->get_rc());
-            if ((ce_bptr->colour() & (1u << c_right)) == 0)
+            if (not bitmask::any(ce_bptr->tag(), visit_endpoint_mask[c_right]))
             {
-                ce_bptr->colour() |= (1u << c_right);
+                bitmask::set(ce_bptr->tag(), visit_endpoint_mask[c_right]);
                 resolve_unmappable_terminal_region(ce_bptr, c_right);
             }
         }
@@ -2298,7 +2299,7 @@ void Graph::dump_detailed_counts(ostream& os) const
             {
                 os << ',';
             }
-            os << rc_cbptr->ce_bptr()->contig_id();
+            os << rc_cbptr->ce_bptr().to_int();
         }
         os << '\n';
     }
@@ -2315,7 +2316,7 @@ void Graph::dump_detailed_counts(ostream& os) const
         Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
 
         os << "CE\t"
-           << ce_cbptr->contig_id() << '\t'
+           << ce_cbptr.to_int() << '\t'
            << ce_cbptr->get_len() << '\t'
            << static_cast< int >(ce_cbptr->is_unmappable()) << '\t'
            << ce_cbptr->chunk_cont().size() << '\t'
@@ -2396,7 +2397,7 @@ void Graph::dump_detailed_counts(ostream& os) const
                     Contig_Entry_CBPtr tmp_ce_cbptr;
                     bool tmp_flip;
                     tie(tmp_ce_cbptr, tmp_flip) = p.first;
-                    os << '(' << tmp_ce_cbptr->contig_id()
+                    os << '(' << tmp_ce_cbptr.to_int()
                        << ',' << int(tmp_flip)
                        << ',' << p.second.size();
                     if (print_unmap_range)

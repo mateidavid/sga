@@ -38,7 +38,7 @@ private:
     /** Constructor.
      * @param seq RVR to read sequence (assume ownership).
      */
-    Contig_Entry(Seq_Type&& seq, Size_Type seq_offset = 0) : _seq(std::move(seq)), _seq_offset(seq_offset), _colour(0) {}
+    Contig_Entry(Seq_Type&& seq, Size_Type seq_offset = 0) : _seq(std::move(seq)), _seq_offset(seq_offset), _tag(0) {}
 
     // allow move only when unlinked
     DEFAULT_DEF_CTOR(Contig_Entry)
@@ -60,19 +60,17 @@ public:
         {
             ASSERT(is_unlinked());
             _seq = std::move(rhs._seq);
+            _seq_offset = std::move(rhs._seq_offset);
+            _tag = std::move(rhs._tag);
             _mut_cont = std::move(rhs._mut_cont);
             _chunk_cont = std::move(rhs._chunk_cont);
-            _seq_offset = std::move(rhs._seq_offset);
-            _contig_id = std::move(rhs._contig_id);
-            _colour = std::move(rhs._colour);
         }
         return *this;
     }
 
     /** @name Getters */
     /**@{*/
-    const Seq_Type& seq() const { return _seq; }
-    Seq_Type& seq() { return _seq; }
+    GETTER(Seq_Type, seq, _seq)
     Size_Type get_seq_offset() const { return _seq_offset; }
     Seq_Type substr(Size_Type start, Size_Type len) const
     {
@@ -80,14 +78,9 @@ public:
         return _seq.substr(start - _seq_offset, len);
     }
     Size_Type get_len() const { return _seq.size(); }
-    const Mutation_Cont& mut_cont() const { return _mut_cont; }
-    Mutation_Cont& mut_cont() { return _mut_cont; }
-    const Read_Chunk_CE_Cont& chunk_cont() const { return _chunk_cont; }
-    Read_Chunk_CE_Cont& chunk_cont() { return _chunk_cont; }
-    const int& colour() const { return _colour; }
-    int& colour() { return _colour; }
-    const size_t& contig_id() const { return _contig_id; }
-    size_t& contig_id() { return _contig_id; }
+    GETTER(Mutation_Cont, mut_cont, _mut_cont)
+    GETTER(Read_Chunk_CE_Cont, chunk_cont, _chunk_cont)
+    GETTER(uint64_t, tag, _tag)
     bool is_unmappable() const { return _chunk_cont.size() == 1 and _chunk_cont.begin()->is_unmappable(); }
     /**@}*/
 
@@ -206,17 +199,18 @@ public:
     boost::property_tree::ptree to_ptree() const;
 
 private:
+    friend struct detail::Contig_Entry_List_Node_Traits;
+
     Seq_Type _seq;
+    Size_Type _seq_offset;
+    uint64_t _tag;
     Mutation_Cont _mut_cont;
     Read_Chunk_CE_Cont _chunk_cont;
-    Size_Type _seq_offset;
-    size_t _contig_id;
-    int _colour;
 
     /** Hooks for storage in intrusive list in Graph object. */
-    friend struct detail::Contig_Entry_List_Node_Traits;
     Contig_Entry_BPtr _previous;
     Contig_Entry_BPtr _next;
+
     bool is_unlinked() const { return not(_previous or _next); }
 }; // class Contig_Entry
 

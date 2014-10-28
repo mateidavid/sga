@@ -78,8 +78,6 @@ public:
     /** Merge all contigs. */
     void cat_all_read_contigs();
 
-    void set_contig_ids();
-
     /** Get reads beyond which coverage drops (that is, supercontigs end with out-degree zero).
      * For each such read, we print the strand with which the coverage ends.
      * Thus, to extend the current supercontig, one should find mappings beyond the 3' end
