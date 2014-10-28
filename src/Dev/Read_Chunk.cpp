@@ -281,14 +281,19 @@ Read_Chunk::Read_Chunk(Read_Entry_BPtr re_bptr, Contig_Entry_BPtr ce_bptr)
       _bits(0)
 {
     ASSERT(_r_len == _c_len);
-    _set_rc(false);
-    _set_is_unmappable(false);
 }
 
 Size_Type Read_Chunk::get_read_len() const
 {
     ASSERT(re_bptr());
     return re_bptr()->get_len();
+}
+
+bool Read_Chunk::is_unmappable() const
+{
+    ASSERT(ce_bptr());
+    ASSERT(ce_bptr()->is_ambiguous() == _get_is_unmappable());
+    return _get_is_unmappable();
 }
 
 Read_Chunk_BPtr
@@ -520,7 +525,6 @@ Read_Chunk::collapse_mapping(Read_Chunk_BPtr c1rc1_cbptr, Read_Chunk_BPtr rc1rc2
     c1rc2_bptr->_set_rc(c1rc1_cbptr->get_rc() != rc1rc2_cbptr->get_rc());
     c1rc2_bptr->re_bptr() = rc1rc2_cbptr->re_bptr();
     c1rc2_bptr->ce_bptr() = c1rc1_cbptr->ce_bptr();
-    c1rc2_bptr->_set_is_unmappable(false);
 
     // traverse c1 left-to-right; traverse rc1 left-to-right if not _rc, r-to-l ow;
     Pos pos = c1rc1_cbptr->get_start_pos();
@@ -971,6 +975,7 @@ void Read_Chunk::make_unmappable(Read_Chunk_BPtr rc_bptr)
     rc_bptr->_set_rc(false);
     rc_bptr->_set_is_unmappable(true);
     ce_new_bptr->chunk_cont().insert(rc_bptr);
+    ce_new_bptr->set_ambiguous();
 }
 
 Seq_Type Read_Chunk::get_seq() const

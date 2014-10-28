@@ -170,28 +170,7 @@ private:
           _ce_bptr(nullptr),
           _mut_ptr_cont(),
           _bits(0)
-    {
-        _set_rc(false);
-        _set_is_unmappable(false);
-    }
-
-    /** Constructs a single read chunk from a read, and maps it to a new contig.
-     * @param re_ptr Pointer to read entry where this chunk comes from.
-     * @param len Length of the read.
-     */
-    Read_Chunk(Read_Entry_BPtr re_bptr, Size_Type len)
-        : _r_start(0),
-          _r_len(len),
-          _c_start(0),
-          _c_len(len),
-          _re_bptr(re_bptr),
-          _ce_bptr(NULL),
-          _mut_ptr_cont(),
-          _bits(0)
-    {
-        _set_rc(false);
-        _set_is_unmappable(false);
-    }
+    {}
 
     /** Construct chunk mapping full read to single contig.
      * Pre: Read and contig must be of the same length.
@@ -233,23 +212,21 @@ public:
 
     /** @name Getters */
     /**@{*/
-    const Read_Entry_BPtr& re_bptr() const { return _re_bptr; }
-    Read_Entry_BPtr& re_bptr() { return _re_bptr; }
-    const Contig_Entry_BPtr& ce_bptr() const { return _ce_bptr; }
-    Contig_Entry_BPtr& ce_bptr() { return _ce_bptr; }
+    GETTER(Read_Entry_BPtr, re_bptr, _re_bptr)
+    GETTER(Contig_Entry_BPtr, ce_bptr, _ce_bptr)
+    GETTER(Size_Type, c_len, _c_len)
+    GETTER(Mutation_Ptr_Cont, mut_ptr_cont, _mut_ptr_cont)
     Size_Type get_r_start() const { return _r_start; }
     Size_Type get_r_len() const { return _r_len; }
     Size_Type get_r_end() const { return _r_start + _r_len; }
     Size_Type get_c_start() const { return _c_start; }
     Size_Type get_c_len() const { return _c_len; }
-    Size_Type& c_len() { return _c_len; }
     Size_Type get_c_end() const { return _c_start + _c_len; }
     bool get_rc() const { return _get_rc(); }
-    const Mutation_Ptr_Cont& mut_ptr_cont() const { return _mut_ptr_cont; }
-    Mutation_Ptr_Cont& mut_ptr_cont() { return _mut_ptr_cont; }
     Seq_Type get_seq() const;
     Seq_Type substr(Size_Type start, Size_Type len) const;
-    bool is_unmappable() const { return _get_is_unmappable(); }
+    //bool is_unmappable() const { ASSERT(ce_bptr()); ASSERT(ce_bptr()->is_ambiguous() == _get_is_unmappable()); return _get_is_unmappable(); }
+    bool is_unmappable() const;
     Size_Type get_read_len() const;
     /**@}*/
 

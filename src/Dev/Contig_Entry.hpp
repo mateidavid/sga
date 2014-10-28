@@ -81,7 +81,15 @@ public:
     GETTER(Mutation_Cont, mut_cont, _mut_cont)
     GETTER(Read_Chunk_CE_Cont, chunk_cont, _chunk_cont)
     GETTER(uint64_t, tag, _tag)
-    bool is_unmappable() const { return _chunk_cont.size() == 1 and _chunk_cont.begin()->is_unmappable(); }
+    bool old_is_unmappable() const { return _chunk_cont.size() == 1 and _chunk_cont.begin()->is_unmappable(); }
+    bool is_unmappable() const { ASSERT(old_is_unmappable() == is_ambiguous()); return is_ambiguous(); }
+
+    bool is_ambiguous() const { return bitmask::any(_tag, is_ambiguous_mask); }
+    void set_ambiguous() { bitmask::set(_tag, is_ambiguous_mask); }
+    void reset_ambiguous() { bitmask::reset(_tag, is_ambiguous_mask); }
+    bool is_lowcomplex() const { return bitmask::any(_tag, is_lowcomplex_mask); }
+    void set_lowcomplex() { bitmask::set(_tag, is_lowcomplex_mask); }
+    void reset_lowcomplex() { bitmask::reset(_tag, is_lowcomplex_mask); }
     /**@}*/
 
     /** Cut mutation at given offsets.
@@ -198,8 +206,12 @@ public:
     //friend std::ostream& operator << (std::ostream& os, const Contig_Entry& rhs);
     boost::property_tree::ptree to_ptree() const;
 
+    static const uint64_t is_ambiguous_mask = 1u << 31;
+    static const uint64_t is_lowcomplex_mask = 1u << 30;
+
 private:
     friend struct detail::Contig_Entry_List_Node_Traits;
+    bool is_unlinked() const { return not(_previous or _next); }
 
     Seq_Type _seq;
     Size_Type _seq_offset;
@@ -210,8 +222,6 @@ private:
     /** Hooks for storage in intrusive list in Graph object. */
     Contig_Entry_BPtr _previous;
     Contig_Entry_BPtr _next;
-
-    bool is_unlinked() const { return not(_previous or _next); }
 }; // class Contig_Entry
 
 } // namespace MAC
