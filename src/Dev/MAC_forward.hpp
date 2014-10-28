@@ -29,6 +29,7 @@
 #include "logger.hpp"
 #include "Cigar.hpp"
 #include "Util.h"
+#include "bits.hpp"
 
 #include <boost/intrusive/itree.hpp>
 

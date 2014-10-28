@@ -428,53 +428,21 @@ private:
     Read_Chunk_BPtr _re_l_child;
     Read_Chunk_BPtr _re_r_child;
 
-    int _bits;
+    uint8_t _bits;
 
     static const uint8_t _rc_bit = 1u;
     static const uint8_t _is_unmappable_bit = 2u;
     static const uint8_t _ce_col_bit = 4u;
     static const uint8_t _re_col_bit = 8u;
 
-    bool _get_rc() const
-    {
-        bool res = (_bits & _rc_bit) != 0;
-        return res;
-    }
-    void _set_rc(bool c)
-    {
-        _bits &= ~_rc_bit;
-        _bits |= (static_cast< uint8_t >(c) * _rc_bit);
-    }
-    bool _get_is_unmappable() const
-    {
-        bool res = (_bits & _is_unmappable_bit) != 0;
-        return res;
-    }
-    void _set_is_unmappable(bool c)
-    {
-        _bits &= ~_is_unmappable_bit;
-        _bits |= (static_cast< uint8_t >(c) * _is_unmappable_bit);
-    }
-    bool _get_ce_col() const
-    {
-        bool res = (_bits & _ce_col_bit) != 0;
-        return res;
-    }
-    void _set_ce_col(bool c)
-    {
-        _bits &= ~_ce_col_bit;
-        _bits |= (static_cast< uint8_t >(c) * _ce_col_bit);
-    }
-    bool _get_re_col() const
-    {
-        bool res = (_bits & _re_col_bit) != 0;
-        return res;
-    }
-    void _set_re_col(bool c)
-    {
-        _bits &= ~_re_col_bit;
-        _bits |= (static_cast< uint8_t >(c) * _re_col_bit);
-    }
+    bool _get_rc() const { return bitmask::any(_bits, _rc_bit); }
+    void _set_rc(bool v) { bitmask::assign(_bits, _rc_bit, v); }
+    bool _get_is_unmappable() const { return bitmask::any(_bits, _is_unmappable_bit); }
+    void _set_is_unmappable(bool v) { bitmask::assign(_bits, _is_unmappable_bit, v); }
+    bool _get_ce_col() const { return bitmask::any(_bits, _ce_col_bit); }
+    void _set_ce_col(bool v) { bitmask::assign(_bits, _ce_col_bit, v); }
+    bool _get_re_col() const { return bitmask::any(_bits, _re_col_bit); }
+    void _set_re_col(bool v) { bitmask::assign(_bits, _re_col_bit, v); }
 }; // class Read_Chunk
 
 } // namespace MAC
