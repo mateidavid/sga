@@ -121,9 +121,9 @@ bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
 
     ASSERT(rc_bptr->get_r_len() > 0);
     ASSERT(rc_bptr->get_r_start() <= r_brk and r_brk <= rc_bptr->get_r_end());
-    if (rc_bptr->is_unmappable())
+    if (rc_bptr->is_unbreakable())
     {
-        // never cut unmappable chunks
+        // never cut unbreakable chunks
         return false;
     }
     if (r_brk == rc_bptr->get_r_start() or r_brk == rc_bptr->get_r_end())
@@ -370,8 +370,8 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
             ASSERT(r1_pos < r1_start + r1_len);
             ASSERT(r2_rc or r2_pos < r2_start + r2_len);
             ASSERT(not r2_rc or r2_pos > r2_start);
-            ASSERT(rc1_offset == 0 or rc1_bptr->is_unmappable());
-            ASSERT(rc2_offset == 0 or rc2_bptr->is_unmappable());
+            ASSERT(rc1_offset == 0 or rc1_bptr->is_unbreakable());
+            ASSERT(rc2_offset == 0 or rc2_bptr->is_unbreakable());
             ASSERT(rc1_bptr);
             ASSERT(rc1_bptr->get_r_start() + rc1_offset == r1_pos);
             ASSERT(rc1_remaining_len > 0);
@@ -420,10 +420,10 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
             // cuts don't succeed only if those chunks are unmappable
             ASSERT(op_end < cigar.n_ops()
                    or op_rf_sub_len >= rc1_remaining_len
-                   or rc1_bptr->is_unmappable());
+                   or rc1_bptr->is_unbreakable());
             ASSERT(op_end < cigar.n_ops()
                    or op_qr_sub_len >= rc2_remaining_len
-                   or rc2_bptr->is_unmappable());
+                   or rc2_bptr->is_unbreakable());
             if (op_rf_sub_len > rc1_remaining_len)
             {
                 // the first inequality trivially holds with <=
@@ -478,8 +478,8 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
             ASSERT(op_rf_sub_len <= rc1_remaining_len
                    and op_qr_sub_len <= rc2_remaining_len);
             // now we are sure the op ends on at least one of the read chunk boundaries
-            // unless these are the last chunks and they are both unmappable
-            if (op_end == cigar.n_ops() and rc1_bptr->is_unmappable() and rc2_bptr->is_unmappable())
+            // unless these are the last chunks and they are both unbreakable
+            if (op_end == cigar.n_ops() and rc1_bptr->is_unbreakable() and rc2_bptr->is_unbreakable())
             {
                 ASSERT(done);
                 break;
@@ -501,17 +501,17 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
                     op_start = op_end;
                     continue;
                 }
-                else if (rc2_bptr->is_unmappable())
+                else if (rc2_bptr->is_unbreakable())
                 {
                     // rc2 cannot be cut
-                    if (not rc1_bptr->is_unmappable())
+                    if (not rc1_bptr->is_unbreakable())
                     {
-                        // rc1 is mapped to an unmappable chunk; we unmap it
+                        // rc1 is mapped to an unbreakable chunk; we unmap it
                         unmap_chunk(rc1_bptr);
                         done = false;
                         break;
                     }
-                    else // both rc1 and rc2 are unmappable
+                    else // both rc1 and rc2 are unbreakable
                     {
                         // we advance both
                         r1_pos = rc1_bptr->get_r_end();
@@ -543,17 +543,17 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
                     op_start = op_end;
                     continue;
                 }
-                else if (rc1_bptr->is_unmappable())
+                else if (rc1_bptr->is_unbreakable())
                 {
                     // rc1 cannot be cut
-                    if (not rc2_bptr->is_unmappable())
+                    if (not rc2_bptr->is_unbreakable())
                     {
-                        // rc2 is mapped to an unmappable chunk; we unmap it
+                        // rc2 is mapped to an unbreakable chunk; we unmap it
                         unmap_chunk(rc2_bptr);
                         done = false;
                         break;
                     }
-                    else // both rc1 and rc2 are unmappable
+                    else // both rc1 and rc2 are unbreakable
                     {
                         // we advance both
                         r1_pos += op_rf_sub_len;
@@ -572,20 +572,20 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
             // reached when both rc1 and rc2 end at the current cigar op
             ASSERT(op_rf_sub_len == rc1_remaining_len
                    and op_qr_sub_len == rc2_remaining_len);
-            if (rc1_bptr->is_unmappable() and not rc2_bptr->is_unmappable())
+            if (rc1_bptr->is_unbreakable() and not rc2_bptr->is_unbreakable())
             {
                 unmap_chunk(rc2_bptr);
                 done = false;
                 break;
             }
-            if (rc2_bptr->is_unmappable() and not rc1_bptr->is_unmappable())
+            if (rc2_bptr->is_unbreakable() and not rc1_bptr->is_unbreakable())
             {
                 unmap_chunk(rc1_bptr);
                 done = false;
                 break;
             }
-            ASSERT(rc1_bptr->is_unmappable() == rc2_bptr->is_unmappable());
-            if (not rc1_bptr->is_unmappable())
+            ASSERT(rc1_bptr->is_unbreakable() == rc2_bptr->is_unbreakable());
+            if (not rc1_bptr->is_unbreakable())
             {
                 // add read chunk mapping
                 rc_mapping.push_back(make_tuple(rc1_bptr->get_r_start(), rc2_bptr->get_r_start(), cigar.subcigar(op_start, op_cnt)));
@@ -662,7 +662,7 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     logger("graph", debug1) << ptree("add_overlap_after_disambiguate").put("cigar", cigar.to_ptree());
 
     // cut r1 & r2 at the ends of the match region
-    // NOTE: unmappable chunks are never cut
+    // NOTE: unbreakable chunks are never cut
     cut_read_entry(re1_bptr, r1_start);
     cut_read_entry(re1_bptr, r1_start + r1_len);
     cut_read_entry(re2_bptr, r2_start);
@@ -768,7 +768,7 @@ void Graph::cat_read_contigs(Read_Entry_BPtr re_bptr)
         {
             Read_Chunk_BPtr rc_bptr = &rc_bref;
             Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
-            if (rc_bptr->is_unmappable())
+            if (ce_bptr->is_unmappable())
             {
                 continue;
             }
@@ -861,7 +861,7 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
         tie(re_bptr, rc_start, rc_end) = e;
         re_set.insert(re_bptr);
         Read_Chunk_BPtr other_rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rc_start).unconst();
-        ASSERT(other_rc_bptr->is_unmappable());
+        ASSERT(other_rc_bptr->ce_bptr()->is_unmappable());
         ASSERT(other_rc_bptr->get_r_start() <= rc_start and rc_end <= other_rc_bptr->get_r_end());
         if (other_rc_bptr->get_r_start() != rc_start or other_rc_bptr->get_r_end() != rc_end)
         {
@@ -887,7 +887,7 @@ void Graph::unmap_regions(Read_Entry_BPtr re_bptr, const Range_Cont< Size_Type >
         // cut first chunk if necessary
         Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg_r_start).unconst();
         ASSERT(rc_bptr->get_r_start() <= rg_r_start and rg_r_start < rc_bptr->get_r_end());
-        if (rc_bptr->is_unmappable())
+        if (rc_bptr->is_unbreakable())
         {
             pos = rc_bptr->get_r_end();
         }
@@ -902,7 +902,7 @@ void Graph::unmap_regions(Read_Entry_BPtr re_bptr, const Range_Cont< Size_Type >
         while (pos < rg_r_end)
         {
             rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(pos).unconst();
-            if (rc_bptr->is_unmappable())
+            if (rc_bptr->is_unbreakable())
             {
                 ASSERT(rc_bptr->get_r_start() <= pos);
                 pos = rc_bptr->get_r_end();
@@ -939,7 +939,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
         // calls in previous iterations might extend the unmapped region
         // we first recompute the chunks based solely on: re_cptr & unmap_start
         Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(r_left? pos : pos - 1).unconst();
-        ASSERT(rc_bptr->is_unmappable());
+        ASSERT(rc_bptr->ce_bptr()->is_unmappable());
         ASSERT(not r_left or rc_bptr->get_r_start() <= pos);
         ASSERT(not r_right or pos <= rc_bptr->get_r_end());
         pos = (r_left? rc_bptr->get_r_start() : rc_bptr->get_r_end());
@@ -950,7 +950,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
         }
         Read_Chunk_BPtr next_rc_bptr = re_bptr->chunk_cont().get_sibling(rc_bptr, true, r_right).unconst();
 
-        if (next_rc_bptr->is_unmappable())
+        if (next_rc_bptr->ce_bptr()->is_unmappable())
         {
             // consecutive unmappable chunks; merge contigs
             ASSERT(not rc_bptr->get_rc());
@@ -975,7 +975,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
                 // skip small mappable chunks
                 list< tuple< Size_Type, Size_Type > > skipped_chunks;
                 Size_Type skipped_len = 0;
-                while (not next_rc_bptr->is_unmappable()
+                while (not next_rc_bptr->ce_bptr()->is_unmappable()
                        and skipped_len + next_rc_bptr->get_r_len() <= unmap_trigger_len())
                 {
                     skipped_chunks.push_back(make_tuple(next_rc_bptr->get_r_start(), next_rc_bptr->get_r_end()));
@@ -985,7 +985,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
                     ASSERT(next_rc_bptr);
                 }
                 ASSERT(skipped_len <= unmap_trigger_len());
-                if (next_rc_bptr->is_unmappable())
+                if (next_rc_bptr->ce_bptr()->is_unmappable())
                 {
                     // unmap all skipped chunks (if they are not modified in previous iterations)
                     for (auto it = skipped_chunks.begin(); it != skipped_chunks.end(); ++it)
@@ -994,7 +994,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
                         Size_Type rc_end;
                         tie(rc_start, rc_end) = *it;
                         rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rc_start).unconst();
-                        if (rc_bptr->get_r_start() != rc_start or rc_bptr->get_r_end() != rc_end or rc_bptr->is_unmappable())
+                        if (rc_bptr->get_r_start() != rc_start or rc_bptr->get_r_end() != rc_end or rc_bptr->ce_bptr()->is_unmappable())
                         {
                             // already been merged with other unmappable chunks
                             continue;
@@ -1423,7 +1423,7 @@ void Graph::unmap_read_ends()
 void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
 {
     ASSERT(not rc_bptr->re_bptr()->chunk_cont().get_sibling(rc_bptr, true, not r_start));
-    if (rc_bptr->is_unmappable())
+    if (rc_bptr->ce_bptr()->is_unmappable())
     {
         return;
     }
@@ -1531,7 +1531,7 @@ void Graph::print_unmappable_contigs(ostream& os) const
                     Read_Chunk_CBPtr rc_next_cbptr =
                         rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, false, c_right);
                     ASSERT(rc_next_cbptr);
-                    if (rc_next_cbptr->is_unmappable())
+                    if (rc_next_cbptr->ce_bptr()->is_unmappable())
                     {
                         seq_v.insert(make_tuple(not rc_cbptr->get_rc()?
                                                      rc_next_cbptr->get_seq()
@@ -1795,7 +1795,7 @@ void Graph::resolve_unmappable_inner_region(
         bool r_right = (c_right != rc_cbptr->get_rc());
         Read_Chunk_CBPtr rc_next_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, r_right);
         ASSERT(rc_next_cbptr);
-        if (not rc_next_cbptr->is_unmappable())
+        if (not rc_next_cbptr->ce_bptr()->is_unmappable())
         {
             continue;
         }
@@ -1813,7 +1813,7 @@ void Graph::resolve_unmappable_inner_region(
         Read_Chunk_CBPtr rc_next_next_cbptr = rc_next_cbptr->re_bptr()->chunk_cont().get_sibling(rc_next_cbptr, true, r_right);
         static_cast< void >(rc_next_next_cbptr); // silence unused warnings when assertions disabled
         ASSERT(rc_next_next_cbptr);
-        ASSERT(not rc_next_next_cbptr->is_unmappable());
+        ASSERT(not rc_next_next_cbptr->ce_bptr()->is_unmappable());
         ASSERT(rc_next_next_cbptr->ce_bptr() == ce_next_cbptr);
         ASSERT((rc_next_next_cbptr->get_rc() == rc_cbptr->get_rc()) == same_orientation);
     }
@@ -1940,7 +1940,7 @@ void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool
         bool r_right = (c_right != rc_last_cbptr->get_rc());
         Read_Chunk_CBPtr rc_unmap_bptr = rc_last_cbptr->re_bptr()->chunk_cont().get_sibling(rc_last_cbptr, true, r_right);
         ASSERT(rc_unmap_bptr);
-        ASSERT(rc_unmap_bptr->is_unmappable());
+        ASSERT(rc_unmap_bptr->ce_bptr()->is_unmappable());
         auto t = rc_unmap_seq_set.insert(
             make_tuple(
                 (not rc_last_cbptr->get_rc()?
@@ -2014,7 +2014,7 @@ void Graph::resolve_unmappable_regions()
         for (auto rc_bref_it = re_bptr->chunk_cont().begin(); rc_bref_it != re_bptr->chunk_cont().end(); )
         {
             Read_Chunk_CBPtr rc_cbptr = &*(rc_bref_it++); // loop it incremented here, before modifications to current elem
-            if (not rc_cbptr->is_unmappable())
+            if (not rc_cbptr->ce_bptr()->is_unmappable())
             {
                 continue;
             }
@@ -2024,8 +2024,8 @@ void Graph::resolve_unmappable_regions()
             {
                 continue;
             }
-            ASSERT(not rc_prev_cbptr->is_unmappable());
-            ASSERT(not rc_next_cbptr->is_unmappable());
+            ASSERT(not rc_prev_cbptr->ce_bptr()->is_unmappable());
+            ASSERT(not rc_next_cbptr->ce_bptr()->is_unmappable());
             resolve_unmappable_inner_region(rc_prev_cbptr->ce_bptr(), not rc_prev_cbptr->get_rc(),
                                             rc_next_cbptr->ce_bptr(), rc_next_cbptr->get_rc() == rc_prev_cbptr->get_rc());
         }
@@ -2043,7 +2043,7 @@ void Graph::resolve_unmappable_regions()
         for (int r_right = 0; r_right < 2; ++r_right)
         {
             Read_Chunk_CBPtr rc_last_cbptr = (not r_right? &*re_bptr->chunk_cont().begin() : &*re_bptr->chunk_cont().rbegin());
-            if (not rc_last_cbptr->is_unmappable())
+            if (not rc_last_cbptr->ce_bptr()->is_unmappable())
             {
                 // last chunk in this dir is mappable
                 continue;
@@ -2266,7 +2266,7 @@ void Graph::dump_detailed_counts(ostream& os) const
             {
                 os << ',';
             }
-            os << (rc_cbptr->is_unmappable()? "*" : "") << rc_cbptr->get_r_len();
+            os << (rc_cbptr->ce_bptr()->is_unmappable()? "*" : "") << rc_cbptr->get_r_len();
         }
         os << '\t';
         for (const auto rc_cbref : re_cbptr->chunk_cont())

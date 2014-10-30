@@ -289,13 +289,6 @@ Size_Type Read_Chunk::get_read_len() const
     return re_bptr()->get_len();
 }
 
-bool Read_Chunk::is_unmappable() const
-{
-    ASSERT(ce_bptr());
-    ASSERT(ce_bptr()->is_ambiguous() == _get_is_unmappable());
-    return _get_is_unmappable();
-}
-
 Read_Chunk_BPtr
 Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf, const Seq_Type& qr)
 {
@@ -973,9 +966,9 @@ void Read_Chunk::make_unmappable(Read_Chunk_BPtr rc_bptr)
     rc_bptr->_c_start = 0;
     rc_bptr->_c_len = rc_bptr->_r_len;
     rc_bptr->_set_rc(false);
-    rc_bptr->_set_is_unmappable(true);
+    rc_bptr->_set_is_unbreakable(true);
     ce_new_bptr->chunk_cont().insert(rc_bptr);
-    ce_new_bptr->set_ambiguous();
+    ce_new_bptr->set_unmappable();
 }
 
 Seq_Type Read_Chunk::get_seq() const
@@ -1061,8 +1054,9 @@ void Read_Chunk::check() const
                : get_c_start() == 0));
 #endif
     // unmappable contigs have no mutations and a single chunk
-    if (is_unmappable())
+    if (is_unbreakable())
     {
+        ASSERT(ce_bptr()->is_unmappable() or ce_bptr()->is_lowcomplex());
         ASSERT(mut_ptr_cont().empty());
         ASSERT(ce_bptr()->chunk_cont().single_node());
         ASSERT((&*(ce_bptr()->chunk_cont().begin())).raw() == this);
@@ -1083,7 +1077,7 @@ boost::property_tree::ptree Read_Chunk::to_ptree() const
 {
     return ptree().put("re_bptr", re_bptr().to_ptree())
                   .put("ce_bptr", ce_bptr().to_ptree())
-                  .put("is_unmappable", is_unmappable())
+                  .put("is_unbreakable", is_unbreakable())
                   .put("r_start", get_r_start())
                   .put("r_len", get_r_len())
                   .put("c_start", get_c_start())
@@ -1156,7 +1150,7 @@ std::string Read_Chunk::to_string(Read_Chunk_CBPtr rc_cbptr, bool r_dir, bool fo
         << " re " << std::setw(re_pad) << std::left << rc_cbptr->re_bptr().to_int() << " ";
     print_subinterval(oss, rc_cbptr->get_r_start(), rc_cbptr->get_r_end(), 0, re_len, r_forward);
     oss << " " << std::setw(5) << std::left
-        << (not rc_cbptr->is_unmappable()? (not rc_cbptr->get_rc()? "fwd" : "rev") : "unmap")
+        << (rc_cbptr->ce_bptr()->is_unmappable()? "unmap" : (not rc_cbptr->get_rc()? "fwd" : "rev"))
         << " ce " << std::setw(ce_pad) << std::left << rc_cbptr->ce_bptr().to_int() << " ";
     print_subinterval(oss, rc_cbptr->get_c_start(), rc_cbptr->get_c_end(), 0, ce_len, c_forward);
     return oss.str();

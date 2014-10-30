@@ -83,7 +83,7 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
         if (unmappable_policy == 3 or unmappable_policy == 4)
         {
             // skip unmappable chunks
-            while (rc_next_cbptr and rc_next_cbptr->is_unmappable())
+            while (rc_next_cbptr and rc_next_cbptr->ce_bptr()->is_unmappable())
             {
                 rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_next_cbptr, true, r_right);
             }
@@ -99,7 +99,7 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
         ASSERT(rc_next_cbptr);
         Contig_Entry_CBPtr ce_next_cbptr = rc_next_cbptr->ce_bptr();
         bool same_orientation = (rc_cbptr->get_rc() == rc_next_cbptr->get_rc());
-        if (rc_next_cbptr->is_unmappable())
+        if (rc_next_cbptr->ce_bptr()->is_unmappable())
         {
             ASSERT(unmappable_policy != 3 and unmappable_policy != 4);
             switch (unmappable_policy)
@@ -157,7 +157,7 @@ Contig_Entry::unmappable_neighbour_range(bool c_right, const vector< MAC::Read_C
         Read_Chunk_CBPtr rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, false, c_right);
         ASSERT(rc_next_cbptr);
         Size_Type skip_len = 0;
-        while (rc_next_cbptr->is_unmappable())
+        while (rc_next_cbptr->ce_bptr()->is_unmappable())
         {
             skip_len += rc_next_cbptr->get_r_len();
             rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_next_cbptr, false, c_right);
@@ -306,6 +306,12 @@ void Contig_Entry::check() const
 #ifndef BOOST_DISABLE_ASSERTS
     // there are chunks mapped to this contig
     ASSERT(not chunk_cont().empty());
+    if (is_unmappable())
+    {
+        ASSERT(mut_cont().empty());
+        ASSERT(chunk_cont().single_node());
+        ASSERT(chunk_cont().begin()->is_unbreakable());
+    }
     // check mutation container
     mut_cont().check();
     // mutations:

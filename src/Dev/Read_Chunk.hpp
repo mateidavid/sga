@@ -225,8 +225,7 @@ public:
     bool get_rc() const { return _get_rc(); }
     Seq_Type get_seq() const;
     Seq_Type substr(Size_Type start, Size_Type len) const;
-    //bool is_unmappable() const { ASSERT(ce_bptr()); ASSERT(ce_bptr()->is_ambiguous() == _get_is_unmappable()); return _get_is_unmappable(); }
-    bool is_unmappable() const;
+    bool is_unbreakable() const { return _get_is_unbreakable(); }
     Size_Type get_read_len() const;
     /**@}*/
 
@@ -408,14 +407,14 @@ private:
     uint8_t _bits;
 
     static const uint8_t _rc_bit = 1u;
-    static const uint8_t _is_unmappable_bit = 2u;
+    static const uint8_t _is_unbreakable_bit = 2u;
     static const uint8_t _ce_col_bit = 4u;
     static const uint8_t _re_col_bit = 8u;
 
     bool _get_rc() const { return bitmask::any(_bits, _rc_bit); }
     void _set_rc(bool v) { bitmask::assign(_bits, _rc_bit, v); }
-    bool _get_is_unmappable() const { return bitmask::any(_bits, _is_unmappable_bit); }
-    void _set_is_unmappable(bool v) { bitmask::assign(_bits, _is_unmappable_bit, v); }
+    bool _get_is_unbreakable() const { return bitmask::any(_bits, _is_unbreakable_bit); }
+    void _set_is_unbreakable(bool v) { bitmask::assign(_bits, _is_unbreakable_bit, v); }
     bool _get_ce_col() const { return bitmask::any(_bits, _ce_col_bit); }
     void _set_ce_col(bool v) { bitmask::assign(_bits, _ce_col_bit, v); }
     bool _get_re_col() const { return bitmask::any(_bits, _re_col_bit); }
