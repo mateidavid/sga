@@ -141,6 +141,31 @@ public:
     std::tuple< Size_Type, Size_Type >
     unmappable_neighbour_range(bool c_right, const std::vector< Read_Chunk_CBPtr >& chunk_cont) const;
 
+    /** Options for neighbour traversal. */
+    class Neighbour_Options
+    {
+    public:
+        typedef size_t option_type;
+        static const option_type opt_none = 0;
+        static const option_type opt_drop = 1;
+        static const option_type opt_skip = 2;
+        static const option_type opt_skip_not_last = 3;
+        Neighbour_Options& none(category_type t) { _map[t] = opt_none; return *this; }
+        Neighbour_Options& drop(category_type t) { _map[t] = opt_drop; return *this; }
+        Neighbour_Options& skip(category_type t) { _map[t] = opt_skip; return *this; }
+        Neighbour_Options& skip_not_last(category_type t) { _map[t] = opt_skip_not_last; return *this; }
+        Neighbour_Options& clear() { _map.clear(); return *this; }
+        Neighbour_Options& default_opt(option_type o) { _default_opt = o; return *this; }
+        option_type get_opt(category_type t) const { return _map.count(t) > 0? _map.at(t) : _default_opt; }
+    private:
+        map< category_type, option_type > _map;
+        option_type _default_opt = opt_none;
+    }; // Neighbour_Options
+
+    /** Get neighbours of this Contig Entry. */
+    typedef map< tuple< Contig_Entry_CBPtr, bool >, vector< tuple< Read_Chunk_CBPtr, Read_Chunk_CBPtr > > > neighbours_type;
+    neighbours_type neighbours(bool forward, Neighbour_Options to, size_t ignore_threshold = 0);
+
     /** Check if contig is catenable with a single other contig in the given direction.
      * @param c_right Bool; true: merge past contig end, false: merge past contig start.
      * @return A tuple (Contig_Entry, same_orientation, Read_Chunk list);

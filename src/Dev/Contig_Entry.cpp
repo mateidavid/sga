@@ -169,6 +169,64 @@ Contig_Entry::unmappable_neighbour_range(bool c_right, const vector< MAC::Read_C
     return std::make_tuple(min_skip_len, max_skip_len);
 }
 
+auto Contig_Entry::neighbours(bool forward, Neighbour_Options opts, size_t ignore_threshold) -> neighbours_type
+{
+    neighbours_type res;
+    Size_Type endpoint = (forward? get_len() : 0);
+    for (auto rc_cbref : chunk_cont().iintersect(endpoint, endpoint))
+    {
+        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
+        Read_Entry_CBPtr re_cbptr = rc_cbptr->re_bptr();
+        // we might be skipping chunks mapped in different ways; we need read direction for consistent traversal
+        bool r_forward = (forward != rc_cbptr->get_rc());
+        Read_Chunk_CBPtr rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, r_forward);
+        if (not rc_next_cbptr)
+        {
+            // rc is terminal, nothing to do
+            continue;
+        }
+        Contig_Entry_CBPtr ce_next_cbptr = rc_next_cbptr->ce_bptr();
+        // skip chunks as dictated by the options
+        while (opts.get_opt(ce_next_cbptr->category()) == Neighbour_Options::opt_skip
+               or opts.get_opt(ce_next_cbptr->category()) == Neighbour_Options::opt_skip_not_last)
+        {
+            Read_Chunk_CBPtr rc_next_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_next_cbptr, true, r_forward);
+            if (not rc_next_next_cbptr)
+            {
+                break;
+            }
+            rc_next_cbptr = rc_next_next_cbptr;
+            ce_next_cbptr = rc_next_cbptr->ce_bptr();
+        }
+        if (opts.get_opt(ce_next_cbptr->category()) == Neighbour_Options::opt_drop
+            or opts.get_opt(ce_next_cbptr->category()) == Neighbour_Options::opt_skip)
+        {
+            continue;
+        }
+        ASSERT(opts.get_opt(ce_next_cbptr->category()) == Neighbour_Options::opt_none
+               or (opts.get_opt(ce_next_cbptr->category()) == Neighbour_Options::opt_skip_not_last
+                   and not re_cbptr->chunk_cont().get_sibling(rc_next_cbptr, true, r_forward)));
+        bool same_orientation = (rc_cbptr->get_rc() == rc_next_cbptr->get_rc());
+        res[make_tuple(ce_next_cbptr, same_orientation)].push_back(make_tuple(rc_cbptr, rc_next_cbptr));
+    }
+    // remove (contig,orientation) pairs with low support
+    if (ignore_threshold > 0)
+    {
+        for (auto it = res.begin(); it != res.end(); )
+        {
+            if (it->second.size() <= ignore_threshold)
+            {
+                res.erase(it++);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+    return res;
+}
+
 std::tuple< Contig_Entry_CBPtr, bool, vector< Read_Chunk_CBPtr > >
 Contig_Entry::can_cat_dir(bool c_right) const
 {
