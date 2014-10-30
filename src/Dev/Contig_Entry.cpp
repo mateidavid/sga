@@ -62,25 +62,6 @@ void Contig_Entry::reverse()
     chunk_cont().reverse();
 }
 
-std::tuple< size_t, size_t, size_t, size_t >
-Contig_Entry::get_out_degrees(int unmappable_policy, size_t ignore_threshold) const
-{
-    auto neighbours_left_cont = out_chunks_dir(false, unmappable_policy, ignore_threshold);
-    auto neighbours_right_cont = out_chunks_dir(true, unmappable_policy, ignore_threshold);
-    size_t total_left = 0;
-    for (const auto& t : neighbours_left_cont)
-    {
-        total_left += t.second.size();
-    }
-    size_t total_right = 0;
-    for (const auto& t : neighbours_right_cont)
-    {
-        total_left += t.second.size();
-    }
-    return std::make_tuple(total_left, neighbours_left_cont.size(),
-                           total_right, neighbours_right_cont.size());
-}
-
 map< std::tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > >
 Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_threshold) const
 {
@@ -260,74 +241,6 @@ void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_n
     // deallocate rhs contig
     Contig_Entry_Fact::del_elem(ce_next_bptr);
 }
-
-/*
-map< std::tuple< Contig_Entry_CBPtr, bool >, std::tuple< unsigned int, Size_Type, Size_Type > >
-Contig_Entry::neighbour_stats(bool c_right, int unmappable_policy, bool trim_results) const
-{
-    map< std::tuple< Contig_Entry_CBPtr, bool >, std::tuple< unsigned int, Size_Type, Size_Type > > res;
-    //unsigned int support = 0;
-    auto out_chunks_cont = out_chunks_dir(c_right, unmappable_policy);
-    for (auto rc_cptr_it = _chunk_cptr_cont.begin(); rc_cptr_it != _chunk_cptr_cont.end(); ++rc_cptr_it)
-    {
-        Read_Chunk_CPtr rc_cptr = *rc_cptr_it;
-        if ((not c_right and not rc_cptr->get_c_start() == 0)
-                or (c_right and not rc_cptr->get_c_end() == get_len()))
-        {
-            continue;
-        }
-        Read_Chunk_CPtr rc_next_cptr = rc_cptr->get_re_ptr()->get_sibling(rc_cptr, c_right != rc_cptr->get_rc());
-        Size_Type skipped_len = 0;
-        if (rc_next_cptr != NULL and skip_unmappable and rc_next_cptr->is_unmappable())
-        {
-            skipped_len = rc_next_cptr->get_r_len();
-            rc_next_cptr = rc_next_cptr->get_re_ptr()->get_sibling(rc_next_cptr, c_right != rc_cptr->get_rc());
-        }
-        if (rc_next_cptr == NULL or rc_next_cptr->is_unmappable())
-        {
-            continue;
-        }
-        //++support;
-        std::tuple< const Contig_Entry*, bool > t = std::make_tuple(rc_next_cptr->get_ce_ptr(), rc_cptr->get_rc() != rc_next_cptr->get_rc());
-        if (res->count(t) == 0)
-        {
-            (*res)[t] = std::make_tuple(1, skipped_len, skipped_len);
-        }
-        else
-        {
-            unsigned int tmp_support;
-            Size_Type min_skipped_len;
-            Size_Type max_skipped_len;
-            std::tie(tmp_support, min_skipped_len, max_skipped_len) = (*res)[t];
-            (*res)[t] = std::make_tuple(tmp_support + 1, min(min_skipped_len, skipped_len), max(max_skipped_len, skipped_len));
-        }
-    }
-    // remove neighbours with single support
-    if (skip_unmappable and trim_results)
-    {
-        for (auto it = res->begin(); it != res->end(); ++it)
-        {
-            if (get<0>(it->second) == 1)
-            {
-                / *
-                const Contig_Entry* ce_next_cptr;
-                bool flip;
-                std::tie(ce_next_cptr, flip) = it->first;
-                auto neighbours_next_sptr = ce_next_cptr->get_neighbours(dir == flip, true, false);
-                ASSERT(neighbours_next_sptr->count(std::make_tuple(this, flip)) == 1);
-                unsigned int neighbour_support = 0;
-                for (auto it2 = neighbours_next_sptr->begin(); it2 != neighbours_next_sptr->end(); ++it2)
-                {
-                    neighbour_support += it2->second;
-                }
-                * /
-                res->erase(it);
-            }
-        }
-    }
-    return res;
-}
-*/
 
 /*
 vector< Mutation_CPtr > Contig_Entry::get_separated_het_mutations(

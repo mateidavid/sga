@@ -1119,28 +1119,6 @@ Graph::find_unmappable_regions(Read_Chunk_CBPtr orig_rc_cbptr, Range_Cont< Size_
 }
 
 /*
-void Graph::clear_contig_colours()
-{
-    for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
-    {
-        const Contig_Entry* ce_cptr = &*ce_it;
-        modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) {
-            ce.colour() = 0;
-        });
-    }
-}
-
-void Graph::clear_contig_visit()
-{
-    for (auto ce_it = _ce_cont.begin(); ce_it != _ce_cont.end(); ++ce_it)
-    {
-        const Contig_Entry* ce_cptr = &*ce_it;
-        modify_contig_entry(ce_cptr, [] (Contig_Entry& ce) {
-            ce.colour() &= ~0x3;
-        });
-    }
-}
-
 tuple< Size_Type, bool> Graph::visit_contig(const Contig_Entry* ce_cptr, bool dir)
 {
     if ((ce_cptr->get_colour() & 0x1) != 0)
@@ -2413,17 +2391,6 @@ void Graph::dump_detailed_counts(ostream& os) const
             }
         }; // print_neighbours_cont_stats
 
-        /*
-        size_t cnt_0;
-        size_t uniq_0;
-        size_t cnt_1;
-        size_t uniq_1;
-        tie(cnt_0, uniq_0, cnt_1, uniq_1) = ce_cbptr->get_out_degrees(1);
-        os << cnt_0 << '\t'
-           << uniq_0 << '\t'
-           << cnt_1 << '\t'
-           << uniq_1 << '\t';
-        */
         {
             print_neighbours_cont_stats(os, ce_cbptr, false, false, ce_cbptr->out_chunks_dir(false, 1));
             os << '\t';

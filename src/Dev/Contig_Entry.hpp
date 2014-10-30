@@ -124,16 +124,6 @@ public:
     typedef map< tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > > out_chunks_dir_type;
     out_chunks_dir_type out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_threshold = 0) const;
 
-    /** Get out-edges counts.
-     * @param unmappable_policy See above.
-     * @param ignore_threshold See above.
-     * @return A tuple (cnt_left, uniq_left, cnt_right, uniq_right), where cnt is the number
-     * of read chunks spanning that breakpoint, and uniq is the number of different contig entries
-     * where following chunks are mapped.
-     */
-    std::tuple< size_t, size_t, size_t, size_t >
-    get_out_degrees(int unmappable_policy, size_t ignore_threshold = 0) const;
-
     /** Compute the min and max unmappable regions neighbouring this contig.
      * Given a set of chunks leaving the contig in the given direction,
      * compute the minimum and maximum unmappable sibling chunks.
