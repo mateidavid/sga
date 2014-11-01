@@ -124,7 +124,7 @@ public:
             Mutation_BPtr mut_bptr = &mut_cbref.unconst();
             if (last_mut_cbptr)
             {
-                ASSERT(last_mut_cbptr->get_end() < mut_bptr->get_start());
+                ASSERT(last_mut_cbptr->rf_end() < mut_bptr->rf_start());
             }
             Mutation_Chunk_Adapter_BPtr mca_bptr = Mutation_Chunk_Adapter_Fact::new_elem(mut_bptr, chunk_cbptr);
             Base::push_back(*mca_bptr);
@@ -233,7 +233,7 @@ public:
     {
         ASSERT(empty()
                or other_cont.empty()
-               or rbegin()->mut_cbptr()->get_end() < other_cont.begin()->mut_cbptr()->get_start());
+               or rbegin()->mut_cbptr()->rf_end() < other_cont.begin()->mut_cbptr()->rf_start());
         for (auto mca_bref : other_cont)
         {
             Mutation_Chunk_Adapter_BPtr mca_bptr = &mca_bref;

@@ -40,15 +40,15 @@ private:
      * @param len Length of the base sequence affected by the mutation.
      * @param seq Alternate sequence.
      */
-    Mutation(Size_Type start, Size_Type len, const Seq_Type& seq = Seq_Type())
-        : _seq(seq), _start(start), _len(len), _seq_len(seq.size()) {}
+    Mutation(Size_Type start, Size_Type len, Seq_Type&& seq)
+        : _seq(move(seq)), _start(start), _len(len), _seq_len(_seq.size()) {}
 
     /** Constructor.
      * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
      * @param len Length of the base sequence affected by the mutation.
      * @param seq_len Length of alternate sequence.
      */
-    Mutation(Size_Type start, Size_Type len, Size_Type seq_len)
+    Mutation(Size_Type start, Size_Type len, Size_Type seq_len = 0)
         : _start(start), _len(len), _seq_len(seq_len) {}
 
     /** No copy constructor. */
@@ -84,13 +84,12 @@ private:
 public:
     /** @name Getters */
     /**@{*/
-    Size_Type get_start() const { return _start; }
-    Size_Type get_len() const { return _len; }
-    Size_Type get_end() const { return _start + _len; }
-    Size_Type get_seq_len() const { return _seq_len; }
+    Size_Type rf_start() const { return _start; }
+    Size_Type rf_len() const { return _len; }
+    Size_Type rf_end() const { return _start + _len; }
+    Size_Type seq_len() const { return _seq_len; }
     bool have_seq() const { return _seq.size() == _seq_len; }
-    const Seq_Type& get_seq() const { return _seq; }
-    Seq_Type& seq() { return _seq; }
+    GETTER(Seq_Type, seq, _seq)
     /**@}*/
 
     /** @name Basic queries */
@@ -108,7 +107,7 @@ public:
      * @param extra_len Extra reference length.
      * @param extra_seq Extra alternate sequence.
      */
-    void extend(Size_Type start, Size_Type extra_len, const Seq_Type& extra_seq)
+    void extend(Size_Type start, Size_Type extra_len, const Seq_Proxy_Type& extra_seq)
     {
         ASSERT(is_unlinked());
         ASSERT(have_seq());
@@ -116,7 +115,7 @@ public:
         {
             _start = start;
         }
-        ASSERT(get_end() == start);
+        ASSERT(rf_end() == start);
         _len += extra_len;
         _seq += extra_seq;
         _seq_len += extra_seq.size();
@@ -137,7 +136,7 @@ public:
         {
             _start = start;
         }
-        ASSERT(get_end() == start);
+        ASSERT(rf_end() == start);
         _len += extra_len;
         _seq_len += extra_seq_size;
     }
@@ -153,12 +152,12 @@ public:
         ASSERT(have_seq() and extra_mut_cbptr->have_seq());
         if (is_empty())
         {
-            _start = extra_mut_cbptr->get_start();
+            _start = extra_mut_cbptr->rf_start();
         }
-        ASSERT(get_end() == extra_mut_cbptr->get_start());
-        _len += extra_mut_cbptr->get_len();
-        _seq += extra_mut_cbptr->get_seq();
-        _seq_len += extra_mut_cbptr->get_seq_len();
+        ASSERT(rf_end() == extra_mut_cbptr->rf_start());
+        _len += extra_mut_cbptr->rf_len();
+        _seq += extra_mut_cbptr->seq();
+        _seq_len += extra_mut_cbptr->seq_len();
     }
 
     /** Cut mutation at given offsets, allocate new Mutation to keep leftover.
@@ -171,7 +170,7 @@ public:
     /** Simplify Mutation by dropping the ends of rf and qr if they match.
      * @param rf Reference sequence spanned by the mutation.
      */
-    void simplify(const Seq_Type& rf);
+    void simplify(const Seq_Proxy_Type& rf);
 
     /** Reverse the mutation.
      * @param c_len The contig length.
@@ -181,7 +180,7 @@ public:
         _start = c_len - (_start + _len);
         if (have_seq())
         {
-            _seq = reverseComplement(_seq);
+            _seq = _seq.revcomp();
         }
     }
 

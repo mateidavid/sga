@@ -36,12 +36,12 @@ private:
      * @param name String containing read name; (take ownership).
      * @param len Length of the read.
      */
-    Read_Entry(std::string&& name, Size_Type len) : _name(std::move(name)), _len(len) {}
+    Read_Entry(string&& name, Size_Type len) : _name(move(name)), _len(len) {}
 
     // allow move only
     DEFAULT_DEF_CTOR(Read_Entry)
     DELETE_COPY_CTOR(Read_Entry)
-    Read_Entry(Read_Entry&& rhs) { *this = std::move(rhs); }
+    Read_Entry(Read_Entry&& rhs) { *this = move(rhs); }
 
     ~Read_Entry()
     {
@@ -56,20 +56,18 @@ public:
         if (this != &rhs)
         {
             ASSERT(is_unlinked() and rhs.is_unlinked());
-            _name = std::move(rhs._name);
-            _chunk_cont = std::move(rhs._chunk_cont);
-            _len = std::move(rhs._len);
+            _name = move(rhs._name);
+            _chunk_cont = move(rhs._chunk_cont);
+            _len = move(rhs._len);
         }
         return *this;
     }
 
     /** @name Getters */
     /**@{*/
-    const std::string& name() const { return _name; }
-    std::string& name() { return _name; }
-    Size_Type get_len() const { return _len; }
-    const Read_Chunk_RE_Cont& chunk_cont() const { return _chunk_cont; }
-    Read_Chunk_RE_Cont& chunk_cont() { return _chunk_cont; }
+    GETTER(string, name, _name)
+    GETTER(Read_Chunk_RE_Cont, chunk_cont, _chunk_cont)
+    Size_Type len() const { return _len; }
     Seq_Type get_seq() const;
     /**@}*/
 
@@ -86,7 +84,7 @@ public:
     boost::property_tree::ptree to_ptree() const;
 
 private:
-    std::string _name;
+    string _name;
     Read_Chunk_RE_Cont _chunk_cont;
     Size_Type _len;
 

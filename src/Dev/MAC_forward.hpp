@@ -28,9 +28,10 @@
 #include "ptree.hpp"
 #include "logger.hpp"
 #include "Cigar.hpp"
-#include "Util.h"
+//#include "Util.h"
 #include "bits.hpp"
 #include "ref_range.hpp"
+#include "DNA_Sequence.hpp"
 
 #include <boost/intrusive/itree.hpp>
 
@@ -47,7 +48,8 @@ namespace ba = boost::adaptors;
 /** Type for absolute and relative offsets in read and contig sequences. */
 typedef size_t Size_Type;
 /** Type holding a read sequence. */
-typedef string Seq_Type;
+typedef dnasequence::Sequence< std::string, size_t > Seq_Type;
+typedef Seq_Type::proxy_type Seq_Proxy_Type;
 /** Type holding a single base pair. */
 typedef Seq_Type::value_type Symb_Type;
 

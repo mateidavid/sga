@@ -10,7 +10,7 @@
 namespace MAC
 {
 
-Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
+Mutation_Cont::Mutation_Cont(const Cigar& cigar, const Seq_Proxy_Type& qr)
 {
     Mutation_BPtr accum_mut_bptr;
     for (size_t i = 0; i <= cigar.n_ops(); ++i)
@@ -29,7 +29,7 @@ Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
             // disallow ambigous 'M' operation
             ASSERT(cigar.op_type(i) != 'M');
             // accumulator is either empty, or it extends to the start of this mutation
-            ASSERT(not accum_mut_bptr or accum_mut_bptr->get_end() == cigar.op_rf_pos(i));
+            ASSERT(not accum_mut_bptr or accum_mut_bptr->rf_end() == cigar.op_rf_pos(i));
             if (not accum_mut_bptr)
             {
                 accum_mut_bptr = Mutation_Fact::new_elem();
@@ -50,9 +50,12 @@ Mutation_Cont::Mutation_Cont(const Cigar& cigar, const string& qr)
                 accum_mut_bptr->extend(
                     cigar.op_rf_pos(i),
                     cigar.op_rf_len(i),
+                    /*
                     (not cigar.reversed()?
                      qr.substr(qr_offset, cigar.op_qr_len(i))
                      : reverseComplement(qr.substr(qr_offset, cigar.op_qr_len(i)))));
+                    */
+                    qr.substr(qr_offset, cigar.op_qr_len(i)).revcomp(cigar.reversed()));
             }
             else
             {
@@ -87,7 +90,7 @@ Mutation_CBPtr Mutation_Cont::find_span_pos(Size_Type c_pos) const
     auto it_range = Base::iintersect(c_pos, c_pos);
     for (auto it = it_range.begin(); it != it_range.end(); ++it)
     {
-        if (it->get_start() < c_pos and c_pos < it->get_end())
+        if (it->rf_start() < c_pos and c_pos < it->rf_end())
         {
             return &*it;
         }
@@ -97,7 +100,7 @@ Mutation_CBPtr Mutation_Cont::find_span_pos(Size_Type c_pos) const
 
 Mutation_Cont Mutation_Cont::split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
-    ASSERT(not mut_left_cbptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
+    ASSERT(not mut_left_cbptr or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
     Mutation_Cont rhs_cont;
     auto it = begin();
     while (it != end())
@@ -105,9 +108,9 @@ Mutation_Cont Mutation_Cont::split(Size_Type c_brk, Mutation_CBPtr mut_left_cbpt
         Mutation_BPtr mut_bptr = &*it;
         ++it;
         // no Mutation may span c_brk
-        ASSERT(not (mut_bptr->get_start() < c_brk and c_brk < mut_bptr->get_end()));
+        ASSERT(not (mut_bptr->rf_start() < c_brk and c_brk < mut_bptr->rf_end()));
         // move the ones starting at or past the break, except possibly for mut_left_cbptr
-        if (mut_bptr->get_start() >= c_brk and mut_bptr != mut_left_cbptr)
+        if (mut_bptr->rf_start() >= c_brk and mut_bptr != mut_left_cbptr)
         {
             erase(mut_bptr);
             rhs_cont.insert(mut_bptr);

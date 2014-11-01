@@ -17,7 +17,7 @@ Mutation_CBPtr Mutation::cut(Size_Type base_offset, Size_Type alt_offset)
     ASSERT(alt_offset <= _seq_len);
     if (have_seq())
     {
-        res = Mutation_Fact::new_elem(_start + base_offset, _len - base_offset, _seq.substr(alt_offset));
+        res = Mutation_Fact::new_elem(_start + base_offset, _len - base_offset, Seq_Type(_seq.substr(alt_offset)));
         _len = base_offset;
         _seq_len = alt_offset;
         _seq.erase(alt_offset);
@@ -31,21 +31,23 @@ Mutation_CBPtr Mutation::cut(Size_Type base_offset, Size_Type alt_offset)
     return res;
 }
 
-void Mutation::simplify(const Seq_Type& rf)
+void Mutation::simplify(const Seq_Proxy_Type& rf_seq)
 {
-    ASSERT(rf.size() == _len);
+    ASSERT(rf_seq.size() == _len);
     if (not have_seq())
     {
         return;
     }
-    while (_len > 0 and _seq_len > 0 and rf[_len - 1] == _seq[_seq_len - 1])
+    Seq_Proxy_Type qr_seq = seq();
+    while (_len > 0 and _seq_len > 0 and rf_seq[_len - 1] == qr_seq[_seq_len - 1])
     {
         --_len;
         --_seq_len;
-        _seq.resize(_seq.size() - 1);
+        //_seq.resize(_seq.size() - 1);
+        qr_seq = qr_seq.substr(0, _seq_len);
     }
     size_t i = 0;
-    while (i < _len and i < _seq_len and rf[i] == _seq[i])
+    while (i < _len and i < _seq_len and rf_seq[i] == _seq[i])
     {
         ++i;
     }
@@ -54,7 +56,12 @@ void Mutation::simplify(const Seq_Type& rf)
         _start += i;
         _len -= i;
         _seq_len -= i;
-        _seq = _seq.substr(i);
+        //_seq = _seq.substr(i);
+        qr_seq = qr_seq.substr(i);
+    }
+    if (qr_seq.size() != _seq.size())
+    {
+        _seq = qr_seq;
     }
 }
 
@@ -70,10 +77,10 @@ bool operator == (const Mutation& lhs, const Mutation& rhs)
 boost::property_tree::ptree Mutation::to_ptree() const
 {
     return ptree().put("addr", (void*)this)
-                  .put("start", get_start())
-                  .put("len", get_len())
-                  .put("seq_len", get_seq_len())
-                  .put("seq", get_seq());
+                  .put("rf_start", rf_start())
+                  .put("rf_len", rf_len())
+                  .put("seq_len", seq_len())
+                  .put("seq", seq());
 }
 
 

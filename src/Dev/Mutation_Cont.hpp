@@ -81,10 +81,10 @@ struct Mutation_ITree_Value_Traits
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
     static pointer to_value_ptr(node_ptr n) { return n; }
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
-    static key_type get_start(const_pointer n) { return n->get_start(); }
-    static key_type get_start(const value_type* n) { return n->get_start(); }
-    static key_type get_end(const_pointer n) { return n->get_end(); }
-    static key_type get_end(const value_type* n) { return n->get_end(); }
+    static key_type get_start(const_pointer n) { return n->rf_start(); }
+    static key_type get_start(const value_type* n) { return n->rf_start(); }
+    static key_type get_end(const_pointer n) { return n->rf_end(); }
+    static key_type get_end(const value_type* n) { return n->rf_end(); }
 };
 
 } // namespace detail
@@ -124,7 +124,7 @@ public:
      * @param cigar Cigar object describing the match.
      * @param qr Query string; optional: if not given, Mutation objects contain alternate string lengths only.
      */
-    Mutation_Cont(const Cigar& cigar, const std::string& qr = std::string());
+    Mutation_Cont(const Cigar& cigar, const Seq_Proxy_Type& qr = Seq_Proxy_Type());
 
     /** Get iterator to Mutation inside container. */
     //const_iterator iterator_to(Mutation_CBPtr mut_cbptr) const { return Base::iterator_to(*mut_cbptr); }

@@ -56,9 +56,9 @@ void Contig_Entry::reverse()
     // only reverse full contigs
     ASSERT(_seq_offset == 0);
     // reverse the base sequence
-    _seq = reverseComplement(_seq);
+    _seq = _seq.revcomp();
     // reverse Mutation objects in their container
-    mut_cont().reverse_mutations(get_len());
+    mut_cont().reverse_mutations(len());
     chunk_cont().reverse();
 }
 
@@ -67,7 +67,7 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
 {
     map< std::tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > > res;
     bool c_left = not c_right;
-    Size_Type endpoint = (c_left? 0 : get_len());
+    Size_Type endpoint = (c_left? 0 : len());
     for (auto rc_cbref : chunk_cont().iintersect(endpoint, endpoint))
     {
         Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
@@ -153,7 +153,7 @@ Contig_Entry::unmappable_neighbour_range(bool c_right, const vector< MAC::Read_C
         ASSERT(rc_cbptr);
         Read_Entry_CBPtr re_cbptr = rc_cbptr->re_bptr();
         ASSERT(c_right or rc_cbptr->get_c_start() == 0);
-        ASSERT(not c_right or rc_cbptr->get_c_end() == get_len());
+        ASSERT(not c_right or rc_cbptr->get_c_end() == len());
         Read_Chunk_CBPtr rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, false, c_right);
         ASSERT(rc_next_cbptr);
         Size_Type skip_len = 0;
@@ -172,7 +172,7 @@ Contig_Entry::unmappable_neighbour_range(bool c_right, const vector< MAC::Read_C
 auto Contig_Entry::neighbours(bool forward, Neighbour_Options opts, size_t ignore_threshold) -> neighbours_type
 {
     neighbours_type res;
-    Size_Type endpoint = (forward? get_len() : 0);
+    Size_Type endpoint = (forward? len() : 0);
     for (auto rc_cbref : chunk_cont().iintersect(endpoint, endpoint))
     {
         Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
@@ -227,35 +227,50 @@ auto Contig_Entry::neighbours(bool forward, Neighbour_Options opts, size_t ignor
     return res;
 }
 
-std::tuple< Contig_Entry_CBPtr, bool, vector< Read_Chunk_CBPtr > >
+tuple< Contig_Entry_CBPtr, bool, vector< Read_Chunk_CBPtr > >
 Contig_Entry::can_cat_dir(bool c_right) const
 {
-    // ignore unmappable out chunks iff this ce is not unmappable
-    //auto res = out_chunks_dir(c_right, not is_unmappable()? 0 : 1);
+    ASSERT(not chunk_cont().empty());
+    Contig_Entry_CBPtr ce_cbptr = chunk_cont().begin()->ce_bptr();
+    ASSERT(ce_cbptr.raw() == this);
+
+    logger("Contig_Entry", debug1) << ptree("can_cat_dir")
+        .put("ce_ptr", ce_cbptr.to_int())
+        .put("c_right", c_right);
+
     auto res = out_chunks_dir(c_right, 1);
+    logger("Contig_Entry", debug1) << ptree("can_cat_dir")
+        .put("res_size", res.size());
     if (res.size() != 1)
     {
-        return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
+        return make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
     }
-    ASSERT(not res.begin()->second.empty());
     Contig_Entry_CBPtr ce_next_cbptr;
     bool same_orientation;
-    vector< Read_Chunk_CBPtr > rc_cbptr_cont = std::move(res.begin()->second);
-    std::tie(ce_next_cbptr, same_orientation) = res.begin()->first;
-    if (ce_next_cbptr->is_unmappable() != is_unmappable())
+    tie(ce_next_cbptr, same_orientation) = res.begin()->first;
+    vector< Read_Chunk_CBPtr > rc_cbptr_cont = move(res.begin()->second);
+    ASSERT(not rc_cbptr_cont.empty());
+    logger("Contig_Entry", debug1) << ptree("can_cat_dir")
+        .put("ce_next_ptr", ce_next_cbptr.to_int())
+        .put("same_orientation", same_orientation)
+        .put("chunk_cont_size", rc_cbptr_cont.size());
+    //if (ce_next_cbptr->is_unmappable() != is_unmappable())
+    /*
+    if (ce_next_cbptr->category() != category())
     {
         return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
     }
-    //auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, not is_unmappable()? 0 : 1);
+    */
     auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, 1);
+    logger("Contig_Entry", debug1) << ptree("can_cat_dir")
+        .put("tmp_size", tmp.size());
     if (tmp.size() != 1)
     {
-        return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
+        return make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
     }
-    ASSERT(not tmp.begin()->second.empty());
-    ASSERT(tmp.begin()->first == std::make_tuple(Contig_Entry_CBPtr(rc_cbptr_cont.front()->ce_bptr()), same_orientation));
+    ASSERT(tmp.begin()->first == make_tuple(ce_cbptr, same_orientation));
     ASSERT(tmp.begin()->second.size() == rc_cbptr_cont.size());
-    return std::make_tuple(ce_next_cbptr, same_orientation, std::move(rc_cbptr_cont));
+    return make_tuple(ce_next_cbptr, same_orientation, move(rc_cbptr_cont));
 }
 
 void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_next_bptr,
@@ -268,8 +283,8 @@ void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_n
     ASSERT(ce_bptr->_seq_offset == 0 and ce_next_bptr->_seq_offset == 0);
     ASSERT(ce_next_bptr->is_unlinked());
     // first, shift all mutations and chunks from the second Contig_Entry
-    ce_next_bptr->mut_cont().shift(int(ce_bptr->get_len()));
-    ce_next_bptr->chunk_cont().shift(int(ce_bptr->get_len()));
+    ce_next_bptr->mut_cont().shift(int(ce_bptr->len()));
+    ce_next_bptr->chunk_cont().shift(int(ce_bptr->len()));
     // move all chunks and mutations into first Contig_Entry
     ce_bptr->mut_cont().splice(ce_next_bptr->mut_cont());
     ce_bptr->chunk_cont().splice(ce_next_bptr->chunk_cont(), ce_bptr);
@@ -311,17 +326,17 @@ vector< Mutation_CPtr > Contig_Entry::get_separated_het_mutations(
         Mutation_CPtr mut_cptr = &*mut_it;
         auto next_mut_it = mut_it;
         ++next_mut_it;
-        if (mut_cptr->get_start() >= last_mut_end + min_separation
-                and mut_cptr->get_end() + min_separation <= get_len()
+        if (mut_cptr->rf_start() >= last_mut_end + min_separation
+                and mut_cptr->rf_end() + min_separation <= len()
                 and (next_mut_it == _mut_cont.end()
-                     or mut_cptr->get_end() + min_separation <= next_mut_it->get_start()))
+                     or mut_cptr->rf_end() + min_separation <= next_mut_it->rf_start()))
         {
             // well separated
             size_t n_chunks_supporting_mut[2] = { 0, 0 };
             for (auto& rc_cptr : _chunk_cptr_cont)
             {
-                if (rc_cptr->get_c_start() > mut_cptr->get_start()
-                        or rc_cptr->get_c_end() < mut_cptr->get_end())
+                if (rc_cptr->get_c_start() > mut_cptr->rf_start()
+                        or rc_cptr->get_c_end() < mut_cptr->rf_end())
                 {
                     // doesn't span mutation
                     continue;
@@ -334,7 +349,7 @@ vector< Mutation_CPtr > Contig_Entry::get_separated_het_mutations(
                 res.push_back(mut_cptr);
             }
         }
-        last_mut_end = std::max(last_mut_end, mut_cptr->get_end());
+        last_mut_end = std::max(last_mut_end, mut_cptr->rf_end());
     }
     return res;
 }
@@ -347,14 +362,14 @@ void Contig_Entry::print_separated_het_mutations(
     {
         if (mut_cptr->is_del())
         {
-            os << _seq_ptr->substr(mut_cptr->get_start(), mut_cptr->get_len()) << "\t\t";
+            os << _seq_ptr->substr(mut_cptr->rf_start(), mut_cptr->rf_len()) << "\t\t";
         }
         else
         {
-            os << mut_cptr->get_seq() << '\t' << _seq_ptr->substr(mut_cptr->get_start(), mut_cptr->get_len()) << '\t';
+            os << mut_cptr->get_seq() << '\t' << _seq_ptr->substr(mut_cptr->rf_start(), mut_cptr->rf_len()) << '\t';
         }
-        os << _seq_ptr->substr(mut_cptr->get_start() - min_separation, min_separation) << '\t'
-           << _seq_ptr->substr(mut_cptr->get_end(), min_separation) << '\n';
+        os << _seq_ptr->substr(mut_cptr->rf_start() - min_separation, min_separation) << '\t'
+           << _seq_ptr->substr(mut_cptr->rf_end(), min_separation) << '\n';
     }
 }
 */
@@ -377,7 +392,7 @@ void Contig_Entry::check() const
     {
         Mutation_CBPtr mut_cbptr = &mut_cbref;
         // base coordinates
-        ASSERT(mut_cbptr->get_start() <= seq().size() and mut_cbptr->get_end() <= seq().size());
+        ASSERT(mut_cbptr->rf_start() <= seq().size() and mut_cbptr->rf_end() <= seq().size());
         // no empty mutations
         ASSERT(not mut_cbptr->is_empty());
         // read chunk ptr container
@@ -421,7 +436,7 @@ boost::property_tree::ptree Contig_Entry::to_ptree() const
 {
     return ptree().put("addr", (void*)this)
                   .put("seq", seq())
-                  .put("seq_len", get_len())
+                  .put("len", len())
                   .put("tag", tag())
                   .put("is_unmappable", is_unmappable())
                   .put("mut_cont", cont_to_ptree(mut_cont()))

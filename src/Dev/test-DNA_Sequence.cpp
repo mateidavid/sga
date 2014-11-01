@@ -7,7 +7,8 @@
 using namespace std;
 namespace bo = boost::program_options;
 
-typedef dna_sequence::DNA_Sequence< std::string > dna_sequence_type;
+typedef dnasequence::Sequence< std::string > sequence_type;
+typedef sequence_type::proxy_type sequence_proxy_type;
 
 struct Program_Options
 {
@@ -33,16 +34,25 @@ void real_main(const Program_Options& po)
                                       "substr + id", "substr + comp", "substr + rev", "substr + revcomp" };
     for (size_t i = 0; i < po.n_ops; ++i)
     {
-        // pick a string
+        // pick 2 strings
         size_t s_len = rand_int(po.max_len - 1) + 1;
+        size_t s_comp_len = rand_int(po.max_len - 1) + 1;
         string s_old_lib;
+        string s_comp_old_lib;
         for (size_t j = 0; j < s_len; ++j)
         {
             static const string char_s = "ACGT";
             size_t char_idx = rand_int(4);
             s_old_lib += char_s[char_idx];
         }
-        dna_sequence_type s_new_lib(s_old_lib);
+        for (size_t j = 0; j < s_comp_len; ++j)
+        {
+            static const string char_s = "ACGT";
+            size_t char_idx = rand_int(4);
+            s_comp_old_lib += char_s[char_idx];
+        }
+        sequence_type s_new_lib(s_old_lib);
+        sequence_type s_comp_new_lib(s_comp_old_lib);
         // pick operation order, rev/comp combo, and substr coordinates
         bool substr_first = rand_int(2);
         bool do_rev = rand_int(2);
@@ -56,43 +66,69 @@ void real_main(const Program_Options& po)
         // print operation
         clog << "s='" << s_old_lib << "' substr_first=" << substr_first << " do_rev=" << do_rev
              << " do_comp=" << do_comp << " cut_start=" << cut_start << " cut_len=" << cut_len
-             << " check_idx=" << check_idx << "\n";
+             << " check_idx=" << check_idx << " s_comp='" << s_comp_old_lib << "'\n";
         // apply operations using old library
         string res_old_lib;
+        int res_comp_old_lib;
         {
             std::chrono::steady_clock::time_point start_t = std::chrono::steady_clock::now();
             if (substr_first and do_rev and do_comp)
+            {
                 res_old_lib = reverseComplement(s_old_lib.substr(cut_start, cut_len));
+            }
             else if (substr_first and do_rev and not do_comp)
+            {
                 res_old_lib = reverse(s_old_lib.substr(cut_start, cut_len));
+            }
             else if (substr_first and not do_rev and do_comp)
+            {
                 res_old_lib = complement(s_old_lib.substr(cut_start, cut_len));
+            }
             else if (substr_first and not do_rev and not do_comp)
+            {
                 res_old_lib = s_old_lib.substr(cut_start, cut_len);
+            }
             else if (not substr_first and do_rev and do_comp)
+            {
                 res_old_lib = reverseComplement(s_old_lib).substr(cut_start, cut_len);
+            }
             else if (not substr_first and do_rev and not do_comp)
+            {
                 res_old_lib = reverse(s_old_lib).substr(cut_start, cut_len);
+            }
             else if (not substr_first and not do_rev and do_comp)
+            {
                 res_old_lib = complement(s_old_lib).substr(cut_start, cut_len);
+            }
             else if (not substr_first and not do_rev and not do_comp)
+            {
                 res_old_lib = s_old_lib.substr(cut_start, cut_len);
+            }
+            res_comp_old_lib = res_old_lib.compare(s_comp_old_lib);
             std::chrono::steady_clock::time_point end_t = std::chrono::steady_clock::now();
             old_lib_us += std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count();
         }
         // apply operations using new library
-        dna_sequence_type res_new_lib;
+        sequence_proxy_type res_new_lib;
+        int res_comp_new_lib;
         {
             std::chrono::steady_clock::time_point start_t = std::chrono::steady_clock::now();
             if (substr_first)
-                res_new_lib = s_new_lib.substr(cut_start, cut_len).rev(do_rev).comp(do_comp);
+            {
+                res_new_lib = std::move(s_new_lib.substr(cut_start, cut_len).rev(do_rev).comp(do_comp));
+            }
             else
-                res_new_lib = s_new_lib.rev(do_rev).comp(do_comp).substr(cut_start, cut_len);
+            {
+                res_new_lib = std::move(s_new_lib.rev(do_rev).comp(do_comp).substr(cut_start, cut_len));
+            }
+            res_comp_new_lib = res_new_lib.compare(s_comp_new_lib);
             std::chrono::steady_clock::time_point end_t = std::chrono::steady_clock::now();
             new_lib_us += std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count();
         }
         assert(res_new_lib == res_old_lib);
         assert(res_new_lib[check_idx] == res_old_lib[check_idx]);
+        assert((res_comp_new_lib < 0) == (res_comp_old_lib < 0));
+        assert((res_comp_new_lib > 0) == (res_comp_old_lib > 0));
     }
     cout << "op counts:\n";
     for (size_t i = 0; i < 8; ++i)

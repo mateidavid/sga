@@ -38,10 +38,10 @@ private:
     /** Constructor.
      * @param seq RVR to read sequence (assume ownership).
      */
-    Contig_Entry(Seq_Type&& seq, Size_Type seq_offset = 0) : _seq(std::move(seq)), _seq_offset(seq_offset), _tag(0) {}
+    Contig_Entry(Seq_Type&& seq, Size_Type seq_offset = 0) : _seq(move(seq)), _seq_offset(seq_offset), _tag(0) {}
 
     // allow move only when unlinked
-    DEFAULT_DEF_CTOR(Contig_Entry)
+    Contig_Entry() : _seq_offset(0), _tag(0) {}
     DELETE_COPY_CTOR(Contig_Entry)
     Contig_Entry(Contig_Entry&& rhs) { *this = std::move(rhs); }
 
@@ -71,13 +71,13 @@ public:
     /** @name Getters */
     /**@{*/
     GETTER(Seq_Type, seq, _seq)
-    Size_Type get_seq_offset() const { return _seq_offset; }
-    Seq_Type substr(Size_Type start, Size_Type len) const
+    Size_Type seq_offset() const { return _seq_offset; }
+    Seq_Proxy_Type substr(Size_Type start, Size_Type len) const
     {
         ASSERT(start >= _seq_offset and start + len <= _seq_offset + _seq.size());
-        return _seq.substr(start - _seq_offset, len);
+        return seq().substr(start - _seq_offset, len);
     }
-    Size_Type get_len() const { return _seq.size(); }
+    Size_Type len() const { return _seq.size(); }
     GETTER(Mutation_Cont, mut_cont, _mut_cont)
     GETTER(Read_Chunk_CE_Cont, chunk_cont, _chunk_cont)
     GETTER(uint64_t, tag, _tag)
@@ -167,11 +167,13 @@ public:
     neighbours_type neighbours(bool forward, Neighbour_Options to, size_t ignore_threshold = 0);
 
     /** Check if contig is catenable with a single other contig in the given direction.
+     * For this to be true, the contigs must have out-degree 1 in each-other's direction.
+     * NOTE: This function does not check the contig's types are catenatable.
      * @param c_right Bool; true: merge past contig end, false: merge past contig start.
      * @return A tuple (Contig_Entry, same_orientation, Read_Chunk list);
      * if the chunk is not catenable, the first coordinate is NULL.
      */
-    std::tuple< Contig_Entry_CBPtr, bool, std::vector< Read_Chunk_CBPtr > >
+    tuple< Contig_Entry_CBPtr, bool, vector< Read_Chunk_CBPtr > >
     can_cat_dir(bool c_right) const;
 
     /** Merge two contigs in the first.

@@ -8,11 +8,8 @@
 #include "shortcuts.hpp"
 
 
-namespace dna_sequence
+namespace dnasequence
 {
-
-template < typename String_Type, typename Size_Type >
-class DNA_Sequence;
 
 /** Static class holding complement table. */
 class complement
@@ -68,23 +65,25 @@ private:
     }
 }; // class complement
 
+template < typename String_Type, typename Size_Type >
+class Sequence_Proxy;
+template < typename String_Type, typename Size_Type >
+class Sequence;
+
 namespace detail
 {
 
-template < typename String_Type, typename Size_Type >
-class Proxy;
-
 /** Iterator for proxy objects */
-class Proxy_Iterator
-    : public boost::iterator_adaptor< Proxy_Iterator, const char*, char, boost::random_access_traversal_tag, char >
+class Sequence_Proxy_Iterator
+    : public boost::iterator_adaptor< Sequence_Proxy_Iterator, const char*, char, boost::random_access_traversal_tag, char >
 {
 private:
-    typedef boost::iterator_adaptor< Proxy_Iterator, const char*, char, boost::random_access_traversal_tag, char > Adaptor_Base;
+    typedef boost::iterator_adaptor< Sequence_Proxy_Iterator, const char*, char, boost::random_access_traversal_tag, char > Adaptor_Base;
 public:
-    Proxy_Iterator()
-        : Proxy_Iterator::iterator_adaptor_(0), _reversed(false), _complemented(false) {}
-    explicit Proxy_Iterator(const char* other, bool reversed = false, bool complemented = false)
-        : Proxy_Iterator::iterator_adaptor_(other), _reversed(reversed), _complemented(complemented) {}
+    Sequence_Proxy_Iterator()
+        : Sequence_Proxy_Iterator::iterator_adaptor_(0), _reversed(false), _complemented(false) {}
+    explicit Sequence_Proxy_Iterator(const char* other, bool reversed = false, bool complemented = false)
+        : Sequence_Proxy_Iterator::iterator_adaptor_(other), _reversed(reversed), _complemented(complemented) {}
 
     using typename Adaptor_Base::value_type;
     using typename Adaptor_Base::reference;
@@ -115,50 +114,57 @@ private:
     {
         this->base_reference() += not _reversed? n : -n;
     }
-    difference_type distance_to(const Proxy_Iterator& other) const
+    difference_type distance_to(const Sequence_Proxy_Iterator& other) const
     {
         return not _reversed? other.base() - this->base() : this->base() - other.base();
     }
 
     bool _reversed;
     bool _complemented;
-}; // class Proxy_Iterator
+}; // class Sequence_Proxy_Iterator
 
-/** Proxy class.
+} // namespace detail
+
+/** Sequence_Proxy class.
  * Its role is to accumulate rev(), comp(), and substr() operations
- * applied on a DNA_Sequence object. One can use a proxy object in 3 ways:
+ * applied on a Sequence object. One can use a proxy object in 3 ways:
  * - retrieve a given position using at() and operator[]()
  * - print object
  * - construct a new sequence object
  */
-template < typename String_Type, typename Size_Type >
-class Proxy
+template < typename String_Type, typename Size_Type = size_t >
+class Sequence_Proxy
 {
 private:
-    typedef DNA_Sequence< String_Type, Size_Type > dna_sequence_type;
-    typedef Proxy_Iterator iterator;
+    typedef Sequence< String_Type, Size_Type > sequence_type;
+    typedef detail::Sequence_Proxy_Iterator iterator;
 
-    friend class DNA_Sequence< String_Type, Size_Type >;
+    friend class Sequence< String_Type, Size_Type >;
 
-    DELETE_DEF_CTOR(Proxy)
-    DELETE_COPY_CTOR(Proxy)
-    DEFAULT_MOVE_CTOR(Proxy)
-    DELETE_COPY_ASOP(Proxy)
-    DELETE_MOVE_ASOP(Proxy)
-
-    Proxy(const dna_sequence_type* seq_p, Size_Type start, Size_Type len, bool reversed, bool complemented)
-    : _seq_p(seq_p), _start(start), _len(len), _reversed(reversed), _complemented(complemented) {}
+    DEFAULT_COPY_CTOR(Sequence_Proxy)
+    DELETE_COPY_ASOP(Sequence_Proxy)
+    Sequence_Proxy(const String_Type* seq_p, Size_Type start, Size_Type len, bool reversed, bool complemented)
+        : _seq_p(seq_p), _start(start), _len(len), _reversed(reversed), _complemented(complemented) {}
 
 public:
+    Sequence_Proxy() : _seq_p(), _start(0), _len(0), _reversed(false), _complemented(false) {}
+    DEFAULT_MOVE_CTOR(Sequence_Proxy)
+    DEFAULT_MOVE_ASOP(Sequence_Proxy)
+
+    Sequence_Proxy(const String_Type& s) : _seq_p(&s), _start(0), _len(s.size()), _reversed(false), _complemented(false) {}
+
     size_t size() const { return _len; }
     bool empty() const { return size() > 0; }
 
     /** Further rev/comp/substr applied on this proxy */
-    Proxy& rev(bool reversed = true) { _reversed = (_reversed != reversed); return *this; }
-    Proxy& comp(bool complemented = true) { _complemented = (_complemented != complemented); return *this; }
-    Proxy& revcomp(bool revcomped = true) { return (*this).rev(revcomped).comp(revcomped); return *this; }
-    Proxy& substr(size_t pos = 0, size_t len = String_Type::npos)
+    Sequence_Proxy rev(bool reversed = true) const
+    { Sequence_Proxy res = *this; res._reversed = (_reversed != reversed); return res; }
+    Sequence_Proxy comp(bool complemented = true) const
+    { Sequence_Proxy res = *this; res._complemented = (_complemented != complemented); return res; }
+    Sequence_Proxy revcomp(bool revcomped = true) const { return (*this).rev(revcomped).comp(revcomped); }
+    Sequence_Proxy substr(size_t pos = 0, size_t len = String_Type::npos) const
     {
+        Sequence_Proxy res = *this;
         if (pos > size())
         {
             throw std::out_of_range("pos > size");
@@ -176,14 +182,14 @@ public:
         }
         if (not _reversed)
         {
-            _start += pos;
+            res._start += pos;
         }
         else
         {
-            _start = (_start + _len - (pos + len));
+            res._start = (_start + _len - (pos + len));
         }
-        _len = len;
-        return *this;
+        res._len = len;
+        return res;
     }
 
     /** Element access */
@@ -218,7 +224,7 @@ public:
     }
 
     /** Formatted output operator */
-    friend std::ostream& operator << (std::ostream& os, const Proxy& rhs)
+    friend std::ostream& operator << (std::ostream& os, const Sequence_Proxy& rhs)
     {
         if (not rhs._reversed and not rhs._complemented)
         {
@@ -233,39 +239,90 @@ public:
         return os;
     }
 
+    /** Lexicographical comparison */
+    int compare(const Sequence_Proxy& rhs) const
+    {
+        if (not _reversed and not _complemented and not rhs._reversed and not rhs._complemented)
+        {
+            return _seq_p->compare(_start, _len, *rhs._seq_p, rhs._start, rhs._len);
+        }
+        else
+        {
+            auto it1 = begin();
+            auto it1_end = end();
+            auto it2 = rhs.begin();
+            auto it2_end = rhs.end();
+            while (it1 != it1_end and it2 != it2_end)
+            {
+                if (*it1 != *it2)
+                {
+                    return static_cast< int >(*it1) - static_cast< int >(*it2);
+                }
+                ++it1;
+                ++it2;
+            }
+            if (it1 == it1_end and it2 == it2_end)
+            {
+                return 0;
+            }
+            else if (it1 == it1_end)
+            {
+                return -1;
+            }
+            else // it2 == it2_end
+            {
+                return 1;
+            }
+        }
+    }
+    friend bool operator == (const Sequence_Proxy& lhs, const Sequence_Proxy& rhs)
+    {
+        return lhs.compare(rhs) == 0;
+    }
+    friend bool operator != (const Sequence_Proxy& lhs, const Sequence_Proxy& rhs) { return !(lhs == rhs); }
+    friend bool operator < (const Sequence_Proxy& lhs, const Sequence_Proxy& rhs)
+    {
+        return lhs.compare(rhs) < 0;
+    }
+    friend bool operator <= (const Sequence_Proxy& lhs, const Sequence_Proxy& rhs) { return lhs < rhs or lhs == rhs; }
+    friend bool operator > (const Sequence_Proxy& lhs, const Sequence_Proxy& rhs)
+    {
+        return lhs.compare(rhs) > 0;
+    }
+    friend bool operator >= (const Sequence_Proxy& lhs, const Sequence_Proxy& rhs) { return lhs > rhs or lhs == rhs; }
+
 private:
-    const dna_sequence_type* const _seq_p;
+    const String_Type* _seq_p;
     Size_Type _start;
     Size_Type _len;
     bool _reversed;
     bool _complemented;
-}; // class Proxy
+}; // class Sequence_Proxy
 
-} // namespace detail
-
-/** DNA_Sequence class.
+/** Sequence class.
  * Implemented as a non-orthodox derivation from a regular string class.
  * The derived class adds no new data members, but provides new functions
  * rev(), comp(), revcomp(), and overloads substr(). All of these produce
  * proxy objects that accumulate the corresponding restrictions.
  */
 template < typename String_Type, typename Size_Type = size_t >
-class DNA_Sequence
+class Sequence
     : public String_Type
 {
-private:
-    typedef detail::Proxy< String_Type, Size_Type > proxy_type;
 public:
-    DEFAULT_DEF_CTOR(DNA_Sequence)
-    DEFAULT_COPY_CTOR(DNA_Sequence)
-    DEFAULT_MOVE_CTOR(DNA_Sequence)
-    DEFAULT_COPY_ASOP(DNA_Sequence)
-    DEFAULT_MOVE_ASOP(DNA_Sequence)
+    typedef Sequence_Proxy< String_Type, Size_Type > proxy_type;
+
+    DEFAULT_DEF_CTOR(Sequence)
+    DEFAULT_COPY_CTOR(Sequence)
+    DEFAULT_MOVE_CTOR(Sequence)
+    DEFAULT_COPY_ASOP(Sequence)
+    DEFAULT_MOVE_ASOP(Sequence)
 
     /** Construction from base */
-    DNA_Sequence(const String_Type& seq) : String_Type(seq) {}
-    DNA_Sequence(String_Type&& seq) : String_Type(std::move(seq)) {}
-    DNA_Sequence& operator = (const String_Type& seq)
+    Sequence(const String_Type& seq) : String_Type(seq) {}
+    Sequence(String_Type&& seq) : String_Type(std::move(seq)) {}
+    /** Assignment from base */
+    Sequence& operator = (const String_Type& seq)
     {
         if (&seq != static_cast< String_Type* >(this))
         {
@@ -273,7 +330,7 @@ public:
         }
         return *this;
     }
-    DNA_Sequence& operator = (String_Type&& seq)
+    Sequence& operator = (String_Type&& seq)
     {
         if (&seq != static_cast< String_Type* >(this))
         {
@@ -314,9 +371,27 @@ public:
         }
         return proxy_type(this, pos, len, false, false);
     }
-}; // class DNA_Sequence
 
-} // namespace dna_sequence
+    /** Functions using proxies */
+    using String_Type::append;
+    Sequence& append(const proxy_type& p)
+    {
+        if (not p._reversed and not p._complemented)
+        {
+            this->append(*p._seq_p, p._start, p._len);
+        }
+        else
+        {
+            this->append(p.begin(), p.end());
+        }
+        return *this;
+    }
+    using String_Type::operator +=;
+    Sequence& operator += (const proxy_type& p) { return this->append(p); }
+
+}; // class Sequence
+
+} // namespace dnasequence
 
 
 #endif

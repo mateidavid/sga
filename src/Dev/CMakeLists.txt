@@ -26,7 +26,6 @@ add_dependencies(mac-bin version)
 #target_link_libraries(mac-bin mac ${CMAKE_BINARY_DIR}/Util/libutil.a ${CMAKE_BINARY_DIR}/Thirdparty/libthirdparty.a)
 target_link_libraries(mac-bin
     mac
-    util
     thirdparty
     ${Boost_IOSTREAMS_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
@@ -48,7 +47,6 @@ add_executable(test-Read_Chunk-traversal
 )
 target_link_libraries(test-Read_Chunk-traversal
     mac
-    util
     thirdparty
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
@@ -59,7 +57,6 @@ add_executable(check-assert check-assert.cpp global_assert.cpp)
 add_executable(test-affine-overlapper test-affine-overlapper.cpp)
 target_link_libraries(test-affine-overlapper
     mac
-    util
     thirdparty
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}

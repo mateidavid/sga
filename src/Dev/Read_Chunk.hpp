@@ -224,7 +224,6 @@ public:
     Size_Type get_c_end() const { return _c_start + _c_len; }
     bool get_rc() const { return _get_rc(); }
     Seq_Type get_seq() const;
-    Seq_Type substr(Size_Type start, Size_Type len) const;
     bool is_unbreakable() const { return _get_is_unbreakable(); }
     Size_Type get_read_len() const;
     /**@}*/
@@ -271,7 +270,7 @@ public:
      * @param qr Query string (either whole, or just mapped portion).
      */
     static Read_Chunk_BPtr
-    make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf_ptr, const Seq_Type& qr);
+    make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf_ptr, const Seq_Proxy_Type& qr);
 
     /** Create Read_Chunk object from a cigar string.
      * This version assumes a Contig_Entry object exists holding the cigar rf sequence.
@@ -280,7 +279,7 @@ public:
      * @param ce_bptr Contig_Entry object holding the cigar rf sequence.
      */
     static Read_Chunk_BPtr
-    make_chunk_from_cigar(const Cigar& cigar, const Seq_Type& qr, Contig_Entry_BPtr ce_bptr);
+    make_chunk_from_cigar(const Cigar& cigar, const Seq_Proxy_Type& qr, Contig_Entry_BPtr ce_bptr);
 
     /** Create Read_Chunk and Contig_Entry objects from a cigar string and 2 existing Read_Chunk objects.
      * @param rc1_cbptr Read_Chunk corresponding to rf.

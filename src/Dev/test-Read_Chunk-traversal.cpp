@@ -84,25 +84,25 @@ Pos_List get_expected_pos_list(Read_Chunk_CBPtr rc_cbptr)
     Size_Type c_pos = rc_cbptr->get_c_start();
     Size_Type r_pos = same_dir? rc_cbptr->get_r_start() : rc_cbptr->get_r_end();
     if (rc_cbptr->mut_ptr_cont().empty()
-        or rc_cbptr->mut_ptr_cont().begin()->mut_cbptr()->get_start() > rc_cbptr->get_c_start())
+        or rc_cbptr->mut_ptr_cont().begin()->mut_cbptr()->rf_start() > rc_cbptr->get_c_start())
     {
         res.emplace_back(std::vector< size_t >({ c_pos, r_pos, 0, 0 }));
     }
     for (auto mca_cbref : rc_cbptr->mut_ptr_cont())
     {
         Mutation_CBPtr mut_cbptr = (&mca_cbref)->mut_cbptr();
-        assert(mut_cbptr->get_start() >= c_pos);
-        Size_Type skip_len = mut_cbptr->get_start() - c_pos;
+        assert(mut_cbptr->rf_start() >= c_pos);
+        Size_Type skip_len = mut_cbptr->rf_start() - c_pos;
         assert(not res.empty() or skip_len == 0);
         c_pos += skip_len;
         r_pos = same_dir? r_pos + skip_len : r_pos - skip_len;
         res.emplace_back(std::vector< size_t >({ c_pos, r_pos, 0, 0 }));
-        c_pos += mut_cbptr->get_len();
-        r_pos = same_dir? r_pos + mut_cbptr->get_seq_len() : r_pos - mut_cbptr->get_seq_len();
+        c_pos += mut_cbptr->rf_len();
+        r_pos = same_dir? r_pos + mut_cbptr->seq_len() : r_pos - mut_cbptr->seq_len();
         res.emplace_back(std::vector< size_t >({ c_pos, r_pos, 1, 0 }));
     }
     if (rc_cbptr->mut_ptr_cont().empty()
-        or rc_cbptr->mut_ptr_cont().rbegin()->mut_cbptr()->get_end() < rc_cbptr->get_c_end())
+        or rc_cbptr->mut_ptr_cont().rbegin()->mut_cbptr()->rf_end() < rc_cbptr->get_c_end())
     {
         Size_Type skip_len = rc_cbptr->get_c_end() - c_pos;
         assert(skip_len > 0);

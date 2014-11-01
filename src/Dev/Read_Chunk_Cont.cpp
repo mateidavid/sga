@@ -13,7 +13,7 @@ namespace MAC
 
 Read_Chunk_CE_Cont Read_Chunk_CE_Cont::split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
-    ASSERT(not mut_left_cbptr or (mut_left_cbptr->get_start() == c_brk and mut_left_cbptr->is_ins()));
+    ASSERT(not mut_left_cbptr or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
     Read_Chunk_CE_Cont lhs_cont;
     Read_Chunk_CE_Cont rhs_cont;
 

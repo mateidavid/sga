@@ -13,7 +13,8 @@
 #include "global.hpp"
 #include "global_assert.hpp"
 #include "Cigar_Op.hpp"
-#include "Util.h"
+//#include "Util.h"
+#include "DNA_Sequence.hpp"
 #include "logger.hpp"
 
 
@@ -31,6 +32,8 @@ class Cigar
 public:
     typedef Size_Type size_type;
     typedef Cigar_Op< Size_Type > cigar_op_type;
+    typedef dnasequence::Sequence< std::string, size_t > sequence_type;
+    typedef sequence_type::proxy_type sequence_proxy_type;
 
     /** Default constructor */
     Cigar() : _rf_start(0), _qr_start(0), _rf_len(0), _qr_len(0), _reversed(false) {}
@@ -118,6 +121,8 @@ public:
     Size_Type op_rf_offset(size_t i) const { return i == n_ops()? _rf_len : op(i).rf_offset(); }
     /** Get qr start offset of operation (ignoring qr_start). */
     Size_Type op_qr_offset(size_t i) const { return i == n_ops()? (same_st()? _qr_len : 0) : op(i).qr_offset(); }
+    /** Get qr start offset of operation (ignoring qr_start) relative to its orientation. */
+    Size_Type op_qr_roffset(size_t i) const { return same_st()? op_qr_offset(i) : _qr_len - op_qr_offset(i); }
     /** Get rf start position of operation (including rf_start). */
     Size_Type op_rf_pos(size_t i) const { return rf_start() + op_rf_offset(i); }
     /** Get qr start position of operation (including qr_start). */
@@ -219,7 +224,7 @@ public:
     }
 
     /** Disambiguate M operations. */
-    void disambiguate(const string& rf_seq, const string& qr_seq)
+    void disambiguate(const sequence_proxy_type& rf_seq, const sequence_proxy_type& qr_seq)
     {
         ASSERT(rf_seq.size() == rf_len());
         ASSERT(qr_seq.size() == qr_len());
@@ -227,27 +232,34 @@ public:
         logger("cigar", debug) << ptree("disambiguate_start")
             .put("cigar", this->to_ptree())
             .put("rf_seq", rf_seq)
-            .put("qr_seq", (same_st()? qr_seq : reverseComplement(qr_seq)));
+            //.put("qr_seq", (same_st()? qr_seq : reverseComplement(qr_seq)));
+            .put("qr_seq", qr_seq.revcomp(diff_st()));
 
+        /*
         auto get_qr_pos = [&] (Size_Type pos) -> char {
             ASSERT(not same_st() or pos < qr_len());
             ASSERT(not diff_st() or (0 < pos and pos <= qr_len()));
-            return (same_st()? qr_seq[pos] : ::complement(char(qr_seq[pos - 1])));
+            //return (same_st()? qr_seq[pos] : ::complement(char(qr_seq[pos - 1])));
+            return same_st()? qr_seq[pos] : dnasequence::complement::base(qr_seq[pos - 1]);
         };
+        */
         for (size_t i = 0; i < n_ops(); ++i)
         {
             if (op_type(i) == 'M')
             {
                 vector< cigar_op_type > v;
-                cigar_op_type op(rf_seq[op_rf_offset(i)] == get_qr_pos(op_qr_offset(i))? '=' : 'X', 1);
+                //cigar_op_type op(rf_seq[op_rf_offset(i)] == get_qr_pos(op_qr_offset(i))? '=' : 'X', 1);
+                cigar_op_type op(rf_seq[op_rf_offset(i)] == qr_seq.revcomp(diff_st())[op_qr_roffset(i)]? '=' : 'X', 1);
                 op.rf_offset() = op_rf_offset(i);
                 op.qr_offset() = op_qr_offset(i);
+                size_t qr_roffset = op_qr_roffset(i);
 
                 while (op.rf_offset() + op.len() < op_rf_offset(i + 1))
                 {
                     if ((op.op_type() == '=')
                         == (rf_seq[op.rf_offset() + op.len()]
-                            == get_qr_pos((same_st()? op.qr_offset() + op.len() : op.qr_offset() - op.len()))))
+                            //== get_qr_pos((same_st()? op.qr_offset() + op.len() : op.qr_offset() - op.len()))))
+                            == qr_seq.revcomp(diff_st())[qr_roffset + op.len()]))
                     {
                         ++op.len();
                     }
@@ -257,6 +269,7 @@ public:
                         op.op_type() = (op.op_type() == '='? 'X' : '=');
                         op.rf_offset() += op.len();
                         op.qr_offset() = (same_st()? op.qr_offset() + op.len() : op.qr_offset() - op.len());
+                        qr_roffset += op.len();
                         op.len() = 1;
                     }
                 }
@@ -272,7 +285,7 @@ public:
     }
 
     /** Check Cigar. */
-    void check(const string& rf_seq, const string& qr_seq) const
+    void check(const sequence_proxy_type& rf_seq, const sequence_proxy_type& qr_seq) const
     {
 #ifndef BOOST_DISABLE_ASSERTS
         ASSERT(rf_seq.size() == rf_len());
@@ -293,9 +306,13 @@ public:
             // check '=' ops
             if (op_type(i) == '=')
             {
+                /*
                 ASSERT(rf_seq.substr(op_rf_offset(i), op_rf_len(i))
                        == (same_st()? qr_seq.substr(op_qr_offset(i), op_qr_len(i))
                            : reverseComplement(qr_seq.substr(op_qr_offset(i) - op_qr_len(i), op_qr_len(i)))));
+                */
+                ASSERT(rf_seq.substr(op_rf_offset(i), op_rf_len(i))
+                       == qr_seq.revcomp(diff_st()).substr(op_qr_roffset(i), op_qr_len(i)));
             }
         }
         ASSERT(check_rf_len == rf_len());
