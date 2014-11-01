@@ -122,8 +122,8 @@ get_directory_property(include_directories INCLUDE_DIRECTORIES)
 message(STATUS "INCLUDE_DIRECTORIES = ${include_directories}")
 
 # compile flags
-set(CMAKE_C_FLAGS "$ENV{CFLAGS} -Wall -Wextra -pedantic -Wno-long-long -Wno-format -Wno-unused-local-typedefs -Wno-unknown-warning -Wno-unknown-warning-option")
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -Wall -Wextra -pedantic -Wno-long-long -Wno-format -Wno-unused-local-typedefs -Wno-unknown-warning -Wno-unknown-warning-option")
+set(CMAKE_C_FLAGS "$ENV{CFLAGS} -Wall -Wextra -pedantic -fmax-errors=1 -Wno-long-long -Wno-format -Wno-unused-local-typedefs") #-Wno-unknown-warning -Wno-unknown-warning-option")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -Wall -Wextra -pedantic -fmax-errors=1 -Wno-long-long -Wno-format -Wno-unused-local-typedefs") #-Wno-unknown-warning -Wno-unknown-warning-option")
 if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -137,6 +137,10 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 # compile flags for Test build
 set(CMAKE_CXX_FLAGS_TEST "-O3 -g3")
 set(CMAKE_C_FLAGS_TEST "${CMAKE_CXX_FLAGS_TEST}")
+set(CMAKE_CXX_FLAGS_TEST_O2 "-O2 -g3")
+set(CMAKE_C_FLAGS_TEST_O2 "${CMAKE_CXX_FLAGS_TEST_O2}")
+set(CMAKE_CXX_FLAGS_TEST_O1 "-O1 -g3")
+set(CMAKE_C_FLAGS_TEST_O1 "${CMAKE_CXX_FLAGS_TEST_O1}")
 
 # compile flags for GProf build
 set(CMAKE_CXX_FLAGS_GPROF "-O3 -g3 -pg")
