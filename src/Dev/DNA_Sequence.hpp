@@ -321,6 +321,7 @@ public:
     /** Construction from base */
     Sequence(const String_Type& seq) : String_Type(seq) {}
     Sequence(String_Type&& seq) : String_Type(std::move(seq)) {}
+    Sequence(const proxy_type& seq) : String_Type(std::move(String_Type(seq))) {}
     /** Assignment from base */
     Sequence& operator = (const String_Type& seq)
     {
@@ -336,6 +337,11 @@ public:
         {
             *static_cast< String_Type* >(this) = std::move(seq);
         }
+        return *this;
+    }
+    Sequence& operator = (const proxy_type& seq)
+    {
+        *this = std::move(String_Type(seq));
         return *this;
     }
 

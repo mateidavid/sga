@@ -144,9 +144,9 @@ public:
      * @param seq_bseq_map Mapping (read sequence) -> (index of bseq, cigar_string).
      */
     void resolve_unmappable_fully_mapped(
-        const map< string, size_t >& seq_cnt_map,
-        vector< string >& bseq_v,
-        map< string, tuple< size_t, string > >& seq_bseq_map);
+        const map< Seq_Type, size_t >& seq_cnt_map,
+        vector< Seq_Type >& bseq_v,
+        map< Seq_Type, tuple< size_t, string > >& seq_bseq_map);
     /** Remap set of unmappable seq ends to a set of base sequences.
      * @param seq_set Set of pairs (sequence, side):
      * the mapping of sequence to abse sequences should be anchored on side.

@@ -264,9 +264,8 @@ void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPt
                                                                    c1_ce_bptr->mut_cont());
 
     // for the remaining chunks mapped to c2, remap them to c1 through c1->c2 mapping
-    for (auto rc_bref : c2_ce_bptr->chunk_cont())
+    for (auto c2rc_bptr : c2_ce_bptr->chunk_cont() | referenced)
     {
-        Read_Chunk_BPtr c2rc_bptr = &rc_bref;
         Read_Chunk_BPtr c1rc_bptr;
         if (c2rc_bptr == c2rc2_chunk_bptr)
         {
@@ -795,9 +794,8 @@ void Graph::cat_read_contigs(Read_Entry_BPtr re_bptr)
     while (not done)
     {
         done = true;
-        for (auto rc_bref : re_bptr->chunk_cont())
+        for (auto rc_bptr : re_bptr->chunk_cont() | referenced)
         {
-            Read_Chunk_BPtr rc_bptr = &rc_bref;
             Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
             if (ce_bptr->is_unmappable())
             {
@@ -1443,9 +1441,8 @@ void Graph::unmap_single_chunks()
 void Graph::unmap_read_ends()
 {
     logger("graph", info) << ptree("unmap_read_ends");
-    for (auto re_bref : _re_cont)
+    for (auto re_bptr : re_cont() | referenced)
     {
-        Read_Entry_BPtr re_bptr = &re_bref;
         unmap_single_terminal_chunk(&*re_bptr->chunk_cont().begin(), true);
         unmap_single_terminal_chunk(&*re_bptr->chunk_cont().rbegin(), false);
     }
@@ -1534,9 +1531,8 @@ void Graph::print_separated_het_mutations(ostream& os, size_t min_support_report
 
 void Graph::print_unmappable_contigs(ostream& os) const
 {
-    for (auto ce_cbref : ce_cont())
+    for (auto ce_cbptr : ce_cont() | referenced)
     {
-        Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
         if (ce_cbptr->is_unmappable())
         {
             continue;
@@ -1586,9 +1582,9 @@ void Graph::print_unmappable_contigs(ostream& os) const
 }
 
 void Graph::resolve_unmappable_fully_mapped(
-    const map< string, size_t >& seq_cnt_map,
-    vector< string >& bseq_v,
-    map< string, tuple< size_t, string > >& seq_bseq_map)
+    const map< Seq_Type, size_t >& seq_cnt_map,
+    vector< Seq_Type >& bseq_v,
+    map< Seq_Type, tuple< size_t, string > >& seq_bseq_map)
 {
     ASSERT(bseq_v.empty());
     ASSERT(seq_bseq_map.empty());
@@ -1669,7 +1665,7 @@ void Graph::resolve_unmappable_fully_mapped(
     */
 
     // move sequences into a vector, ignore counts
-    vector< string > seq_v;
+    vector< Seq_Type > seq_v;
     for (const auto& t : seq_cnt_map)
     {
         logger("graph", debug1) << ptree("resolve_unmappable_fully_mapped")
@@ -1678,26 +1674,27 @@ void Graph::resolve_unmappable_fully_mapped(
     }
 
     // for every sequence, count 3-mers and save them in a map
-    vector< map< string, size_t > > kmer_map_v(seq_v.size());
+    vector< map< Seq_Type, size_t > > kmer_map_v(seq_v.size());
     for (size_t k = 0; k < seq_v.size(); ++k)
     {
-        const string& seq = seq_v[k];
-        map< string, size_t >& m = kmer_map_v[k];
+        const Seq_Type& seq = seq_v[k];
+        map< Seq_Type, size_t >& m = kmer_map_v[k];
         for (size_t i = 0; i + 3 < seq.size(); ++i)
         {
-            if (m.count(seq.substr(i, 3)) == 0)
+            Seq_Type kmer = Seq_Type(seq.substr(i, 3));
+            if (m.count(kmer) == 0)
             {
-                m[seq.substr(i, 3)] = 1;
+                m[kmer] = 1;
             }
             else
             {
-                ++m[seq.substr(i, 3)];
+                ++m[kmer];
             }
         }
     }
 
     // count all pairwise distances
-    auto get_dist = [] (const map< string, size_t >& km1, const map< string, size_t >& km2)
+    auto get_dist = [] (const map< Seq_Type, size_t >& km1, const map< Seq_Type, size_t >& km2)
     {
         // we compute the distance as follows:
         //   sum_{kmer k} |count(s1,k) - count(s2,k)| / max(count(s1,k), count(s2,k)) / sum(denom)
@@ -1760,12 +1757,12 @@ void Graph::resolve_unmappable_fully_mapped(
         size_t max_cluster_size = 0;
         for (size_t i = 0; i < seq_v.size(); ++i)
         {
-            size_t cluster_size = 1;
             if (seq_bseq_map.count(seq_v[i]) > 0)
             {
                 // already mapped
                 continue;
             }
+            size_t cluster_size = 1;
             for (size_t j = i + 1; j < seq_v.size(); ++j)
             {
                 if (seq_bseq_map.count(seq_v[j]) > 0)
@@ -1788,7 +1785,7 @@ void Graph::resolve_unmappable_fully_mapped(
         // pick sequence at idx as a new base sequence
         logger("graph", debug1) << ptree("new_base_seq").put("seq", seq_v[idx]);
         bseq_v.emplace_back(seq_v[idx]);
-        const string& bseq = bseq_v.back();
+        const Seq_Type& bseq = bseq_v.back();
         const size_t bseq_idx = bseq_v.size() - 1;
         // map sequences not already mapped to the new base sequence
         for (size_t i = 0; i < seq_v.size(); ++i)
@@ -1817,11 +1814,13 @@ void Graph::resolve_unmappable_inner_region(
         .put("same_orientation", same_orientation);
 
     auto oc_map = ce_cbptr->out_chunks_dir(c_right, 3);
-    const auto& out_chunks_v = oc_map.at(make_tuple(ce_next_cbptr, same_orientation));
+    auto t = make_tuple(ce_next_cbptr, same_orientation);
+    ASSERT(oc_map.count(t) > 0);
+    const auto& out_chunks_v = oc_map.at(t);
     // collect unmappable chunks, along with their orientation, in unmappable_chunks_v
     vector< tuple< Read_Chunk_BPtr, bool > > unmappable_chunks_v;
     // collect sequences along with occurrence count in seq_map
-    map< string, size_t > seq_cnt_map;
+    map< Seq_Type, size_t > seq_cnt_map;
     for (const auto& rc_cbptr : out_chunks_v)
     {
         bool r_right = (c_right != rc_cbptr->get_rc());
@@ -1832,7 +1831,7 @@ void Graph::resolve_unmappable_inner_region(
             continue;
         }
         unmappable_chunks_v.push_back(make_tuple(rc_next_cbptr.unconst(), r_right));
-        string seq = rc_next_cbptr->get_seq().revcomp(not r_right);
+        Seq_Type seq = rc_next_cbptr->get_seq().revcomp(not r_right);
         if (seq_cnt_map.count(seq) > 0)
         {
             ++seq_cnt_map.at(seq);
@@ -1850,12 +1849,12 @@ void Graph::resolve_unmappable_inner_region(
         ASSERT((rc_next_next_cbptr->get_rc() == rc_cbptr->get_rc()) == same_orientation);
     }
     // construct set of base sequences
-    map< string, tuple< size_t, string > > seq_bseq_map;
-    vector< string > bseq_v;
+    map< Seq_Type, tuple< size_t, string > > seq_bseq_map;
+    vector< Seq_Type > bseq_v;
     resolve_unmappable_fully_mapped(seq_cnt_map, bseq_v, seq_bseq_map);
     // create new contig entries
     vector< Contig_Entry_BPtr > new_ce_bptr_v;
-    for (const auto& bseq : bseq_v)
+    for (auto& bseq : bseq_v)
     {
         Contig_Entry_BPtr new_ce_bptr = Contig_Entry_Fact::new_elem(move(bseq));
         new_ce_bptr_v.push_back(new_ce_bptr);
@@ -1868,7 +1867,7 @@ void Graph::resolve_unmappable_inner_region(
         bool r_right;
         tie(old_rc_bptr, r_right) = unmappable_chunks_v[i];
         // seq as considered during base seq selection
-        string seq = old_rc_bptr->get_seq().revcomp(not r_right);
+        Seq_Type seq = old_rc_bptr->get_seq().revcomp(not r_right);
         size_t bseq_idx;
         string cigar_string;
         tie(bseq_idx, cigar_string) = seq_bseq_map.at(seq);
@@ -2045,9 +2044,8 @@ void Graph::resolve_unmappable_regions()
     logger("graph", info) << ptree("resolve_unmappable_regions");
 
     // step 1: find reads with unmappable contigs in between mappable ones
-    for (auto re_bref : re_cont())
+    for (auto re_bptr : re_cont() | referenced)
     {
-        Read_Entry_BPtr re_bptr = &re_bref;
         for (auto rc_bref_it = re_bptr->chunk_cont().begin(); rc_bref_it != re_bptr->chunk_cont().end(); )
         {
             Read_Chunk_CBPtr rc_cbptr = &*(rc_bref_it++); // loop it incremented here, before modifications to current elem
@@ -2120,16 +2118,14 @@ void Graph::check_all() const
     size_t chunks_count_1 = 0;
     size_t chunks_count_2 = 0;
     // check read entry objects
-    for (auto re_cbref : _re_cont)
+    for (auto re_cbptr : re_cont() | referenced)
     {
-        Read_Entry_CBPtr re_cbptr = &re_cbref;
         re_cbptr->check();
         chunks_count_1 += re_cbptr->chunk_cont().size();
     }
     // check contig entry objects
-    for (auto ce_cbref : _ce_cont)
+    for (auto ce_cbptr : ce_cont() | referenced)
     {
-        Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
         ce_cbptr->check();
         chunks_count_2 += ce_cbptr->chunk_cont().size();
     }
@@ -2144,9 +2140,9 @@ void Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry
     set< Contig_Entry_CBPtr > ce_extra_set;
     for (const auto& re_cbptr : re_set)
     {
-        for (auto rc_cbref : re_cbptr->chunk_cont())
+        for (auto rc_cbptr : re_cbptr->chunk_cont() | referenced)
         {
-            ce_extra_set.insert(rc_cbref.raw().ce_bptr());
+            ce_extra_set.insert(rc_cbptr->ce_bptr());
         }
     }
 
@@ -2154,9 +2150,9 @@ void Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry
     set< Read_Entry_CBPtr > re_extra_set;
     for (const auto& ce_cbptr : ce_set)
     {
-        for (auto rc_cbref : ce_cbptr->chunk_cont())
+        for (auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
         {
-            re_extra_set.insert(rc_cbref.raw().re_bptr());
+            re_extra_set.insert(rc_cbptr->re_bptr());
         }
     }
 
@@ -2208,13 +2204,13 @@ void Graph::check_leaks() const
     size_t num_chunks = 0;
     size_t num_muts = 0;
     size_t num_mca = 0;
-    for (auto ce_cbref : ce_cont())
+    for (auto ce_cbptr : ce_cont() | referenced)
     {
-        num_chunks += ce_cbref.raw().chunk_cont().nonconst_size();
-        num_muts += ce_cbref.raw().mut_cont().nonconst_size();
-        for (auto rc_cbref : ce_cbref.raw().chunk_cont())
+        num_chunks += ce_cbptr->chunk_cont().nonconst_size();
+        num_muts += ce_cbptr->mut_cont().nonconst_size();
+        for (auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
         {
-            num_mca += rc_cbref.raw().mut_ptr_cont().nonconst_size();
+            num_mca += rc_cbptr->mut_ptr_cont().nonconst_size();
         }
     }
     ASSERT(Read_Chunk_Fact::used()
@@ -2288,17 +2284,14 @@ void Graph::dump_detailed_counts(ostream& os) const
     logger("graph", info) << ptree("dump_detailed_counts");
     // First read stats
     os << "RE\tname\tlen\tnum.chunks\tchunk.lens\tcontigs\n";
-    for (const auto re_cbref : re_cont())
+    for (const auto re_cbptr : re_cont() | referenced)
     {
-        Read_Entry_CBPtr re_cbptr = &re_cbref;
-
         os << "RE\t"
            << re_cbptr->name() << '\t'
            << re_cbptr->len() << '\t'
            << re_cbptr->chunk_cont().size() << '\t';
-        for (const auto rc_cbref : re_cbptr->chunk_cont())
+        for (const auto rc_cbptr : re_cbptr->chunk_cont() | referenced)
         {
-            Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
             if (rc_cbptr != &*re_cbptr->chunk_cont().begin())
             {
                 os << ',';
@@ -2306,9 +2299,8 @@ void Graph::dump_detailed_counts(ostream& os) const
             os << (rc_cbptr->ce_bptr()->is_unmappable()? "*" : "") << rc_cbptr->get_r_len();
         }
         os << '\t';
-        for (const auto rc_cbref : re_cbptr->chunk_cont())
+        for (const auto rc_cbptr : re_cbptr->chunk_cont() | referenced)
         {
-            Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
             if (rc_cbptr != &*re_cbptr->chunk_cont().begin())
             {
                 os << ',';
@@ -2325,10 +2317,8 @@ void Graph::dump_detailed_counts(ostream& os) const
        << "\tce.deg.right\tre.deg.right\tedges.right"
        << "\tce.deg.left.skip\tre.deg.left.skip\tedges.left.skip"
        << "\tce.deg.right.skip\tre.deg.right.skip\tedges.right.skip\n";
-    for (const auto ce_cbref : ce_cont())
+    for (const auto ce_cbptr : ce_cont() | referenced)
     {
-        Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
-
         os << "CE\t"
            << ce_cbptr.to_int() << '\t'
            << ce_cbptr->len() << '\t'
@@ -2338,9 +2328,8 @@ void Graph::dump_detailed_counts(ostream& os) const
            << ce_cbptr->mut_cont().size() << '\t';
         size_t num_bp_chunks = 0;
         size_t num_muts_chunks = 0;
-        for (const auto rc_cbref : ce_cbptr->chunk_cont())
+        for (const auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
         {
-            Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
             num_bp_chunks += rc_cbptr->get_r_len();
             num_muts_chunks += rc_cbptr->mut_ptr_cont().size();
         }
@@ -2351,9 +2340,8 @@ void Graph::dump_detailed_counts(ostream& os) const
         size_t n_del = 0;
         size_t n_mnp = 0;
         size_t total_mut_bp = 0;
-        for (const auto mut_cbref : ce_cbptr->mut_cont())
+        for (const auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
         {
-            Mutation_CBPtr mut_cbptr = &mut_cbref;
             if (mut_cbptr->is_snp())
             {
                 ++n_snp;
@@ -2487,22 +2475,19 @@ void Graph::save(ostream& os) const
     //     - alternate sequence
     size_t n_strings = 0;
     size_t n_bytes = 0;
-    for (const auto re_cbref : _re_cont)
+    for (const auto re_cbptr : re_cont() | referenced)
     {
-        Read_Entry_CBPtr re_cbptr = &re_cbref;
         os.write(re_cbptr->name().c_str(), re_cbptr->name().size() + 1);
         ++n_strings;
         n_bytes += re_cbptr->name().size() + 1;
     }
-    for (const auto ce_cbref : _ce_cont)
+    for (const auto ce_cbptr : ce_cont() | referenced)
     {
-        Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
         os.write(ce_cbptr->seq().c_str(), ce_cbptr->seq().size() + 1);
         ++n_strings;
         n_bytes += ce_cbptr->seq().size() + 1;
-        for (const auto mut_cbref : ce_cbptr->mut_cont())
+        for (const auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
         {
-            Mutation_CBPtr mut_cbptr = &mut_cbref;
             os.write(mut_cbptr->seq().c_str(), mut_cbptr->seq().size() + 1);
             ++n_strings;
             n_bytes += mut_cbptr->seq().size() + 1;
@@ -2533,25 +2518,22 @@ void Graph::load(istream& is)
     // load strings
     size_t n_strings = 0;
     size_t n_bytes = 0;
-    for (auto re_bref : _re_cont)
+    for (auto re_bptr : re_cont() | referenced)
     {
-        Read_Entry_BPtr re_bptr = &re_bref;
         new (&re_bptr->name()) string();
         getline(is, re_bptr->name(), '\0');
         ++n_strings;
         n_bytes += re_bptr->name().size() + 1;
     }
-    for (auto ce_bref : _ce_cont)
+    for (auto ce_bptr : ce_cont() | referenced)
     {
-        Contig_Entry_BPtr ce_bptr = &ce_bref;
         new (&ce_bptr->seq()) string();
         new (&ce_bptr->mut_cont().header_ptr()->seq()) string();
         getline(is, ce_bptr->seq(), '\0');
         ++n_strings;
         n_bytes += ce_bptr->seq().size() + 1;
-        for (auto mut_bref : ce_bptr->mut_cont())
+        for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
-            Mutation_BPtr mut_bptr = &mut_bref;
             new (&mut_bptr->seq()) string();
             getline(is, mut_bptr->seq(), '\0');
             ++n_strings;
@@ -2565,9 +2547,8 @@ void Graph::load(istream& is)
 void Graph::get_terminal_reads(ostream& os) const
 {
     logger("graph", info) << ptree("get_terminal_reads");
-    for (auto ce_cbref : ce_cont())
+    for (auto ce_cbptr : ce_cont() | referenced)
     {
-        Contig_Entry_CBPtr ce_cbptr = &ce_cbref;
         for (int dir = 0; dir < 2; ++dir)
         {
             bool c_right = (dir == 1);
@@ -2695,9 +2676,8 @@ void Graph::interactive_commands(istream& is, ostream& os)
                     os << "Read_Entry: " << id
                        << " name: " << re_cbptr->name()
                        << " len: " << re_cbptr->len() << "\n";
-                    for (auto rc_cbref : re_cbptr->chunk_cont())
+                    for (auto rc_cbptr : re_cbptr->chunk_cont() | referenced)
                     {
-                        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
                         os << "  " << Read_Chunk::to_string(rc_cbptr, true, true) << "\n";
                     }
                 }
@@ -2713,9 +2693,8 @@ void Graph::interactive_commands(istream& is, ostream& os)
                     Contig_Entry_CBPtr ce_cbptr = Contig_Entry_CBPtr::from_index(id);
                     os << "Contig_Entry: " << id
                        << " len: " << ce_cbptr->len() << "\n";
-                    for (auto rc_cbref : ce_cbptr->chunk_cont())
+                    for (auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
                     {
-                        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
                         os << "  " << Read_Chunk::to_string(rc_cbptr, false, true) << "\n";
                     }
                 }
