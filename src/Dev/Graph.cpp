@@ -1876,6 +1876,11 @@ void Graph::resolve_unmappable_inner_region(
         Cigar cigar(cigar_string, not r_right, 0, old_rc_bptr->get_r_start());
         // since the cigar object knows the orientation, we pass the non-reversed chunk sequence
         Read_Chunk_BPtr new_rc_bptr = Read_Chunk::make_chunk_from_cigar(cigar, old_rc_bptr->get_seq(), new_ce_bptr_v[bseq_idx]);
+        // set lowcomplexity flag if the contig entry contains more than 3 mutations
+        if (new_rc_bptr->ce_bptr()->mut_cont().nonconst_size() > 3)
+        {
+            new_rc_bptr->ce_bptr()->set_lowcomplex();
+        }
         Read_Entry_BPtr re_bptr = old_rc_bptr->re_bptr();
         new_rc_bptr->re_bptr() = re_bptr;
         // unlink & deallocate old unmappable read chunk
