@@ -18,7 +18,8 @@ list:
 	@echo ${TARGETS}
 
 clean:
-	rm -rf ${TARGETS}
+	@rm -rf ${TARGETS}
+#	@rm -rf $(foreach f,${TARGETS},${f} ${f}.log ${f}.stats)
 
 define add_run
 $(2): $(1)
