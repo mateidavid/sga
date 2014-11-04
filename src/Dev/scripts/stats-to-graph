@@ -4,7 +4,7 @@ import sys
 
 
 def add_header():
-    print 'strict digraph graphName {'
+    print 'digraph graphName {'
     print 'concentrate=true'
     print 'rankdir="LR"'
 
