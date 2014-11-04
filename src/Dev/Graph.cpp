@@ -1951,6 +1951,7 @@ void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool
     // this bucket contains the last chunks which are followed by terminal unmappable siblings
     const auto rc_last_bucket = make_tuple(Contig_Entry_CBPtr(), false);
     const auto& rc_last_cbptr_v = out_chunks_map.at(rc_last_bucket);
+    ASSERT(not rc_last_cbptr_v.empty());
     // group base sequences of the neighbouring contigs
     vector< tuple< Contig_Entry_CBPtr, bool > > ce_next_v;
     vector< string > ce_next_seq_v;
@@ -1968,6 +1969,11 @@ void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool
         ce_next_seq_v.push_back(string(ce_next_cbptr->seq().revcomp(not same_orientation)));
         logger("graph", debug1) << ptree("resolve_unmappable_terminal_region")
             .put("bseq", ce_next_seq_v.back());
+    }
+    if (ce_next_v.empty())
+    {
+        // no mappable contigs beyond this one
+        return;
     }
     // group unmappable chunk seqeunces
     set< tuple< string, bool > > rc_unmap_seq_set;
