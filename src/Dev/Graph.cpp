@@ -1960,7 +1960,7 @@ void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool
         Contig_Entry_CBPtr ce_next_cbptr;
         bool same_orientation;
         tie(ce_next_cbptr, same_orientation) = t.first;
-        if (not ce_next_cbptr)
+        if (not ce_next_cbptr or ce_next_cbptr->seq().empty())
         {
             continue;
         }
