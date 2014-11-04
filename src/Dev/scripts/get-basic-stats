@@ -26,7 +26,7 @@ reads_bp=$(get_re | cut -f 2 | get_sum)
 printab "reads bp" "$reads_bp"
 
 printab "num contigs" "$(get_ce | wc -l)"
-num_mutations=$(get_ce | cut -f 5 | get_sum)
+num_mutations=$(get_ce | cut -f 6 | get_sum)
 printab "num mutations" "$num_mutations"
 
 num_chunks=$(get_re | cut -f 3 | get_sum)
@@ -44,8 +44,8 @@ printab "bp unmappable" "$reads_bp_unmappable" \
     "($(echo "scale=4; $reads_bp_unmappable / $reads_bp" | bc))"
 
 printab "bp contigs" "$(get_ce | cut -f 2 | get_sum)"
-printab "bp contigs >1 chunk" "$(get_ce | awk '$3>1' | cut -f 2 | get_sum)"
-printab "bp in mut" "$(get_ce | cut -f 11 | get_sum)"
+printab "bp contigs >1 chunk" "$(get_ce | awk '$5>1' | cut -f 2 | get_sum)"
+printab "bp in mut" "$(get_ce | cut -f 13 | get_sum)"
 
 printab "bp per chunk" "$(echo "scale=2; $reads_bp / $num_chunks" | bc)"
 printab "mappable bp per mappable chunk" \
