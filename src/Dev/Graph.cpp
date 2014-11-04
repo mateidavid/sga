@@ -2318,7 +2318,7 @@ void Graph::dump_detailed_counts(ostream& os) const
         os << '\n';
     }
     // next, contig stats
-    os << "CE\tid\tlen\tunmappable"
+    os << "CE\tid\tlen\tunmappable\tlowcomplex"
        << "\tnum.chunks\tnum.muts\tbp.chunks\tnum.muts.chunks"
        << "\tnum.snp\tnum.ins\tnum.del\tnum.mnp\tbp.muts"
        << "\tce.deg.left\tre.deg.left\tedges.left"
@@ -2333,6 +2333,7 @@ void Graph::dump_detailed_counts(ostream& os) const
            << ce_cbptr.to_int() << '\t'
            << ce_cbptr->len() << '\t'
            << static_cast< int >(ce_cbptr->is_unmappable()) << '\t'
+           << static_cast< int >(ce_cbptr->is_lowcomplex()) << '\t'
            << ce_cbptr->chunk_cont().size() << '\t'
            << ce_cbptr->mut_cont().size() << '\t';
         size_t num_bp_chunks = 0;
