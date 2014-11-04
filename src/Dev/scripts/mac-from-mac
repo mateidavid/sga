@@ -1,0 +1,4 @@
+#!/bin/bash
+source lib.common.sh
+find_my_name_and_dir "${BASH_SOURCE[0]}"
+make -f "$MY_DIR/$MY_NAME.make" "$@" 2>&1 | tee make.log
