@@ -2,6 +2,7 @@
 
 #include <iomanip>
 #include <cmath>
+#include <boost/range/adaptor/filtered.hpp>
 
 #include "overlapper.h"
 
@@ -2439,6 +2440,19 @@ void Graph::dump_detailed_counts(ostream& os) const
             print_neighbours_cont_stats(os, ce_cbptr, true, true, ce_cbptr->out_chunks_dir(true, 3, 1));
         }
         os << '\n';
+    } //for (ce_cbptr : ce_cont()
+    // finally, mutation stats
+    os << "MUT\tCE\tlen.ce\tpos.rf\tlen.rf\tlen.alt\tseq.rf\tseq.alt\n";
+    for (auto ce_bptr : ce_cont() | referenced |
+             ba::filtered([] (Contig_Entry_CBPtr ce_cbptr) { return ce_cbptr->is_normal(); }))
+    {
+        for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
+        {
+            os << "MUT\t" << ce_bptr.to_int() << "\t" << ce_bptr->len() << "\t"
+               << mut_bptr->rf_start() << "\t" << mut_bptr->rf_len() << "\t" << mut_bptr->seq_len() << "\t"
+               << ce_bptr->seq().substr(mut_bptr->rf_start(), mut_bptr->rf_len()) << "\t"
+               << mut_bptr->seq() << "\n";
+        }
     }
 }
 
