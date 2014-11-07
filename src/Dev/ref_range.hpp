@@ -33,7 +33,7 @@ const detail::ref_range_forwarder referenced = detail::ref_range_forwarder();
 }
 
 template < typename Range >
-inline ref_range< Range > operator | (Range& r, detail::ref_range_forwarder)
+inline ref_range< Range > operator | (Range&& r, detail::ref_range_forwarder)
 {
     return ref_range< Range >(r);
 }
