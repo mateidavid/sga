@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <mutex>
 #include <chrono>
+#include <cctype>
 #include <boost/iterator/transform_iterator.hpp>
 #include "shortcuts.hpp"
 
@@ -37,6 +38,8 @@ private:
     static const char* table()
     {
         static char _complement_table[128];
+        static const std::vector< std::vector< char > > _complement_table_pairs =
+            { { 'A', 'T' }, { 'C', 'G' }, { 'N', 'N' }, { 'X', 'X' }, { '.', '.' } };
         static bool _inited = false;
         if (not _inited)
         {
@@ -45,18 +48,13 @@ private:
                 std::lock_guard< std::mutex > _lock(_mutex);
                 if (not _inited)
                 {
-                    _complement_table['A'] = 'T';
-                    _complement_table['a'] = 't';
-                    _complement_table['C'] = 'G';
-                    _complement_table['c'] = 'g';
-                    _complement_table['G'] = 'C';
-                    _complement_table['g'] = 'c';
-                    _complement_table['T'] = 'A';
-                    _complement_table['N'] = 'N';
-                    _complement_table['n'] = 'n';
-                    _complement_table['X'] = 'X';
-                    _complement_table['x'] = 'x';
-                    _complement_table['.'] = '.';
+                    for (const auto& p : _complement_table_pairs)
+                    {
+                        _complement_table[static_cast< int >(tolower(p[0]))] = tolower(p[1]);
+                        _complement_table[static_cast< int >(toupper(p[0]))] = toupper(p[1]);
+                        _complement_table[static_cast< int >(tolower(p[1]))] = tolower(p[0]);
+                        _complement_table[static_cast< int >(toupper(p[1]))] = toupper(p[0]);
+                    }
                 }
             }
             _inited = true;
