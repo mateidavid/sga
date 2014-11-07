@@ -17,7 +17,7 @@ class ref_iterator
 {
 public:
     ref_iterator()
-        : ref_iterator::iterator_adaptor_(0) {}
+        : ref_iterator::iterator_adaptor_() {}
     ref_iterator(const Iterator& other)
         : ref_iterator::iterator_adaptor_(other) {}
 
