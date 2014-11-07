@@ -173,6 +173,61 @@ static_assert(
     >::enabled,
     "Extra data manager is not enabled");
 
+// Check iterator traits
+// ITree::iterator
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::iterator >::value_type,
+              Value
+              >::value, "iterator_traits<itree_type::iterator>::value_type != Value");
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::iterator >::reference,
+              bounded::Reference< Value >
+              >::value, "iterator_traits<itree_type::iterator>::reference != Reference<Value>");
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::iterator >::pointer,
+              bounded::Pointer< Value >
+              >::value, "iterator_traits<itree_type::iterator>::pointer != Pointer<Value>");
+// ITree::const_iterator
+// NOTE: value_type does not inherit const-ness, only pointer&reference types
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::const_iterator >::value_type,
+              Value
+              >::value, "iterator_traits<itree_type::const_iterator>::value_type != Value");
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::const_iterator >::reference,
+              bounded::Reference< const Value >
+              >::value, "iterator_traits<itree_type::const_iterator>::reference != Reference<const Value>");
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::const_iterator >::pointer,
+              bounded::Pointer< const Value >
+              >::value, "iterator_traits<itree_type::const_iterator>::pointer != Pointer<const Value>");
+// ITree::intersection_iterator
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::intersection_iterator >::value_type,
+              Value
+              >::value, "iterator_traits<itree_type::intersection_iterator>::value_type != Value");
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::intersection_iterator >::reference,
+              bounded::Reference< Value >
+              >::value, "iterator_traits<itree_type::intersection_iterator>::reference != Reference<Value>");
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::intersection_iterator >::pointer,
+              bounded::Pointer< Value >
+              >::value, "iterator_traits<itree_type::intersection_iterator>::pointer != Pointer<Value>");
+// ITree::intersection_const_iterator
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::intersection_const_iterator >::value_type,
+              Value
+              >::value, "iterator_traits<itree_type::intersection_const_iterator>::value_type != Value");
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::intersection_const_iterator >::reference,
+              bounded::Reference< const Value >
+              >::value, "iterator_traits<itree_type::intersection_const_iterator>::reference != Reference<const Value>");
+static_assert(std::is_same<
+              std::iterator_traits< itree_type::intersection_const_iterator >::pointer,
+              bounded::Pointer< const Value >
+              >::value, "iterator_traits<itree_type::intersection_const_iterator>::pointer != Pointer<const Value>");
+
 const_ptr_type get_root(itree_type& t)
 {
     return itree_algo::get_header(&*t.begin())->_parent;
@@ -263,6 +318,7 @@ void real_main(const Program_Options& po)
          << "\nPointer< const Value >: " << type_str< bounded::Pointer< const Value > >()
          << "\nReference< Value >: " << type_str< bounded::Reference< Value > >()
          << "\nReference< const Value >: " << type_str< bounded::Reference< const Value > >()
+         << "\niterator_traits<intersection_iterator>::pointer: " << type_str< std::iterator_traits< itree_type::intersection_iterator >::pointer >()
          << '\n';
 
     clog << "--- type sizes:\n"
