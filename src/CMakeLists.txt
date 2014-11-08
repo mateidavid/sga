@@ -56,12 +56,12 @@ find_package(BamTools REQUIRED)
 # => SparseHash_INCLUDE_DIR
 find_package(SparseHash REQUIRED)
 
-# check for Boost 1.55
+# check for Boost 1.57
 # => Boost_INCLUDE_DIRS, Boost_<COMPONENT>_LIBRARY
 set(BOOST_ROOT "$ENV{BOOST_ROOT}" CACHE PATH "Path to Boost")
-find_package(Boost 1.55.0 REQUIRED COMPONENTS iostreams program_options)
+find_package(Boost 1.57.0 REQUIRED COMPONENTS iostreams program_options)
 if(NOT Boost_FOUND)
-    message(FATAL_ERROR "Boost 1.55.0 not found")
+    message(FATAL_ERROR "Boost 1.57.0 not found")
 endif()
 
 # check for Hoard
