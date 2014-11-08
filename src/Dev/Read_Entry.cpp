@@ -61,9 +61,8 @@ void Read_Entry::check() const
         }
     }
     // check individual chunks
-    for (auto rc_cbref : chunk_cont())
+    for (auto rc_cbptr : chunk_cont() | referenced)
     {
-        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         rc_cbptr->check();
     }
 #endif

@@ -136,9 +136,8 @@ public:
      */
     void shift(int delta)
     {
-        for (auto rc_bref : *this)
+        for (auto rc_bptr : *this | referenced)
         {
-            Read_Chunk_BPtr rc_bptr = &rc_bref;
             rc_bptr->shift(delta);
         }
         Base::implement_shift(delta);
@@ -149,9 +148,8 @@ public:
      */
     void set_ce_ptr(Contig_Entry_BPtr ce_bptr)
     {
-        for (auto rc_bref : *this)
+        for (auto rc_bptr : *this | referenced)
         {
-            Read_Chunk_BPtr rc_bptr = &rc_bref;
             rc_bptr->ce_bptr() = ce_bptr;
         }
     }

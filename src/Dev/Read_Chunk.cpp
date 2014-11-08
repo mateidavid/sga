@@ -1026,9 +1026,9 @@ void Read_Chunk::check() const
     Size_Type r_len = get_r_end() - get_r_start();
     long long delta = 0;
     Mutation_CBPtr last_mut_cbptr = nullptr;
-    for (auto mca_cbref : mut_ptr_cont())
+    for (auto mca_cbptr : mut_ptr_cont() | referenced)
     {
-        Mutation_CBPtr mut_cbptr = mca_cbref.raw().mut_cbptr();
+        Mutation_CBPtr mut_cbptr = mca_cbptr->mut_cbptr();
         // no empty mutations
         ASSERT(not mut_cbptr->is_empty());
         // mutations must be in contig order

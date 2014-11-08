@@ -68,9 +68,8 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
     map< std::tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > > res;
     bool c_left = not c_right;
     Size_Type endpoint = (c_left? 0 : len());
-    for (auto rc_cbref : chunk_cont().iintersect(endpoint, endpoint))
+    for (auto rc_cbptr : chunk_cont().iintersect(endpoint, endpoint) | referenced)
     {
-        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         Read_Entry_BPtr re_cbptr = rc_cbptr->re_bptr();
         // we might be skipping chunks mapped in different ways; we need read direction to be consistent
         bool r_right = (c_right != rc_cbptr->get_rc());
@@ -173,9 +172,8 @@ auto Contig_Entry::neighbours(bool forward, Neighbour_Options opts, size_t ignor
 {
     neighbours_type res;
     Size_Type endpoint = (forward? len() : 0);
-    for (auto rc_cbref : chunk_cont().iintersect(endpoint, endpoint))
+    for (auto rc_cbptr : chunk_cont().iintersect(endpoint, endpoint) | referenced)
     {
-        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         Read_Entry_CBPtr re_cbptr = rc_cbptr->re_bptr();
         // we might be skipping chunks mapped in different ways; we need read direction for consistent traversal
         bool r_forward = (forward != rc_cbptr->get_rc());
@@ -388,9 +386,8 @@ void Contig_Entry::check() const
     // check mutation container
     mut_cont().check();
     // mutations:
-    for (auto mut_cbref : mut_cont())
+    for (auto mut_cbptr : mut_cont() | referenced)
     {
-        Mutation_CBPtr mut_cbptr = &mut_cbref;
         // base coordinates
         ASSERT(mut_cbptr->rf_start() <= seq().size() and mut_cbptr->rf_end() <= seq().size());
         // no empty mutations
@@ -400,9 +397,8 @@ void Contig_Entry::check() const
         // mutations must be observed by chunks
         ASSERT(not mut_cbptr->chunk_ptr_cont().empty());
         // check read_chunk_ptr_cont
-        for (auto mca_cbref : mut_cbptr->chunk_ptr_cont())
+        for (auto mca_cbptr : mut_cbptr->chunk_ptr_cont() | referenced)
         {
-            Mutation_Chunk_Adapter_CBPtr mca_cbptr = &mca_cbref;
             // Mutation back pointers
             ASSERT(mca_cbptr->mut_cbptr() == mut_cbptr);
             // Read_Chunk part of current contig
@@ -412,19 +408,17 @@ void Contig_Entry::check() const
     // check chunk container
     chunk_cont().check();
     // read chunks:
-    for (auto rc_cbref : chunk_cont())
+    for (auto rc_bptr : chunk_cont() | referenced)
     {
-        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         // contig entry pointers
-        ASSERT(rc_cbptr->ce_bptr() and rc_cbptr->ce_bptr().raw() == this);
+        ASSERT(rc_bptr->ce_bptr() and rc_bptr->ce_bptr().raw() == this);
         // contig coordinates
-        ASSERT(rc_cbptr->get_c_end() <= seq().size());
+        ASSERT(rc_bptr->get_c_end() <= seq().size());
         // mutation pointers:
-        for (auto mca_cbref : rc_cbptr->mut_ptr_cont())
+        for (auto mca_cbptr : rc_bptr->mut_ptr_cont() | referenced)
         {
-            Mutation_Chunk_Adapter_CBPtr mca_cbptr = &mca_cbref;
             // Read_Chunk back pointers
-            ASSERT(mca_cbptr->chunk_cbptr() == rc_cbptr);
+            ASSERT(mca_cbptr->chunk_cbptr() == rc_bptr);
             // Mutation pointers point inside Mutation container
             ASSERT(mut_cont().find(mca_cbptr->mut_cbptr(), true));
         }

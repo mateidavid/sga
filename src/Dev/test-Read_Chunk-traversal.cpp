@@ -88,9 +88,9 @@ Pos_List get_expected_pos_list(Read_Chunk_CBPtr rc_cbptr)
     {
         res.emplace_back(std::vector< size_t >({ c_pos, r_pos, 0, 0 }));
     }
-    for (auto mca_cbref : rc_cbptr->mut_ptr_cont())
+    for (auto mca_cbptr : rc_cbptr->mut_ptr_cont() | referenced)
     {
-        Mutation_CBPtr mut_cbptr = (&mca_cbref)->mut_cbptr();
+        Mutation_CBPtr mut_cbptr = mca_cbptr->mut_cbptr();
         assert(mut_cbptr->rf_start() >= c_pos);
         Size_Type skip_len = mut_cbptr->rf_start() - c_pos;
         assert(not res.empty() or skip_len == 0);

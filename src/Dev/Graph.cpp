@@ -1078,15 +1078,13 @@ Graph::find_unmappable_regions(Read_Chunk_CBPtr orig_rc_cbptr, Range_Cont< Size_
     // group all extremal read chunks by their read entry
     map< Read_Entry_CBPtr, set< Read_Chunk_CBPtr > > re_chunk_map;
     // first look at contig start
-    for (auto rc_cbref : ce_cbptr->chunk_cont().iintersect(0, 0))
+    for (auto rc_cbptr : ce_cbptr->chunk_cont().iintersect(0, 0) | referenced)
     {
-        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         re_chunk_map[rc_cbptr->re_bptr()].insert(rc_cbptr);
     }
     // then at contig end
-    for (auto rc_cbref : ce_cbptr->chunk_cont().iintersect(ce_cbptr->len(), ce_cbptr->len()))
+    for (auto rc_cbptr : ce_cbptr->chunk_cont().iintersect(ce_cbptr->len(), ce_cbptr->len()) | referenced)
     {
-        Read_Chunk_CBPtr rc_cbptr = &rc_cbref;
         re_chunk_map[rc_cbptr->re_bptr()].insert(rc_cbptr);
     }
 
@@ -2242,28 +2240,28 @@ void Graph::check_leaks() const
         set< Mutation_Chunk_Adapter_Fact::index_type > s;
 
         s.insert(_re_cont.header_ptr()->chunk_cont().header_ptr()->mut_ptr_cont().get_root_node().to_int());
-        for (auto re_cbref : re_cont())
+        for (auto re_cbptr : re_cont() | referenced)
         {
-            s.insert(re_cbref.raw().chunk_cont().header_ptr()->mut_ptr_cont().get_root_node().to_int());
+            s.insert(re_cbptr->chunk_cont().header_ptr()->mut_ptr_cont().get_root_node().to_int());
         }
 
         s.insert(_ce_cont.get_root_node()->mut_cont().header_ptr()->chunk_ptr_cont().get_root_node().to_int());
         s.insert(_ce_cont.get_root_node()->chunk_cont().header_ptr()->mut_ptr_cont().get_root_node().to_int());
-        for (auto ce_cbref : ce_cont())
+        for (auto ce_cbptr : ce_cont() | referenced)
         {
-            s.insert(ce_cbref.raw().mut_cont().header_ptr()->chunk_ptr_cont().get_root_node().to_int());
-            s.insert(ce_cbref.raw().chunk_cont().header_ptr()->mut_ptr_cont().get_root_node().to_int());
-            for (auto rc_cbref : ce_cbref.raw().chunk_cont())
+            s.insert(ce_cbptr->mut_cont().header_ptr()->chunk_ptr_cont().get_root_node().to_int());
+            s.insert(ce_cbptr->chunk_cont().header_ptr()->mut_ptr_cont().get_root_node().to_int());
+            for (auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
             {
-                s.insert(rc_cbref.raw().mut_ptr_cont().get_root_node().to_int());
-                for (auto mca_cbref : rc_cbref.raw().mut_ptr_cont())
+                s.insert(rc_cbptr->mut_ptr_cont().get_root_node().to_int());
+                for (auto mca_cbptr : rc_cbptr->mut_ptr_cont() | referenced)
                 {
-                    s.insert((&mca_cbref).to_int());
+                    s.insert(mca_cbptr.to_int());
                 }
             }
-            for (auto mut_cbref : ce_cbref.raw().mut_cont())
+            for (auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
             {
-                s.insert(mut_cbref.raw().chunk_ptr_cont().get_root_node().to_int());
+                s.insert(mut_cbptr->chunk_ptr_cont().get_root_node().to_int());
             }
         }
         ASSERT(s.size() == num_mca + Read_Chunk_Fact::used() + Mutation_Fact::used());

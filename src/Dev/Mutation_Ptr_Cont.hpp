@@ -119,9 +119,9 @@ public:
     Mutation_Ptr_Cont(const Mutation_Cont& mut_cont, Read_Chunk_CBPtr chunk_cbptr)
     {
         Mutation_CBPtr last_mut_cbptr = nullptr;
-        for (const auto& mut_cbref : mut_cont)
+        for (auto mut_cbptr : mut_cont | referenced)
         {
-            Mutation_BPtr mut_bptr = &mut_cbref.unconst();
+            Mutation_BPtr mut_bptr = mut_cbptr.unconst();
             if (last_mut_cbptr)
             {
                 ASSERT(last_mut_cbptr->rf_end() < mut_bptr->rf_start());
@@ -159,11 +159,11 @@ public:
     /** Find a given mutation pointer in this container. */
     const_iterator find(Mutation_CBPtr mut_cbptr) const
     {
-        for (const auto& mca_cbref : *this)
+        for (auto mca_cbptr : *this | referenced)
         {
-            if (mca_cbref.raw().mut_cbptr() == mut_cbptr)
+            if (mca_cbptr->mut_cbptr() == mut_cbptr)
             {
-                return iterator_to(mca_cbref);
+                return iterator_to(*mca_cbptr);
             }
         }
         return end();
@@ -234,9 +234,8 @@ public:
         ASSERT(empty()
                or other_cont.empty()
                or rbegin()->mut_cbptr()->rf_end() < other_cont.begin()->mut_cbptr()->rf_start());
-        for (auto mca_bref : other_cont)
+        for (auto mca_bptr : other_cont | referenced)
         {
-            Mutation_Chunk_Adapter_BPtr mca_bptr = &mca_bref;
             mca_bptr->chunk_cbptr() = rc_cbptr;
         }
         Base::splice(end(), static_cast< Base & >(other_cont));

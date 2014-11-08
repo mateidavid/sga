@@ -40,24 +40,22 @@ Read_Chunk_CE_Cont Read_Chunk_CE_Cont::split(Size_Type c_brk, Mutation_CBPtr mut
 
 void Read_Chunk_CE_Cont::erase_from_re_cont() const
 {
-    for (auto rc_bref : *this)
+    for (auto rc_cbptr : *this | referenced)
     {
-        Read_Chunk_BPtr rc_bptr = (&rc_bref).unconst();
-        Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
+        Read_Entry_BPtr re_bptr = rc_cbptr->re_bptr().unconst();
         if (re_bptr)
         {
-            re_bptr->chunk_cont().erase(rc_bptr);
+            re_bptr->chunk_cont().erase(rc_cbptr);
         }
     }
 }
 
 void Read_Chunk_CE_Cont::insert_into_re_cont() const
 {
-    for (auto rc_bref : *this)
+    for (auto rc_cbptr : *this | referenced)
     {
-        Read_Chunk_BPtr rc_bptr = (&rc_bref).unconst();
-        Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
-        re_bptr->chunk_cont().insert(rc_bptr);
+        Read_Entry_BPtr re_bptr = rc_cbptr->re_bptr().unconst();
+        re_bptr->chunk_cont().insert(rc_cbptr.unconst());
     }
 }
 

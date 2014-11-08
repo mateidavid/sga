@@ -204,9 +204,8 @@ public:
     template < typename delta_type >
     void shift(delta_type delta)
     {
-        for (auto mut_bref : *this)
+        for (auto mut_bptr : *this | referenced)
         {
-            Mutation_BPtr mut_bptr = &mut_bref;
             mut_bptr->shift(delta);
         }
         Base::implement_shift(delta);
@@ -273,9 +272,8 @@ public:
                 {
                     // an equivalent mutation exists in this container
                     // adjust mca-s to have mut_ptr point to existing mutation
-                    for (auto mca_bref : mut_bptr->chunk_ptr_cont())
+                    for (auto mca_bptr : mut_bptr->chunk_ptr_cont() | referenced)
                     {
-                        Mutation_Chunk_Adapter_BPtr mca_bptr = &mca_bref;
                         mca_bptr->mut_cbptr() = equiv_mut_bptr;
                     }
                     // merge the chunk_ptr containers
