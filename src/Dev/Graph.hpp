@@ -106,6 +106,9 @@ public:
     /** Unmap read ends not mapped to anything else. */
     void unmap_read_ends();
 
+    /** Unmap contig entry positions with mutations separated by less than the given number of 3mers. */
+    void unmap_mutation_clusters(size_t min_num_3mers);
+
     /** Clear CE and RE containers and deallocate all objects. */
     void clear_and_dispose();
 

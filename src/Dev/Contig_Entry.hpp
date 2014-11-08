@@ -205,6 +205,9 @@ public:
     //void print_separated_het_mutations(std::ostream& os,
     //                                   size_t min_support_report, Size_Type min_separation) const;
 
+    vector< tuple< Read_Entry_CBPtr, Size_Type, Size_Type > >
+    find_mutation_cluster(size_t min_num_3mers);
+
     static void dispose(Contig_Entry_BPtr ce_bptr)
     {
         // remove chunks from their RE cont

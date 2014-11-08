@@ -2593,7 +2593,39 @@ void Graph::get_terminal_reads(ostream& os) const
             }
         }
     }
+}
 
+void Graph::unmap_mutation_clusters(size_t min_num_3mers)
+{
+    static const uint64_t visit_mask = 4;
+    for (auto ce_bptr : ce_cont() | referenced)
+    {
+        bitmask::reset(ce_bptr->tag(), visit_mask);
+    }
+    for (auto re_bptr : re_cont() | referenced)
+    {
+        Size_Type r_pos = 0;
+        while (r_pos < re_bptr->len())
+        {
+            auto rc_cbptr = re_bptr->chunk_cont().get_chunk_with_pos(r_pos);
+            ASSERT(rc_cbptr);
+            Contig_Entry_BPtr ce_bptr = rc_cbptr->ce_bptr().unconst();
+            if (not ce_bptr->is_normal() or bitmask::any(ce_bptr->tag(), visit_mask))
+            {
+                // skip this ce
+                r_pos = rc_cbptr->get_r_end();
+                continue;
+            }
+            auto unmap_re_pos_v = ce_bptr->find_mutation_cluster(min_num_3mers);
+            if (unmap_re_pos_v.empty())
+            {
+                r_pos = rc_cbptr->get_r_end();
+                bitmask::set(ce_bptr->tag(), visit_mask);
+                continue;
+            }
+            // unmap the read entry positions in the vector
+        }
+    }
 }
 
 void Graph::interactive_commands(istream& is, ostream& os)
