@@ -313,13 +313,6 @@ void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_n
     Contig_Entry_Fact::del_elem(ce_next_bptr);
 }
 
-vector< tuple< Read_Entry_CBPtr, Size_Type, Size_Type > >
-Contig_Entry::find_mutation_cluster(size_t min_num_3mers)
-{
-    vector< tuple< Read_Entry_CBPtr, Size_Type, Size_Type > > res;
-    return res;
-}
-
 /*
 vector< Mutation_CPtr > Contig_Entry::get_separated_het_mutations(
     size_t min_support_report, Size_Type min_separation) const

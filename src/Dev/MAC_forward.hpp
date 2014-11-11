@@ -20,6 +20,8 @@
 #include <boost/intrusive/list.hpp>
 #include <boost/intrusive/set.hpp>
 #include <boost/range/adaptor/map.hpp>
+#include <boost/range/join.hpp>
+#include <boost/optional.hpp>
 
 #include "shortcuts.hpp"
 #include "global.hpp"
@@ -46,6 +48,8 @@ namespace MAC
 using namespace std;
 namespace bi = boost::intrusive;
 namespace ba = boost::adaptors;
+using boost::range::join;
+using boost::optional;
 
 
 /** Type for absolute and relative offsets in read and contig sequences. */
@@ -99,6 +103,9 @@ typedef Contig_Entry_Fact::ptr_type Contig_Entry_BPtr;
 typedef Contig_Entry_Fact::const_ptr_type Contig_Entry_CBPtr;
 typedef Contig_Entry_Fact::ref_type Contig_Entry_BRef;
 typedef Contig_Entry_Fact::const_ref_type Contig_Entry_CBRef;
+
+// algorithms
+class Unmap_Mut_Clusters;
 
 } // namespace MAC
 

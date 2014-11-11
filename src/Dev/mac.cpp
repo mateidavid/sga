@@ -9,6 +9,7 @@
 #include "ixstream.hpp"
 #include "fstr.hpp"
 #include "logger.hpp"
+#include "Unmap_Mut_Clusters.hpp"
 
 using namespace std;
 using namespace MAC;
@@ -38,6 +39,7 @@ struct Program_Options
     bool interactive;
     bool resolve_unmappable_regions;
     bool unmap_single_chunks;
+    bool unmap_mut_clusters;
 
     boost::property_tree::ptree to_ptree() const
     {
@@ -60,6 +62,7 @@ struct Program_Options
                       .put("check graph at each step", check_at_step)
                       .put("resolve unmappable regions", resolve_unmappable_regions)
                       .put("unmap_single_chunks", unmap_single_chunks)
+                      .put("unmap_mut_clusters", unmap_mut_clusters)
                       .put("interactive", interactive)
                       .put("seed", seed)
                       ;
@@ -170,6 +173,10 @@ int real_main(const Program_Options& po)
         g.cat_all_read_contigs();
         g.check_all();
     }
+    if (po.unmap_mut_clusters)
+    {
+        Unmap_Mut_Clusters()(g);
+    }
     if (po.resolve_unmappable_regions)
     {
         g.resolve_unmappable_regions();
@@ -265,6 +272,7 @@ int main(int argc, char* argv[])
         ("check-at-step,C", bo::bool_switch(&po.check_at_step), "check graph at each step")
         ("resolve-unmappable", bo::bool_switch(&po.resolve_unmappable_regions), "resolve unmappable regions")
         ("unmap-single-chunks", bo::bool_switch(&po.unmap_single_chunks), "unmap single chunks")
+        ("unmap-mut-clusters", bo::bool_switch(&po.unmap_mut_clusters), "unmap mutation clusters")
         ("interactive", bo::bool_switch(&po.interactive), "run interactive commands")
         ("log-level,d", bo::value< vector< string > >(&po.log_level)->composing(), "default log level")
         ("save,S", bo::value< string >(&po.save_file), "save file")

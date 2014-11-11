@@ -105,9 +105,6 @@ public:
     /** Unmap read ends not mapped to anything else. */
     void unmap_read_ends();
 
-    /** Unmap contig entry positions with mutations separated by less than the given number of 3mers. */
-    void unmap_mutation_clusters(size_t min_num_3mers);
-
     /** Clear CE and RE containers and deallocate all objects. */
     void clear_and_dispose();
 
@@ -171,16 +168,7 @@ public:
     void load(istream&);
 
 private:
-    Mutation_Fact _mut_fact;
-    Mutation_Chunk_Adapter_Fact _mca_fact;
-    Read_Chunk_Fact _rc_fact;
-    Read_Entry_Fact _re_fact;
-    Contig_Entry_Fact _ce_fact;
-
-    Read_Entry_Cont _re_cont;
-    Contig_Entry_Cont _ce_cont;
-
-    Size_Type _unmap_trigger_len;
+    friend class Unmap_Mut_Clusters;
 
     /** Cut Read_Entry at given read coordinate.
      * NOTE: A cut must be forced iff it is at the edge of a read.
@@ -285,6 +273,19 @@ private:
      * @param r_start Bool; true: unmap in the direction of read start; false: unmap in the direction of read end.
      */
     void unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start);
+
+    /** Data members */
+    Mutation_Fact _mut_fact;
+    Mutation_Chunk_Adapter_Fact _mca_fact;
+    Read_Chunk_Fact _rc_fact;
+    Read_Entry_Fact _re_fact;
+    Contig_Entry_Fact _ce_fact;
+
+    Read_Entry_Cont _re_cont;
+    Contig_Entry_Cont _ce_cont;
+
+    Size_Type _unmap_trigger_len;
+
 }; // class Graph
 
 } // namespace MAC
