@@ -687,7 +687,10 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
 
     // find unmappable regions in the contigs recently merged
     auto region_cont = find_unmappable_regions(re1_bptr, r1_start, r1_start + r1_len);
-    unmap_regions(re1_bptr, region_cont);
+    for (const auto& rg : region_cont)
+    {
+        unmap_re_region(re1_bptr, rg);
+    }
 
     check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr }));
 
@@ -904,55 +907,49 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
     check(re_set);
 } // unmap_chunk
 
-void Graph::unmap_regions(Read_Entry_BPtr re_bptr, const Range_Cont< Size_Type >& region_cont)
+void Graph::unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& re_rg)
 {
-    for (const auto& region : region_cont)
+    // region should be non-empty
+    ASSERT(re_rg.start() < re_rg.end());
+    Size_Type pos = re_rg.start();
+    // cut first chunk if necessary
+    Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(re_rg.start()).unconst();
+    ASSERT(rc_bptr->get_r_start() <= re_rg.start() and re_rg.start() < rc_bptr->get_r_end());
+    if (rc_bptr->is_unbreakable())
     {
-        Size_Type rg_r_start;
-        Size_Type rg_r_end;
-        tie(rg_r_start, rg_r_end) = region;
-        // regions should be non-empty
-        ASSERT(rg_r_start < rg_r_end);
-        Size_Type pos = rg_r_start;
-        // cut first chunk if necessary
-        Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg_r_start).unconst();
-        ASSERT(rc_bptr->get_r_start() <= rg_r_start and rg_r_start < rc_bptr->get_r_end());
+        pos = rc_bptr->get_r_end();
+    }
+    else if (rc_bptr->get_r_start() < re_rg.start())
+    {
+        cut_read_chunk(rc_bptr, re_rg.start());
+        rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(re_rg.start()).unconst();
+        ASSERT(rc_bptr->get_r_start() == re_rg.start());
+    }
+
+    // unmap chunks repeatedly until the end of the range
+    while (pos < re_rg.end())
+    {
+        rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(pos).unconst();
         if (rc_bptr->is_unbreakable())
         {
+            ASSERT(rc_bptr->get_r_start() <= pos);
             pos = rc_bptr->get_r_end();
         }
-        else if (rc_bptr->get_r_start() < rg_r_start)
+        else
         {
-            cut_read_chunk(rc_bptr, rg_r_start);
-            rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg_r_start).unconst();
-            ASSERT(rc_bptr->get_r_start() == rg_r_start);
-        }
-
-        // unmap chunks repeatedly until the end of the range
-        while (pos < rg_r_end)
-        {
-            rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(pos).unconst();
-            if (rc_bptr->is_unbreakable())
+            ASSERT(rc_bptr->get_r_start() == pos);
+            // if chunk contains the region end, we cut it first
+            if (re_rg.end() < rc_bptr->get_r_end())
             {
-                ASSERT(rc_bptr->get_r_start() <= pos);
-                pos = rc_bptr->get_r_end();
+                cut_read_chunk(rc_bptr, re_rg.end());
+                rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(pos).unconst();
+                ASSERT(rc_bptr->get_r_start() == pos and rc_bptr->get_r_end() == re_rg.end());
             }
-            else
-            {
-                ASSERT(rc_bptr->get_r_start() == pos);
-                // if chunk contains the region end, we cut it first
-                if (rg_r_end < rc_bptr->get_r_end())
-                {
-                    cut_read_chunk(rc_bptr, rg_r_end);
-                    rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(pos).unconst();
-                    ASSERT(rc_bptr->get_r_start() == pos and rc_bptr->get_r_end() == rg_r_end);
-                }
-                pos = rc_bptr->get_r_end();
-                unmap_chunk(rc_bptr);
-            }
+            pos = rc_bptr->get_r_end();
+            unmap_chunk(rc_bptr);
         }
     }
-}
+} // unmap_region
 
 void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bool r_right)
 {
@@ -1048,10 +1045,10 @@ void Graph::extend_unmapped_chunk(Read_Entry_BPtr re_bptr, Size_Type rc_start, S
     extend_unmapped_chunk_dir(re_bptr, rc_end, true);
 }
 
-Range_Cont< Size_Type >
+Range_Cont
 Graph::find_unmappable_regions(Read_Entry_CBPtr re_cbptr, Size_Type r_start, Size_Type r_end) const
 {
-    Range_Cont< Size_Type > region_cont;
+    Range_Cont region_cont;
     Size_Type pos = r_start;
     while (pos < r_end)
     {
@@ -1065,7 +1062,7 @@ Graph::find_unmappable_regions(Read_Entry_CBPtr re_cbptr, Size_Type r_start, Siz
 }
 
 void
-Graph::find_unmappable_regions(Read_Chunk_CBPtr orig_rc_cbptr, Range_Cont< Size_Type >& region_cont) const
+Graph::find_unmappable_regions(Read_Chunk_CBPtr orig_rc_cbptr, Range_Cont& region_cont) const
 {
     // If different chunks of the same read
     // are mapped to overlapping regions of the contig,
@@ -1105,19 +1102,19 @@ Graph::find_unmappable_regions(Read_Chunk_CBPtr orig_rc_cbptr, Range_Cont< Size_
             for (auto it_2 = rc_bptr_cont.begin(); it_2 != it_1; ++it_2)
             {
                 Read_Chunk_CBPtr rc2_cbptr = *it_2;
-                Size_Type overlap_c_start = max(rc1_cbptr->get_c_start(), rc2_cbptr->get_c_start());
-                Size_Type overlap_c_end = min(rc1_cbptr->get_c_end(), rc2_cbptr->get_c_end());
+                Range_Type overlap_c_rg(max(rc1_cbptr->get_c_start(), rc2_cbptr->get_c_start()),
+                                        min(rc1_cbptr->get_c_end(), rc2_cbptr->get_c_end()));
                 // restrict to original chunk coordinates
-                overlap_c_start = max(overlap_c_start, orig_rc_cbptr->get_c_start());
-                overlap_c_end = min(overlap_c_end, orig_rc_cbptr->get_c_end());
-                if (overlap_c_end < overlap_c_start)
+                overlap_c_rg.start() = max(overlap_c_rg.start(), orig_rc_cbptr->get_c_start());
+                overlap_c_rg.end() = min(overlap_c_rg.end(), orig_rc_cbptr->get_c_end());
+                if (overlap_c_rg.end() < overlap_c_rg.start())
                 {
                     // negative overlap region; ignore
                     continue;
                 }
-                // overlap_c_start <= overlap_c_end
+                // overlap_c_rg.start() <= overlap_c_rg.end()
                 // compute read positions on original chunk
-                auto rg = orig_rc_cbptr->mapped_range(overlap_c_start, overlap_c_end, true, true, true);
+                auto rg = orig_rc_cbptr->mapped_range(overlap_c_rg, true, true, true);
                 region_cont.insert(rg);
             }
         }

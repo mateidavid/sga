@@ -359,9 +359,8 @@ public:
      * @param rg_start_maximal True: use maximal mapping for start endpoint of original range.
      * @param rg_end_maximal True: use maximal mapping for end endpoint of original range.
      */
-    std::tuple< Size_Type, Size_Type >
-    mapped_range(Size_Type rg_start, Size_Type rg_end, bool on_contig,
-                 bool rg_start_maximal, bool rg_end_maximal) const;
+    Range_Type mapped_range(Range_Type rg, bool on_contig,
+                            bool rg_start_maximal, bool rg_end_maximal) const;
 
     /** Make chunk unmappable.
      * Creates a new contig entry containing only this chunk mapped to the positive strand.

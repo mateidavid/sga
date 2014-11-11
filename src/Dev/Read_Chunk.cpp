@@ -883,13 +883,12 @@ void Read_Chunk::cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bp
     Read_Chunk_Fact::del_elem(rc_next_bptr);
 }
 
-tuple< Size_Type, Size_Type >
-Read_Chunk::mapped_range(Size_Type rg_start, Size_Type rg_end, bool on_contig,
-                         bool rg_start_maximal, bool rg_end_maximal) const
+Range_Type Read_Chunk::mapped_range(Range_Type rg, bool on_contig,
+                                    bool rg_start_maximal, bool rg_end_maximal) const
 {
-    ASSERT(rg_start <= rg_end);
-    ASSERT(not on_contig or (get_c_start() <= rg_start and rg_end <= get_c_end()));
-    ASSERT(on_contig or (get_r_start() <= rg_start and rg_end <= get_r_end()));
+    ASSERT(rg.start() <= rg.end());
+    ASSERT(not on_contig or (get_c_start() <= rg.start() and rg.end() <= get_c_end()));
+    ASSERT(on_contig or (get_r_start() <= rg.start() and rg.end() <= get_r_end()));
     // compute range endpoints in contig order
     Size_Type rg_endpoint_c_left;
     Size_Type rg_endpoint_c_right;
@@ -897,15 +896,15 @@ Read_Chunk::mapped_range(Size_Type rg_start, Size_Type rg_end, bool on_contig,
     bool rg_endpoint_c_right_maximal;
     if (on_contig or not get_rc())
     {
-        rg_endpoint_c_left = rg_start;
-        rg_endpoint_c_right = rg_end;
+        rg_endpoint_c_left = rg.start();
+        rg_endpoint_c_right = rg.end();
         rg_endpoint_c_left_maximal = rg_start_maximal;
         rg_endpoint_c_right_maximal = rg_end_maximal;
     }
     else
     {
-        rg_endpoint_c_left = rg_end;
-        rg_endpoint_c_right = rg_start;
+        rg_endpoint_c_left = rg.end();
+        rg_endpoint_c_right = rg.start();
         rg_endpoint_c_left_maximal = rg_end_maximal;
         rg_endpoint_c_right_maximal = rg_start_maximal;
     }
@@ -953,8 +952,8 @@ Read_Chunk::mapped_range(Size_Type rg_start, Size_Type rg_end, bool on_contig,
         ret_rg_start = start_pos.c_pos;
         ret_rg_end = end_pos.c_pos;
     }
-    ASSERT(ret_rg_start <= ret_rg_end or (rg_start == rg_end and not rg_start_maximal and not rg_end_maximal));
-    return std::make_tuple(ret_rg_start, ret_rg_end);
+    ASSERT(ret_rg_start <= ret_rg_end or (rg.start() == rg.end() and not rg_start_maximal and not rg_end_maximal));
+    return Range_Type(ret_rg_start, ret_rg_end);
 }
 
 void Read_Chunk::make_unmappable(Read_Chunk_BPtr rc_bptr)

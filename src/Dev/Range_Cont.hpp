@@ -9,12 +9,12 @@
 
 #include <tuple>
 #include <set>
+#include "Range.hpp"
 #include "shortcuts.hpp"
 
 
-/** A range is a tuple of coordinates. */
-template < typename T >
-using Range = std::tuple< T, T >;
+namespace range
+{
 
 /** A range container is a set that stores disjoint ranges. */
 template < typename T >
@@ -41,7 +41,7 @@ public:
     void insert(const range_type& range)
     {
         // ignore negative ranges
-        if (std::get<1>(range) <= std::get<0>(range))
+        if (range.end() <= range.start())
         {
             return;
         }
@@ -52,15 +52,15 @@ public:
         {
             --it;
         }
-        while (it != end() and std::get<0>(*it) <= std::get<1>(range))
+        while (it != end() and it->start() <= range.end())
         {
-            if (std::get<0>(range) <= std::get<1>(*it))
+            if (range.start() <= it->end())
             {
                 // overlap:
                 // either get<0>(range) <  get<0>(*it)   [ <= get<1>(range) ]
                 // or     get<0>(*it)   <= get<0>(range) [ <= get<1>(*it)   ]
-                range_type new_range = std::make_tuple(std::min(std::get<0>(*it), std::get<0>(range)),
-                                                       std::max(std::get<1>(*it), std::get<1>(range)));
+                range_type new_range = std::make_tuple(std::min(it->start(), range.start()),
+                                                       std::max(it->end(), range.end()));
                 Base::erase(it);
                 Base::insert(new_range);
                 return;
@@ -71,6 +71,8 @@ public:
         Base::insert(range);
     }
 };
+
+} // namespace Range
 
 
 #endif

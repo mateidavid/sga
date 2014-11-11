@@ -18,7 +18,6 @@
 #include "Read_Entry_Cont.hpp"
 #include "Contig_Entry.hpp"
 #include "Contig_Entry_Cont.hpp"
-#include "Range_Cont.hpp"
 
 
 namespace MAC
@@ -223,11 +222,11 @@ private:
      */
     void unmap_chunk(Read_Chunk_BPtr rc_bptr);
 
-    /** Unmap read regions.
+    /** Unmap read region.
      * The read is cut at region endpoints, and all chunks spanning the given regions
      * are made unmappable.
      */
-    void unmap_regions(Read_Entry_BPtr re_bptr, const Range_Cont< Size_Type >& region_cont);
+    void unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg);
 
     /** Try to extend an unmappable read region in both directions.
      * @param re_bptr Read_Entry object.
@@ -270,14 +269,14 @@ private:
      * @param r_end Read position to scan to.
      * @return A set of disjoint ranges which should be made unmappable in this read.
      */
-    Range_Cont< Size_Type >
+    Range_Cont
     find_unmappable_regions(Read_Entry_CBPtr re_cbptr, Size_Type r_start, Size_Type r_end) const;
 
     /** Find unmappable regions in a read chunk.
      * @param rc_cbptr Read chunk to scan.
      * @param region_cont Set of ranges of the chunk's read which should be made unmappable.
      */
-    void find_unmappable_regions(Read_Chunk_CBPtr rc_cbptr, Range_Cont< Size_Type >& region_cont) const;
+    void find_unmappable_regions(Read_Chunk_CBPtr rc_cbptr, Range_Cont& region_cont) const;
 
     void cat_read_contigs(Read_Entry_BPtr re_bptr);
 

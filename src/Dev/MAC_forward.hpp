@@ -32,6 +32,9 @@
 #include "bits.hpp"
 #include "ref_range.hpp"
 #include "DNA_Sequence.hpp"
+#include "Range.hpp"
+#include "Range_Cont.hpp"
+
 
 #include <boost/intrusive/itree.hpp>
 
@@ -53,7 +56,12 @@ typedef Seq_Type::proxy_type Seq_Proxy_Type;
 /** Type holding a single base pair. */
 typedef Seq_Type::value_type Symb_Type;
 
+/** Cigar object */
 typedef cigar::Cigar< Size_Type > Cigar;
+
+/** Range and Range_Cont */
+typedef range::Range< Size_Type > Range_Type;
+typedef range::Range_Cont< Size_Type > Range_Cont;
 
 class Mutation;
 class Mutation_Chunk_Adapter;
