@@ -6,6 +6,7 @@ namespace MAC
 
 void Unmap_Mut_Clusters::operator () (Graph& g) const
 {
+    logger("Unmap_Mut_Clusters", info) << ptree("unmap_mut_clusters__start");
     static const uint64_t visit_mask = 4;
     for (auto ce_bptr : g.ce_cont() | referenced)
     {
@@ -32,6 +33,10 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
                 bitmask::set(ce_bptr->tag(), visit_mask);
                 continue;
             }
+            logger("Unmap_Mut_Clusters", debug) << ptree("unmap_mut_clusters")
+                .put("ce_ptr", ce_bptr.to_int())
+                .put("start", mut_cluster->start())
+                .put("end", mut_cluster->end());
             // save read entry positions to unmap in a vector
             vector< tuple< Read_Entry_CBPtr, Range_Type > > unmap_re_pos_v;
             for (auto unmap_rc_cbptr : ce_bptr->chunk_cont().iintersect(mut_cluster->start(), mut_cluster->end()) | referenced)
@@ -44,6 +49,11 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
                 }
                 // transform cluster contig range into read range
                 auto r_rg = unmap_rc_cbptr->mapped_range(mut_cluster.get(), true, true, true);
+                ASSERT(r_rg.start() < r_rg.end());
+                logger("Unmap_Mut_Clusters", debug) << ptree("unmap_mut_clusters")
+                    .put("re_ptr", unmap_rc_cbptr->re_bptr().to_int())
+                    .put("start", r_rg.start())
+                    .put("end", r_rg.end());
                 unmap_re_pos_v.emplace_back(unmap_rc_cbptr->re_bptr(), move(r_rg));
             }
             for (const auto& re_pos : unmap_re_pos_v)
@@ -52,6 +62,7 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
             }
         }
     }
+    logger("Unmap_Mut_Clusters", info) << ptree("unmap_mut_clusters__end");
 }
 
 optional< Range_Type >
