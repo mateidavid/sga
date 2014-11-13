@@ -68,7 +68,7 @@ Unmap_Mut_Clusters::find_mutation_cluster(Contig_Entry_CBPtr ce_cbptr) const
         )
     {
         if (mut_cbptr->rf_start() < last_mut_cbptr->rf_end() + _min_num_3mers + 2
-            or not check_3mer_threshold(ce_cbptr->substr(last_mut_cbptr->rf_end(), last_mut_cbptr->rf_end() - mut_cbptr->rf_start())))
+            or not check_3mer_threshold(ce_cbptr->substr(last_mut_cbptr->rf_end(), mut_cbptr->rf_start() - last_mut_cbptr->rf_end())))
         {
             // current mutation not well separated from last one
             if (res)
