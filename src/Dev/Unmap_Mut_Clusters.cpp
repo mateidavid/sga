@@ -72,9 +72,11 @@ Unmap_Mut_Clusters::find_mutation_cluster(Contig_Entry_CBPtr ce_cbptr) const
     Mutation_CBPtr start_mut_cbptr = Mutation_Fact::new_elem(0, 0);
     Mutation_CBPtr end_mut_cbptr = Mutation_Fact::new_elem(ce_cbptr->len(), 0);
     Mutation_CBPtr last_mut_cbptr = start_mut_cbptr;
+    vector< Mutation_CBPtr > tmp_v(1, end_mut_cbptr);
     for (auto mut_cbptr : join(
              ce_cbptr->mut_cont() | referenced,
-             vector< Mutation_CBPtr >(1, end_mut_cbptr)
+//             vector< Mutation_CBPtr >(1, end_mut_cbptr)
+             tmp_v
              )
         )
     {
