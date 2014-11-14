@@ -883,12 +883,13 @@ void Read_Chunk::cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bp
     Read_Chunk_Fact::del_elem(rc_next_bptr);
 }
 
-Range_Type Read_Chunk::mapped_range(Range_Type rg, bool on_contig,
+Range_Type Read_Chunk::mapped_range(Range_Type orig_rg, bool on_contig,
                                     bool rg_start_maximal, bool rg_end_maximal) const
 {
+    ASSERT(orig_rg.start() <= orig_rg.end());
+    Range_Type rg(max(orig_rg.start(), on_contig? get_c_start() : get_r_start()),
+                  min(orig_rg.end(), on_contig? get_c_end() : get_r_end()));
     ASSERT(rg.start() <= rg.end());
-    ASSERT(not on_contig or (get_c_start() <= rg.start() and rg.end() <= get_c_end()));
-    ASSERT(on_contig or (get_r_start() <= rg.start() and rg.end() <= get_r_end()));
     // compute range endpoints in contig order
     Size_Type rg_endpoint_c_left;
     Size_Type rg_endpoint_c_right;
