@@ -42,14 +42,21 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
             for (auto unmap_rc_cbptr : ce_bptr->chunk_cont().iintersect(mut_cluster->start(), mut_cluster->end()) | referenced)
             {
                 // skip 0-length endpoint intersections
-                if (unmap_rc_cbptr->get_c_end() == mut_cluster->start()
-                    or unmap_rc_cbptr->get_c_start() == mut_cluster->end())
+                // ONLY if cluster size is non-zero! otherwise, we might be trying to unmap an insertion
+                if (mut_cluster->start() < mut_cluster->end()
+                    and (unmap_rc_cbptr->get_c_end() == mut_cluster->start()
+                         or unmap_rc_cbptr->get_c_start() == mut_cluster->end()))
                 {
                     continue;
                 }
                 // transform cluster contig range into read range
                 auto r_rg = unmap_rc_cbptr->mapped_range(mut_cluster.get(), true, true, true);
-                ASSERT(r_rg.start() < r_rg.end());
+                ASSERT(r_rg.start() <= r_rg.end());
+                if (r_rg.start() == r_rg.end())
+                {
+                    // the unmapped range is spanned by a deletion in this read
+                    continue;
+                }
                 logger("Unmap_Mut_Clusters", debug) << ptree("unmap_mut_clusters")
                     .put("re_ptr", unmap_rc_cbptr->re_bptr().to_int())
                     .put("start", r_rg.start())
