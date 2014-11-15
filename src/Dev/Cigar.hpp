@@ -287,6 +287,8 @@ public:
     /** Check Cigar. */
     void check(const sequence_proxy_type& rf_seq, const sequence_proxy_type& qr_seq) const
     {
+        static_cast< void >(rf_seq);
+        static_cast< void >(qr_seq);
 #ifndef BOOST_DISABLE_ASSERTS
         ASSERT(rf_seq.size() == rf_len());
         ASSERT(qr_seq.size() == qr_len());

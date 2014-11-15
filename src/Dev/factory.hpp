@@ -546,11 +546,13 @@ public:
 
     pointer allocate(size_t n, std::allocator< void >::const_pointer = nullptr)
     {
+        static_cast< void >(n);
         ASSERT(n == 1);
         return storage_type::allocate(); // use active storage
     }
     void deallocate(pointer p, size_t n)
     {
+        static_cast< void >(n);
         ASSERT(n == 1);
         storage_type::deallocate(p); // use active storage
     }

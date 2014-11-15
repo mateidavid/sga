@@ -323,6 +323,7 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
     Size_Type r1_start = cigar.rf_start();
     /// match length in re1
     Size_Type r1_len = cigar.rf_len();
+    static_cast< void >(r1_len);
     /// match start in re2
     Size_Type r2_start = cigar.qr_start();
     /// match length in re2
@@ -984,6 +985,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
             ASSERT(not next_rc_bptr->get_rc());
             pos = (r_left? next_rc_bptr->get_r_start() : next_rc_bptr->get_r_end());
             bool success = cat_contigs(r_left? next_rc_bptr->ce_bptr() : rc_bptr->ce_bptr(), true);
+            static_cast< void >(success);
             ASSERT(success);
             continue;
         }
@@ -2137,6 +2139,8 @@ void Graph::check_all() const
 
 void Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry_CBPtr >& ce_set) const
 {
+    static_cast< void >(re_set);
+    static_cast< void >(ce_set);
 #ifndef BOOST_DISABLE_ASSERTS
     // compute contig entries referenced by the selected read entries
     set< Contig_Entry_CBPtr > ce_extra_set;
