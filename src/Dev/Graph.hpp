@@ -120,11 +120,7 @@ public:
 
     /** Stats. */
     void dump_detailed_counts(ostream& os) const;
-
-    /*
-    void print_separated_het_mutations(
-        ostream& os, size_t min_support_report, Size_Type min_separation) const;
-    */
+    void print_mutations(ostream& os, size_t min_support = 1, Size_Type flank_len = 20) const;
 
     /** Print unmappable contigs between each pair of mappable ones. */
     void print_unmappable_contigs(ostream& os) const;

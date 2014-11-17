@@ -313,65 +313,6 @@ void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_n
     Contig_Entry_Fact::del_elem(ce_next_bptr);
 }
 
-/*
-vector< Mutation_CPtr > Contig_Entry::get_separated_het_mutations(
-    size_t min_support_report, Size_Type min_separation) const
-{
-    vector< Mutation_CPtr > res;
-    Size_Type last_mut_end = 0;
-    for (auto mut_it = _mut_cont.begin(); mut_it != _mut_cont.end(); ++mut_it)
-    {
-        Mutation_CPtr mut_cptr = &*mut_it;
-        auto next_mut_it = mut_it;
-        ++next_mut_it;
-        if (mut_cptr->rf_start() >= last_mut_end + min_separation
-                and mut_cptr->rf_end() + min_separation <= len()
-                and (next_mut_it == _mut_cont.end()
-                     or mut_cptr->rf_end() + min_separation <= next_mut_it->rf_start()))
-        {
-            // well separated
-            size_t n_chunks_supporting_mut[2] = { 0, 0 };
-            for (auto& rc_cptr : _chunk_cptr_cont)
-            {
-                if (rc_cptr->get_c_start() > mut_cptr->rf_start()
-                        or rc_cptr->get_c_end() < mut_cptr->rf_end())
-                {
-                    // doesn't span mutation
-                    continue;
-                }
-                ++n_chunks_supporting_mut[int(rc_cptr->have_mutation(mut_cptr))];
-            }
-            if (n_chunks_supporting_mut[0] >= min_support_report
-                    and n_chunks_supporting_mut[1] >= min_support_report)
-            {
-                res.push_back(mut_cptr);
-            }
-        }
-        last_mut_end = std::max(last_mut_end, mut_cptr->rf_end());
-    }
-    return res;
-}
-
-void Contig_Entry::print_separated_het_mutations(
-    ostream& os, size_t min_support_report, Size_Type min_separation) const
-{
-    vector< Mutation_CPtr > v = get_separated_het_mutations(min_support_report, min_separation);
-    for (const auto& mut_cptr : v)
-    {
-        if (mut_cptr->is_del())
-        {
-            os << _seq_ptr->substr(mut_cptr->rf_start(), mut_cptr->rf_len()) << "\t\t";
-        }
-        else
-        {
-            os << mut_cptr->get_seq() << '\t' << _seq_ptr->substr(mut_cptr->rf_start(), mut_cptr->rf_len()) << '\t';
-        }
-        os << _seq_ptr->substr(mut_cptr->rf_start() - min_separation, min_separation) << '\t'
-           << _seq_ptr->substr(mut_cptr->rf_end(), min_separation) << '\n';
-    }
-}
-*/
-
 void Contig_Entry::check() const
 {
 #ifndef BOOST_DISABLE_ASSERTS

@@ -1517,15 +1517,41 @@ void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
     }
 }
 
-/*
-void Graph::print_separated_het_mutations(ostream& os, size_t min_support_report, Size_Type min_separation) const
+    void Graph::print_mutations(ostream& os, size_t min_support, Size_Type flank_len) const
 {
-    for (const auto& ce : _ce_cont)
+    os << "CE\tlen.ce\tpos.rf\tlen.rf\tlen.alt\tseq.rf\tseq.alt\tflank.left\tflank.right\tnum.cks.rf\tnum.cks.alt\n";
+    for (auto ce_bptr : ce_cont() | referenced |
+             ba::filtered([] (Contig_Entry_CBPtr ce_cbptr) { return ce_cbptr->is_normal(); }))
     {
-        ce.print_separated_het_mutations(os, min_support_report, min_separation);
+        for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
+        {
+            size_t num_cks_qr = mut_bptr->chunk_ptr_cont().nonconst_size();
+            auto rg = ce_bptr->chunk_cont().iintersect(mut_bptr->rf_start(), mut_bptr->rf_end());
+            //size_t num_cks_total = boost::distance(rg); // WHY NOT???
+            size_t num_cks_total = 0;
+            for (auto _unused : rg)
+            {
+                static_cast< void >(_unused);
+                ++num_cks_total;
+            }
+            ASSERT(num_cks_qr <= num_cks_total);
+            size_t num_cks_rf = num_cks_total - num_cks_qr;
+            if (min(num_cks_rf, num_cks_qr) < min_support)
+            {
+                continue;
+            }
+            os << ce_bptr.to_int() << "\t" << ce_bptr->len() << "\t"
+               << mut_bptr->rf_start() << "\t" << mut_bptr->rf_len() << "\t" << mut_bptr->seq_len() << "\t"
+               << ce_bptr->seq().substr(mut_bptr->rf_start(), mut_bptr->rf_len()) << "\t"
+               << mut_bptr->seq() << "\t"
+               << ce_bptr->seq().substr(mut_bptr->rf_start() >= flank_len? mut_bptr->rf_start() - flank_len : 0,
+                                        mut_bptr->rf_start() >= flank_len? flank_len : mut_bptr->rf_start()) << "\t"
+               << ce_bptr->seq().substr(mut_bptr->rf_end(),
+                                        min(ce_bptr->len() - mut_bptr->rf_end(), flank_len)) << "\t"
+               << num_cks_rf << "\t" << num_cks_total - num_cks_rf << "\n";
+        }
     }
 }
-*/
 
 void Graph::print_unmappable_contigs(ostream& os) const
 {
@@ -2440,19 +2466,6 @@ void Graph::dump_detailed_counts(ostream& os) const
         }
         os << '\n';
     } //for (ce_cbptr : ce_cont()
-    // finally, mutation stats
-    os << "MUT\tCE\tlen.ce\tpos.rf\tlen.rf\tlen.alt\tseq.rf\tseq.alt\n";
-    for (auto ce_bptr : ce_cont() | referenced |
-             ba::filtered([] (Contig_Entry_CBPtr ce_cbptr) { return ce_cbptr->is_normal(); }))
-    {
-        for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
-        {
-            os << "MUT\t" << ce_bptr.to_int() << "\t" << ce_bptr->len() << "\t"
-               << mut_bptr->rf_start() << "\t" << mut_bptr->rf_len() << "\t" << mut_bptr->seq_len() << "\t"
-               << ce_bptr->seq().substr(mut_bptr->rf_start(), mut_bptr->rf_len()) << "\t"
-               << mut_bptr->seq() << "\n";
-        }
-    }
 }
 
 boost::property_tree::ptree Graph::to_ptree() const

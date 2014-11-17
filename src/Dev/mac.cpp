@@ -205,9 +205,9 @@ int real_main(const Program_Options& po)
     }
     if (not po.mutations_file.empty())
     {
-        //TODO
-        //ofstream mutations_ofs(po.mutations_file);
-        //g.print_separated_het_mutations(mutations_ofs, 2, 20);
+        logger("mac", info) << ptree("print_mutations").put("file", po.mutations_file);
+        fstr tmp_fs(po.mutations_file, ios_base::out);
+        g.print_mutations(tmp_fs);
     }
     if (not po.terminal_reads_file.empty())
     {
