@@ -1517,7 +1517,7 @@ void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
     }
 }
 
-    void Graph::print_mutations(ostream& os, size_t min_support, Size_Type flank_len) const
+void Graph::print_mutations(ostream& os, size_t min_support, Size_Type flank_len) const
 {
     os << "CE\tlen.ce\tpos.rf\tlen.rf\tlen.alt\tseq.rf\tseq.alt\tflank.left\tflank.right\tnum.cks.rf\tnum.cks.alt\n";
     for (auto ce_bptr : ce_cont() | referenced |
@@ -1526,14 +1526,7 @@ void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
             size_t num_cks_qr = mut_bptr->chunk_ptr_cont().nonconst_size();
-            auto rg = ce_bptr->chunk_cont().iintersect(mut_bptr->rf_start(), mut_bptr->rf_end());
-            //size_t num_cks_total = boost::distance(rg); // WHY NOT???
-            size_t num_cks_total = 0;
-            for (auto _unused : rg)
-            {
-                static_cast< void >(_unused);
-                ++num_cks_total;
-            }
+            size_t num_cks_total = boost::distance(ce_bptr->chunk_cont().iintersect(mut_bptr->rf_start(), mut_bptr->rf_end()));
             ASSERT(num_cks_qr <= num_cks_total);
             size_t num_cks_rf = num_cks_total - num_cks_qr;
             if (min(num_cks_rf, num_cks_qr) < min_support)
