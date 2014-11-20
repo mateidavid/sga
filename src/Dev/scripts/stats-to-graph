@@ -12,7 +12,8 @@ def add_footer():
     print '}'
 
 def add_node(u, l, is_unmap, is_lowcomplex):
-    print ('%s [label="%s"%s%s]' % (u, l, ['', ',style=dashed'][is_unmap], ['', ',color=red'][is_lowcomplex]))
+    if not is_unmap and not is_lowcomplex:
+        print ('%s [label="%s"%s%s]' % (u, l, ['', ',style=dashed'][is_unmap], ['', ',color=red'][is_lowcomplex]))
 
 def add_edge(u, v, out_u, same_orient, l):
     print ('%s -> %s [dir="both",arrowtail="%s",arrowhead="%s",label="%s"%s]' %
@@ -41,13 +42,13 @@ for line in sys.stdin:
         continue
     add_node(a[1], a[1] + ':' + a[2], int(a[3]), int(a[4]))
     nodes[a[1]] = int(a[3])
-    if a[16] != '.':
-        for e in a[16][1:-1].split('),('):
+    if a[22] != '.':
+        for e in a[22][1:-1].split('),('):
             b = e.split(',')
             if b[0] in nodes:
                 add_edge(a[1], b[0], 0, int(b[1]), ','.join(b[2:]))
-    if a[19] != '.':
-        for e in a[19][1:-1].split('),('):
+    if a[25] != '.':
+        for e in a[25][1:-1].split('),('):
             b = e.split(',')
             if b[0] in nodes:
                 add_edge(a[1], b[0], 1, int(b[1]), ','.join(b[2:]))
