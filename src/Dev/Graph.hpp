@@ -18,7 +18,7 @@
 #include "Read_Entry_Cont.hpp"
 #include "Contig_Entry.hpp"
 #include "Contig_Entry_Cont.hpp"
-
+#include "Allele_Anchor.hpp"
 
 namespace MAC
 {
