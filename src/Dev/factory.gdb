@@ -90,7 +90,7 @@ class raw_func(gdb.Function):
         super(raw_func, self).__init__('raw')
     def invoke(self, p, idx=None):
         assert isinstance(p, gdb.Value), '"v" not a gdb.Value'
-        assert boost_print.template_name(p.type) == 'bounded::detail::Pointer', '"v" not a bounded pointer'
+        assert boost_print.template_name(gdb.types.get_basic_type(p.type)) == 'bounded::detail::Pointer', '"v" not a bounded pointer'
         return factory_raw_ptr(p, idx)
 
 raw = raw_func()
