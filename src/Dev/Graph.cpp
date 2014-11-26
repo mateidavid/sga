@@ -727,7 +727,7 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
 #ifdef ENABLE_GCC_BUG
     Contig_Entry_BPtr ce_next_cbptr;
     bool same_orientation;
-    vector< Read_Chunk_CBPtr > rc_cbptr_cont;
+    set< Read_Chunk_CBPtr > rc_cbptr_cont;
     tie(ce_next_cbptr, same_orientation, rc_cbptr_cont) = ce_bptr->can_cat_dir(c_right);
     Contig_Entry_BPtr ce_next_bptr(ce_next_cbptr.unconst());
 
@@ -741,7 +741,7 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
     auto tmp = ce_bptr->can_cat_dir(c_right);
     Contig_Entry_BPtr ce_next_bptr = get<0>(tmp).unconst();
     bool same_orientation = get<1>(tmp);
-    vector< Read_Chunk_CBPtr > rc_cbptr_cont = move(get<2>(tmp));
+    set< Read_Chunk_CBPtr > rc_cbptr_cont = move(get<2>(tmp));
 #endif
 
     if (not ce_next_bptr)
@@ -1562,7 +1562,7 @@ void Graph::print_unmappable_contigs(ostream& os) const
             {
                 Contig_Entry_CBPtr ce_next_cbptr;
                 bool same_orientation;
-                vector< Read_Chunk_CBPtr > chunk_v;
+                set< Read_Chunk_CBPtr > chunk_v;
                 tie(ce_next_cbptr, same_orientation) = move(t.first);
                 chunk_v = move(t.second);
                 multiset< tuple< string, string > > seq_v;
@@ -1831,7 +1831,7 @@ void Graph::resolve_unmappable_inner_region(
         .put("same_orientation", same_orientation);
 
     auto oc_map = ce_cbptr->out_chunks_dir(c_right, 3);
-    auto t = make_tuple(ce_next_cbptr, same_orientation);
+    auto t = make_pair(ce_next_cbptr, same_orientation);
     ASSERT(oc_map.count(t) > 0);
     const auto& out_chunks_v = oc_map.at(t);
     // collect unmappable chunks, along with their orientation, in unmappable_chunks_v
@@ -1966,7 +1966,7 @@ void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool
 
     auto out_chunks_map = ce_cbptr->out_chunks_dir(c_right, 4);
     // this bucket contains the last chunks which are followed by terminal unmappable siblings
-    const auto rc_last_bucket = make_tuple(Contig_Entry_CBPtr(), false);
+    const auto rc_last_bucket = make_pair(Contig_Entry_CBPtr(), false);
     const auto& rc_last_cbptr_v = out_chunks_map.at(rc_last_bucket);
     ASSERT(not rc_last_cbptr_v.empty());
     // group base sequences of the neighbouring contigs
@@ -2341,7 +2341,8 @@ void Graph::dump_detailed_counts(ostream& os) const
        << "\tce.deg.left\tre.deg.left\tedges.left"
        << "\tce.deg.right\tre.deg.right\tedges.right"
        << "\tce.deg.left.skip\tre.deg.left.skip\tedges.left.skip"
-       << "\tce.deg.right.skip\tre.deg.right.skip\tedges.right.skip\n";
+       << "\tce.deg.right.skip\tre.deg.right.skip\tedges.right.skip"
+       << "\tallele.support\n";
     for (const auto ce_cbptr : ce_cont() | referenced)
     {
         os << "CE\t"
@@ -2449,13 +2450,30 @@ void Graph::dump_detailed_counts(ostream& os) const
         }
         if (ce_cbptr->is_unmappable())
         {
-            os << ".\t.\t.\t.\t.\t.";
+            os << ".\t.\t.\t.\t.\t.\t.";
         }
         else
         {
             print_neighbours_cont_stats(os, ce_cbptr, false, true, ce_cbptr->out_chunks_dir(false, 3, 1));
             os << '\t';
             print_neighbours_cont_stats(os, ce_cbptr, true, true, ce_cbptr->out_chunks_dir(true, 3, 1));
+            auto ac = Allele_Anchor::connect(Allele_Anchor(ce_cbptr, false).support(),
+                                             Allele_Anchor(ce_cbptr, true).support());
+            os << '\t';
+            bool first = true;
+            for (const auto& p : ac)
+            {
+                if (not first)
+                {
+                    os << ",";
+                }
+                first = false;
+                auto l_allele = boost::get< pair< Contig_Entry_CBPtr, bool > >(p.first.first);
+                auto r_allele = boost::get< pair< Contig_Entry_CBPtr, bool > >(p.first.second);
+                os << "(" << l_allele.first.to_int() << "," << l_allele.second << ","
+                   << r_allele.first.to_int() << "," << r_allele.second << ","
+                   << p.second.size() << ")";
+            }
         }
         os << '\n';
     } //for (ce_cbptr : ce_cont()
@@ -2791,13 +2809,13 @@ void Graph::interactive_commands(istream& is, ostream& os)
             {
                 Contig_Entry_CBPtr ce_next_cbptr;
                 bool same_orientation;
-                vector< Read_Chunk_CBPtr > rc_cbptr_v;
+                set< Read_Chunk_CBPtr > rc_cbptr_cont;
                 tie(ce_next_cbptr, same_orientation) = move(t.first);
-                rc_cbptr_v = move(t.second);
+                rc_cbptr_cont = move(t.second);
                 os << "  ce " << setw(9) << left << ce_next_cbptr.to_int()
                    << " same_orientation " << same_orientation
                    << " rc";
-                for (const auto& rc_cbptr : rc_cbptr_v)
+                for (const auto& rc_cbptr : rc_cbptr_cont)
                 {
                     os << " " << rc_cbptr.to_int();
                 }

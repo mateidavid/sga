@@ -17,139 +17,134 @@ public:
     DEFAULT_COPY_ASOP(Allele_Anchor)
     DEFAULT_MOVE_ASOP(Allele_Anchor)
 
-    Allele_Anchor(Mutation_CBPtr mut_cbptr, bool rf_allele)
-        : _mut_cbptr(mut_cbptr), _rf_allele(rf_allele)
+    explicit Allele_Anchor(Mutation_CBPtr mut_cbptr)
+        : _mut_cbptr(mut_cbptr)
     {
         ASSERT(mut_cbptr);
         ASSERT(not mut_cbptr->chunk_ptr_cont().empty());
         _ce_cbptr = mut_cbptr->chunk_ptr_cont().begin()->chunk_cbptr()->ce_bptr();
     }
 
-    Allele_Anchor(Contig_Entry_CBPtr ce_cbptr, Contig_Entry_CBPtr ce_next_cbptr,
-                  bool c_right, bool same_orientation)
-        : _ce_cbptr(ce_cbptr), _ce_next_cbptr(ce_next_cbptr),
-          _c_right(c_right), _same_orientation(same_orientation)
+    Allele_Anchor(Contig_Entry_CBPtr ce_cbptr, bool c_right)
+        : _ce_cbptr(ce_cbptr), _c_right(c_right)
     {
         ASSERT(ce_cbptr);
-        ASSERT(ce_next_cbptr);
     }
 
-    bool is_mutation_allele() const { return _mut_cbptr; }
-    bool is_contig_edge() const { return _ce_next_cbptr; }
-
-    GETTER(Mutation_CBPtr, mut_cbptr, _mut_cbptr)
-    GETTER(bool, rf_allele, _rf_allele)
-    GETTER(Contig_Entry_CBPtr, ce_cbptr, _ce_cbptr)
-    GETTER(Contig_Entry_CBPtr, ce_next_cbptr, _ce_next_cbptr)
-    GETTER(bool, c_right, _c_right)
-    GETTER(bool, same_orientation, _same_orientation)
-
-    /** Return the set of read chunks (in ce_cbptr()) supporting this anchor.
+    /** Allele specifier type.
+     * When the anchor is a mutation, an allele is specified by a bool:
+     * rf=false; qr=true.
+     * When the anchor is an endpoint, an allele is specified by the
+     * destination of the edge: (ce_next, same_orientation)
      */
-    set< Read_Chunk_CBPtr > support() const
+    typedef boost::variant< bool, pair< Contig_Entry_CBPtr, bool > > allele_specifier_type;
+
+    bool is_mutation() const { return _mut_cbptr; }
+    bool is_endpoint() const { return not is_mutation(); }
+
+    GETTER(Contig_Entry_CBPtr, ce_cbptr, _ce_cbptr)
+    GETTER(Mutation_CBPtr, mut_cbptr, _mut_cbptr)
+    GETTER(bool, c_right, _c_right)
+
+    /** Group read chunks supporting various alleles for this anchor.
+     */
+    typedef map< allele_specifier_type, set< Read_Chunk_CBPtr > > allele_support_type;
+    allele_support_type support() const
     {
-        set< Read_Chunk_CBPtr > res;
-        if (is_mutation_allele())
+        allele_support_type res;
+        if (is_mutation())
         {
-            if (rf_allele())
+            // first, get support for qr allele
+            for (auto mca_cbptr : mut_cbptr()->chunk_ptr_cont() | referenced)
             {
-                // add all chunks fully spanning mutation
-                // if the rf allele is empty, we require >=1bp mapped on either side
-                for (rc_cbptr : ce_cbptr()->iintersect(mut_cbptr()->rf_start(), mut_cbptr()->rf_end()) | referenced)
-                {
-                    if ((mut_cbptr()->rf_len() > 0
-                         and rc_cbptr->c_start() <= _mut_cbptr->rf_start()
-                         and rc_cbptr->c_end() >= _mut_cbptr->rf_end())
-                        or (mut_cbptr()->rf_len() == 0
-                            and rc_cbptr->c_start() < _mut_cbptr->rf_start()
-                            and rc_cbptr->c_end() > _mut_cbptr->rf_end()))
-                    {
-                        res.insert(rc_cbptr);
-                    }
-                }
-                // then, remove the chunks observing the alternate allele
-                auto qr_res = Allele_Anchor(mut_cbptr(), false).support();
-                for (rc_cbptr : qr_res)
-                {
-                    // if mut is not an insertion, every chunk observing qr allele should already be in res
-                    ASSERT(not (mut_cbptr()->rf_len() > 0) or res.count(rc_cbptr) == 1);
-                    // if mut is an insertion, chunks observing qr allele should be in res iff they span >=1bp in both directions
-                    ASSERT(not (mut_cbptr()->rf_len() == 0)
-                           or ((res.count(rc_cbptr) == 1)
-                               == (rc_cbptr->c_start() < _mut_cbptr->rf_start()
-                                   and rc_cbptr->c_end() > _mut_cbptr->rf_end())));
-                    res.erase(rc_cbptr);
-                }
+                res[allele_specifier_type(true)].insert(mca_cbptr->chunk_cbptr());
             }
-            else // is_mutation_allele && qr_allele
+            // next, get support for rf allele
+            // add all chunks fully spanning mutation
+            for (auto rc_cbptr : ce_cbptr()->chunk_cont().iintersect(mut_cbptr()->rf_start(), mut_cbptr()->rf_end()) | referenced)
             {
-                for (auto mca_cbptr : mut_cbptr()->chunk_ptr_cont() | referenced)
+                // if chunk observes qr allele, skip it
+                if (res[allele_specifier_type(true)].count(rc_cbptr) > 0) { continue; }
+                // if the rf allele is empty, we require >=1bp mapped on either side
+                if ((mut_cbptr()->rf_len() > 0
+                     and rc_cbptr->get_c_start() <= _mut_cbptr->rf_start()
+                     and rc_cbptr->get_c_end() >= _mut_cbptr->rf_end())
+                    or (mut_cbptr()->rf_len() == 0
+                        and rc_cbptr->get_c_start() < _mut_cbptr->rf_start()
+                        and rc_cbptr->get_c_end() > _mut_cbptr->rf_end()))
                 {
-                    res.insert(mca_cbptr->chunk_cbptr());
+                    res[allele_specifier_type(false)].insert(rc_cbptr);
                 }
             }
         }
-        else // is_contig_edge
+        else // is_endpoint
         {
             auto m = ce_cbptr()->out_chunks_dir(c_right(), 3);
-            auto k = make_tuple(ce_next_cbptr(), same_orientation());
-            ASSERT(m.count(k) == 1);
-            res = move(m[k]);
+            for (auto p : m)
+            {
+                res[allele_specifier_type(p.first)] = move(p.second);
+            }
         }
         return res;
     }
 
-    /** Return (indirectly) the set of Read_Entry supporting 2 anchors.
-     * For every Read_Entry supporting both anchors, return a pait of chunks,
-     * the first supporting the first anchor, the second supporting the second anchor.
-     * @param a1 First anchor.
-     * @param a1 First anchor.
-     * @param same_st Bool; if true, consider reads supporting the anchors on the same strand;
+    /** Find Read_Entry objects supporting each pairs of alleles at the given anchors.
+     * For every pair of alleles at the given anchors, find all Read_Entry objects
+     * observing those 2 alleles on the same or different strand.
+     * @param a1_support_m Support map for anchor a1.
+     * @param a2_support_m Support map for anchor a2.
+     * @param same_st Bool; if true, find reads supporting pairs of alleles on the same strand;
      * if false, on different strands.
+     * NOTE: Using same_st==false only makes sense when a1 & a2 are on different contigs.
+     * @return A map with keys: are pairs of alleles, values: sets of Read_Entry objects.
      */
-    static set< pair< Read_Chunk_CBPtr, Read_Chunk_CBPtr > >
-    connect(const Allele_Anchor& a1, const Allele_Anchor& a2, bool same_st = true)
+    typedef map< pair< allele_specifier_type, allele_specifier_type >, set< Read_Entry_CBPtr > > anchor_connect_type;
+    static anchor_connect_type
+    connect(const allele_support_type& a1_support_m, const allele_support_type& a2_support_m, bool same_st = true)
     {
-        set< pair< Read_Chunk_CBPtr, Read_Chunk_CBPtr > > res;
-        // for each anchor, compute support
-        auto res1 = a1.support();
-        auto res2 = a2.support();
-        // for each anchor, construct maps of the form [Read_Entry, strand] -> Read_Chunk
-        auto re_orientation_rg_1 = ba::transform(res1, [] (Read_Chunk_CBPtr rc_cbptr) {
-                return make_pair(make_pair(rc_cbptr->re_bptr(), rc_cbptr->get_rc()), rc_cbptr);
-            });
-        auto re_orientation_rg_2 = ba::transform(res2, [] (Read_Chunk_CBPtr rc_cbptr) {
-                return make_pair(make_pair(rc_cbptr->re_bptr(), rc_cbptr->get_rc()), rc_cbptr);
-            });
-        map< pair< Read_Entry_CBPtr, bool >, Read_Chunk_CBPtr >
-            re_orientation_map_1(re_orientation_rg_1.begin(), re_orientation_rg_1.end());
-        map< pair< Read_Entry_CBPtr, bool >, Read_Chunk_CBPtr >
-            re_orientation_map_2(re_orientation_rg_2.begin(), re_orientation_rg_2.end());
-        // iterate through map of a1 support
-        for (auto p1 : re_orientation_map_1 | ba::map_keys)
-        {
-            Read_Entry_CBPtr re_cbptr = p1.first;
-            bool a1_neg_strand = p1.second;
-            bool a2_neg_strand = (a1_neg_strand != same_st);
-            auto p2 = make_pair(re_cbptr, a2_neg_strand);
-            if (re_orientation_map_2.count(p2) == 0)
+        anchor_connect_type res;
+        // for each anchor, construct a map of the form
+        //   [ allele_specifier_type ] -> set< [ Read_Entry, strand ] >
+        auto make_allele_spec_re_set_map = [] (const allele_support_type& m) {
+            map< allele_specifier_type, set< pair< Read_Entry_CBPtr, bool > > > r;
+            for (const auto& p : m)
             {
-                continue;
+                allele_specifier_type allele_spec = p.first;
+                auto rg = ba::transform(p.second, [] (Read_Chunk_CBPtr rc_cbptr) {
+                        return make_pair(rc_cbptr->re_bptr(), rc_cbptr->get_rc());
+                    });
+                r.insert(make_pair(allele_spec, set< pair< Read_Entry_CBPtr, bool > >(rg.begin(), rg.end())));
             }
-            // found pair of chunks of the same read supporting each anchor
-            res.insert(make_pair(re_orientation_map_1[p1], re_orientation_map_2[p2]));
+            return r;
+        };
+        auto a1_allele_spec_re_set_map = make_allele_spec_re_set_map(a1_support_m);
+        auto a2_allele_spec_re_set_map = make_allele_spec_re_set_map(a2_support_m);
+        // consider every pair of alleles
+        for (const auto& p1 : a1_allele_spec_re_set_map)
+        {
+            for (const auto& p2 : a2_allele_spec_re_set_map)
+            {
+                // iterate through Read_Entry objects supporting the allele at a1 (p1.first),
+                // find those supporting the allele at a2 (p2.first)
+                for (const auto& q : p1.second)
+                {
+                    Read_Entry_CBPtr re_cbptr = q.first;
+                    bool a1_neg_st = q.second;
+                    bool a2_neg_st = (a1_neg_st == same_st);
+                    if (p2.second.count(make_pair(re_cbptr, a2_neg_st)) > 0)
+                    {
+                        res[make_pair(p1.first, p2.first)].insert(re_cbptr);
+                    }
+                }
+            }
         }
         return res;
     }
 
 private:
-    Mutation_CBPtr _mut_cbptr;
-    bool _rf_allele;
-
     Contig_Entry_CBPtr _ce_cbptr;
-    Contig_Entry_CBPtr _ce_next_cbptr;
+    Mutation_CBPtr _mut_cbptr;
     bool _c_right;
-    bool _same_orientation;
 
 }; // class Allele_Anchor
 

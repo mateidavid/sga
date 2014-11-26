@@ -121,7 +121,7 @@ public:
      * two chunks have the same orientation if they are both mapped to the positive or negative
      * strand of their respective contigs.
      */
-    typedef map< tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > > out_chunks_dir_type;
+    typedef map< pair< Contig_Entry_CBPtr, bool >, set< Read_Chunk_CBPtr > > out_chunks_dir_type;
     out_chunks_dir_type out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_threshold = 0) const;
 
     /** Compute the min and max unmappable regions neighbouring this contig.
@@ -138,8 +138,8 @@ public:
      * @param chunk_cont Container of chunks leaving the contig in direction c_right.
      * @return (Minimum, maximum) unmappable regions.
      */
-    std::tuple< Size_Type, Size_Type >
-    unmappable_neighbour_range(bool c_right, const std::vector< Read_Chunk_CBPtr >& chunk_cont) const;
+    pair< Size_Type, Size_Type >
+    unmappable_neighbour_range(bool c_right, const set< Read_Chunk_CBPtr >& chunk_cont) const;
 
     /** Options for neighbour traversal. */
     class Neighbour_Options
@@ -173,7 +173,7 @@ public:
      * @return A tuple (Contig_Entry, same_orientation, Read_Chunk list);
      * if the chunk is not catenable, the first coordinate is NULL.
      */
-    tuple< Contig_Entry_CBPtr, bool, vector< Read_Chunk_CBPtr > >
+    tuple< Contig_Entry_CBPtr, bool, set< Read_Chunk_CBPtr > >
     can_cat_dir(bool c_right) const;
 
     /** Merge two contigs in the first.
@@ -185,7 +185,7 @@ public:
      * @param rc_cbptr_cont Read chunks from first contig that span into the next contig.
      */
     static void cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_next_bptr,
-                            std::vector< Read_Chunk_CBPtr >& rc_cbptr_cont);
+                            set< Read_Chunk_CBPtr >& rc_cbptr_cont);
 
     /** Get neighbour contigs.
      * @param dir Bool; true: past contig end, false: past contig start.

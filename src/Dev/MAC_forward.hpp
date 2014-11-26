@@ -22,6 +22,7 @@
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/join.hpp>
 #include <boost/optional.hpp>
+#include <boost/variant.hpp>
 
 #include "shortcuts.hpp"
 #include "global.hpp"

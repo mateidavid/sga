@@ -62,10 +62,10 @@ void Contig_Entry::reverse()
     chunk_cont().reverse();
 }
 
-map< std::tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > >
+map< pair< Contig_Entry_CBPtr, bool >, set< Read_Chunk_CBPtr > >
 Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_threshold) const
 {
-    map< std::tuple< Contig_Entry_CBPtr, bool >, vector< Read_Chunk_CBPtr > > res;
+    map< pair< Contig_Entry_CBPtr, bool >, set< Read_Chunk_CBPtr > > res;
     bool c_left = not c_right;
     Size_Type endpoint = (c_left? 0 : len());
     for (auto rc_cbptr : chunk_cont().iintersect(endpoint, endpoint) | referenced)
@@ -90,7 +90,7 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
             {
                 if ( unmappable_policy == 4)
                 {
-                    res[std::make_tuple(Contig_Entry_CBPtr(nullptr), false)].push_back(rc_cbptr);
+                    res[make_pair(Contig_Entry_CBPtr(nullptr), false)].insert(rc_cbptr);
                 }
                 continue;
             }
@@ -106,10 +106,10 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
             case 0:
                 break;
             case 1:
-                res[std::make_tuple(ce_next_cbptr, same_orientation)].push_back(rc_cbptr);
+                res[make_pair(ce_next_cbptr, same_orientation)].insert(rc_cbptr);
                 break;
             case 2:
-                res[std::make_tuple(Contig_Entry_CBPtr(nullptr), false)].push_back(rc_cbptr);
+                res[make_pair(Contig_Entry_CBPtr(nullptr), false)].insert(rc_cbptr);
                 break;
             default:
                 ASSERT(false);
@@ -117,7 +117,7 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
         }
         else
         {
-            res[std::make_tuple(ce_next_cbptr, same_orientation)].push_back(rc_cbptr);
+            res[make_pair(ce_next_cbptr, same_orientation)].insert(rc_cbptr);
         }
     }
     // remove (contig,orientation) pairs with low support
@@ -138,12 +138,12 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
     return res;
 }
 
-tuple< Size_Type, Size_Type >
-Contig_Entry::unmappable_neighbour_range(bool c_right, const vector< MAC::Read_Chunk_CBPtr >& chunk_cont) const
+pair< Size_Type, Size_Type >
+Contig_Entry::unmappable_neighbour_range(bool c_right, const set< MAC::Read_Chunk_CBPtr >& chunk_cont) const
 {
     if (chunk_cont.empty())
     {
-        return std::make_tuple(Size_Type(0), Size_Type(0));
+        return make_pair(Size_Type(0), Size_Type(0));
     }
     Size_Type min_skip_len = numeric_limits< Size_Type >::max();
     Size_Type max_skip_len = 0;
@@ -165,7 +165,7 @@ Contig_Entry::unmappable_neighbour_range(bool c_right, const vector< MAC::Read_C
         min_skip_len = min(min_skip_len, skip_len);
         max_skip_len = max(max_skip_len, skip_len);
     }
-    return std::make_tuple(min_skip_len, max_skip_len);
+    return make_pair(min_skip_len, max_skip_len);
 }
 
 auto Contig_Entry::neighbours(bool forward, Neighbour_Options opts, size_t ignore_threshold) -> neighbours_type
@@ -225,7 +225,7 @@ auto Contig_Entry::neighbours(bool forward, Neighbour_Options opts, size_t ignor
     return res;
 }
 
-tuple< Contig_Entry_CBPtr, bool, vector< Read_Chunk_CBPtr > >
+tuple< Contig_Entry_CBPtr, bool, set< Read_Chunk_CBPtr > >
 Contig_Entry::can_cat_dir(bool c_right) const
 {
     ASSERT(not chunk_cont().empty());
@@ -241,12 +241,12 @@ Contig_Entry::can_cat_dir(bool c_right) const
         .put("res_size", res.size());
     if (res.size() != 1)
     {
-        return make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
+        return make_tuple(Contig_Entry_CBPtr(nullptr), false, set< Read_Chunk_CBPtr >());
     }
     Contig_Entry_CBPtr ce_next_cbptr;
     bool same_orientation;
     tie(ce_next_cbptr, same_orientation) = res.begin()->first;
-    vector< Read_Chunk_CBPtr > rc_cbptr_cont = move(res.begin()->second);
+    set< Read_Chunk_CBPtr > rc_cbptr_cont = move(res.begin()->second);
     ASSERT(not rc_cbptr_cont.empty());
     logger("Contig_Entry", debug1) << ptree("can_cat_dir")
         .put("ce_next_ptr", ce_next_cbptr.to_int())
@@ -264,15 +264,15 @@ Contig_Entry::can_cat_dir(bool c_right) const
         .put("tmp_size", tmp.size());
     if (tmp.size() != 1)
     {
-        return make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
+        return make_tuple(Contig_Entry_CBPtr(nullptr), false, set< Read_Chunk_CBPtr >());
     }
-    ASSERT(tmp.begin()->first == make_tuple(ce_cbptr, same_orientation));
+    ASSERT(tmp.begin()->first == make_pair(ce_cbptr, same_orientation));
     ASSERT(tmp.begin()->second.size() == rc_cbptr_cont.size());
     return make_tuple(ce_next_cbptr, same_orientation, move(rc_cbptr_cont));
 }
 
 void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_next_bptr,
-                               vector< MAC::Read_Chunk_CBPtr >& rc_cbptr_cont)
+                               set< Read_Chunk_CBPtr >& rc_cbptr_cont)
 {
     logger("Contig_Entry", debug1) << ptree("cat_c_right")
         .put("ce_ptr", ce_bptr.to_int())
