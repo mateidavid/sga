@@ -10,6 +10,7 @@ add_library(mac STATIC
     global_assert.cpp
     Mutation.cpp
     Mutation_Cont.cpp
+    Read_Chunk_Pos.cpp
     Read_Chunk.cpp
     Read_Chunk_Cont.cpp
     Read_Entry.cpp
