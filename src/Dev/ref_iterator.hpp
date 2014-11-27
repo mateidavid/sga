@@ -1,7 +1,8 @@
 #ifndef __REF_ITERATOR_HPP
 #define __REF_ITERATOR_HPP
 
-#include <boost/iterator/transform_iterator.hpp>
+//#include <boost/iterator/transform_iterator.hpp>
+#include <boost/iterator/iterator_adaptor.hpp>
 #include "shortcuts.hpp"
 
 
