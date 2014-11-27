@@ -17,6 +17,7 @@ add_library(mac STATIC
     Contig_Entry.cpp
     Graph.cpp
     Unmap_Mut_Clusters.cpp
+    Hap_Map.cpp
 )
 #set_target_properties(mac PROPERTIES LINK_FLAGS "${BOOST_LDFLAGS}")
 

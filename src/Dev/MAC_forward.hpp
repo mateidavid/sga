@@ -73,6 +73,8 @@ class Mutation_Chunk_Adapter;
 class Read_Chunk;
 class Read_Entry;
 class Contig_Entry;
+class Hap_Hop;
+class Hap_Entry;
 class Graph;
 
 typedef bounded::Factory< Mutation > Mutation_Fact;
@@ -105,8 +107,21 @@ typedef Contig_Entry_Fact::const_ptr_type Contig_Entry_CBPtr;
 typedef Contig_Entry_Fact::ref_type Contig_Entry_BRef;
 typedef Contig_Entry_Fact::const_ref_type Contig_Entry_CBRef;
 
+typedef bounded::Factory< Hap_Hop > Hap_Hop_Fact;
+typedef Hap_Hop_Fact::ptr_type Hap_Hop_BPtr;
+typedef Hap_Hop_Fact::const_ptr_type Hap_Hop_CBPtr;
+typedef Hap_Hop_Fact::ref_type Hap_Hop_BRef;
+typedef Hap_Hop_Fact::const_ref_type Hap_Hop_CBRef;
+
+typedef bounded::Factory< Hap_Entry > Hap_Entry_Fact;
+typedef Hap_Entry_Fact::ptr_type Hap_Entry_BPtr;
+typedef Hap_Entry_Fact::const_ptr_type Hap_Entry_CBPtr;
+typedef Hap_Entry_Fact::ref_type Hap_Entry_BRef;
+typedef Hap_Entry_Fact::const_ref_type Hap_Entry_CBRef;
+
 // algorithms
 class Unmap_Mut_Clusters;
+class Hap_Map;
 
 } // namespace MAC
 

@@ -6,6 +6,7 @@
 #include <boost/program_options.hpp>
 
 #include "Graph.hpp"
+#include "Hap_Map.hpp"
 #include "ixstream.hpp"
 #include "fstr.hpp"
 #include "logger.hpp"
@@ -185,6 +186,8 @@ int real_main(const Program_Options& po)
     {
         g.unmap_single_chunks();
     }
+
+    Hap_Map hm(g);
 
     if (po.interactive)
     {
