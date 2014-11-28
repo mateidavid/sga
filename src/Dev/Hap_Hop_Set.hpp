@@ -55,42 +55,15 @@ struct Hap_Hop_Comparator
 {
     bool operator () (const Hap_Hop& lhs, const Hap_Hop& rhs) const
     {
-        // order by Contig_Entry bptr first
-        if (lhs.allele_anchor().ce_cbptr() != rhs.allele_anchor().ce_cbptr())
-        {
-            return lhs.allele_anchor().ce_cbptr().to_int() < rhs.allele_anchor().ce_cbptr().to_int();
-        }
-        // next, order left endpoint before mutations before right endpoint
-        else if (lhs.allele_anchor().is_endpoint())
-        {
-            if (rhs.allele_anchor().is_endpoint())
-            {
-                return lhs.allele_anchor().c_right() < rhs.allele_anchor().c_right();
-            }
-            else
-            {
-                return lhs.allele_anchor().c_right() == false;
-            }
-        }
-        else // lhs.allele_anchor().is_mutation()
-        {
-            if (rhs.allele_anchor().is_endpoint())
-            {
-                return rhs.allele_anchor().c_right() == true;
-            }
-            else
-            {
-                // order by Mutation rf_start, then by bptr
-                if (lhs.allele_anchor().mut_cbptr()->rf_start() != rhs.allele_anchor().mut_cbptr()->rf_start())
-                {
-                    return lhs.allele_anchor().mut_cbptr()->rf_start() < rhs.allele_anchor().mut_cbptr()->rf_start();
-                }
-                else
-                {
-                    return lhs.allele_anchor().mut_cbptr().to_int() < rhs.allele_anchor().mut_cbptr().to_int();
-                }
-            }
-        }
+        return lhs.allele_anchor() < rhs.allele_anchor();
+    }
+    bool operator () (const Hap_Hop& lhs, const Allele_Anchor& rhs) const
+    {
+        return lhs.allele_anchor() < rhs;
+    }
+    bool operator () (const Allele_Anchor& lhs, const Hap_Hop& rhs) const
+    {
+        return lhs < rhs.allele_anchor();
     }
 }; // struct Hap_Hop_Comparator
 

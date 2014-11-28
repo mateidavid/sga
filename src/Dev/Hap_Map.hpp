@@ -15,6 +15,10 @@ public:
     Hap_Map(const Graph& g);
 
 private:
+    void check_he(Hap_Entry_CBPtr) const;
+    void check(const set< Hap_Entry_CBPtr >&) const;
+    void check_all() const;
+
     Hap_Entry_Fact _he_fact;
     Hap_Hop_Fact _hh_fact;
 

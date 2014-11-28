@@ -3,17 +3,10 @@
 
 #include "Mutation.hpp"
 #include "Contig_Entry.hpp"
+#include "Allele_Specifier.hpp"
 
 namespace MAC
 {
-
-/** Allele specifier type.
- * When the anchor is a mutation, an allele is specified by a bool:
- * rf=false; qr=true.
- * When the anchor is an endpoint, an allele is specified by the
- * destination of the edge: (ce_next, same_orientation)
- */
-typedef boost::variant< bool, pair< Contig_Entry_CBPtr, bool > > Allele_Specifier;
 
 /** An allele anchor is either a Mutation or a Contig_Entry edge */
 class Allele_Anchor
@@ -61,7 +54,8 @@ public:
             }
             // next, get support for rf allele
             // add all chunks fully spanning mutation
-            for (auto rc_cbptr : ce_cbptr()->chunk_cont().iintersect(mut_cbptr()->rf_start(), mut_cbptr()->rf_end()) | referenced)
+            auto iint_res = ce_cbptr()->chunk_cont().iintersect(mut_cbptr()->rf_start(), mut_cbptr()->rf_end());
+            for (auto rc_cbptr : iint_res | referenced)
             {
                 // if chunk observes qr allele, skip it
                 if (res[Allele_Specifier(true)].count(rc_cbptr) > 0) { continue; }
@@ -140,6 +134,66 @@ public:
         }
         return res;
     }
+
+    /// Comparator for storage a tree.
+    friend bool operator < (const Allele_Anchor& lhs, const Allele_Anchor& rhs)
+    {
+        // order by Contig_Entry bptr first
+        if (lhs.ce_cbptr() != rhs.ce_cbptr())
+        {
+            return lhs.ce_cbptr() < rhs.ce_cbptr();
+        }
+        // next, order left endpoint before mutations before right endpoint
+        else if (lhs.is_endpoint())
+        {
+            if (rhs.is_endpoint())
+            {
+                return lhs.c_right() < rhs.c_right();
+            }
+            else
+            {
+                return lhs.c_right() == false;
+            }
+        }
+        else // lhs.is_mutation()
+        {
+            if (rhs.is_endpoint())
+            {
+                return rhs.c_right() == true;
+            }
+            else
+            {
+                // order by Mutation rf_start, then by bptr
+                if (lhs.mut_cbptr()->rf_start() != rhs.mut_cbptr()->rf_start())
+                {
+                    return lhs.mut_cbptr()->rf_start() < rhs.mut_cbptr()->rf_start();
+                }
+                else
+                {
+                    return lhs.mut_cbptr() < rhs.mut_cbptr();
+                }
+            }
+        }
+    }
+    friend bool operator == (const Allele_Anchor& lhs, const Allele_Anchor& rhs)
+    {
+        if (lhs.is_endpoint() != rhs.is_endpoint())
+        {
+            return false;
+        }
+        else if (lhs.is_endpoint()) // both endpoints
+        {
+            return lhs.ce_cptr() == rhs.ce_cbptr() and lhs.c_right() == rhs.c_right();
+        }
+        else // both mutations
+        {
+            return lhs.mut_cbptr() == rhs.mut_cptr();
+        }
+    }
+    friend bool operator != (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return !(lhs == rhs); }
+    friend bool operator <= (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return lhs == rhs or lhs < rhs; }
+    friend bool operator >  (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return !(lhs <= rhs); }
+    friend bool operator >= (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return !(lhs < rhs); }
 
 private:
     Contig_Entry_CBPtr _ce_cbptr;

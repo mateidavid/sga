@@ -29,8 +29,10 @@ private:
     DELETE_COPY_ASOP(Hap_Hop)
     DELETE_MOVE_ASOP(Hap_Hop)
 
-    Hap_Hop(const Allele_Anchor& allele_anchor, const Allele_Specifier& allele_specifier, bool c_direction)
-    : _allele_anchor(allele_anchor), _allele_specifier(allele_specifier), _c_direction(c_direction) {}
+    Hap_Hop(Hap_Entry_CBPtr he_cbptr, const Allele_Anchor& allele_anchor,
+            const Allele_Specifier& allele_specifier, bool c_direction)
+        : _he_cbptr(he_cbptr), _allele_anchor(allele_anchor),
+          _allele_specifier(allele_specifier), _c_direction(c_direction) {}
 
     ~Hap_Hop() { ASSERT(is_unlinked()); }
 
@@ -41,7 +43,7 @@ public:
     Contig_Entry_CBPtr ce_cbptr() const { return _allele_anchor.ce_cbptr(); }
 
 private:
-    Hap_Entry_BPtr _hap_bptr;
+    Hap_Entry_CBPtr _he_cbptr;
 
     /** Hooks for storage in intrusive list. */
     friend struct detail::Hap_Hop_List_Node_Traits;
