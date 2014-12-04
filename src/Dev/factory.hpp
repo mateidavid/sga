@@ -548,7 +548,7 @@ public:
     {
         static_cast< void >(n);
         ASSERT(n == 1);
-        return storage_type::allocate(); // use active storage
+        return pointer::from_index(storage_type::allocate()); // use active storage
     }
     void deallocate(pointer p, size_t n)
     {
