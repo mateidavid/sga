@@ -67,7 +67,7 @@
     USING_SIZE_MEMBERS(_type)
 
 #define T_ENABLE_IF(_cond) \
-    bool _unused = true, typename boost::enable_if_c< _unused and (_cond), int >::type = 0
+    bool _unused = true, typename std::enable_if< _unused and (_cond) >::type* = nullptr
 
 #define GETTER(_type, _pub_id, _pri_id) \
     const _type& _pub_id() const { return _pri_id; } \
