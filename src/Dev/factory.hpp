@@ -24,8 +24,6 @@
 
 namespace bounded
 {
-namespace detail
-{
 
 template < typename, typename >
 struct Identifier;
@@ -34,12 +32,7 @@ class Pointer;
 template < typename, typename >
 class Reference;
 template < typename, typename >
-struct Cloner;
-template < typename, typename >
-struct Disposer;
-template < typename, typename >
 class Factory;
-
 
 /** Wrapper type used by Storage objects to store free node list without overhead. */
 template < typename Value, typename Index = uint32_t >
@@ -207,7 +200,6 @@ private:
     size_t _load;
 }; // class Storage
 
-
 template < typename Value, typename Index = uint32_t >
 struct Identifier
 {
@@ -273,7 +265,6 @@ struct Identifier
     index_type _idx;
 };
 
-
 template < typename Value, typename Index = uint32_t >
 class Pointer
 {
@@ -323,7 +314,7 @@ public:
     /** Pointer traits interface. */
     static Pointer pointer_to(reference r) { return &r; }
     // workaround for: https://svn.boost.org/trac/boost/ticket/10853
-    template < typename Other_Value, T_ENABLE_IF((std::is_convertible< Other_Value*, Value* >::value)) >
+    template < typename Other_Value >
     static Pointer const_cast_from(const Pointer< Other_Value, Index >& other) { return other.unconst(); }
 
     /** Bool conversion: via pointer to private member fcn. */
@@ -589,13 +580,6 @@ public:
 private:
     ptr_type _ptr;
 }; // class Pointer_Holder
-
-} // namespace detail
-
-using detail::Pointer;
-using detail::Reference;
-using detail::Factory;
-using detail::Pointer_Holder;
 
 } // namespace bounded
 
