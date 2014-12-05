@@ -90,6 +90,13 @@ public:
     DEFAULT_MOVE_ASOP(Hap_Hop_Set)
 
     USING_INTRUSIVE_CONT(Base)
+    using Base::equal_range;
+
+    // Insert Hap_Hop into this container
+    void insert(Hap_Hop_BPtr hh_bptr)
+    {
+        Base::push_back(*hh_bptr);
+    }
 
 }; // class Hap_Hop_Set
 

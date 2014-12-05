@@ -73,7 +73,7 @@ public:
         }
         else // is_endpoint
         {
-            auto m = ce_cbptr()->out_chunks_dir(c_right(), 3);
+            auto m = ce_cbptr()->out_chunks_dir(c_right(), 3, 1);
             for (auto p : m)
             {
                 res[Allele_Specifier(p.first)] = move(p.second);
@@ -183,17 +183,37 @@ public:
         }
         else if (lhs.is_endpoint()) // both endpoints
         {
-            return lhs.ce_cptr() == rhs.ce_cbptr() and lhs.c_right() == rhs.c_right();
+            return lhs.ce_cbptr() == rhs.ce_cbptr() and lhs.c_right() == rhs.c_right();
         }
         else // both mutations
         {
-            return lhs.mut_cbptr() == rhs.mut_cptr();
+            return lhs.mut_cbptr() == rhs.mut_cbptr();
         }
     }
     friend bool operator != (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return !(lhs == rhs); }
     friend bool operator <= (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return lhs == rhs or lhs < rhs; }
     friend bool operator >  (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return !(lhs <= rhs); }
     friend bool operator >= (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return !(lhs < rhs); }
+
+    boost::property_tree::ptree to_ptree() const
+    {
+        return to_ptree(is_endpoint());
+    }
+    boost::property_tree::ptree to_ptree(bool as_endpoint) const
+    {
+        if (as_endpoint)
+        {
+            return ptree().put("is_endpoint", as_endpoint)
+                .put("ce_cbptr", ce_cbptr().to_int())
+                .put("c_right", c_right());
+        }
+        else
+        {
+            return ptree().put("is_endpoint", as_endpoint)
+                .put("ce_cbptr", ce_cbptr().to_int())
+                .put("mut_cbptr", mut_cbptr().to_int());
+        }
+    }
 
 private:
     Contig_Entry_CBPtr _ce_cbptr;

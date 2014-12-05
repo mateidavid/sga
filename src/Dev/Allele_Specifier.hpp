@@ -15,30 +15,83 @@ namespace MAC
 class Allele_Specifier
 {
 public:
-    DEFAULT_DEF_CTOR(Allele_Specifierv)
+    DEFAULT_DEF_CTOR(Allele_Specifier)
     DEFAULT_COPY_CTOR(Allele_Specifier)
     DEFAULT_MOVE_CTOR(Allele_Specifier)
     DEFAULT_COPY_ASOP(Allele_Specifier)
     DEFAULT_MOVE_ASOP(Allele_Specifier)
 
-    Allele_Specifier(Contig_Entry_CBPtr ce_cbptr, bool same_orientation)
-        : _ce_cbptr(ce_cbptr), _same_orientation(same_orientation) {}
+    Allele_Specifier(Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation)
+        : _ce_next_cbptr(ce_next_cbptr), _same_orientation(same_orientation) {}
 
     explicit Allele_Specifier(const pair< Contig_Entry_CBPtr, bool >& p)
-        : _ce_cbptr(p.first), _same_orientation(p.second) {}
+        : _ce_next_cbptr(p.first), _same_orientation(p.second) {}
 
     explicit Allele_Specifier(bool strand)
         : _strand(strand) {}
 
     bool is_mutation() const { return not is_endpoint(); }
-    bool is_endpoint() const { return _ce_cbptr; }
+    bool is_endpoint() const { return _ce_next_cbptr; }
 
-    GETTER(Contig_Entry_CBPtr, ce_cbptr, _ce_cbptr)
+    GETTER(Contig_Entry_CBPtr, ce_next_cbptr, _ce_next_cbptr)
     GETTER(bool, same_orientation, _same_orientation)
     GETTER(bool, strand, _strand)
 
+    friend bool operator == (const Allele_Specifier& lhs, const Allele_Specifier& rhs)
+    {
+        return (lhs._ce_next_cbptr == rhs._ce_next_cbptr)
+            and (lhs.is_endpoint()? lhs._same_orientation == rhs._same_orientation : lhs._strand == rhs._strand);
+    }
+    friend bool operator != (const Allele_Specifier& lhs, const Allele_Specifier& rhs) { return !(lhs == rhs); }
+    friend bool operator <  (const Allele_Specifier& lhs, const Allele_Specifier& rhs)
+    {
+        if (lhs.is_endpoint())
+        {
+            if (rhs.is_endpoint())
+            {
+                return make_pair(lhs.ce_next_cbptr(), lhs.same_orientation())
+                    < make_pair(rhs.ce_next_cbptr(), rhs.same_orientation());
+            }
+            else
+            {
+                return true;
+            }
+        }
+        else
+        {
+            if (rhs.is_endpoint())
+            {
+                return false;
+            }
+            else
+            {
+                return lhs.strand() < rhs.strand();
+            }
+        }
+    }
+    friend bool operator <= (const Allele_Specifier& lhs, const Allele_Specifier& rhs) { return lhs == rhs or lhs < rhs; }
+    friend bool operator >  (const Allele_Specifier& lhs, const Allele_Specifier& rhs) { return !(lhs <= rhs); }
+    friend bool operator >= (const Allele_Specifier& lhs, const Allele_Specifier& rhs) { return !(lhs < rhs); }
+
+    boost::property_tree::ptree to_ptree() const
+    {
+        return to_ptree(is_endpoint());
+    }
+    boost::property_tree::ptree to_ptree(bool as_endpoint) const
+    {
+        if (as_endpoint)
+        {
+            return ptree().put("ce_next_cbptr", ce_next_cbptr().to_int())
+                .put("same_orientation", same_orientation());
+        }
+        else
+        {
+            return ptree().put("strand", _strand);
+        }
+    }
+
 private:
-    Contig_Entry_CBPtr _ce_cbptr;
+    Contig_Entry_CBPtr _ce_next_cbptr;
     bool _same_orientation;
     bool _strand;
 }; // class Allele_Specifier

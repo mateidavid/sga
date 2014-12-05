@@ -37,10 +37,19 @@ private:
     ~Hap_Hop() { ASSERT(is_unlinked()); }
 
 public:
+    GETTER(Hap_Entry_CBPtr, he_cbptr, _he_cbptr)
     GETTER(Allele_Anchor, allele_anchor, _allele_anchor)
     GETTER(Allele_Specifier, allele_specifier, _allele_specifier)
     GETTER(bool, c_direction, _c_direction)
     Contig_Entry_CBPtr ce_cbptr() const { return _allele_anchor.ce_cbptr(); }
+
+    boost::property_tree::ptree to_ptree() const
+    {
+        return ptree().put("he_cbptr", he_cbptr().to_int())
+            .put("anchor", allele_anchor().to_ptree())
+            .put("allele", allele_specifier().to_ptree())
+            .put("c_dir", c_direction());
+    }
 
 private:
     Hap_Entry_CBPtr _he_cbptr;

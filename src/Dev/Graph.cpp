@@ -2205,10 +2205,10 @@ void Graph::dump_detailed_counts(ostream& os) const
                     os << ",";
                 }
                 first = false;
-                auto l_allele = boost::get< pair< Contig_Entry_CBPtr, bool > >(p.first.first);
-                auto r_allele = boost::get< pair< Contig_Entry_CBPtr, bool > >(p.first.second);
-                os << "(" << l_allele.first.to_int() << "," << l_allele.second << ","
-                   << r_allele.first.to_int() << "," << r_allele.second << ","
+                auto l_allele = p.first.first;
+                auto r_allele = p.first.second;
+                os << "(" << l_allele.ce_next_cbptr().to_int() << "," << l_allele.same_orientation() << ","
+                   << r_allele.ce_next_cbptr().to_int() << "," << r_allele.same_orientation() << ","
                    << p.second.size() << ")";
             }
         }

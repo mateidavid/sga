@@ -238,7 +238,7 @@ public:
         {
             mca_bptr->chunk_cbptr() = rc_cbptr;
         }
-        Base::splice(end(), static_cast< Base & >(other_cont));
+        Base::splice(end(), static_cast< Base& >(other_cont));
     }
 };
 

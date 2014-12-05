@@ -65,6 +65,58 @@ public:
 
     USING_INTRUSIVE_CONT(Base)
 
+    // Get front and back elements
+    Hap_Hop_CBPtr front() const { Hap_Hop_CBRef hh_cbref = Base::front(); return &hh_cbref; }
+    Hap_Hop_BPtr front() { return &Base::front(); }
+    Hap_Hop_CBPtr back() const { return &Base::back(); }
+    Hap_Hop_BPtr back() { return &Base::back(); }
+
+    // Insert HH before element pointed to by iterator.
+    void insert_before(const_iterator cit, Hap_Hop_BPtr hh_bptr)
+    {
+        Base::insert(cit, *hh_bptr);
+    }
+    void insert_before(Hap_Hop_CBPtr existing_hh_cbptr, Hap_Hop_BPtr hh_bptr)
+    {
+        insert_before(Base::iterator_to(*existing_hh_cbptr), hh_bptr);
+    }
+    // Insert MCA after element pointed to by iterator.
+    void insert_after(const_iterator cit, Hap_Hop_BPtr hh_bptr)
+    {
+        ASSERT(cit != end());
+        Base::insert(++cit, *hh_bptr);
+    }
+    void insert_after(Hap_Hop_CBPtr existing_hh_cbptr, Hap_Hop_BPtr hh_bptr)
+    {
+        insert_after(Base::iterator_to(*existing_hh_cbptr), hh_bptr);
+    }
+
+    // Insert at the front.
+    void push_front(Hap_Hop_BPtr hh_bptr) { insert_before(begin(), hh_bptr); }
+
+    // Insert at the back.
+    void push_back(Hap_Hop_BPtr hh_bptr) { insert_before(end(), hh_bptr); }
+
+    // Reverse the list of hops; also flip the c_direction flags
+    void reverse()
+    {
+        for (auto hh_bptr : *this | referenced)
+        {
+            hh_bptr->c_direction() = not hh_bptr->c_direction();
+        }
+        Base::reverse();
+    }
+
+    // Copy given container into this one; also set the he_cbptr to the given one
+    void splice_right(Hap_Hop_List& other_cont, Hap_Entry_CBPtr he_cbptr)
+    {
+        for (auto hh_bptr : other_cont | referenced)
+        {
+            hh_bptr->he_cbptr() = he_cbptr;
+        }
+        Base::splice(end(), static_cast< Base& >(other_cont));
+    }
+
 }; // class Hap_Hop_List
 
 } // namespace MAC
