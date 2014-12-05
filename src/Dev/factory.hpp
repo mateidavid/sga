@@ -15,7 +15,6 @@
 #include <boost/mpl/logical.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/tti/tti.hpp>
-//#include <typeinfo>
 
 #include "global_assert.hpp"
 #include "nonconst_methods.hpp"
@@ -323,7 +322,9 @@ public:
 
     /** Pointer traits interface. */
     static Pointer pointer_to(reference r) { return &r; }
-    static Pointer const_cast_from(const Pointer< const val_type >& other) { return other.unconst(); }
+    // workaround for: https://svn.boost.org/trac/boost/ticket/10853
+    template < typename Other_Value, T_ENABLE_IF((std::is_convertible< Other_Value*, Value* >::value)) >
+    static Pointer const_cast_from(const Pointer< Other_Value, Index >& other) { return other.unconst(); }
 
     /** Bool conversion: via pointer to private member fcn. */
     BOOL_CONVERSION(Pointer, public, (_idn))
