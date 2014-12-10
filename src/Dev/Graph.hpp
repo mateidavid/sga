@@ -27,7 +27,7 @@ class Graph
 {
 public:
     /** Default constructor. */
-    Graph() : _unmap_trigger_len(9) {}
+    Graph() : _unmap_trigger_len(9), _cat_at_step(false) {}
 
     // disallow copy or move
     DELETE_COPY_CTOR(Graph)
@@ -47,6 +47,7 @@ public:
     Contig_Entry_Cont& ce_cont() { return _ce_cont; }
     const Size_Type& unmap_trigger_len() const { return _unmap_trigger_len; }
     Size_Type& unmap_trigger_len() { return _unmap_trigger_len; }
+    GETTER(bool, cat_at_step, _cat_at_step)
 
     /** Add a read.
      * Create basic Read_Entry, Read_Chunk, and Contig_Entry objects,
@@ -72,7 +73,7 @@ public:
     void add_overlap(const string& r1_name, const string& r2_name,
                      Size_Type r1_start, Size_Type r1_len,
                      Size_Type r2_start, Size_Type r2_len, bool r2_rc,
-                     const string& cigar, bool cat_at_step);
+                     const string& cigar);
 
     /** Merge all contigs. */
     void cat_all_read_contigs();
@@ -281,6 +282,7 @@ private:
     Contig_Entry_Cont _ce_cont;
 
     Size_Type _unmap_trigger_len;
+    bool _cat_at_step;
 
 }; // class Graph
 

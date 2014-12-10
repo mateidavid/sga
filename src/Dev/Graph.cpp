@@ -607,8 +607,7 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
 void Graph::add_overlap(const string& r1_name, const string& r2_name,
                         Size_Type r1_start, Size_Type r1_len,
                         Size_Type r2_start, Size_Type r2_len, bool r2_rc,
-                        const string& cigar_string,
-                        bool cat_at_step)
+                        const string& cigar_string)
 {
     logger("graph", debug) << ptree("add_overlap_start")
         .put("r1_name", r1_name)
@@ -695,7 +694,7 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
 
     check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr }));
 
-    if (cat_at_step)
+    if (cat_at_step())
     {
         //cerr << "before merging:\n" << *this;
         cat_read_contigs(re1_bptr);

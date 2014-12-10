@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -11,70 +12,20 @@
 #include "fstr.hpp"
 #include "logger.hpp"
 #include "Unmap_Mut_Clusters.hpp"
+#include "variables_map_converter.hpp"
+
 
 using namespace std;
 using namespace MAC;
 namespace bo = boost::program_options;
 
 
-struct Program_Options
-{
-    string input_file;
-    string stats_file;
-    string supercontig_lengths_file;
-    string mutations_file;
-    string unmappable_contigs_file;
-    string terminal_reads_file;
-    string save_file;
-    string load_file;
-    size_t progress_count;
-    size_t unmap_trigger_len;
-    long seed;
-    vector< string > log_level;
-    bool cat_at_step;
-    bool cat_at_end;
-    bool unmap_read_ends;
-    bool print_at_step;
-    bool print_at_end;
-    bool check_at_step;
-    bool interactive;
-    bool resolve_unmappable_regions;
-    bool unmap_single_chunks;
-    bool unmap_mut_clusters;
-
-    boost::property_tree::ptree to_ptree() const
-    {
-        return ptree().put("input file", input_file)
-                      .put("load file", load_file)
-                      .put("save file", save_file)
-                      .put("stats file", stats_file)
-                      .put("supercontig lengths file", supercontig_lengths_file)
-                      .put("mutations file", mutations_file)
-                      .put("unmappable contigs file", unmappable_contigs_file)
-                      .put("terminal reads file", terminal_reads_file)
-                      .put("progress count", progress_count)
-                      .put("unmap trigger length", unmap_trigger_len)
-                      .put("log levels", cont_to_ptree< vector<string>, string >(log_level, [] (const string& s) { return boost::property_tree::ptree(s); }))
-                      .put("cat contigs at each step", cat_at_step)
-                      .put("cat contigs at end", cat_at_end)
-                      .put("unmap read ends", unmap_read_ends)
-                      .put("print graph at each step", print_at_step)
-                      .put("print graph at end", print_at_end)
-                      .put("check graph at each step", check_at_step)
-                      .put("resolve unmappable regions", resolve_unmappable_regions)
-                      .put("unmap_single_chunks", unmap_single_chunks)
-                      .put("unmap_mut_clusters", unmap_mut_clusters)
-                      .put("interactive", interactive)
-                      .put("seed", seed)
-                      ;
-    }
-};
-
-void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
+void load_asqg(std::istream& is, const bo::variables_map& vm, Graph& g)
 {
     logger("io", info) << ptree("load_asqg_start");
     string line;
     size_t line_count = 0;
+    size_t progress_count = vm.at("progress-count").as< unsigned >();
     while (getline(is, line))
     {
         logger("mac", debug) << ptree("op").put("line", line);
@@ -87,7 +38,7 @@ void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
         }
         if (rec_type == "HT")
         {
-            // ignore header line for now
+            // ignore header line
         }
         else if (rec_type == "VT")
         {
@@ -116,17 +67,17 @@ void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
             ++r1_end;
             ++r2_end;
             global::assert_message() = string("ED ") + r1_id + " " + r2_id;
-            g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5), po.cat_at_step);
+            g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
         }
-        if (po.check_at_step)
+        if (vm.at("check-at-step").as< bool >())
         {
             g.check_all();
             g.check_leaks();
         }
         logger("mac", debug2) << g.to_ptree();
-        if (po.progress_count > 0)
+        if (progress_count > 0)
         {
-            if ((++line_count % po.progress_count) == 0)
+            if ((++line_count % progress_count) == 0)
             {
                 logger("mac", info) << ptree("progress").put("count", line_count);
             }
@@ -138,102 +89,147 @@ void load_asqg(std::istream& is, const Program_Options& po, Graph& g)
 }
 
 
-int real_main(const Program_Options& po)
+int real_main(const bo::variables_map& vm)
 {
     Graph g;
 
-    logger("mac", info) << ptree("settings", po.to_ptree());
-
-    if (po.input_file.empty() == po.load_file.empty())
+    // option validation
+    if (vm.count("input-file") == vm.count("load-file"))
     {
-        cerr << "exactly 1 of input file or load file must be specified\n";
+        logger("mac", error) << "exactly 1 of input-file or load-file options must be specified" << endl;
         abort();
     }
-    if (not po.input_file.empty())
+    if (vm.count("load-file"))
     {
-        logger("mac", info) << ptree("loading").put("input_file", po.input_file);
-        ixstream tmp_fs(po.input_file);
-        g.unmap_trigger_len() = po.unmap_trigger_len;
-        load_asqg(tmp_fs, po, g);
+        vector< string > forbidden_options = { "unmap-trigger-len" };
+        vector< string > forbidden_bool_switches = { "cat-at-step", "print-at-step", "check-at-step" };
+        for (const auto& s : forbidden_options)
+        {
+            if (vm.count(s))
+            {
+                logger("mac", warning) << s << ": ignored when loading a mac graph";
+            }
+        }
+        for (const auto& s : forbidden_bool_switches)
+        {
+            if (vm.at(s).as< bool >())
+            {
+                logger("mac", warning) << s << ": ignored when loading a mac graph";
+            }
+        }
+    }
+
+    if (vm.count("input-file"))
+    {
+        const string& fn = vm.at("input-file").as< string >();
+        logger("mac", info) << ptree("loading").put("input_file", fn);
+        ixstream tmp_fs(fn);
+        if (vm.count("unmap-trigger-len"))
+        {
+            g.unmap_trigger_len() = vm.at("unmap-trigger-len").as< unsigned >();
+        }
+        g.cat_at_step() = vm.at("cat-at-step").as< bool >();
+        load_asqg(tmp_fs, vm, g);
     }
     else
     {
-        logger("mac", info) << ptree("loading").put("load_file", po.load_file);
-        fstr ifs(po.load_file, ios_base::in | ios_base::binary);
+        const string& fn = vm.at("load-file").as< string >();
+        logger("mac", info) << ptree("loading").put("load-file", fn);
+        fstr ifs(fn, ios_base::in | ios_base::binary);
         g.load(ifs);
     }
     logger("mac", info) << ptree("factory_stats", g.factory_stats());
 
-    if (po.unmap_read_ends)
+    if (vm.at("cat-at-end").as< bool >())
     {
-        g.unmap_read_ends();
-        g.check_all();
-    }
-    if (po.cat_at_end)
-    {
+        logger("mac", info) << ptree("cat_at_end_start");
         g.cat_all_read_contigs();
         g.check_all();
+        logger("mac", info) << ptree("cat_at_end_end");
     }
-    if (po.unmap_mut_clusters)
+    if (vm.at("unmap-read-ends").as< bool >())
     {
+        logger("mac", info) << ptree("unmap_read_ends_start");
+        g.unmap_read_ends();
+        g.check_all();
+        logger("mac", info) << ptree("unmap_read_ends_end");
+    }
+    if (vm.at("unmap-mut-clusters").as< bool >())
+    {
+        logger("mac", info) << ptree("unmap_mut_clusters_start");
         Unmap_Mut_Clusters()(g);
+        g.check_all();
+        logger("mac", info) << ptree("unmap_mut_clusters_end");
     }
-    if (po.resolve_unmappable_regions)
+    if (vm.at("resolve-unmappable-regions").as< bool >())
     {
+        logger("mac", info) << ptree("resolve_unmappable_regions_start");
         g.resolve_unmappable_regions();
+        g.check_all();
+        logger("mac", info) << ptree("resolve_unmappable_regions_end");
     }
-    if (po.unmap_single_chunks)
+    if (vm.at("unmap-single-chunks").as< bool >())
     {
+        logger("mac", info) << ptree("unmap_single_chunks_start");
         g.unmap_single_chunks();
+        g.check_all();
+        logger("mac", info) << ptree("unmap_single_chunks_end");
     }
 
-    Hap_Map hm(g);
+    //Hap_Map hm(g);
 
-    if (po.interactive)
+    if (vm.at("interactive").as< bool >())
     {
         g.interactive_commands(std::cin, std::cout);
     }
 
-    if (not po.stats_file.empty())
+    if (vm.count("stats-file"))
     {
-        logger("mac", info) << ptree("dump_detailed_counts").put("file", po.stats_file);
-        fstr tmp_fs(po.stats_file, ios_base::out);
+        const string& fn = vm.at("stats-file").as< string >();
+        logger("mac", info) << ptree("print_stats").put("stats_file", fn);
+        fstr tmp_fs(fn, ios_base::out);
         g.dump_detailed_counts(tmp_fs);
     }
+    /*
     if (not po.supercontig_lengths_file.empty())
     {
         //TODO
         //ofstream lengths_file(po.supercontig_lengths_file);
         //g.print_supercontig_lengths_2(lengths_file);
     }
-    if (not po.mutations_file.empty())
+    */
+    if (vm.count("mutations-file"))
     {
-        logger("mac", info) << ptree("print_mutations").put("file", po.mutations_file);
-        fstr tmp_fs(po.mutations_file, ios_base::out);
+        const string& fn = vm.at("mutations-file").as< string >();
+        logger("mac", info) << ptree("print_mutations").put("file", fn);
+        fstr tmp_fs(fn, ios_base::out);
         g.print_mutations(tmp_fs);
     }
-    if (not po.terminal_reads_file.empty())
+    if (vm.count("terminal-reads-file"))
     {
-        logger("mac", info) << ptree("get_terminal_reads").put("file", po.terminal_reads_file);
-        fstr tmp_fs(po.terminal_reads_file, ios_base::out);
+        const string& fn = vm.at("terminal-reads-file").as< string >();
+        logger("mac", info) << ptree("print_terminal_reads").put("file", fn);
+        fstr tmp_fs(fn, ios_base::out);
         g.get_terminal_reads(tmp_fs);
     }
-    if (po.print_at_end)
+    if (vm.at("print-at-end").as< bool >())
     {
         cout << g.to_ptree();
     }
-    if (not po.unmappable_contigs_file.empty())
+    if (vm.count("unmappable-contigs-file"))
     {
-        logger("mac", info) << ptree("print_unmappable_contigs").put("file", po.unmappable_contigs_file);
-        fstr tmp_fs(po.unmappable_contigs_file, ios_base::out);
+        const string& fn = vm.at("unmappable-contigs-file").as< string >();
+        logger("mac", info) << ptree("print_unmappable_contigs").put("file", fn);
+        fstr tmp_fs(fn, ios_base::out);
         g.print_unmappable_contigs(tmp_fs);
     }
     logger("mac", info) << ptree("done_output");
 
-    if (not po.save_file.empty())
+    if (vm.count("save-file"))
     {
-        logger("mac", info) << ptree("saving").put("save_file", po.save_file);
-        fstr tmp_fs(po.save_file, ios_base::out | ios_base::binary);
+        const string& fn = vm.at("save-file").as< string >();
+        logger("mac", info) << ptree("saving").put("save_file", fn);
+        fstr tmp_fs(fn, ios_base::out | ios_base::binary);
         g.save(tmp_fs);
     }
 
@@ -247,7 +243,6 @@ int real_main(const Program_Options& po)
 
 int main(int argc, char* argv[])
 {
-    Program_Options po;
     global::program_name() = argv[0];
 
     bo::options_description generic_opts_desc("Generic options");
@@ -257,31 +252,47 @@ int main(int argc, char* argv[])
     bo::options_description visible_opts_desc("Allowed options");
     generic_opts_desc.add_options()
         ("help,?", "produce help message")
+        // hack, see: http://lists.boost.org/boost-users/2010/01/55054.php
+        ("log-level,d", bo::value< vector< string > >()->default_value(vector< string >(), ""), "log level")
+        ("seed", bo::value< long >()->default_value(time(nullptr)), "random seed")
+        ("progress-count,c", bo::value< unsigned >()->default_value(0), "progress count")
         ;
     config_opts_desc.add_options()
-        ("input-file,i", bo::value< string >(&po.input_file), "input file")
-        ("stats-file,x", bo::value< string >(&po.stats_file), "stats file")
-        ("supercontig-lengths-file,l", bo::value< string >(&po.supercontig_lengths_file), "supercontig lengths file")
-        ("mutations-file,M", bo::value< string >(&po.mutations_file), "mutations file")
-        ("unmappable-contigs-file,U", bo::value< string >(&po.unmappable_contigs_file), "unmappable contigs file")
-        ("terminal-reads", bo::value< string >(&po.terminal_reads_file), "terminal reads file")
-        ("progress-count,c", bo::value< size_t >(&po.progress_count)->default_value(0), "progress count")
-        ("unmap-trigger-len,u", bo::value< size_t >(&po.unmap_trigger_len)->default_value(9), "unmap trigger len")
-        ("cat-each-step,s", bo::bool_switch(&po.cat_at_step), "cat contigs at each step")
-        ("cat-end,e", bo::bool_switch(&po.cat_at_end), "cat contigs at end")
-        ("unmap-read-ends", bo::bool_switch(&po.unmap_read_ends), "unmap read ends")
-        ("print-at-step,G", bo::bool_switch(&po.print_at_step), "print graph at each step")
-        ("print-at-end,g", bo::bool_switch(&po.print_at_end), "print graph at end")
-        ("check-at-step,C", bo::bool_switch(&po.check_at_step), "check graph at each step")
-        ("resolve-unmappable", bo::bool_switch(&po.resolve_unmappable_regions), "resolve unmappable regions")
-        ("unmap-single-chunks", bo::bool_switch(&po.unmap_single_chunks), "unmap single chunks")
-        ("unmap-mut-clusters", bo::bool_switch(&po.unmap_mut_clusters), "unmap mutation clusters")
-        ("interactive", bo::bool_switch(&po.interactive), "run interactive commands")
-        ("log-level,d", bo::value< vector< string > >(&po.log_level)->composing(), "default log level")
-        ("save,S", bo::value< string >(&po.save_file), "save file")
-        ("load,L", bo::value< string >(&po.load_file), "load file")
-        ("seed", bo::value< long >(&po.seed), "RNG seed")
+        //
+        // file-related options
+        //
+        ("input-file,i", bo::value< string >(), "input file")
+        ("load-file,L", bo::value< string >(), "load file")
+        ("save-file,S", bo::value< string >(), "save file")
+        ("stats-file", bo::value< string >(), "stats file")
+        //("supercontig-lengths-file,l", bo::value< string >(), "supercontig lengths file")
+        ("mutations-file,M", bo::value< string >(), "mutations file")
+        ("unmappable-contigs-file", bo::value< string >(), "unmappable contigs file")
+        ("terminal-reads-file", bo::value< string >(), "terminal reads file")
+        //
+        // asqg loading options
+        //
+        ("unmap-trigger-len,u", bo::value< unsigned >(), "unmap trigger len")
+        ("cat-at-step,s", bo::bool_switch(), "cat contigs at each step")
+        ("print-at-step", bo::bool_switch(), "print graph at each step")
+        ("check-at-step", bo::bool_switch(), "check graph at each step")
+        //
+        // post-loading options
+        //
+        ("cat-at-end,e", bo::bool_switch(), "cat contigs at end")
+        ("print-at-end", bo::bool_switch(), "print graph at end")
+        ("unmap-read-ends", bo::bool_switch(), "unmap read ends")
+        ("resolve-unmappable-regions", bo::bool_switch(), "resolve unmappable regions")
+        ("unmap-single-chunks", bo::bool_switch(), "unmap single chunks")
+        ("unmap-mut-clusters", bo::bool_switch(), "unmap mutation clusters")
+        ("interactive", bo::bool_switch(), "run interactive commands")
         ;
+    any_converter ac;
+    ac.add_string_converter< string >();
+    ac.add_string_converter< bool >();
+    ac.add_string_converter< unsigned >();
+    ac.add_string_converter< long >();
+    ac.add_converter(&cont_to_ptree< vector< string > >);
     cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
     visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
     bo::variables_map vm;
@@ -295,7 +306,7 @@ int main(int argc, char* argv[])
         exit(EXIT_SUCCESS);
     }
     // set log levels
-    for (const auto& l : po.log_level)
+    for (const auto& l : vm.at("log-level").as< vector< string > >())
     {
         size_t i = l.find(':');
         if (i == string::npos)
@@ -312,10 +323,10 @@ int main(int argc, char* argv[])
         }
     }
     // set random seed
-    if (po.seed == 0)
-    {
-        po.seed = time(nullptr);
-    }
+    srand48(vm.at("seed").as< long >());
 
-    return real_main(po);
+    // print options
+    logger("mac", info) << variables_map_converter::to_ptree(vm, ac);
+
+    return real_main(vm);
 }
