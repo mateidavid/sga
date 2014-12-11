@@ -50,6 +50,23 @@ public:
             .put("allele", allele_specifier().to_ptree())
             .put("c_dir", c_direction());
     }
+    static void to_stream(ostream& os, Hap_Hop_CBPtr hh_cbptr)
+    {
+        os << "hop " << setw(5) << left << hh_cbptr.to_int()
+           << "he " << setw(5) << left << hh_cbptr->he_cbptr().to_int()
+           << "ce " << setw(5) << left << hh_cbptr->ce_cbptr().to_int();
+        if (hh_cbptr->allele_anchor().is_endpoint())
+        {
+            os << "end " << hh_cbptr->allele_anchor().c_right()
+               << " [ ce_next " << setw(5) << left << hh_cbptr->allele_specifier().ce_next_cbptr().to_int()
+               << " " << hh_cbptr->allele_specifier().same_orientation() << " ]";
+        }
+        else
+        {
+            os << "mut " << hh_cbptr->allele_anchor().mut_cbptr().to_int()
+               << " [ " << hh_cbptr->allele_specifier().strand() << " ]";
+        }
+    }
 
 private:
     Hap_Entry_CBPtr _he_cbptr;
