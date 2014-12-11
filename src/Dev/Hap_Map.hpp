@@ -12,7 +12,27 @@ namespace MAC
 class Hap_Map
 {
 public:
-    Hap_Map(const Graph& g);
+    Hap_Map(const Graph& g) { build(g); }
+
+    DEFAULT_DEF_CTOR(Hap_Map)
+    DELETE_COPY_CTOR(Hap_Map)
+    DELETE_MOVE_CTOR(Hap_Map)
+    DELETE_COPY_ASOP(Hap_Map)
+    DELETE_MOVE_ASOP(Hap_Map)
+
+    ~Hap_Map()
+    {
+        ASSERT(he_cont().empty());
+        ASSERT(hh_set().empty());
+    }
+
+    GETTER(Hap_Entry_Cont, he_cont, _he_cont)
+    GETTER(Hap_Hop_Set, hh_set, _hh_set)
+
+    void build(const Graph& g);
+
+    void dispose(Hap_Entry_BPtr he_bptr);
+    void clear_and_dispose();
 
 private:
     Hap_Hop_BPtr make_single_allele_hop(const Allele_Anchor& anchor, const Allele_Specifier& allele,
@@ -22,7 +42,6 @@ private:
     void connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
                         map< Allele_Specifier, set< Hap_Hop_CBPtr > >& a1_hops,
                         map< Allele_Specifier, set< Hap_Hop_CBPtr > >& a2_hops);
-    void build(const Graph& g);
 
     void check_he(Hap_Entry_CBPtr) const;
     void check(const set< Hap_Entry_CBPtr >&) const;

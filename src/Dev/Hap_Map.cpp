@@ -4,11 +4,6 @@
 namespace MAC
 {
 
-Hap_Map::Hap_Map(const Graph& g)
-{
-    build(g);
-}
-
 Hap_Hop_BPtr Hap_Map::make_single_allele_hop(const Allele_Anchor& anchor, const Allele_Specifier& allele,
                                              bool direction)
 {
@@ -23,6 +18,7 @@ Hap_Hop_BPtr Hap_Map::make_single_allele_hop(const Allele_Anchor& anchor, const 
 
 map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::make_mutation_haps(Mutation_CBPtr mut_cbptr)
 {
+    logger("hap_map", debug) << ptree("make_mutation_haps").put("mut_ptr", mut_cbptr.to_int());
     map< Allele_Specifier, set< Hap_Hop_CBPtr > > res;
     Allele_Anchor anchor(mut_cbptr);
     for (int k = 0; k < 2; ++k)
@@ -37,6 +33,9 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::make_mutation_haps(Mutati
 map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::extend_endpoint_haps(const Allele_Anchor& anchor)
 {
     ASSERT(anchor.is_endpoint());
+    logger("hap_map", debug) << ptree("extend_endpoint_haps")
+        .put("ce_ptr", anchor.ce_cbptr().to_int())
+        .put("c_right", anchor.c_right());
     map< Allele_Specifier, set< Hap_Hop_CBPtr > > res;
     auto anchor_support = anchor.support();
     for (auto p : anchor_support)
@@ -103,10 +102,12 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::extend_endpoint_haps(cons
 
 void Hap_Map::build(const Graph& g)
 {
+    logger("hap_map", info) << ptree("build_start");
+    clear_and_dispose();
     for (auto ce_cbptr : g.ce_cont() | referenced)
     {
         if (not ce_cbptr->is_normal()) continue;
-
+        logger("hap_map", debug) << ptree("build_loop").put("ce_ptr", ce_cbptr.to_int());
         // construct left endpoint haps
         Allele_Anchor prev_anchor(ce_cbptr, false);
         auto prev_haps = extend_endpoint_haps(prev_anchor);
@@ -126,6 +127,7 @@ void Hap_Map::build(const Graph& g)
         // connect with haps at previous anchor
         connect_unique(prev_anchor, re_anchor, prev_haps, re_haps);
     }
+    logger("hap_map", info) << ptree("build_end");
 } // Hap_Map::build
 
 void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
@@ -187,10 +189,15 @@ void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
         // if they are on the same haplotype, this consitututes a haplotype cycle
         if (he1_bptr == he2_bptr)
         {
-            logger("Hap_Map", debug) << ptree("hap_cycle")
+            logger("hap_map", debug) << ptree("hap_cycle")
                 .put("a1_hop", a1_hop_cbptr->to_ptree()).put("a2_hop", a2_hop_cbptr->to_ptree());
             continue;
         }
+        logger("Hap_Hap", debug) << ptree("connect_unique:new_connection")
+            .put("a1_anchor", a1.to_ptree())
+            .put("a2_anchor", a2.to_ptree())
+            .put("a1_allele", a1_allele.to_ptree())
+            .put("a2_allele", a2_allele.to_ptree());
         if (a1_hop_cbptr->c_direction() != a2_hop_cbptr->c_direction())
         {
             // reverse haplotype at a2_hop to enable merge
@@ -212,6 +219,22 @@ void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
         }
     }
 } // Hap_Map::connect_unique
+
+void Hap_Map::dispose(Hap_Entry_BPtr he_bptr)
+{
+    he_bptr->hh_cont().clear_and_dispose([this] (Hap_Hop_BPtr hh_bptr) {
+            this->hh_set().erase(hh_bptr);
+            Hap_Hop_Fact::del_elem(hh_bptr);
+        });
+    Hap_Entry_Fact::del_elem(he_bptr);
+}
+
+void Hap_Map::clear_and_dispose()
+{
+    he_cont().clear_and_dispose([this] (Hap_Entry_BPtr he_bptr) {
+            this->dispose(he_bptr);
+        });
+}
 
 void Hap_Map::check_he(Hap_Entry_CBPtr he_cbptr) const
 {
