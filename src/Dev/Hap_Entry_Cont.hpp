@@ -64,6 +64,7 @@ public:
     DEFAULT_MOVE_ASOP(Hap_Entry_Cont)
 
     USING_INTRUSIVE_CONT(Base)
+    using Base::clear_and_dispose;
 
     /// Insert Hap_Entry into container.
     /// @param ce_bptr Pointer to Contig_Entry object.

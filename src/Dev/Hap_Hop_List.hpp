@@ -64,6 +64,7 @@ public:
     DEFAULT_MOVE_ASOP(Hap_Hop_List)
 
     USING_INTRUSIVE_CONT(Base)
+    using Base::clear_and_dispose;
 
     // Get front and back elements
     Hap_Hop_CBPtr front() const { Hap_Hop_CBRef hh_cbref = Base::front(); return &hh_cbref; }

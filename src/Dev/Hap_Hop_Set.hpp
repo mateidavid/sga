@@ -97,6 +97,11 @@ public:
     {
         Base::push_back(*hh_bptr);
     }
+    // Erase Hap_Hop from this container
+    void erase(Hap_Hop_BPtr hh_bptr)
+    {
+        Base::erase(iterator_to(*hh_bptr));
+    }
 
 }; // class Hap_Hop_Set
 
