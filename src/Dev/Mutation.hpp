@@ -197,9 +197,24 @@ public:
     const Read_Chunk_Ptr_Cont& chunk_ptr_cont() const { return _chunk_ptr_cont; }
     Read_Chunk_Ptr_Cont& chunk_ptr_cont() { return _chunk_ptr_cont; }
 
-    friend bool operator == (const Mutation&, const Mutation&);
-    //friend std::ostream& operator << (std::ostream&, const Mutation&);
-    boost::property_tree::ptree to_ptree() const;
+    friend bool operator == (const Mutation& lhs, const Mutation& rhs)
+    {
+        return (lhs._start == rhs._start
+                and lhs._len == rhs._len
+                and lhs._seq_len == rhs._seq_len
+                and lhs.have_seq() == rhs.have_seq()
+                and (not lhs.have_seq() or lhs._seq == rhs._seq));
+    }
+
+    boost::property_tree::ptree to_ptree() const
+    {
+        return ptree().put("addr", static_cast< const void* >(this))
+            .put("rf_start", rf_start())
+            .put("rf_len", rf_len())
+            .put("seq_len", seq_len())
+            .put("seq", seq());
+    }
+    static void to_stream(ostream& os, Mutation_CBPtr mut_cbptr, Contig_Entry_CBPtr ce_cbptr);
 
 private:
     /** Hooks for storage in intrusive interval trees inside Contig_Entry objects. */

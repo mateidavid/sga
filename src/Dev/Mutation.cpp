@@ -5,6 +5,7 @@
 //-----------------------------------------------
 
 #include "Mutation.hpp"
+#include "Contig_Entry.hpp"
 
 
 namespace MAC
@@ -65,22 +66,17 @@ void Mutation::simplify(const Seq_Proxy_Type& rf_seq)
     }
 }
 
-bool operator == (const Mutation& lhs, const Mutation& rhs)
+void Mutation::to_stream(ostream& os, Mutation_CBPtr mut_cbptr, Contig_Entry_CBPtr ce_cbptr)
 {
-    return (lhs._start == rhs._start
-            and lhs._len == rhs._len
-            and lhs._seq_len == rhs._seq_len
-            and lhs.have_seq() == rhs.have_seq()
-            and (not lhs.have_seq() or lhs._seq == rhs._seq));
-}
-
-boost::property_tree::ptree Mutation::to_ptree() const
-{
-    return ptree().put("addr", (void*)this)
-                  .put("rf_start", rf_start())
-                  .put("rf_len", rf_len())
-                  .put("seq_len", seq_len())
-                  .put("seq", seq());
+    ASSERT(mut_cbptr);
+    ASSERT(ce_cbptr);
+    auto p = ce_cbptr->mut_support(mut_cbptr);
+    os << "mut " << setw(5) << left << mut_cbptr.to_int()
+       << setw(5) << right << mut_cbptr->rf_start()
+       << setw(5) << right << mut_cbptr->rf_len()
+       << setw(5) << right << mut_cbptr->seq_len()
+       << setw(5) << right << p.first.size()
+       << setw(5) << right << p.second.size();
 }
 
 
