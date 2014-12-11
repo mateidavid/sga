@@ -75,11 +75,7 @@ public:
 
     boost::property_tree::ptree to_ptree() const
     {
-        return to_ptree(is_endpoint());
-    }
-    boost::property_tree::ptree to_ptree(bool as_endpoint) const
-    {
-        if (as_endpoint)
+        if (is_endpoint())
         {
             return ptree().put("ce_next_cbptr", ce_next_cbptr().to_int())
                 .put("same_orientation", same_orientation());

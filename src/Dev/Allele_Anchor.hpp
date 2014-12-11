@@ -197,19 +197,15 @@ public:
 
     boost::property_tree::ptree to_ptree() const
     {
-        return to_ptree(is_endpoint());
-    }
-    boost::property_tree::ptree to_ptree(bool as_endpoint) const
-    {
-        if (as_endpoint)
+        if (is_endpoint())
         {
-            return ptree().put("is_endpoint", as_endpoint)
+            return ptree().put("is_endpoint", true)
                 .put("ce_cbptr", ce_cbptr().to_int())
                 .put("c_right", c_right());
         }
         else
         {
-            return ptree().put("is_endpoint", as_endpoint)
+            return ptree().put("is_endpoint", false)
                 .put("ce_cbptr", ce_cbptr().to_int())
                 .put("mut_cbptr", mut_cbptr().to_int());
         }
