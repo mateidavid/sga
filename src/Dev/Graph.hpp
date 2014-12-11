@@ -154,9 +154,6 @@ public:
         const vector< string >& bseq_v,
         map< tuple< string, bool >, tuple< size_t, string > >& seq_bseq_map);
 
-    /** Process interactive commands. */
-    void interactive_commands(istream& is, ostream& os);
-
     //friend ostream& operator << (ostream&, const Graph&);
     boost::property_tree::ptree to_ptree() const;
     boost::property_tree::ptree factory_stats() const;

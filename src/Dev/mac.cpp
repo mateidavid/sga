@@ -13,6 +13,7 @@
 #include "logger.hpp"
 #include "Unmap_Mut_Clusters.hpp"
 #include "variables_map_converter.hpp"
+#include "CLI.hpp"
 
 
 using namespace std;
@@ -92,6 +93,7 @@ void load_asqg(std::istream& is, const bo::variables_map& vm, Graph& g)
 int real_main(const bo::variables_map& vm)
 {
     Graph g;
+    Hap_Map hm;
 
     // option validation
     if (vm.count("input-file") == vm.count("load-file"))
@@ -175,12 +177,16 @@ int real_main(const bo::variables_map& vm)
         g.check_all();
         logger("mac", info) << ptree("unmap_single_chunks_end");
     }
-
-    //Hap_Map hm(g);
+    if (vm.at("hap-map").as< bool >())
+    {
+        logger("mac", info) << ptree("hap_map_start");
+        hm.build(g);
+        logger("mac", info) << ptree("hap_map_end");
+    }
 
     if (vm.at("interactive").as< bool >())
     {
-        g.interactive_commands(std::cin, std::cout);
+        cli(std::cin, std::cout, g, hm);
     }
 
     if (vm.count("stats-file"))
@@ -235,6 +241,7 @@ int real_main(const bo::variables_map& vm)
 
     logger("mac", info) << ptree("factory_stats", g.factory_stats());
     g.clear_and_dispose();
+    hm.clear_and_dispose();
     logger("mac", info) << ptree("graph_cleared");
 
     return EXIT_SUCCESS;
@@ -254,7 +261,7 @@ int main(int argc, char* argv[])
         ("help,?", "produce help message")
         // hack, see: http://lists.boost.org/boost-users/2010/01/55054.php
         ("log-level,d", bo::value< vector< string > >()->default_value(vector< string >(), ""), "log level")
-        ("seed", bo::value< long >()->default_value(time(nullptr)), "random seed")
+        ("seed", bo::value< long >()->default_value(time(nullptr), "use time"), "random seed")
         ("progress-count,c", bo::value< unsigned >()->default_value(0), "progress count")
         ;
     config_opts_desc.add_options()
@@ -266,7 +273,7 @@ int main(int argc, char* argv[])
         ("save-file,S", bo::value< string >(), "save file")
         ("stats-file", bo::value< string >(), "stats file")
         //("supercontig-lengths-file,l", bo::value< string >(), "supercontig lengths file")
-        ("mutations-file,M", bo::value< string >(), "mutations file")
+        ("mutations-file", bo::value< string >(), "mutations file")
         ("unmappable-contigs-file", bo::value< string >(), "unmappable contigs file")
         ("terminal-reads-file", bo::value< string >(), "terminal reads file")
         //
@@ -279,12 +286,13 @@ int main(int argc, char* argv[])
         //
         // post-loading options
         //
-        ("cat-at-end,e", bo::bool_switch(), "cat contigs at end")
+        ("cat-at-end", bo::bool_switch(), "cat contigs at end")
         ("print-at-end", bo::bool_switch(), "print graph at end")
         ("unmap-read-ends", bo::bool_switch(), "unmap read ends")
         ("resolve-unmappable-regions", bo::bool_switch(), "resolve unmappable regions")
         ("unmap-single-chunks", bo::bool_switch(), "unmap single chunks")
         ("unmap-mut-clusters", bo::bool_switch(), "unmap mutation clusters")
+        ("hap-map", bo::bool_switch(), "build haplotype map")
         ("interactive", bo::bool_switch(), "run interactive commands")
         ;
     any_converter ac;

@@ -18,6 +18,7 @@ add_library(mac STATIC
     Graph.cpp
     Unmap_Mut_Clusters.cpp
     Hap_Map.cpp
+    CLI.cpp
 )
 #set_target_properties(mac PROPERTIES LINK_FLAGS "${BOOST_LDFLAGS}")
 
