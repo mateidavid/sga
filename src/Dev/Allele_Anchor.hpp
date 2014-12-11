@@ -47,29 +47,9 @@ public:
         allele_support_type res;
         if (is_mutation())
         {
-            // first, get support for qr allele
-            for (auto mca_cbptr : mut_cbptr()->chunk_ptr_cont() | referenced)
-            {
-                res[Allele_Specifier(true)].insert(mca_cbptr->chunk_cbptr());
-            }
-            // next, get support for rf allele
-            // add all chunks fully spanning mutation
-            auto iint_res = ce_cbptr()->chunk_cont().iintersect(mut_cbptr()->rf_start(), mut_cbptr()->rf_end());
-            for (auto rc_cbptr : iint_res | referenced)
-            {
-                // if chunk observes qr allele, skip it
-                if (res[Allele_Specifier(true)].count(rc_cbptr) > 0) { continue; }
-                // if the rf allele is empty, we require >=1bp mapped on either side
-                if ((mut_cbptr()->rf_len() > 0
-                     and rc_cbptr->get_c_start() <= _mut_cbptr->rf_start()
-                     and rc_cbptr->get_c_end() >= _mut_cbptr->rf_end())
-                    or (mut_cbptr()->rf_len() == 0
-                        and rc_cbptr->get_c_start() < _mut_cbptr->rf_start()
-                        and rc_cbptr->get_c_end() > _mut_cbptr->rf_end()))
-                {
-                    res[Allele_Specifier(false)].insert(rc_cbptr);
-                }
-            }
+            auto p = ce_cbptr()->mut_support(mut_cbptr());
+            res[Allele_Specifier(false)] = move(p.first);
+            res[Allele_Specifier(true)] = move(p.second);
         }
         else // is_endpoint
         {

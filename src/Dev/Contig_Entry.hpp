@@ -100,6 +100,14 @@ public:
      */
     void cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size_Type r_offset);
 
+    /** Get chunks supporting rf and qr alleles of a mutation.
+     * @param mut_cbptr Mutation of interest.
+     * @return A pair of sets; first = chunks supporting rf allele; second = chunks supporting qr allele.
+     * NOTE: A chunk supports the rf allele if it fully spans the rf span of the mutation;
+     * if the rf allele is empty (length 0, an insertion), we require >=1bp mapped on either side.
+     */
+    pair< set< Read_Chunk_CBPtr >, set< Read_Chunk_CBPtr > > mut_support(Mutation_CBPtr mut_cbptr) const;
+
     /** Reverse the contig. */
     void reverse();
 

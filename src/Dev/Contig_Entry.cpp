@@ -51,6 +51,36 @@ void Contig_Entry::cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size
     check();
 }
 
+pair< set< Read_Chunk_CBPtr >, set< Read_Chunk_CBPtr > >
+Contig_Entry::mut_support(Mutation_CBPtr mut_cbptr) const
+{
+    pair< set< Read_Chunk_CBPtr >, set< Read_Chunk_CBPtr > > res;
+    // first, get support for qr allele
+    for (auto mca_cbptr : mut_cbptr->chunk_ptr_cont() | referenced)
+    {
+        res.second.insert(mca_cbptr->chunk_cbptr());
+    }
+    // next, get support for rf allele
+    // add all chunks fully spanning mutation
+    auto iint_res = chunk_cont().iintersect(mut_cbptr->rf_start(), mut_cbptr->rf_end());
+    for (auto rc_cbptr : iint_res | referenced)
+    {
+        // if chunk observes qr allele, skip it
+        if (res.second.count(rc_cbptr)) continue;
+        // if the rf allele is empty, we require >=1bp mapped on either side
+        if ((mut_cbptr->rf_len() > 0
+             and rc_cbptr->get_c_start() <= mut_cbptr->rf_start()
+             and rc_cbptr->get_c_end() >= mut_cbptr->rf_end())
+            or (mut_cbptr->rf_len() == 0
+                and rc_cbptr->get_c_start() < mut_cbptr->rf_start()
+                and rc_cbptr->get_c_end() > mut_cbptr->rf_end()))
+        {
+            res.first.insert(rc_cbptr);
+        }
+    }
+    return res;
+}
+
 void Contig_Entry::reverse()
 {
     // only reverse full contigs
