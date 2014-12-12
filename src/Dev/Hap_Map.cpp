@@ -8,10 +8,10 @@ Hap_Hop_BPtr Hap_Map::make_single_allele_hop(const Allele_Anchor& anchor, const 
                                              bool direction)
 {
     Hap_Entry_BPtr he_bptr = Hap_Entry_Fact::new_elem();
-    _he_cont.insert(he_bptr);
+    he_cont().insert(he_bptr);
     Hap_Hop_BPtr hh_bptr = Hap_Hop_Fact::new_elem(he_bptr, anchor, allele, direction);
     he_bptr->hh_cont().push_front(hh_bptr);
-    _hh_set.insert(hh_bptr);
+    hh_set().insert(hh_bptr);
     check_he(he_bptr);
     return hh_bptr;
 } // Hap_Map::make_single_allele_hop
@@ -48,11 +48,11 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::extend_endpoint_haps(cons
         Allele_Specifier mirror_allele(anchor.ce_cbptr(), allele.same_orientation());
         // check if mirror_anchor has haplotypes
         set< Hap_Hop_BPtr > haps_to_extend;
-        //auto it_p = _hh_set.equal_range(mirror_anchor, detail::Hap_Hop_Comparator());
-        auto it_p = _hh_set.lower_bound_range(mirror_anchor, detail::Hap_Hop_Comparator());
+        auto it_p = hh_set().equal_range(mirror_anchor, hh_set().value_comp());
         for (auto it = it_p.first; it != it_p.second; ++it)
         {
             auto hh_bptr = &*it;
+            ASSERT(hh_bptr->allele_anchor() == mirror_anchor);
             if (hh_bptr->allele_specifier() != mirror_allele) continue;
             haps_to_extend.insert(hh_bptr);
         }
@@ -77,21 +77,22 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::extend_endpoint_haps(cons
                 Hap_Entry_BPtr he_bptr = hh_bptr->he_cbptr().unconst();
                 ASSERT(he_bptr);
                 ASSERT(not he_bptr->hh_cont().empty());
-                ASSERT(hh_bptr == he_bptr->hh_cont().front()
-                       or hh_bptr == he_bptr->hh_cont().back());
-                bool is_hap_end = hh_bptr == he_bptr->hh_cont().back();
+                ASSERT(Hap_Map::is_end_hop(hh_bptr));
                 // create new hop for current allele
                 Hap_Hop_BPtr hh_new_bptr = Hap_Hop_Fact::new_elem(he_bptr, anchor, allele,
                                                                   hh_bptr->c_direction() == allele.same_orientation());
-                if (is_hap_end)
+                // direction and endpoint are enough to identify if this should be first or last hop
+                if (hh_new_bptr->c_direction() == anchor.c_right())
                 {
+                    ASSERT(Hap_Map::is_end_hop(hh_bptr, true));
                     he_bptr->hh_cont().insert_after(hh_bptr, hh_new_bptr);
                 }
                 else
                 {
+                    ASSERT(Hap_Map::is_end_hop(hh_bptr, false));
                     he_bptr->hh_cont().insert_before(hh_bptr, hh_new_bptr);
                 }
-                _hh_set.insert(hh_new_bptr);
+                hh_set().insert(hh_new_bptr);
                 res[allele].insert(hh_new_bptr);
                 check_he(he_bptr);
             }
@@ -131,6 +132,7 @@ void Hap_Map::build(const Graph& g)
         auto re_haps = extend_endpoint_haps(re_anchor);
         // connect with haps at previous anchor
         connect_unique(prev_anchor, re_anchor, prev_haps, re_haps);
+        hh_set().check();
     }
     logger("hap_map", info) << ptree("build_end");
 } // Hap_Map::build
@@ -139,23 +141,19 @@ void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
                              map< Allele_Specifier, set< Hap_Hop_CBPtr > >& a1_hops,
                              map< Allele_Specifier, set< Hap_Hop_CBPtr > >& a2_hops)
 {
+    ASSERT(a1.get_sibling(true) == a2);
     // check there is 1 hop per allele, and all hops are terminal
-    auto check_hop_terminal = [] (Hap_Hop_CBPtr hh_cbptr) {
-        return (hh_cbptr == hh_cbptr->he_cbptr()->hh_cont().front()
-                or hh_cbptr == hh_cbptr->he_cbptr()->hh_cont().back());
-    };
-    static_cast< void >(check_hop_terminal);
     ASSERT(all_of(a1_hops.begin(), a1_hops.end(),
-                  [&check_hop_terminal] (const pair< Allele_Specifier, set< Hap_Hop_CBPtr > >& p) {
-                      return p.second.size() == 1 and check_hop_terminal(*p.second.begin());
+                  [] (const pair< Allele_Specifier, set< Hap_Hop_CBPtr > >& p) {
+                      return p.second.size() == 1 and Hap_Map::is_end_hop(*p.second.begin());
                   }));
     ASSERT(all_of(a2_hops.begin(), a2_hops.end(),
-                  [&check_hop_terminal] (const pair< Allele_Specifier, set< Hap_Hop_CBPtr > >& p) {
-                      return p.second.size() == 1 and check_hop_terminal(*p.second.begin());
+                  [] (const pair< Allele_Specifier, set< Hap_Hop_CBPtr > >& p) {
+                      return p.second.size() == 1 and Hap_Map::is_end_hop(*p.second.begin());
                   }));
     auto a1_support = a1.support();
-    ASSERT(a1_support.size() == a1_hops.size());
     auto a2_support = a2.support();
+    ASSERT(a1_support.size() == a1_hops.size());
     ASSERT(a2_support.size() == a2_hops.size());
     auto connect_map = Allele_Anchor::connect(a1_support, a2_support);
     // create map of unique allele connections
@@ -206,6 +204,8 @@ void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
         if (a1_hop_cbptr->c_direction() != a2_hop_cbptr->c_direction())
         {
             // reverse haplotype at a2_hop to enable merge
+            logger("hap_map", debug) << ptree("connect_unique__reverse_hap")
+                .put("he_ptr", he2_bptr.to_int());
             he2_bptr->hh_cont().reverse();
         }
         ASSERT(a1_hop_cbptr->c_direction() == a2_hop_cbptr->c_direction());
@@ -215,12 +215,14 @@ void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
             he1_bptr->hh_cont().splice_right(he2_bptr->hh_cont(), he1_bptr);
             _he_cont.erase(he2_bptr);
             Hap_Entry_Fact::del_elem(he2_bptr);
+            check_he(he1_bptr);
         }
         else
         {
             he2_bptr->hh_cont().splice_right(he1_bptr->hh_cont(), he2_bptr);
             _he_cont.erase(he1_bptr);
             Hap_Entry_Fact::del_elem(he1_bptr);
+            check_he(he2_bptr);
         }
     }
 } // Hap_Map::connect_unique
@@ -241,54 +243,29 @@ void Hap_Map::clear_and_dispose()
         });
 }
 
-bool Hap_Map::is_start_hop(Hap_Hop_CBPtr hh_cbptr) const
-{
-    ASSERT(hh_cbptr);
-    ASSERT(hh_cbptr->he_cbptr());
-    return hh_cbptr == hh_cbptr->he_cbptr()->hh_cont().front();
-}
-
-bool Hap_Map::is_end_hop(Hap_Hop_CBPtr hh_cbptr) const
-{
-    ASSERT(hh_cbptr);
-    ASSERT(hh_cbptr->he_cbptr());
-    return hh_cbptr == hh_cbptr->he_cbptr()->hh_cont().back();
-}
-
 void Hap_Map::dump_consecutive_anchor_pair_stats(ostream& os, const Allele_Anchor& a1, const Allele_Anchor& a2) const
 {
-    ASSERT(a1.ce_cbptr() == a2.ce_cbptr());
-    ASSERT(not a1.is_endpoint() or not a1.c_right());
-    ASSERT(not a2.is_endpoint() or a2.c_right());
-    ASSERT(a1 < a2);
-    ASSERT(not a1.is_mutation() or not a2.is_mutation() or a1.mut_cbptr()->rf_end() <= a2.mut_cbptr()->rf_start());
+    ASSERT(a1.get_sibling(true) == a2);
     auto a1_support = a1.support();
     auto a2_support = a2.support();
     auto connect_map = Allele_Anchor::connect(a1_support, a2_support);
-    auto a1_hops_rg = _hh_set.lower_bound_range(a1, detail::Hap_Hop_Comparator());
-    auto a2_hops_rg = _hh_set.lower_bound_range(a2, detail::Hap_Hop_Comparator());
-    /*
-    auto tmp1 = hh_set().find(a1);
-    auto tmp2 = hh_set().find(a2);
-    ASSERT(tmp1 != hh_set().end());
-    ASSERT(tmp2 != hh_set().end());
-    auto a1_hops_rg = hh_set().equal_range(tmp1);
-    auto a2_hops_rg = hh_set().equal_range(tmp2);
-    */
-    auto make_terminal_hop_set = [this] (const decltype(a1_hops_rg)& rg) {
+    auto a1_hops_rg = hh_set().equal_range(a1, hh_set().value_comp());
+    auto a2_hops_rg = hh_set().equal_range(a2, hh_set().value_comp());
+    auto make_terminal_hop_set = [] (const Allele_Anchor& anchor, const decltype(a1_hops_rg)& rg) {
         set< Hap_Hop_CBPtr > res;
         for (auto it = rg.first; it != rg.second; ++it)
         {
             auto hh_cbptr = &*it;
-            if (this->is_terminal_hop(hh_cbptr))
+            ASSERT(it->allele_anchor() == anchor);
+            if (Hap_Map::is_end_hop(hh_cbptr))
             {
                 res.insert(hh_cbptr);
             }
         }
         return res;
     };
-    auto a1_terminal_hops = make_terminal_hop_set(a1_hops_rg);
-    auto a2_terminal_hops = make_terminal_hop_set(a2_hops_rg);
+    auto a1_terminal_hops = make_terminal_hop_set(a1, a1_hops_rg);
+    auto a2_terminal_hops = make_terminal_hop_set(a2, a2_hops_rg);
     ASSERT(a1_terminal_hops.size() <= a1_support.size());
     ASSERT(a2_terminal_hops.size() <= a2_support.size());
 
@@ -335,10 +312,9 @@ void Hap_Map::check_he(Hap_Entry_CBPtr he_cbptr) const
             if (last_hh_cbptr->ce_cbptr() == hh_cbptr->ce_cbptr())
             {
                 ASSERT(last_hh_cbptr->c_direction() == hh_cbptr->c_direction());
-                // anchors must be in an order corresponding to the direction
-                ASSERT(not hh_cbptr->c_direction()?
-                       last_hh_cbptr->allele_anchor() < hh_cbptr->allele_anchor()
-                       : hh_cbptr->allele_anchor() < last_hh_cbptr->allele_anchor());
+                // anchors must be consecutive in the given direction
+                ASSERT(last_hh_cbptr->allele_anchor().get_sibling(not hh_cbptr->c_direction())
+                       == hh_cbptr->allele_anchor());
             }
             else
             {
@@ -348,6 +324,7 @@ void Hap_Map::check_he(Hap_Entry_CBPtr he_cbptr) const
                 bool same_orientation = last_hh_cbptr->c_direction() == hh_cbptr->c_direction();
                 ASSERT(last_hh_cbptr->allele_specifier() == Allele_Specifier(hh_cbptr->ce_cbptr(), same_orientation));
                 ASSERT(hh_cbptr->allele_specifier() == Allele_Specifier(last_hh_cbptr->ce_cbptr(), same_orientation));
+                ASSERT(last_hh_cbptr->allele_anchor().c_right() == not last_hh_cbptr->c_direction());
                 auto last_hh_allele_support = last_hh_cbptr->allele_anchor().support();
                 auto hh_allele_support = hh_cbptr->allele_anchor().support();
                 ASSERT(last_hh_allele_support.count(last_hh_cbptr->allele_specifier()) == 1);

@@ -91,12 +91,13 @@ public:
 
     USING_INTRUSIVE_CONT(Base)
     using Base::check;
-    using Base::lower_bound_range;
+    using Base::value_comp;
+    using Base::equal_range;
 
     // Insert Hap_Hop into this container
     void insert(Hap_Hop_BPtr hh_bptr)
     {
-        Base::push_back(*hh_bptr);
+        Base::insert(*hh_bptr);
     }
     // Erase Hap_Hop from this container
     void erase(Hap_Hop_BPtr hh_bptr)

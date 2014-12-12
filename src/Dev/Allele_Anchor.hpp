@@ -115,6 +115,74 @@ public:
         return res;
     }
 
+    /** Get sibling anchor.
+     * PRE: Sibling anchor must exist in the given direction.
+     * @param forward Bool; if true: get anchor to the right, else to the left
+     * @return Sibling anchor.
+     */
+    Allele_Anchor get_sibling(bool forward) const
+    {
+        if (is_endpoint())
+        {
+            // cannot go past left or right endpoints
+            ASSERT(c_right() != forward);
+            if (not c_right())
+            {
+                // anchor is left endpoint; next is first mutation (if one exists)
+                if (not ce_cbptr()->mut_cont().empty())
+                {
+                    return Allele_Anchor(&*ce_cbptr()->mut_cont().begin());
+                }
+                else
+                {
+                    return Allele_Anchor(ce_cbptr(), true);
+                }
+            }
+            else
+            {
+                // anchor is right endpoint; next is last mutation (if one exists)
+                if (not ce_cbptr()->mut_cont().empty())
+                {
+                    return Allele_Anchor(&*ce_cbptr()->mut_cont().rbegin());
+                }
+                else
+                {
+                    return Allele_Anchor(ce_cbptr(), false);
+                }
+            }
+        }
+        else // current anchor is a mutation
+        {
+            auto it = ce_cbptr()->mut_cont().iterator_to(*mut_cbptr());
+            if (not forward)
+            {
+                // find previous mutation if one exists
+                if (it != ce_cbptr()->mut_cont().begin())
+                {
+                    --it;
+                    return Allele_Anchor(&*it);
+                }
+                else
+                {
+                    return Allele_Anchor(ce_cbptr(), false);
+                }
+            }
+            else
+            {
+                // find next mutation if one exists
+                ++it;
+                if (it != ce_cbptr()->mut_cont().end())
+                {
+                    return Allele_Anchor(&*it);
+                }
+                else
+                {
+                    return Allele_Anchor(ce_cbptr(), true);
+                }
+            }
+        }
+    }
+
     /// Comparator for storage a tree.
     friend bool operator < (const Allele_Anchor& lhs, const Allele_Anchor& rhs)
     {
