@@ -203,6 +203,39 @@ public:
     //std::shared_ptr< std::map< std::tuple< const Contig_Entry*, bool >, std::tuple< unsigned int, Size_Type, Size_Type > > >
     //get_neighbours(bool dir, bool skip_unmappable = true, bool trim_results = true) const;
 
+    /** Check the Mutation objects in this Contig_Entry are well separated.
+     * @param min_separation Minimum separation required.
+     * @param include_endpoints Also check separation between first&last mutations and the endpoints
+     * @return Bool; true iff all obejcts are well separated.
+     */
+    bool separated_mutations(Size_Type min_separation, bool include_endpoints) const
+    {
+        if (not mut_cont().empty())
+        {
+            Mutation_Cont::const_iterator it_last = mut_cont().begin();
+            Mutation_Cont::const_iterator it = next(it_last);
+            while (it != mut_cont().end())
+            {
+                if (it->rf_start() < it_last->rf_end() + min_separation) return false;
+                it_last = it;
+                ++it;
+            }
+            if (include_endpoints)
+            {
+                return min_separation <= mut_cont().begin()->rf_start()
+                    and mut_cont().rbegin()->rf_end() + min_separation <= len();
+            }
+        }
+        else // mut_cont is empty
+        {
+            if (include_endpoints)
+            {
+                return min_separation <= len();
+            }
+        }
+        return true;
+    }
+
     static void dispose(Contig_Entry_BPtr ce_bptr)
     {
         // remove chunks from their RE cont

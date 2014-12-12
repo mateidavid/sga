@@ -111,6 +111,8 @@ void Hap_Map::build(const Graph& g)
     {
         if (not ce_cbptr->is_normal()) continue;
         logger("hap_map", debug) << ptree("build_loop").put("ce_ptr", ce_cbptr.to_int());
+        // do not allow overlapping mutations during haplotype building
+        ASSERT(ce_cbptr->separated_mutations(10, true));
         // construct left endpoint haps
         Allele_Anchor prev_anchor(ce_cbptr, false);
         auto prev_haps = extend_endpoint_haps(prev_anchor);
