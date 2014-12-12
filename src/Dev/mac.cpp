@@ -229,6 +229,13 @@ int real_main(const bo::variables_map& vm)
         fstr tmp_fs(fn, ios_base::out);
         g.print_unmappable_contigs(tmp_fs);
     }
+    if (vm.count("hapmap-stats-file"))
+    {
+        const string& fn = vm.at("hapmap-stats-file").as< string >();
+        logger("mac", info) << ptree("hapmap-stats").put("file", fn);
+        fstr tmp_fs(fn, ios_base::out);
+        hm.dump_stats(tmp_fs, g);
+    }
     logger("mac", info) << ptree("done_output");
 
     if (vm.count("save-file"))
@@ -276,6 +283,7 @@ int main(int argc, char* argv[])
         ("mutations-file", bo::value< string >(), "mutations file")
         ("unmappable-contigs-file", bo::value< string >(), "unmappable contigs file")
         ("terminal-reads-file", bo::value< string >(), "terminal reads file")
+        ("hapmap-stats-file", bo::value< string >(), "haplotype map stats file")
         //
         // asqg loading options
         //

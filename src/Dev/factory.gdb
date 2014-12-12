@@ -27,7 +27,7 @@ def get_null_idn_val(t):
 def __aux_factory_is_null_identifier(p):
     return int(p['_idx']) == get_null_idn_val(p.type)
 
-@boost_print.utils._add_to_dict(boost_print.null_dict, 'bounded::detail::Pointer')
+@boost_print.utils._add_to_dict(boost_print.null_dict, 'bounded::Pointer')
 def __aux_factory_is_null_pointer(p):
     return boost_print.is_null(p['_idn'])
 
@@ -49,7 +49,7 @@ def Pointer_Printer(p):
 # trivial printer for bounded identifier and pointer objects
 #
 boost_print.add_trivial_printer('bounded::detail::Identifier<.*>', Identifier_Printer)
-boost_print.add_trivial_printer('bounded::detail::Pointer<.*>', lambda p: str(p['_idn']))
+boost_print.add_trivial_printer('bounded::Pointer<.*>', lambda p: str(p['_idn']))
 
 def factory_raw_ptr(p, idx=None):
     """Transform bounded pointer into raw pointer.
@@ -79,7 +79,7 @@ def factory_raw_ptr(p, idx=None):
     #print('got: ' + str(res), file=sys.stderr)
     return res
 
-@boost_print.utils._add_to_dict(boost_print.raw_ptr, 'bounded::detail::Pointer')
+@boost_print.utils._add_to_dict(boost_print.raw_ptr, 'bounded::Pointer')
 def __aux_factory_raw_ptr(p):
     return factory_raw_ptr(p)
 
@@ -90,7 +90,7 @@ class raw_func(gdb.Function):
         super(raw_func, self).__init__('raw')
     def invoke(self, p, idx=None):
         assert isinstance(p, gdb.Value), '"v" not a gdb.Value'
-        assert boost_print.template_name(gdb.types.get_basic_type(p.type)) == 'bounded::detail::Pointer', '"v" not a bounded pointer'
+        assert boost_print.template_name(gdb.types.get_basic_type(p.type)) == 'bounded::Pointer', '"v" not a bounded pointer'
         return factory_raw_ptr(p, idx)
 
 raw = raw_func()

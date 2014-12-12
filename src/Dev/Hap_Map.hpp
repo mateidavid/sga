@@ -33,6 +33,11 @@ public:
 
     void dispose(Hap_Entry_BPtr he_bptr);
     void clear_and_dispose();
+    bool is_start_hop(Hap_Hop_CBPtr hh_cbptr) const;
+    bool is_end_hop(Hap_Hop_CBPtr hh_cbptr) const;
+    bool is_terminal_hop(Hap_Hop_CBPtr hh_cbptr) const { return is_start_hop(hh_cbptr) or is_end_hop(hh_cbptr); }
+
+    void dump_stats(ostream& os, const Graph& g) const;
 
 private:
     Hap_Hop_BPtr make_single_allele_hop(const Allele_Anchor& anchor, const Allele_Specifier& allele,
@@ -42,6 +47,8 @@ private:
     void connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
                         map< Allele_Specifier, set< Hap_Hop_CBPtr > >& a1_hops,
                         map< Allele_Specifier, set< Hap_Hop_CBPtr > >& a2_hops);
+
+    void dump_consecutive_anchor_pair_stats(ostream& os, const Allele_Anchor& a1, const Allele_Anchor& a2) const;
 
     void check_he(Hap_Entry_CBPtr) const;
     void check(const set< Hap_Entry_CBPtr >&) const;

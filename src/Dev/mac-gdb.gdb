@@ -56,4 +56,21 @@ boost_print.static_method[("MAC::detail::Contig_Entry_List_Value_Traits", "to_va
 boost_print.static_method[("MAC::detail::Contig_Entry_List_Node_Traits", "get_next")] = lambda v: v['_next']
 boost_print.add_trivial_printer('MAC::Contig_Entry_Cont', get_first_subclass)
 
+boost_print.inner_type[("MAC::detail::Hap_Entry_List_Value_Traits", "node_traits")] = "MAC::detail::Hap_Entry_List_Node_Traits"
+boost_print.static_method[("MAC::detail::Hap_Entry_List_Value_Traits", "to_value_ptr")] = identity
+boost_print.static_method[("MAC::detail::Hap_Entry_List_Node_Traits", "get_next")] = lambda v: v['_next']
+boost_print.add_trivial_printer('MAC::Hap_Entry_Cont', get_first_subclass)
+
+boost_print.inner_type[("MAC::detail::Hap_Hop_List_Value_Traits", "node_traits")] = "MAC::detail::Hap_Hop_List_Node_Traits"
+boost_print.static_method[("MAC::detail::Hap_Hop_List_Value_Traits", "to_value_ptr")] = identity
+boost_print.static_method[("MAC::detail::Hap_Hop_List_Node_Traits", "get_next")] = lambda v: v['_next']
+boost_print.add_trivial_printer('MAC::Hap_Hop_Cont', get_first_subclass)
+
+boost_print.inner_type[("MAC::detail::Hap_Hop_Set_Value_Traits", "node_traits")] = "MAC::detail::Hap_Hop_Set_Node_Traits"
+boost_print.static_method[("MAC::detail::Hap_Hop_Set_Value_Traits", "to_value_ptr")] = identity
+boost_print.static_method[("MAC::detail::Hap_Hop_Set_Node_Traits", "get_left")] = lambda v: v['_l_child']
+boost_print.static_method[("MAC::detail::Hap_Hop_Set_Node_Traits", "get_right")] = lambda v: v['_r_child']
+boost_print.static_method[("MAC::detail::Hap_Hop_Set_Node_Traits", "get_parent")] = lambda v: v['_parent']
+boost_print.add_trivial_printer('MAC::Hap_Hop_Set', get_first_subclass)
+
 end

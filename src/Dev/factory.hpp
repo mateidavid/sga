@@ -26,13 +26,14 @@ namespace bounded
 {
 
 template < typename, typename >
-struct Identifier;
-template < typename, typename >
 class Pointer;
 template < typename, typename >
 class Reference;
 template < typename, typename >
 class Factory;
+
+namespace detail
+{
 
 /** Wrapper type used by Storage objects to store free node list without overhead. */
 template < typename Value, typename Index = uint32_t >
@@ -263,7 +264,9 @@ struct Identifier
     }
 
     index_type _idx;
-};
+}; // struct Identifier
+
+} // namespace detail
 
 template < typename Value, typename Index = uint32_t >
 class Pointer
@@ -276,7 +279,7 @@ public:
 private:
     typedef typename std::is_void< val_type > is_void_t; // true_type iff T is (cv-) void
     typedef typename std::is_const< val_type > is_const_t; // true_type iff T is const-qualified
-    typedef Identifier< unqual_val_type, index_type > idn_type;
+    typedef detail::Identifier< unqual_val_type, index_type > idn_type;
 public:
     typedef typename boost::mpl::if_< is_void_t, void, Reference< val_type, index_type > >::type reference;
 
@@ -344,6 +347,9 @@ private:
     idn_type _idn;
 }; // class Pointer
 
+namespace detail
+{
+
 template < typename T, bool = false >
 struct to_ptree_caller_impl
 {
@@ -359,6 +365,8 @@ template < typename T >
 struct to_ptree_caller
     : public to_ptree_caller_impl< T, has_member_function_to_ptree< const T, boost::property_tree::ptree >::value > {};
 
+} // namespace detail
+
 /** Reference. */
 template < typename Value, typename Index = uint32_t >
 class Reference
@@ -369,14 +377,14 @@ public:
 private:
     typedef typename std::is_void< val_type > is_void_t; // true_type iff T is (cv-) void
     typedef typename std::is_const< val_type > is_const_t; // true_type iff T is const-qualified
-    typedef to_ptree_caller< val_type > to_ptree_caller_t;
+    typedef detail::to_ptree_caller< val_type > to_ptree_caller_t;
     static_assert(not is_void_t::value, "Reference instantiated with void type");
 public:
     typedef val_type& raw_ref_type;
     typedef typename std::remove_const< val_type >::type unqual_val_type;
     typedef Pointer< val_type, index_type > ptr_type;
 private:
-    typedef Identifier< unqual_val_type, index_type > idn_type;
+    typedef detail::Identifier< unqual_val_type, index_type > idn_type;
 
 public:
     // allow construction only
@@ -432,6 +440,8 @@ private:
     const idn_type _idn;
 }; // class Reference
 
+namespace detail {
+
 template < typename Value, typename Index = uint32_t >
 struct Cloner
 {
@@ -463,13 +473,15 @@ struct Disposer
     }
 };
 
+} // namespace detail
+
 /** Factory class that manages storage for objects of type T. */
 template < typename Value, typename Index = uint32_t >
 class Factory
-    : public Storage< Value, Index >
+    : public detail::Storage< Value, Index >
 {
 private:
-    typedef Storage< Value, Index > Base;
+    typedef detail::Storage< Value, Index > Base;
 public:
     typedef Value val_type;
     typedef Index index_type;
@@ -478,11 +490,11 @@ public:
     typedef Pointer< const val_type, index_type > const_ptr_type;
     typedef Reference< val_type, index_type > ref_type;
     typedef Reference< const val_type, index_type > const_ref_type;
-    typedef Cloner< val_type, index_type > cloner_type;
-    typedef Disposer< val_type, index_type > disposer_type;
+    typedef detail::Cloner< val_type, index_type > cloner_type;
+    typedef detail::Disposer< val_type, index_type > disposer_type;
 private:
-    typedef Identifier< val_type, index_type > idn_type;
-    typedef Value_Wrapper< val_type, index_type > wrapper_type;
+    typedef detail::Identifier< val_type, index_type > idn_type;
+    typedef detail::Value_Wrapper< val_type, index_type > wrapper_type;
 
 public:
     /** Default constructor.
@@ -527,7 +539,7 @@ public:
     typedef Reference< value_type, index_type > reference;
     typedef Reference< const value_type, index_type > const_reference;
 private:
-    typedef Storage< value_type, index_type > storage_type;
+    typedef detail::Storage< value_type, index_type > storage_type;
 
 public:
     DEFAULT_DEF_CTOR(Allocator)
