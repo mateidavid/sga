@@ -5,6 +5,7 @@ namespace MAC
 
 void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
 {
+    set< Mutation_Fact::index_type > unused_mut_set = Mutation_Fact::unused_set();
     set< Read_Chunk_Fact::index_type > unused_rc_set = Read_Chunk_Fact::unused_set();
     set< Read_Entry_Fact::index_type > unused_re_set = Read_Entry_Fact::unused_set();
     set< Contig_Entry_Fact::index_type > unused_ce_set = Contig_Entry_Fact::unused_set();
@@ -29,7 +30,9 @@ void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
                << "  ptree|pt : print as ptree\n"
                << "  print|p : print object\n"
                << "  seq|s : print sequence\n"
-               << "  outchunks|oc : print chunks leaving contig\n";
+               << "  outchunks|oc : print chunks leaving contig\n"
+               << "  hops|hh : print haplotype hops\n"
+                ;
         }
         else if (cmd == "quit" or cmd == "q")
         {
@@ -271,6 +274,48 @@ void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
                     os << " " << rc_cbptr.to_int();
                 }
                 os << "\n";
+            }
+        }
+        else if (cmd == "hops" or cmd == "hh")
+        {
+            size_t id;
+            int c_right;
+            bool is_endpoint;
+            iss >> id;
+            if (iss.eof())
+            {
+                os << "use: hops [ ce c_right | mut ]" << endl;
+                continue;
+            }
+            iss >> c_right;
+            is_endpoint = not iss.eof();
+            Allele_Anchor anchor;
+            if (is_endpoint)
+            {
+                if (id >= Contig_Entry_Fact::size() or unused_ce_set.count(id) > 0)
+                {
+                    os << "Contig_Entry:" << id << ": not allocated\n";
+                    continue;
+                }
+                Contig_Entry_CBPtr ce_cbptr = Contig_Entry_CBPtr::from_index(id);
+                anchor = Allele_Anchor(ce_cbptr, c_right);
+            }
+            else // is_mutation
+            {
+                if (id >= Mutation_Fact::size() or unused_mut_set.count(id) > 0)
+                {
+                    os << "Mutation:" << id << ": not allocated\n";
+                    continue;
+                }
+                Mutation_CBPtr mut_cbptr = Mutation_CBPtr::from_index(id);
+                anchor = Allele_Anchor(mut_cbptr);
+            }
+            auto p = hm.hh_set().equal_range(anchor);
+            for (auto it = p.first; it != p.second; ++it)
+            {
+                os << "  ";
+                Hap_Hop::to_stream(os, &*it);
+                os << endl;
             }
         }
         else
