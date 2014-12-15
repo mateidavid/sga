@@ -258,6 +258,18 @@ public:
                 .put("mut_cbptr", mut_cbptr().to_int());
         }
     }
+    friend ostream& operator << (ostream& os, const Allele_Anchor& a)
+    {
+        if (a.is_endpoint())
+        {
+            os << "(" << a.ce_cbptr().to_int() << "," << a.c_right() << ")";
+        }
+        else
+        {
+            os << a.mut_cbptr().to_int();
+        }
+        return os;
+    }
 
 private:
     Contig_Entry_CBPtr _ce_cbptr;
