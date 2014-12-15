@@ -249,23 +249,23 @@ void Hap_Map::dump_consecutive_anchor_pair_stats(ostream& os, const Allele_Ancho
     auto a1_support = a1.support();
     auto a2_support = a2.support();
     auto connect_map = Allele_Anchor::connect(a1_support, a2_support);
-    auto make_terminal_hop_set = [] (const Allele_Anchor& anchor, const decltype(a1_hops_rg)& rg) {
     auto a1_hops_rg = hh_set().equal_range(a1);
     auto a2_hops_rg = hh_set().equal_range(a2);
+    auto make_terminal_hop_set = [] (const Allele_Anchor& anchor, const decltype(a1_hops_rg)& rg, bool right_anchor) {
         set< Hap_Hop_CBPtr > res;
         for (auto it = rg.first; it != rg.second; ++it)
         {
             auto hh_cbptr = &*it;
             ASSERT(it->allele_anchor() == anchor);
-            if (Hap_Map::is_end_hop(hh_cbptr))
+            if (Hap_Map::is_end_hop(hh_cbptr, right_anchor == hh_cbptr->c_direction()))
             {
                 res.insert(hh_cbptr);
             }
         }
         return res;
     };
-    auto a1_terminal_hops = make_terminal_hop_set(a1, a1_hops_rg);
-    auto a2_terminal_hops = make_terminal_hop_set(a2, a2_hops_rg);
+    auto a1_terminal_hops = make_terminal_hop_set(a1, a1_hops_rg, false);
+    auto a2_terminal_hops = make_terminal_hop_set(a2, a2_hops_rg, true);
     ASSERT(a1_terminal_hops.size() <= a1_support.size());
     ASSERT(a2_terminal_hops.size() <= a2_support.size());
 
