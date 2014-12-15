@@ -48,7 +48,7 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::extend_endpoint_haps(cons
         Allele_Specifier mirror_allele(anchor.ce_cbptr(), allele.same_orientation());
         // check if mirror_anchor has haplotypes
         set< Hap_Hop_BPtr > haps_to_extend;
-        auto it_p = hh_set().equal_range(mirror_anchor, hh_set().value_comp());
+        auto it_p = hh_set().equal_range(mirror_anchor);
         for (auto it = it_p.first; it != it_p.second; ++it)
         {
             auto hh_bptr = &*it;
@@ -249,9 +249,9 @@ void Hap_Map::dump_consecutive_anchor_pair_stats(ostream& os, const Allele_Ancho
     auto a1_support = a1.support();
     auto a2_support = a2.support();
     auto connect_map = Allele_Anchor::connect(a1_support, a2_support);
-    auto a1_hops_rg = hh_set().equal_range(a1, hh_set().value_comp());
-    auto a2_hops_rg = hh_set().equal_range(a2, hh_set().value_comp());
     auto make_terminal_hop_set = [] (const Allele_Anchor& anchor, const decltype(a1_hops_rg)& rg) {
+    auto a1_hops_rg = hh_set().equal_range(a1);
+    auto a2_hops_rg = hh_set().equal_range(a2);
         set< Hap_Hop_CBPtr > res;
         for (auto it = rg.first; it != rg.second; ++it)
         {
@@ -271,9 +271,40 @@ void Hap_Map::dump_consecutive_anchor_pair_stats(ostream& os, const Allele_Ancho
 
     Size_Type dist = (a2.is_endpoint()? a2.ce_cbptr()->len() : a2.mut_cbptr()->rf_start())
         - (a1.is_endpoint()? 0 : a1.mut_cbptr()->rf_end());
-    os << a1.is_endpoint() << "\t" << a2.is_endpoint() << "\t" << dist << "\t"
-       << a1_support.size() << "\t" << a2_support.size() << "\t"
-       << a1_terminal_hops.size() << "\t" << a2_terminal_hops.size() << endl;
+    os << a1 << "\t" << a2 << "\t" << dist << "\t"
+       << a1_support.size() << "\t" << a2_support.size() << "\t" << connect_map.size() << "\t"
+       << a1_terminal_hops.size() << "\t" << a2_terminal_hops.size() << "\t";
+    if (a1_support.size() == 2 and a2_support.size() == 2)
+    {
+        list< size_t > l;
+        for (auto al1 : a1_support | ba::map_keys)
+        {
+            for (auto al2 : a2_support | ba::map_keys)
+            {
+                auto p = make_pair(al1, al2);
+                if (connect_map.count(p))
+                {
+                    l.push_back(connect_map.at(p).size());
+                }
+                else
+                {
+                    l.push_back(0);
+                }
+            }
+        }
+        bool first = true;
+        for (const auto& e : l)
+        {
+            if (not first) os << ",";
+            first = false;
+            os << e;
+        }
+    }
+    else
+    {
+        os << ".";
+    }
+    os << endl;
 }
 
 void Hap_Map::dump_stats(ostream& os, const Graph& g) const

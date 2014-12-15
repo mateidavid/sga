@@ -91,8 +91,6 @@ public:
 
     USING_INTRUSIVE_CONT(Base)
     using Base::check;
-    using Base::value_comp;
-    using Base::equal_range;
 
     // Insert Hap_Hop into this container
     void insert(Hap_Hop_BPtr hh_bptr)
@@ -103,6 +101,16 @@ public:
     void erase(Hap_Hop_BPtr hh_bptr)
     {
         Base::erase(iterator_to(*hh_bptr));
+    }
+
+    // Get hops at given anchor.
+    pair< const_iterator, const_iterator > equal_range(const Allele_Anchor& anchor) const
+    {
+        return Base::equal_range(anchor, Base::value_comp());
+    }
+    pair< iterator, iterator > equal_range(const Allele_Anchor& anchor)
+    {
+        return Base::equal_range(anchor, Base::value_comp());
     }
 
 }; // class Hap_Hop_Set
