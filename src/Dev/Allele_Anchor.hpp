@@ -48,8 +48,10 @@ public:
         if (is_mutation())
         {
             auto p = ce_cbptr()->mut_support(mut_cbptr());
-            res[Allele_Specifier(false)] = move(p.first);
-            res[Allele_Specifier(true)] = move(p.second);
+            if (p.first.size() > 1)
+                res[Allele_Specifier(false)] = move(p.first);
+            if (p.second.size() > 1)
+                res[Allele_Specifier(true)] = move(p.second);
         }
         else // is_endpoint
         {
@@ -181,6 +183,13 @@ public:
                 }
             }
         }
+    }
+
+    static Size_Type dist(const Allele_Anchor& lhs, const Allele_Anchor& rhs)
+    {
+        ASSERT(lhs.get_sibling(true) == rhs);
+        return (rhs.is_endpoint()? rhs.ce_cbptr()->len() : rhs.mut_cbptr()->rf_start())
+            - (lhs.is_endpoint()? 0 : lhs.mut_cbptr()->rf_end());
     }
 
     /// Comparator for storage a tree.

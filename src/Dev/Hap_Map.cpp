@@ -21,9 +21,10 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::make_mutation_haps(Mutati
     logger("hap_map", debug) << ptree("make_mutation_haps").put("mut_ptr", mut_cbptr.to_int());
     map< Allele_Specifier, set< Hap_Hop_CBPtr > > res;
     Allele_Anchor anchor(mut_cbptr);
-    for (int k = 0; k < 2; ++k)
+    auto anchor_support = anchor.support();
+    for (auto p : anchor_support)
     {
-        Allele_Specifier allele(k == 1);
+        Allele_Specifier allele = p.first;
         Hap_Hop_BPtr hh_bptr = make_single_allele_hop(anchor, allele);
         res[allele].insert(hh_bptr);
     }
@@ -269,9 +270,8 @@ void Hap_Map::dump_consecutive_anchor_pair_stats(ostream& os, const Allele_Ancho
     ASSERT(a1_terminal_hops.size() <= a1_support.size());
     ASSERT(a2_terminal_hops.size() <= a2_support.size());
 
-    Size_Type dist = (a2.is_endpoint()? a2.ce_cbptr()->len() : a2.mut_cbptr()->rf_start())
-        - (a1.is_endpoint()? 0 : a1.mut_cbptr()->rf_end());
-    os << a1 << "\t" << a2 << "\t" << dist << "\t"
+    Size_Type dist = Allele_Anchor::dist(a1, a2);
+    os << "consec.anchors\t" << a1 << "\t" << a2 << "\t" << dist << "\t"
        << a1_support.size() << "\t" << a2_support.size() << "\t" << connect_map.size() << "\t"
        << a1_terminal_hops.size() << "\t" << a2_terminal_hops.size() << "\t";
     if (a1_support.size() == 2 and a2_support.size() == 2)
@@ -309,7 +309,7 @@ void Hap_Map::dump_consecutive_anchor_pair_stats(ostream& os, const Allele_Ancho
 
 void Hap_Map::dump_stats(ostream& os, const Graph& g) const
 {
-    os << "disconnected alleles" << endl;
+    os << "consec.anchors\ta1\ta2\tdist\tsize.supp.a1\tsize.supp.a2\tsize.conn\tnum.term.hops.a1\tnum.term.hops.a2\t2-2-degs" << endl;
     for (auto ce_cbptr : g.ce_cont() | referenced)
     {
         if (not ce_cbptr->is_normal()) continue;
