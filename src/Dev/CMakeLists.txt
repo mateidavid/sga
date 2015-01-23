@@ -6,6 +6,20 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 include_directories(BEFORE ${CMAKE_SOURCE_DIR}/interval-tree/include)
 include_directories(BEFORE ${CMAKE_SOURCE_DIR}/boost-intrusive/include) # <-first
 
+if(OPENMP_FOUND)
+    add_executable(bloom-filter-tool bloom-filter-tool.cpp
+        kmer_gen.cpp
+    )
+    target_link_libraries(bloom-filter-tool
+        util
+        thirdparty
+        ${Boost_IOSTREAMS_LIBRARY}
+        ${ZLIB_LIBRARIES}
+    )
+else()
+    message(STATUS "Cannot build bloom-filter-tool, need OpenMP")
+endif()
+
 add_library(mac STATIC
     global_assert.cpp
     Mutation.cpp
