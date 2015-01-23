@@ -22,13 +22,13 @@ public:
     DEFAULT_MOVE_ASOP(Allele_Specifier)
 
     Allele_Specifier(Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation)
-        : _ce_next_cbptr(ce_next_cbptr), _same_orientation(same_orientation) {}
+        : _ce_next_cbptr(ce_next_cbptr), _same_orientation(same_orientation), _strand(false) {}
 
     explicit Allele_Specifier(const pair< Contig_Entry_CBPtr, bool >& p)
-        : _ce_next_cbptr(p.first), _same_orientation(p.second) {}
+        : _ce_next_cbptr(p.first), _same_orientation(p.second), _strand(false) {}
 
     explicit Allele_Specifier(bool strand)
-        : _strand(strand) {}
+        : _ce_next_cbptr(), _same_orientation(true), _strand(strand) {}
 
     bool is_mutation() const { return not is_endpoint(); }
     bool is_endpoint() const { return _ce_next_cbptr; }
