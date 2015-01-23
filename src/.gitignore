@@ -2,6 +2,10 @@
 *.in
 */*.in
 configure
+compile
+depcomp
+install-sh
+missing
 autom4te.cache/
 aclocal.m4
 *.swp
