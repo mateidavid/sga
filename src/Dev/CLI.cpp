@@ -3,7 +3,7 @@
 namespace MAC
 {
 
-void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
+void cli(istream& is, ostream& os, const Graph&, const Hap_Map& hm)
 {
     set< Mutation_Fact::index_type > unused_mut_set = Mutation_Fact::unused_set();
     set< Read_Chunk_Fact::index_type > unused_rc_set = Read_Chunk_Fact::unused_set();

@@ -253,6 +253,7 @@ void Hap_Map::dump_consecutive_anchor_pair_stats(ostream& os, const Allele_Ancho
     auto a1_hops_rg = hh_set().equal_range(a1);
     auto a2_hops_rg = hh_set().equal_range(a2);
     auto make_terminal_hop_set = [] (const Allele_Anchor& anchor, const decltype(a1_hops_rg)& rg, bool right_anchor) {
+        static_cast< void >(anchor);
         set< Hap_Hop_CBPtr > res;
         for (auto it = rg.first; it != rg.second; ++it)
         {
