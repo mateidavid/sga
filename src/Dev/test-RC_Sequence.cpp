@@ -5,13 +5,13 @@
 #include <string>
 #include <iostream>
 #include <boost/program_options.hpp>
-#include "DNA_Sequence.hpp"
+#include "RC_Sequence.hpp"
 #include "Util.h"
 
 using namespace std;
 namespace bo = boost::program_options;
 
-typedef dnasequence::Sequence< std::string > sequence_type;
+typedef rc_sequence::Sequence< std::string > sequence_type;
 typedef sequence_type::proxy_type sequence_proxy_type;
 
 struct Program_Options
@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
     notify(vm);
     if (vm.count("help"))
     {
-        cout << "Test DNA Sequence type.\n"
+        cout << "Test RC Sequence type.\n"
             "The program repeats the following random test several times:\n"
             " - pick a DNA sequence\n"
             " - pick a substring position\n"

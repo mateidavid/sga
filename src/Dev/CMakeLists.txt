@@ -6,20 +6,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 include_directories(BEFORE ${CMAKE_SOURCE_DIR}/interval-tree/include)
 include_directories(BEFORE ${CMAKE_SOURCE_DIR}/boost-intrusive/include) # <-first
 
-if(OPENMP_FOUND)
-    add_executable(bloom-filter-tool bloom-filter-tool.cpp
-        kmer_gen.cpp
-    )
-    target_link_libraries(bloom-filter-tool
-        util
-        thirdparty
-        ${Boost_IOSTREAMS_LIBRARY}
-        ${ZLIB_LIBRARIES}
-    )
-else()
-    message(STATUS "Cannot build bloom-filter-tool, need OpenMP")
-endif()
-
 add_library(mac STATIC
     global_assert.cpp
     Mutation.cpp
@@ -34,14 +20,11 @@ add_library(mac STATIC
     Hap_Map.cpp
     CLI.cpp
 )
-#set_target_properties(mac PROPERTIES LINK_FLAGS "${BOOST_LDFLAGS}")
 
 # workaround library&executable having the same name
 add_executable(mac-bin mac.cpp)
 set_target_properties(mac-bin PROPERTIES OUTPUT_NAME mac)
 add_dependencies(mac-bin version)
-#set_target_properties(mac-bin PROPERTIES LINK_FLAGS "${BOOST_LDFLAGS} -lboost_iostreams -lboost_program_options")
-#target_link_libraries(mac-bin mac ${CMAKE_BINARY_DIR}/Util/libutil.a ${CMAKE_BINARY_DIR}/Thirdparty/libthirdparty.a)
 target_link_libraries(mac-bin
     mac
     thirdparty
@@ -80,8 +63,8 @@ target_link_libraries(test-affine-overlapper
     ${ZLIB_LIBRARIES}
 )
 
-add_executable(test-DNA_Sequence test-DNA_Sequence.cpp)
-target_link_libraries(test-DNA_Sequence
+add_executable(test-RC_Sequence test-RC_Sequence.cpp)
+target_link_libraries(test-RC_Sequence
     util
     thirdparty
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
@@ -93,7 +76,7 @@ if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
   file(COPY factory.gdb mac-gdb.gdb DESTINATION .)
   add_test(test-itree-and-factory test-itree-and-factory)
   add_test(test-Read_Chunk-traversal test-Read_Chunk-traversal)
-  add_test(test-DNA_Sequence test-DNA_Sequence)
+  add_test(test-RC_Sequence test-RC_Sequence)
   add_test(test-affine-overlapper test-affine-overlapper)
   file(GLOB test_graphs test_graphs/test.*)
   file(GLOB test_graphs_real test_graphs/test-real.*)

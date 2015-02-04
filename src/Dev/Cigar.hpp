@@ -14,7 +14,7 @@
 #include "global_assert.hpp"
 #include "Cigar_Op.hpp"
 //#include "Util.h"
-#include "DNA_Sequence.hpp"
+#include "RC_Sequence.hpp"
 #include "logger.hpp"
 
 
@@ -32,7 +32,7 @@ class Cigar
 public:
     typedef Size_Type size_type;
     typedef Cigar_Op< Size_Type > cigar_op_type;
-    typedef dnasequence::Sequence< std::string, size_t > sequence_type;
+    typedef rc_sequence::Sequence< std::string > sequence_type;
     typedef sequence_type::proxy_type sequence_proxy_type;
 
     /** Default constructor */

@@ -1,31 +1,70 @@
-#ifndef __DNA_SEQUENCE_HPP
-#define __DNA_SEQUENCE_HPP
+//-----------------------------------------------
+// Copyright 2015 Ontario Institute for Cancer Research
+// Written by Matei David (mdavid@oicr.on.ca)
+// Released under the GPL license
+//-----------------------------------------------
 
-#include <stdexcept>
+#ifndef __RC_SEQUENCE_HPP
+#define __RC_SEQUENCE_HPP
+
+#include <iostream>
+#include <vector>
+#include <cassert>
 #include <mutex>
-#include <chrono>
+#include <stdexcept>
 #include <cctype>
 #include <boost/iterator/transform_iterator.hpp>
 #include "shortcuts.hpp"
 
 
-namespace dnasequence
+namespace rc_sequence
 {
 
-/** Static class holding complement table. */
-class complement
+/** DNA complementer class.
+ *
+ * The class provides static methods base() and sequence() which return
+ * the complement of a base and of a sequence, respectively.
+ *
+ * The class initializes the complement table internally, in a thread-safe
+ * manner using std::mutex from C++11.
+ */
+class DNA_Complementer;
+
+/** Sequence proxy class.
+ *
+ * Its primary role is to accumulate rev(), comp(), and substr() operations
+ * applied on an existing Sequence object. The Sequence object must not be
+ * destroyed while one of its Proxy objects is used!
+ *
+ * One can use a proxy object to:
+ * - accumulate rev(), comp(), and substr() operations
+ * - retrieve a given position using at() and operator[]()
+ * - compare with other sequence proxy objects
+ * - print object (ostream& operator <<)
+ * - construct a new Sequence object
+ */
+template < typename String_Type, typename Complementer >
+class Sequence_Proxy;
+
+/** Sequence class.
+ *
+ * Implemented as a non-orthodox derivation from a regular string class.
+ * The derived class adds no new data members, but provides new functions
+ * rev(), comp(), revcomp(), and overloads substr(). All of these produce
+ * Sequence_Proxy objects that accumulate the corresponding restrictions.
+ */
+template < typename String_Type, typename Complementer >
+class Sequence;
+
+class DNA_Complementer
 {
 public:
     /** Function that complements one base. */
     static char base(char c)
     {
-        return table()[static_cast< unsigned >(c)];
-    }
-    /** Iterator modifier that complements the output of the iterator. */
-    template < typename Iterator >
-    static boost::transform_iterator< decltype(&complement::base), Iterator > iterator(const Iterator& it)
-    {
-        return boost::make_transform_iterator(it, &complement::base);
+        int res = table().at(static_cast< unsigned >(c));
+        assert(res >= 0);
+        return static_cast< char >(res);
     }
     /** Function that complements a sequence. */
     template < typename Sequence_Type >
@@ -34,12 +73,22 @@ public:
         return Sequence_Type(iterator(s.cbegin()), iterator(s.cend()));
     }
 private:
-    /** Complement table holder (thread-safe initialization). */
-    static const char* table()
+    /** Iterator modifier that complements the output of the iterator. */
+    template < typename Iterator >
+    static boost::transform_iterator< decltype(&base), Iterator > iterator(const Iterator& it)
     {
-        static char _complement_table[128];
+        return boost::make_transform_iterator(it, &base);
+    }
+    /** Complement table holder (thread-safe initialization). */
+    static const std::vector< int >& table()
+    {
+        static std::vector< int > _complement_table(128, -1);
         static const std::vector< std::vector< char > > _complement_table_pairs =
-            { { 'A', 'T' }, { 'C', 'G' }, { 'N', 'N' }, { 'X', 'X' }, { '.', '.' } };
+            { { 'A', 'T' },
+              { 'C', 'G' },
+              { 'N', 'N' },
+              { 'X', 'X' },
+              { '.', '.' } };
         static bool _inited = false;
         if (not _inited)
         {
@@ -61,22 +110,26 @@ private:
         }
         return _complement_table;
     }
-}; // class complement
-
-template < typename String_Type, typename Size_Type >
-class Sequence_Proxy;
-template < typename String_Type, typename Size_Type >
-class Sequence;
+}; // class DNA_Complementer
 
 namespace detail
 {
 
 /** Iterator for proxy objects */
+template < typename Complementer >
 class Sequence_Proxy_Iterator
-    : public boost::iterator_adaptor< Sequence_Proxy_Iterator, const char*, char, boost::random_access_traversal_tag, char >
+    : public boost::iterator_adaptor< Sequence_Proxy_Iterator< Complementer >,
+                                      const char*,
+                                      char,
+                                      boost::random_access_traversal_tag,
+                                      char >
 {
 private:
-    typedef boost::iterator_adaptor< Sequence_Proxy_Iterator, const char*, char, boost::random_access_traversal_tag, char > Adaptor_Base;
+    typedef boost::iterator_adaptor< Sequence_Proxy_Iterator< Complementer >,
+                                     const char*,
+                                     char,
+                                     boost::random_access_traversal_tag,
+                                     char > Adaptor_Base;
 public:
     Sequence_Proxy_Iterator()
         : Sequence_Proxy_Iterator::iterator_adaptor_(0), _reversed(false), _complemented(false) {}
@@ -93,7 +146,7 @@ private:
     char dereference() const
     {
         char base = not _reversed? *(this->base()) : *(this->base() - 1);
-        return not _complemented? base : complement::base(base);
+        return not _complemented? base : Complementer::base(base);
     }
     void increment() { increment_dir(true); }
     void decrement() { increment_dir(false); }
@@ -123,25 +176,18 @@ private:
 
 } // namespace detail
 
-/** Sequence_Proxy class.
- * Its role is to accumulate rev(), comp(), and substr() operations
- * applied on a Sequence object. One can use a proxy object in 3 ways:
- * - retrieve a given position using at() and operator[]()
- * - print object
- * - construct a new sequence object
- */
-template < typename String_Type, typename Size_Type = size_t >
+template < typename String_Type, typename Complementer = DNA_Complementer >
 class Sequence_Proxy
 {
 private:
-    typedef Sequence< String_Type, Size_Type > sequence_type;
-    typedef detail::Sequence_Proxy_Iterator iterator;
+    typedef Sequence< String_Type, Complementer > sequence_type;
+    typedef detail::Sequence_Proxy_Iterator< Complementer > iterator;
 
-    friend class Sequence< String_Type, Size_Type >;
+    friend class Sequence< String_Type, Complementer >;
 
     DEFAULT_COPY_CTOR(Sequence_Proxy)
     DELETE_COPY_ASOP(Sequence_Proxy)
-    Sequence_Proxy(const String_Type* seq_p, Size_Type start, Size_Type len, bool reversed, bool complemented)
+    Sequence_Proxy(const String_Type* seq_p, size_t start, size_t len, bool reversed, bool complemented)
         : _seq_p(seq_p), _start(start), _len(len), _reversed(reversed), _complemented(complemented) {}
 
 public:
@@ -191,11 +237,11 @@ public:
     }
 
     /** Element access */
-    char operator [] (Size_Type pos) const
+    char operator [] (size_t pos) const
     {
         return *(begin() + pos);
     }
-    char at(Size_Type pos) const
+    char at(size_t pos) const
     {
         if (pos >= _len)
         {
@@ -291,24 +337,18 @@ public:
 
 private:
     const String_Type* _seq_p;
-    Size_Type _start;
-    Size_Type _len;
+    size_t _start;
+    size_t _len;
     bool _reversed;
     bool _complemented;
 }; // class Sequence_Proxy
 
-/** Sequence class.
- * Implemented as a non-orthodox derivation from a regular string class.
- * The derived class adds no new data members, but provides new functions
- * rev(), comp(), revcomp(), and overloads substr(). All of these produce
- * proxy objects that accumulate the corresponding restrictions.
- */
-template < typename String_Type, typename Size_Type = size_t >
+template < typename String_Type, typename Complementer = DNA_Complementer >
 class Sequence
     : public String_Type
 {
 public:
-    typedef Sequence_Proxy< String_Type, Size_Type > proxy_type;
+    typedef Sequence_Proxy< String_Type, Complementer > proxy_type;
 
     DEFAULT_DEF_CTOR(Sequence)
     DEFAULT_COPY_CTOR(Sequence)
@@ -395,7 +435,7 @@ public:
 
 }; // class Sequence
 
-} // namespace dnasequence
+} // namespace rc_sequence
 
 
 #endif

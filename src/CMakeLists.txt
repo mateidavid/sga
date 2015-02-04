@@ -26,11 +26,18 @@ set(HEADER_SUBDIRS
     Algorithm Bigraph Concurrency Dev GraphDiff Scaffold SGA SQG StringGraph SuffixTools Thirdparty Util
     CACHE INTERNAL "Subdirectories containing header files")
 set(SUBDIRS
-    Algorithm Bigraph Concurrency Dev GraphDiff Scaffold SGA SQG StringGraph SuffixTools Thirdparty Util bin
+    Thirdparty Util Dev BFTrim
     CACHE INTERNAL "Subdirectories to descend into")
 
 ### Resolve external dependencies
 #
+# prefer static libraries
+#set(CMAKE_FIND_LIBRARY_SUFFIXES .a .so)
+
+# bake-in RPATH to prevent library search problems
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH true)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH true)
+
 # check for OpenMP support
 # => OPENMP_FOUND, OpenMP_C_FLAGS, OpenMP_CXX_FLAGS
 if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") AND NOT OpenMP_DETECTED)
@@ -60,6 +67,8 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${Boost_COMPILER}" STREQUAL
     "The cmake FindBoost package does not properly detect the compiler name when using CLang. Boost libraries built with 'versioned' layout (compiler name in library name, e.g. 'libboost_program_options-clang35-mt-1_57.so') might be incorrectly detected. To find such libraries, give the compiler name on the cmake command line, e.g. 'cmake -DBoost_COMPILER=\"-clang35\" [...]'. To check which libraries have been detected, use: 'grep libboost_program_options CMakeCache.txt'")
 endif()
 set(BOOST_ROOT "$ENV{BOOST_ROOT}" CACHE PATH "Path to Boost")
+# Use static libraries to avoid LD_RUN_PATH issues
+#set(Boost_USE_STATIC_LIBS true)
 find_package(Boost 1.57.0 EXACT REQUIRED COMPONENTS iostreams program_options)
 if(NOT Boost_FOUND)
   message(FATAL_ERROR "Boost 1.57.0 not found")
@@ -167,7 +176,8 @@ set(CMAKE_CXX_FLAGS_GPROFREL "-O3 -DNDEBUG -DBOOST_DISABLE_ASSERTS -pg")
 set(CMAKE_C_FLAGS_GPROFREL "${CMAKE_CXX_FLAGS_GPROF}")
 
 # link flags
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath=$ENV{LD_RUN_PATH}")
+#set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath=$ENV{LD_RUN_PATH} -Wl,--as-needed -static-libgcc -static-libstdc++")
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
 message(STATUS "CMAKE_EXE_LINKER_FLAGS='${CMAKE_EXE_LINKER_FLAGS}'")
 
 ### Add target that updates version
@@ -181,9 +191,6 @@ enable_testing()
 
 ### Descend into subdirectories
 #
-#foreach(dir ${SUBDIRS})
-#    add_subdirectory(${dir})
-#endforeach()
-add_subdirectory(Util)
-add_subdirectory(Thirdparty)
-add_subdirectory(Dev)
+foreach(dir ${SUBDIRS})
+  add_subdirectory(${dir})
+endforeach()

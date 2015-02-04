@@ -34,7 +34,7 @@
 //#include "Util.h"
 #include "bits.hpp"
 #include "ref_range.hpp"
-#include "DNA_Sequence.hpp"
+#include "RC_Sequence.hpp"
 #include "Range.hpp"
 #include "Range_Cont.hpp"
 
@@ -56,7 +56,7 @@ using boost::optional;
 /** Type for absolute and relative offsets in read and contig sequences. */
 typedef size_t Size_Type;
 /** Type holding a read sequence. */
-typedef dnasequence::Sequence< std::string, size_t > Seq_Type;
+typedef rc_sequence::Sequence< std::string > Seq_Type;
 typedef Seq_Type::proxy_type Seq_Proxy_Type;
 /** Type holding a single base pair. */
 typedef Seq_Type::value_type Symb_Type;
