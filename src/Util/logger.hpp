@@ -4,6 +4,44 @@
 // Released under the GPL license
 //-----------------------------------------------
 
+// Logger mechanism
+//
+// Properties:
+// - thread-safe, non-garbled output (uses c++11's thread_local)
+// - uses sink std::clog
+//
+// Main exports:
+// - "Logger" class
+// - "level_wrapper" namespace
+// - "logger" macro
+//
+// To use:
+// - In source code, write:
+//
+//     logger("main", info) << "hello" << endl;
+//
+//   Here, "main" is the facility (a string) and info is the message level.
+//   Note that "logger" is a macro which knows how to look up the name info
+//   inside level_wrapper. The macro introduces C++ code equivalent to:
+//
+//     if (...message should be ignored...) then; else std::clog
+//
+//   NOTE: As with assert(), the code in the output stream following the
+//   logger() macro will ***not be executed*** if the log level of the
+//   facility is higher than the level of the message.
+//
+// - To set the default log level (for unspecified facilities):
+//
+//     Logger::set_default_level(Logger::level_from_string(s));
+//
+// - To set the log level for the "main" facility:
+//
+//     Logger::set_facility_level("main", Logger::level_from_string(s));
+//
+// - By using these functions, one can set log levels using command-line
+//   parameters and achieve dynamic log level settings without recompiling.
+
+
 #ifndef __LOG_HPP
 #define __LOG_HPP
 
@@ -12,7 +50,6 @@
 #include <sstream>
 #include <iostream>
 #include <mutex>
-
 
 namespace level_wrapper
 {
