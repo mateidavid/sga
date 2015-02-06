@@ -262,12 +262,12 @@ Contig_Entry::can_cat_dir(bool c_right) const
     Contig_Entry_CBPtr ce_cbptr = chunk_cont().begin()->ce_bptr();
     ASSERT(ce_cbptr.raw() == this);
 
-    logger("Contig_Entry", debug1) << ptree("can_cat_dir")
+    LOG("Contig_Entry", debug1) << ptree("can_cat_dir")
         .put("ce_ptr", ce_cbptr.to_int())
         .put("c_right", c_right);
 
     auto res = out_chunks_dir(c_right, 1);
-    logger("Contig_Entry", debug1) << ptree("can_cat_dir")
+    LOG("Contig_Entry", debug1) << ptree("can_cat_dir")
         .put("res_size", res.size());
     if (res.size() != 1)
     {
@@ -278,7 +278,7 @@ Contig_Entry::can_cat_dir(bool c_right) const
     tie(ce_next_cbptr, same_orientation) = res.begin()->first;
     set< Read_Chunk_CBPtr > rc_cbptr_cont = move(res.begin()->second);
     ASSERT(not rc_cbptr_cont.empty());
-    logger("Contig_Entry", debug1) << ptree("can_cat_dir")
+    LOG("Contig_Entry", debug1) << ptree("can_cat_dir")
         .put("ce_next_ptr", ce_next_cbptr.to_int())
         .put("same_orientation", same_orientation)
         .put("chunk_cont_size", rc_cbptr_cont.size());
@@ -290,7 +290,7 @@ Contig_Entry::can_cat_dir(bool c_right) const
     }
     */
     auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, 1);
-    logger("Contig_Entry", debug1) << ptree("can_cat_dir")
+    LOG("Contig_Entry", debug1) << ptree("can_cat_dir")
         .put("tmp_size", tmp.size());
     if (tmp.size() != 1)
     {
@@ -304,7 +304,7 @@ Contig_Entry::can_cat_dir(bool c_right) const
 void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_next_bptr,
                                set< Read_Chunk_CBPtr >& rc_cbptr_cont)
 {
-    logger("Contig_Entry", debug1) << ptree("cat_c_right")
+    LOG("Contig_Entry", debug1) << ptree("cat_c_right")
         .put("ce_ptr", ce_bptr.to_int())
         .put("ce_next_ptr", ce_next_bptr.to_int());
 

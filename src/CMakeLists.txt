@@ -23,7 +23,7 @@ set(PACKAGE_TARNAME "${PROJECT_NAME}")
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 
 set(HEADER_SUBDIRS
-    Algorithm Bigraph Concurrency Dev GraphDiff Scaffold SGA SQG StringGraph SuffixTools Thirdparty Util
+    Algorithm Bigraph Concurrency GraphDiff Scaffold SGA SQG StringGraph SuffixTools Thirdparty Util
     CACHE INTERNAL "Subdirectories containing header files")
 set(SUBDIRS
     Thirdparty Util Dev BFTrim

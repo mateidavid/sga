@@ -6,7 +6,7 @@ namespace MAC
 
 void Unmap_Mut_Clusters::operator () (Graph& g) const
 {
-    logger("Unmap_Mut_Clusters", info) << ptree("unmap_mut_clusters__start");
+    LOG("Unmap_Mut_Clusters", info) << ptree("unmap_mut_clusters__start");
     static const uint64_t visit_mask = 4;
     for (auto ce_bptr : g.ce_cont() | referenced)
     {
@@ -33,7 +33,7 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
                 bitmask::set(ce_bptr->tag(), visit_mask);
                 continue;
             }
-            logger("Unmap_Mut_Clusters", debug) << ptree("unmap_mut_clusters")
+            LOG("Unmap_Mut_Clusters", debug) << ptree("unmap_mut_clusters")
                 .put("ce_ptr", ce_bptr.to_int())
                 .put("start", mut_cluster->start())
                 .put("end", mut_cluster->end());
@@ -57,7 +57,7 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
                     // the unmapped range is spanned by a deletion in this read
                     continue;
                 }
-                logger("Unmap_Mut_Clusters", debug) << ptree("unmap_mut_clusters")
+                LOG("Unmap_Mut_Clusters", debug) << ptree("unmap_mut_clusters")
                     .put("re_ptr", unmap_rc_cbptr->re_bptr().to_int())
                     .put("start", r_rg.start())
                     .put("end", r_rg.end());
@@ -69,7 +69,7 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
             }
         }
     }
-    logger("Unmap_Mut_Clusters", info) << ptree("unmap_mut_clusters__end");
+    LOG("Unmap_Mut_Clusters", info) << ptree("unmap_mut_clusters__end");
 }
 
 optional< Range_Type >

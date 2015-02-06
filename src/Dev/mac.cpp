@@ -23,13 +23,13 @@ namespace bo = boost::program_options;
 
 void load_asqg(std::istream& is, const bo::variables_map& vm, Graph& g)
 {
-    logger("io", info) << ptree("load_asqg_start");
+    LOG("io", info) << ptree("load_asqg_start");
     string line;
     size_t line_count = 0;
     size_t progress_count = vm.at("progress-count").as< unsigned >();
     while (getline(is, line))
     {
-        logger("mac", debug) << ptree("op").put("line", line);
+        LOG("mac", debug) << ptree("op").put("line", line);
         istringstream iss(line + "\n");
         string rec_type;
         iss >> rec_type;
@@ -75,16 +75,16 @@ void load_asqg(std::istream& is, const bo::variables_map& vm, Graph& g)
             g.check_all();
             g.check_leaks();
         }
-        logger("mac", debug2) << g.to_ptree();
+        LOG("mac", debug2) << g.to_ptree();
         if (progress_count > 0)
         {
             if ((++line_count % progress_count) == 0)
             {
-                logger("mac", info) << ptree("progress").put("count", line_count);
+                LOG("mac", info) << ptree("progress").put("count", line_count);
             }
         }
     }
-    logger("io", info) << ptree("load_asqg_end");
+    LOG("io", info) << ptree("load_asqg_end");
     g.check_all();
     g.check_leaks();
 }
@@ -98,7 +98,7 @@ int real_main(const bo::variables_map& vm)
     // option validation
     if (vm.count("input-file") == vm.count("load-file"))
     {
-        logger("mac", error) << "exactly 1 of input-file or load-file options must be specified" << endl;
+        LOG("mac", error) << "exactly 1 of input-file or load-file options must be specified" << endl;
         abort();
     }
     if (vm.count("load-file"))
@@ -109,14 +109,14 @@ int real_main(const bo::variables_map& vm)
         {
             if (vm.count(s))
             {
-                logger("mac", warning) << s << ": ignored when loading a mac graph";
+                LOG("mac", warning) << s << ": ignored when loading a mac graph";
             }
         }
         for (const auto& s : forbidden_bool_switches)
         {
             if (vm.at(s).as< bool >())
             {
-                logger("mac", warning) << s << ": ignored when loading a mac graph";
+                LOG("mac", warning) << s << ": ignored when loading a mac graph";
             }
         }
     }
@@ -124,7 +124,7 @@ int real_main(const bo::variables_map& vm)
     if (vm.count("input-file"))
     {
         const string& fn = vm.at("input-file").as< string >();
-        logger("mac", info) << ptree("loading").put("input_file", fn);
+        LOG("mac", info) << ptree("loading").put("input_file", fn);
         ixstream tmp_fs(fn);
         if (vm.count("unmap-trigger-len"))
         {
@@ -136,52 +136,52 @@ int real_main(const bo::variables_map& vm)
     else
     {
         const string& fn = vm.at("load-file").as< string >();
-        logger("mac", info) << ptree("loading").put("load-file", fn);
+        LOG("mac", info) << ptree("loading").put("load-file", fn);
         fstr ifs(fn, ios_base::in | ios_base::binary);
         g.load(ifs);
     }
-    logger("mac", info) << ptree("factory_stats", g.factory_stats());
+    LOG("mac", info) << ptree("factory_stats", g.factory_stats());
 
     if (vm.at("cat-at-end").as< bool >())
     {
-        logger("mac", info) << ptree("cat_at_end_start");
+        LOG("mac", info) << ptree("cat_at_end_start");
         g.cat_all_read_contigs();
         g.check_all();
-        logger("mac", info) << ptree("cat_at_end_end");
+        LOG("mac", info) << ptree("cat_at_end_end");
     }
     if (vm.at("unmap-read-ends").as< bool >())
     {
-        logger("mac", info) << ptree("unmap_read_ends_start");
+        LOG("mac", info) << ptree("unmap_read_ends_start");
         g.unmap_read_ends();
         g.check_all();
-        logger("mac", info) << ptree("unmap_read_ends_end");
+        LOG("mac", info) << ptree("unmap_read_ends_end");
     }
     if (vm.at("unmap-mut-clusters").as< bool >())
     {
-        logger("mac", info) << ptree("unmap_mut_clusters_start");
+        LOG("mac", info) << ptree("unmap_mut_clusters_start");
         Unmap_Mut_Clusters()(g);
         g.check_all();
-        logger("mac", info) << ptree("unmap_mut_clusters_end");
+        LOG("mac", info) << ptree("unmap_mut_clusters_end");
     }
     if (vm.at("resolve-unmappable-regions").as< bool >())
     {
-        logger("mac", info) << ptree("resolve_unmappable_regions_start");
+        LOG("mac", info) << ptree("resolve_unmappable_regions_start");
         g.resolve_unmappable_regions();
         g.check_all();
-        logger("mac", info) << ptree("resolve_unmappable_regions_end");
+        LOG("mac", info) << ptree("resolve_unmappable_regions_end");
     }
     if (vm.at("unmap-single-chunks").as< bool >())
     {
-        logger("mac", info) << ptree("unmap_single_chunks_start");
+        LOG("mac", info) << ptree("unmap_single_chunks_start");
         g.unmap_single_chunks();
         g.check_all();
-        logger("mac", info) << ptree("unmap_single_chunks_end");
+        LOG("mac", info) << ptree("unmap_single_chunks_end");
     }
     if (vm.at("hap-map").as< bool >())
     {
-        logger("mac", info) << ptree("hap_map_start");
+        LOG("mac", info) << ptree("hap_map_start");
         hm.build(g);
-        logger("mac", info) << ptree("hap_map_end");
+        LOG("mac", info) << ptree("hap_map_end");
     }
 
     if (vm.at("interactive").as< bool >())
@@ -192,7 +192,7 @@ int real_main(const bo::variables_map& vm)
     if (vm.count("stats-file"))
     {
         const string& fn = vm.at("stats-file").as< string >();
-        logger("mac", info) << ptree("print_stats").put("stats_file", fn);
+        LOG("mac", info) << ptree("print_stats").put("stats_file", fn);
         fstr tmp_fs(fn, ios_base::out);
         g.dump_detailed_counts(tmp_fs);
     }
@@ -207,14 +207,14 @@ int real_main(const bo::variables_map& vm)
     if (vm.count("mutations-file"))
     {
         const string& fn = vm.at("mutations-file").as< string >();
-        logger("mac", info) << ptree("print_mutations").put("file", fn);
+        LOG("mac", info) << ptree("print_mutations").put("file", fn);
         fstr tmp_fs(fn, ios_base::out);
         g.print_mutations(tmp_fs);
     }
     if (vm.count("terminal-reads-file"))
     {
         const string& fn = vm.at("terminal-reads-file").as< string >();
-        logger("mac", info) << ptree("print_terminal_reads").put("file", fn);
+        LOG("mac", info) << ptree("print_terminal_reads").put("file", fn);
         fstr tmp_fs(fn, ios_base::out);
         g.get_terminal_reads(tmp_fs);
     }
@@ -225,31 +225,31 @@ int real_main(const bo::variables_map& vm)
     if (vm.count("unmappable-contigs-file"))
     {
         const string& fn = vm.at("unmappable-contigs-file").as< string >();
-        logger("mac", info) << ptree("print_unmappable_contigs").put("file", fn);
+        LOG("mac", info) << ptree("print_unmappable_contigs").put("file", fn);
         fstr tmp_fs(fn, ios_base::out);
         g.print_unmappable_contigs(tmp_fs);
     }
     if (vm.count("hapmap-stats-file"))
     {
         const string& fn = vm.at("hapmap-stats-file").as< string >();
-        logger("mac", info) << ptree("hapmap-stats").put("file", fn);
+        LOG("mac", info) << ptree("hapmap-stats").put("file", fn);
         fstr tmp_fs(fn, ios_base::out);
         hm.dump_stats(tmp_fs, g);
     }
-    logger("mac", info) << ptree("done_output");
+    LOG("mac", info) << ptree("done_output");
 
     if (vm.count("save-file"))
     {
         const string& fn = vm.at("save-file").as< string >();
-        logger("mac", info) << ptree("saving").put("save_file", fn);
+        LOG("mac", info) << ptree("saving").put("save_file", fn);
         fstr tmp_fs(fn, ios_base::out | ios_base::binary);
         g.save(tmp_fs);
     }
 
-    logger("mac", info) << ptree("factory_stats", g.factory_stats());
+    LOG("mac", info) << ptree("factory_stats", g.factory_stats());
     g.clear_and_dispose();
     hm.clear_and_dispose();
-    logger("mac", info) << ptree("graph_cleared");
+    LOG("mac", info) << ptree("graph_cleared");
 
     return EXIT_SUCCESS;
 }
@@ -327,13 +327,13 @@ int main(int argc, char* argv[])
         size_t i = l.find(':');
         if (i == string::npos)
         {
-            Logger::set_default_level(Logger::level_from_string(l));
+            Logger::set_default_level(l);
             clog << "set default log level to: "
                  << static_cast< int >(Logger::get_default_level()) << "\n";
         }
         else
         {
-            Logger::set_facility_level(l.substr(0, i), Logger::level_from_string(l.substr(i + 1)));
+            Logger::set_facility_level(l.substr(0, i), l.substr(i + 1));
             clog << "set log level of '" << l.substr(0, i) << "' to: "
                  << static_cast< int >(Logger::get_facility_level(l.substr(0, i))) << "\n";
         }
@@ -342,7 +342,7 @@ int main(int argc, char* argv[])
     srand48(vm.at("seed").as< long >());
 
     // print options
-    logger("mac", info) << variables_map_converter::to_ptree(vm, ac);
+    LOG("mac", info) << variables_map_converter::to_ptree(vm, ac);
 
     return real_main(vm);
 }

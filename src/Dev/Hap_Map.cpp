@@ -18,7 +18,7 @@ Hap_Hop_BPtr Hap_Map::make_single_allele_hop(const Allele_Anchor& anchor, const 
 
 map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::make_mutation_haps(Mutation_CBPtr mut_cbptr)
 {
-    logger("hap_map", debug) << ptree("make_mutation_haps").put("mut_ptr", mut_cbptr.to_int());
+    LOG("hap_map", debug) << ptree("make_mutation_haps").put("mut_ptr", mut_cbptr.to_int());
     map< Allele_Specifier, set< Hap_Hop_CBPtr > > res;
     Allele_Anchor anchor(mut_cbptr);
     auto anchor_support = anchor.support();
@@ -34,7 +34,7 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::make_mutation_haps(Mutati
 map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::extend_endpoint_haps(const Allele_Anchor& anchor)
 {
     ASSERT(anchor.is_endpoint());
-    logger("hap_map", debug) << ptree("extend_endpoint_haps")
+    LOG("hap_map", debug) << ptree("extend_endpoint_haps")
         .put("ce_ptr", anchor.ce_cbptr().to_int())
         .put("c_right", anchor.c_right());
     map< Allele_Specifier, set< Hap_Hop_CBPtr > > res;
@@ -107,12 +107,12 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::extend_endpoint_haps(cons
 
 void Hap_Map::build(const Graph& g)
 {
-    logger("hap_map", info) << ptree("build_start");
+    LOG("hap_map", info) << ptree("build_start");
     clear_and_dispose();
     for (auto ce_cbptr : g.ce_cont() | referenced)
     {
         if (not ce_cbptr->is_normal()) continue;
-        logger("hap_map", debug) << ptree("build_loop").put("ce_ptr", ce_cbptr.to_int());
+        LOG("hap_map", debug) << ptree("build_loop").put("ce_ptr", ce_cbptr.to_int());
         // do not allow overlapping mutations during haplotype building
         ASSERT(ce_cbptr->separated_mutations(10, true));
         // construct left endpoint haps
@@ -135,7 +135,7 @@ void Hap_Map::build(const Graph& g)
         connect_unique(prev_anchor, re_anchor, prev_haps, re_haps);
         hh_set().check();
     }
-    logger("hap_map", info) << ptree("build_end");
+    LOG("hap_map", info) << ptree("build_end");
 } // Hap_Map::build
 
 void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
@@ -193,11 +193,11 @@ void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
         // if they are on the same haplotype, this consitututes a haplotype cycle
         if (he1_bptr == he2_bptr)
         {
-            logger("hap_map", debug) << ptree("connect_unique__hap_cycle")
+            LOG("hap_map", debug) << ptree("connect_unique__hap_cycle")
                 .put("a1_hop", a1_hop_cbptr->to_ptree()).put("a2_hop", a2_hop_cbptr->to_ptree());
             continue;
         }
-        logger("hap_map", debug) << ptree("connect_unique__new_connection")
+        LOG("hap_map", debug) << ptree("connect_unique__new_connection")
             .put("a1_anchor", a1.to_ptree())
             .put("a2_anchor", a2.to_ptree())
             .put("a1_allele", a1_allele.to_ptree())
@@ -205,7 +205,7 @@ void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
         if (a1_hop_cbptr->c_direction() != a2_hop_cbptr->c_direction())
         {
             // reverse haplotype at a2_hop to enable merge
-            logger("hap_map", debug) << ptree("connect_unique__reverse_hap")
+            LOG("hap_map", debug) << ptree("connect_unique__reverse_hap")
                 .put("he_ptr", he2_bptr.to_int());
             he2_bptr->hh_cont().reverse();
         }

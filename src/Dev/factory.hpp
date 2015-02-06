@@ -103,7 +103,7 @@ public:
             os.write(reinterpret_cast< const char* >(&e), sizeof(e));
             bytes += sizeof(e);
         }
-        logger("io", info) << ptree("factory_save")
+        LOG("io", info) << ptree("factory_save")
             .put("type", typeid(Value).name())
             .put("addr", static_cast< const void* >(this))
             .put("next_free_idx", _next_free_idx)
@@ -123,7 +123,7 @@ public:
             is.read(reinterpret_cast< char* >(&e), sizeof(e));
             bytes += sizeof(e);
         }
-        logger("io", info) << ptree("factory_load")
+        LOG("io", info) << ptree("factory_load")
             .put("type", typeid(Value).name())
             .put("addr", static_cast< const void* >(this))
             .put("next_free_idx", _next_free_idx)
@@ -159,7 +159,7 @@ private:
             ++_next_free_idx;
         }
         ++_load;
-        logger("factory", debug1) << ptree("allocate")
+        LOG("factory", debug1) << ptree("allocate")
             .put("type", typeid(Value).name())
             .put("addr", static_cast< const void* >(this))
             .put("idx", idx);
@@ -169,7 +169,7 @@ private:
     /** Deallocate element. */
     void ns_deallocate(index_type idx)
     {
-        logger("factory", debug1) << ptree("deallocate")
+        LOG("factory", debug1) << ptree("deallocate")
             .put("type", typeid(Value).name())
             .put("addr", static_cast< const void* >(this))
             .put("idx", idx);

@@ -8,23 +8,23 @@
 //
 // Properties:
 // - thread-safe, non-garbled output (uses c++11's thread_local)
-// - uses sink std::clog
+// - customizable ostream sink. by default, uses std::clog
 //
 // Main exports:
 // - "Logger" class
 // - "level_wrapper" namespace
-// - "logger" macro
+// - "LOG" macro
 //
 // To use:
 // - In source code, write:
 //
-//     logger("main", info) << "hello" << endl;
+//     LOG("main", info, sink_os) << "hello" << endl;
 //
 //   Here, "main" is the facility (a string) and info is the message level.
 //   Note that "logger" is a macro which knows how to look up the name info
 //   inside level_wrapper. The macro introduces C++ code equivalent to:
 //
-//     if (...message should be ignored...) then; else std::clog
+//     if (...message should be ignored...) then; else sink_os
 //
 //   NOTE: As with assert(), the code in the output stream following the
 //   logger() macro will ***not be executed*** if the log level of the
@@ -42,8 +42,8 @@
 //   parameters and achieve dynamic log level settings without recompiling.
 
 
-#ifndef __LOG_HPP
-#define __LOG_HPP
+#ifndef __LOGGER_HPP
+#define __LOGGER_HPP
 
 #include <string>
 #include <map>
@@ -51,51 +51,112 @@
 #include <iostream>
 #include <mutex>
 
+
 namespace level_wrapper
 {
-
-enum level
-{
-    error = 0,
-    warning,
-    info,
-    debug,
-    debug1,
-    debug2
-};
-
-} // namespace level_wrapper
+    // log levels
+    enum level
+    {
+        error = 0,
+        warning,
+        info,
+        debug,
+        debug1,
+        debug2
+    };
+}
 
 class Logger
     : public std::ostringstream
 {
 public:
-    static level_wrapper::level get_level(level_wrapper::level l) { return l; }
-    static level_wrapper::level get_level(int i) { return static_cast< level_wrapper::level >(i); }
-    static level_wrapper::level get_level(const std::string& s) { return level_from_string(s); }
-
-    /** Constructor: initialize buffer. */
-    Logger(const std::string& facility, level_wrapper::level msg_level)
+    typedef level_wrapper::level level;
+    // Constructor: initialize buffer.
+    Logger(const std::string& facility, level msg_level, std::ostream& os = std::clog)
+        : _os_p(&os)
     {
         *this << "= " << facility << "." << int(msg_level) << ": ";
     }
-    /** Destructor: dump buffer to output. */
+    // Destructor: dump buffer to output.
     ~Logger()
     {
-        //_buffer << std::endl;
-        std::clog.write(this->str().c_str(), this->str().size());
+        _os_p->write(this->str().c_str(), this->str().size());
     }
-    /** Produce l-value for output chaining. */
+    // Produce l-value for output chaining.
     std::ostream& l_value() { return *this; }
 
-    static level_wrapper::level level_from_string(const std::string& s)
+    // static methods for setting and getting facility log levels.
+    static level get_default_level()
+    {
+        return default_level();
+    }
+    static void set_default_level(level l)
+    {
+        static std::mutex m;
+        std::lock_guard< std::mutex > lg(m);
+        default_level() = l;
+    }
+    static void set_default_level(int l)
+    {
+        set_default_level(get_level(l));
+    }
+    static void set_default_level(const std::string& s)
+    {
+        set_default_level(get_level(s));
+    }
+    static level get_facility_level(const std::string& facility)
+    {
+        return (facility_level_map().count(facility) > 0?
+                facility_level_map().at(facility) : get_default_level());
+    }
+    static void set_facility_level(const std::string& facility, level l)
+    {
+        static std::mutex m;
+        std::lock_guard< std::mutex > lg(m);
+        facility_level_map()[facility] = l;
+    }
+    static void set_facility_level(const std::string& facility, int l)
+    {
+        set_facility_level(facility, get_level(l));
+    }
+    static void set_facility_level(const std::string& facility, const std::string& s)
+    {
+        set_facility_level(facility, get_level(s));
+    }
+    // public static utility functions (used by LOG macro)
+    static level get_level(level l) { return l; }
+    static level get_level(int i) { return static_cast< level >(i); }
+    static level get_level(const std::string& s) { return level_from_string(s); }
+    // public static member (used by LOG macro)
+    static level& thread_local_last_level()
+    {
+        static thread_local level _last_level = level_wrapper::error;
+        return _last_level;
+    }
+private:
+    // sink for this Logger object
+    std::ostream* _os_p;
+
+    // private static data members
+    static level& default_level()
+    {
+        static level _default_level = level_wrapper::error;
+        return _default_level;
+    }
+    static std::map< std::string, level >& facility_level_map()
+    {
+        static std::map< std::string, level > _facility_level_map;
+        return _facility_level_map;
+    }
+    // private static utility functions
+    static level level_from_string(const std::string& s)
     {
         std::istringstream iss(s + "\n");
         int tmp_int = -1;
         iss >> tmp_int;
         if (iss.good())
         {
-            return level_wrapper::level(tmp_int);
+            return level(tmp_int);
         }
         else
         {
@@ -112,89 +173,45 @@ public:
             }
         }
     }
-
-    static level_wrapper::level& last_level() {
-        static thread_local level_wrapper::level _last_level = level_wrapper::error;
-        return _last_level;
-    }
-
-    static level_wrapper::level get_default_level()
-    {
-        return default_level();
-    }
-    static void set_default_level(level_wrapper::level l)
-    {
-        mutex().lock();
-        default_level() = l;
-        mutex().unlock();
-    }
-
-    static level_wrapper::level get_facility_level(const std::string& facility)
-    {
-        return facility_level().count(facility) > 0? facility_level()[facility] : get_default_level();
-    }
-    static void set_facility_level(const std::string& facility, level_wrapper::level l)
-    {
-        mutex().lock();
-        facility_level()[facility] = l;
-        mutex().unlock();
-    }
-
-private:
-    static level_wrapper::level& default_level()
-    {
-        static level_wrapper::level _default_level = level_wrapper::error;
-        return _default_level;
-    }
-
-    static std::map< std::string, level_wrapper::level >& facility_level()
-    {
-        static std::map< std::string, level_wrapper::level > _facility_level;
-        return _facility_level;
-    }
-
-    static std::mutex& mutex()
-    {
-        static std::mutex m;
-        return m;
-    }
-}; // class logger
-
+}; // class Logger
 
 /**
- * log() macro
+ * LOG macro
  *
- * log(level_spec) << message
+ * LOG(facility, level_spec, sink) << message
+ *   `facility`   : string
  *   `level_spec` : integer, string, or logger level
+ *   `sink`       : sink ostream
  * 
- * log(facility, level_spec) << message
- *   `facility` : string
- *   `level_spec` : integer, string, or logger level
- * 
- * Log to `facility` (2nd form) or LOG_FACILITY (1st form) at logger level `level_spec`.
+ * Log to `facility` at logger level `level_spec` and dump output to `sink`.
+ * If sink is omitted, it defaults to std::clog.
+ * If `facility` is omitted (logger has single argument), the macro LOG_FACILITY
+ * is used instead.
  */
 
-#define log_2(facility, level_spec) \
-    { using namespace level_wrapper; Logger::last_level() = Logger::get_level(level_spec); } \
-    if (Logger::last_level() > Logger::get_facility_level(facility)) ; \
-    else Logger(facility, Logger::last_level()).l_value()
+#define __LOG_3(facility, level_spec, sink)                                   \
+    { using namespace level_wrapper; Logger::thread_local_last_level() = Logger::get_level(level_spec); } \
+    if (Logger::thread_local_last_level() > Logger::get_facility_level(facility)) ; \
+    else Logger(facility, Logger::thread_local_last_level(), sink).l_value()
 
-#define log_1(level_spec) \
-    log_2(LOG_FACILITY, level_spec)
+#define __LOG_2(facility, level_spec)                                   \
+    { using namespace level_wrapper; Logger::thread_local_last_level() = Logger::get_level(level_spec); } \
+    if (Logger::thread_local_last_level() > Logger::get_facility_level(facility)) ; \
+    else Logger(facility, Logger::thread_local_last_level()).l_value()
 
-#define _NARGS_AUX(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, ...) _9
-#define _NARGS(...) _NARGS_AUX(__VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0)
-
-#define _log_aux_1(level_spec) log_1(level_spec)
-#define _log_aux_2(facility, level_spec) log_2(facility, level_spec)
+#define __LOG_1(level_spec) \
+    __LOG_2(LOG_FACILITY, level_spec)
 
 // we need 2-level indirection in order to trigger expansion after token pasting
 // http://stackoverflow.com/questions/1597007/creating-c-macro-with-and-line-token-concatenation-with-positioning-macr
 // http://stackoverflow.com/a/11763196/717706
-#define __log_aux(N, ...) _log_aux_ ## N (__VA_ARGS__)
-#define _log_aux(N, ...) __log_aux(N, __VA_ARGS__)
+#define __LOG_aux2(N, ...) __LOG_ ## N (__VA_ARGS__)
+#define __LOG_aux1(N, ...) __LOG_aux2(N, __VA_ARGS__)
 
-#define logger(...) _log_aux(_NARGS(__VA_ARGS__), __VA_ARGS__)
+#define __NARGS_AUX(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, ...) _9
+#define __NARGS(...) __NARGS_AUX(__VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0)
+
+#define LOG(...) __LOG_aux1(__NARGS(__VA_ARGS__), __VA_ARGS__)
 
 
 #endif
