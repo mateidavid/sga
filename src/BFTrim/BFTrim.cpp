@@ -29,9 +29,24 @@ namespace bo = boost::program_options;
 namespace global
 {
     string program_name;
-    bo::variables_map vm;
+    // parameters with types;
+    // their default values are found in the option descriptions
+    unsigned num_threads;
+    unsigned progress;
+    unsigned chunk_size;
+    string rf_reads_fn;
+    string qr_reads_fn;
+    string bf_load_fn;
+    string bf_save_fn;
+    bool fasta_input;
+    unsigned phred_offset;
     unsigned k;
+    unsigned min_qv;
+    size_t bf_size;
+    unsigned bf_hashes;
+    // main Bloom Filter
     BloomFilter* bf_p;
+    // run stats
     atomic< long long > rf_kmers_total;
     atomic< long long > rf_kmers_used;
     atomic< long long > qr_kmers_total;
@@ -96,10 +111,9 @@ struct Thread_Output_Storage
 bool is_valid_base(const string& sq, const string& qv, size_t i)
 {
     return (global::allowed_chars.find(sq[i]) != string::npos
-            and qv[i] - global::vm.at("phred-offset").as< unsigned >() >= global::vm.at("min-qv").as< unsigned >());
+            and qv[i] - global::phred_offset >= global::min_qv);
 }
 
-//void add_to_rf_graph(TLS_pfor& tls, SimpleRead& r)
 void add_to_rf_graph(SimpleRead& r, Thread_Output_Storage& tos)
 {
     if (r.sq[0].size() < (size_t)global::k)
@@ -109,7 +123,7 @@ void add_to_rf_graph(SimpleRead& r, Thread_Output_Storage& tos)
     for (size_t i = 0; i < r.sq[0].size(); ++i)
         r.sq[0][i] = toupper(r.sq[0][i]);
     r.sq[1] = r.sq[0].revcomp();
-    if (not global::vm.at("fasta-input").as< bool >())
+    if (not global::fasta_input)
         r.qv[1] = r.qv[0].rev();
 
     global::rf_kmers_total += 2 * (r.sq[0].size() - global::k + 1);
@@ -135,33 +149,20 @@ void build_rf_graph(istream& is)
 {
     LOG("main", info)
         << "allocating Bloom Filter" << endl;
-    global::bf_p = new BloomFilter(global::vm.at("bf-size").as< size_t >(),
-                                   global::vm.at("bf-hashes").as< unsigned >());
+    global::bf_p = new BloomFilter(global::bf_size, global::bf_hashes);
     LOG("main", info)
         << "starting build threads" << endl;
-    /*
-    pfor<SimpleRead,TLS_pfor>(NULL,
-                              [&is] (TLS_pfor& tls, SimpleRead& r)
-                              {
-                                  (void)tls;
-                                  return r.get_from(is, global::vm.at("fasta-input").as< bool >());
-                              },
-                              &add_to_rf_graph,
-                              NULL,
-                              global::vm.at("threads").as< unsigned >(),
-                              (global::vm.at("fasta-input").as< bool >()? 1 : global::vm.at("chunk-size").as< unsigned >()),
-                              1);
-    */
-    pfor::pfor< SimpleRead, Thread_Output_Storage >(
+
+    pfor< SimpleRead, Thread_Output_Storage >(
         nullptr,
         [&is] (SimpleRead& r)
         {
-            return r.get_from(is, global::vm.at("fasta-input").as< bool >());
+            return r.get_from(is, global::fasta_input);
         },
         &add_to_rf_graph,
         nullptr,
-        global::vm.at("threads").as< unsigned >(),
-        (global::vm.at("fasta-input").as< bool >()? 1 : global::vm.at("chunk-size").as< unsigned >()),
+        global::num_threads,
+        (global::fasta_input? 1 : global::chunk_size),
         1);
 
     LOG("main", info)
@@ -184,7 +185,6 @@ void add_int_to_res(vector<pair<size_t,size_t>>& v, size_t min_i, size_t i)
 }
 
 
-//void process_qr_read(TLS_pfor& tls, SimpleRead& r)
 void process_qr_read(SimpleRead& r, Thread_Output_Storage& tos)
 {
     if (r.sq[0].size() < (size_t)global::k)
@@ -269,20 +269,7 @@ void process_qr_reads(istream& is)
     LOG("main", info)
         << "starting processing threads" << endl;
 
-    /*
-    pfor<SimpleRead,TLS_pfor>(NULL,
-                              [&is] (TLS_pfor& tls, SimpleRead& r)
-                              {
-                                  (void)tls;
-                                  return r.get_from(is);
-                              },
-                              &process_qr_read,
-                              NULL,
-                              global::vm.at("threads").as< unsigned >(),
-                              global::vm.at("chunk-size").as< unsigned >(),
-                              1);
-    */
-    pfor::pfor< SimpleRead, Thread_Output_Storage >
+    pfor< SimpleRead, Thread_Output_Storage >
         (nullptr,
          [&is] (SimpleRead& r)
          {
@@ -290,8 +277,8 @@ void process_qr_reads(istream& is)
          },
          &process_qr_read,
          nullptr,
-         global::vm.at("threads").as< unsigned >(),
-         global::vm.at("chunk-size").as< unsigned >(),
+         global::num_threads,
+         global::chunk_size,
          1);
 
     LOG("main", info)
@@ -327,31 +314,31 @@ int main(int argc, char* argv[])
         ("help,?", "produce help message")
         // hack, see: http://lists.boost.org/boost-users/2010/01/55054.php
         ("log-level,d", bo::value< vector< string > >()->default_value(vector< string >(), ""), "log level")
-        ("threads,t", bo::value< unsigned >()->default_value(1), "number of threads")
+        ("threads,t", bo::value(&global::num_threads)->default_value(1), "number of threads")
         ("seed", bo::value< unsigned >()->default_value(time(nullptr), "use time"), "random seed")
-        ("progress", bo::value< unsigned >()->default_value(0), "progress count")
-        ("chunk-size", bo::value< unsigned >()->default_value(100), "progress count")
+        ("progress", bo::value(&global::progress)->default_value(0), "progress count")
+        ("chunk-size", bo::value(&global::chunk_size)->default_value(100), "progress count")
         ;
     config_opts_desc.add_options()
         //
         // file-related options
         //
-        ("rf-reads,r", bo::value< string >()->default_value(""), "reference reads file")
-        ("qr-reads,q", bo::value< string >()->default_value(""), "query reads file")
-        ("bf-load,l", bo::value< string >()->default_value(""), "load Bloom Filter from file")
-        ("bf-save,s", bo::value< string >()->default_value(""), "save Bloom Filter to file")
-        ("fasta-input,f", bo::bool_switch()->default_value(false), "input reads in fasta (not fastq) format")
-        ("phred-offset", bo::value< unsigned >()->default_value(33), "phred offset")
+        ("rf-reads,r", bo::value(&global::rf_reads_fn), "reference reads file")
+        ("qr-reads,q", bo::value(&global::qr_reads_fn), "query reads file")
+        ("bf-load,l", bo::value(&global::bf_load_fn), "load Bloom Filter from file")
+        ("bf-save,s", bo::value(&global::bf_save_fn), "save Bloom Filter to file")
+        ("fasta-input,f", bo::bool_switch(&global::fasta_input)->default_value(false), "input reads in fasta (not fastq) format")
+        ("phred-offset", bo::value(&global::phred_offset)->default_value(33), "phred offset")
         //
         // general parameters
         //
-        ("kmer-size,k", bo::value< unsigned >()->default_value(61), "kmer size")
-        ("min-qv,m", bo::value< unsigned >()->default_value(20), "minimum quality value")
+        ("kmer-size,k", bo::value(&global::k)->default_value(61), "kmer size")
+        ("min-qv,m", bo::value(&global::min_qv)->default_value(20), "minimum quality value")
         //
         // Bloom Filter parameters
         //
-        ("bf-size", bo::value< size_t >()->default_value(20ll * 2ll * 3100000000ll), "size of Bloom Filter in bits")
-        ("bf-hashes", bo::value< unsigned >()->default_value(10), "number of hashes in Bloom Filter")
+        ("bf-size", bo::value(&global::bf_size)->default_value(20ll * 2ll * 3100000000ll), "Bloom Filter size, in bits")
+        ("bf-hashes", bo::value(&global::bf_hashes)->default_value(10), "Bloom Filter number of hashes")
         ;
     any_converter ac;
     ac.add_string_converter< string >();
@@ -361,17 +348,18 @@ int main(int argc, char* argv[])
     ac.add_converter(&cont_to_ptree< vector< string > >);
     cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
     visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
+    bo::variables_map vm;
     try
     {
-        store(bo::command_line_parser(argc, argv).options(cmdline_opts_desc).run(), global::vm);
+        store(bo::command_line_parser(argc, argv).options(cmdline_opts_desc).run(), vm);
         // if help requested, print it and stop
-        if (global::vm.count("help"))
+        if (vm.count("help"))
         {
             usage(cout);
             cout << visible_opts_desc;
             exit(EXIT_SUCCESS);
         }
-        notify(global::vm);
+        notify(vm);
     }
     catch(bo::error& e) 
     { 
@@ -382,13 +370,9 @@ int main(int argc, char* argv[])
     }
 
     // validate command-line options
-    const string& rf_reads_fn = global::vm.at("rf-reads").as< string >();
-    const string& qr_reads_fn = global::vm.at("qr-reads").as< string >();
-    const string& bf_load_fn = global::vm.at("bf-load").as< string >();
-    const string& bf_save_fn = global::vm.at("bf-save").as< string >();
-    if (rf_reads_fn.empty() == bf_load_fn.empty()
-        or (not bf_load_fn.empty() and not bf_save_fn.empty())
-        or (qr_reads_fn.empty() and bf_save_fn.empty()))
+    if (global::rf_reads_fn.empty() == global::bf_load_fn.empty()
+        or (not global::bf_load_fn.empty() and not global::bf_save_fn.empty())
+        or (global::qr_reads_fn.empty() and global::bf_save_fn.empty()))
     {
         usage(cerr);
         cerr << visible_opts_desc;
@@ -396,7 +380,7 @@ int main(int argc, char* argv[])
     }
 
     // set log levels
-    for (const auto& l : global::vm.at("log-level").as< vector< string > >())
+    for (const auto& l : vm.at("log-level").as< vector< string > >())
     {
         size_t i = l.find(':');
         if (i == string::npos)
@@ -413,24 +397,21 @@ int main(int argc, char* argv[])
         }
     }
     // set random seed
-    srand48(global::vm.at("seed").as< unsigned >());
+    srand48(vm.at("seed").as< unsigned >());
 
     // print options
-    LOG("main", info) << variables_map_converter::to_ptree(global::vm, ac);
+    LOG("main", info) << variables_map_converter::to_ptree(vm, ac);
 
-    // save k as global variable for easier access
-    global::k = global::vm.at("kmer-size").as< unsigned >();
-
-    if (not rf_reads_fn.empty())
+    if (not global::rf_reads_fn.empty())
     {
         // create Bloom Filter from ref reads
-        ixstream rf_reads_is(rf_reads_fn);
+        ixstream rf_reads_is(global::rf_reads_fn);
         build_rf_graph(rf_reads_is);
         // save Bloom Filter
-        if (not bf_save_fn.empty())
+        if (not global::bf_save_fn.empty())
         {
-            fstr bf_save_os(bf_save_fn, ios_base::out | ios_base::binary);
-            LOG("main", info) << "saving Bloom Filter to file: " << bf_save_fn << endl;
+            fstr bf_save_os(global::bf_save_fn, ios_base::out | ios_base::binary);
+            LOG("main", info) << "saving Bloom Filter to file: " << global::bf_save_fn << endl;
             global::bf_p->save(bf_save_os);
             LOG("main", info) << "done saving Bloom Filter" << endl;
         }
@@ -438,15 +419,15 @@ int main(int argc, char* argv[])
     else
     {
         // load BF from file
-        fstr bf_load_is(bf_load_fn, ios_base::in | ios_base::binary);
+        fstr bf_load_is(global::bf_load_fn, ios_base::in | ios_base::binary);
         global::bf_p = new BloomFilter();
-        LOG("main", info) << "loading Bloom Filter from file: " << bf_load_fn << endl;
+        LOG("main", info) << "loading Bloom Filter from file: " << global::bf_load_fn << endl;
         global::bf_p->load(bf_load_is);
         LOG("main", info) << "done loading Bloom Filter" << endl;
     }
-    if (not qr_reads_fn.empty())
+    if (not global::qr_reads_fn.empty())
     {
-        ixstream qr_reads_is(qr_reads_fn);
+        ixstream qr_reads_is(global::qr_reads_fn);
         process_qr_reads(qr_reads_is);
     }
 }
