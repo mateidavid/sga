@@ -1,7 +1,13 @@
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef __BASIC_SERIALIZER_HPP
+#define __BASIC_SERIALIZER_HPP
 
 
+// Template functions (with definitions)
+// for saving&loading basic types and shallow vectors
+//
+// version 1 :
+//   convert to uint64_t on 8 bytes
+//
 template <typename T>
 void save_basic_type(std::ostream& os, const T& val, int version = 1)
 {

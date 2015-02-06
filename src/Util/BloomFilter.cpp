@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include "MurmurHash3.h"
 #include "Util.h"
+#include "Basic_Serializer.hpp"
 
 //
 BloomFilter::BloomFilter() : m_occupancy(0)

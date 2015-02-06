@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <cstdlib>
 #include "Util.h"
+#include "Basic_Serializer.hpp"
 
 //
 BitVector::BitVector()
