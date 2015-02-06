@@ -13,3 +13,18 @@ target_link_libraries(BFTrim
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
     )
+
+if(OPENMP_FOUND)
+    add_executable(BFTrim-omp
+        BFTrim-omp.cpp
+        )
+    target_link_libraries(BFTrim-omp
+        util
+        thirdparty
+        ${Boost_IOSTREAMS_LIBRARY}
+        ${Boost_PROGRAM_OPTIONS_LIBRARY}
+        ${ZLIB_LIBRARIES}
+        )
+else()
+    message(STATUS "Cannot build BFTrim-omp, need OpenMP")
+endif()
