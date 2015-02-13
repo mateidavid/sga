@@ -9,6 +9,7 @@
 #include <deque>
 #include <vector>
 #include <set>
+#include <functional>
 #include <type_traits>
 #include <boost/intrusive/pointer_traits.hpp>
 #include <boost/mpl/if.hpp>
@@ -594,6 +595,20 @@ private:
 }; // class Pointer_Holder
 
 } // namespace bounded
+
+/// Template specialization to allow bounded pointers in unordered_set containers.
+///
+namespace std
+{
+    template < typename Value, typename Index >
+    struct hash< bounded::Pointer< Value, Index > >
+    {
+        size_t operator () (const bounded::Pointer< Value, Index >& p) const
+        {
+            return hash< Index >()(p.to_int());
+        }
+    }; // struct hash
+}
 
 
 #endif

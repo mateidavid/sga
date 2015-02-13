@@ -26,7 +26,7 @@ set(HEADER_SUBDIRS
     Algorithm Bigraph Concurrency GraphDiff Scaffold SGA SQG StringGraph SuffixTools Thirdparty Util
     CACHE INTERNAL "Subdirectories containing header files")
 set(SUBDIRS
-    Thirdparty Util Dev BFTrim
+    BFTrim Dev SuffixTools Thirdparty Util
     CACHE INTERNAL "Subdirectories to descend into")
 
 ### Resolve external dependencies

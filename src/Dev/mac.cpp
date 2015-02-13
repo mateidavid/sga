@@ -11,10 +11,14 @@
 #include "ixstream.hpp"
 #include "fstr.hpp"
 #include "logger.hpp"
-#include "Unmap_Mut_Clusters.hpp"
 #include "variables_map_converter.hpp"
 #include "CLI.hpp"
 
+#include "Unmap_Mut_Clusters.hpp"
+#include "Validate_Mutations.hpp"
+
+#include "BWT.h"
+#include "BWTAlgorithms.h"
 
 using namespace std;
 using namespace MAC;
@@ -120,9 +124,15 @@ int real_main(const bo::variables_map& vm)
             }
         }
     }
-
+    if (vm.count("2gs-validate-mutations") and not vm.count("2gs-bwt-file"))
+    {
+        LOG("mac", error) << "--2gs-bwt-file must be specifed with --2gs-validate-mutations" << endl;
+        abort();
+    }
+    // main work
     if (vm.count("input-file"))
     {
+        // load asqg graph
         const string& fn = vm.at("input-file").as< string >();
         LOG("mac", info) << ptree("loading").put("input_file", fn);
         ixstream tmp_fs(fn);
@@ -135,19 +145,29 @@ int real_main(const bo::variables_map& vm)
     }
     else
     {
+        // load mac graph
         const string& fn = vm.at("load-file").as< string >();
         LOG("mac", info) << ptree("loading").put("load-file", fn);
         fstr ifs(fn, ios_base::in | ios_base::binary);
         g.load(ifs);
     }
     LOG("mac", info) << ptree("factory_stats", g.factory_stats());
-
     if (vm.at("cat-at-end").as< bool >())
     {
         LOG("mac", info) << ptree("cat_at_end_start");
         g.cat_all_read_contigs();
         g.check_all();
         LOG("mac", info) << ptree("cat_at_end_end");
+    }
+    if (vm.count("2gs-validate-mutations"))
+    {
+        const string& fn = vm.at("2gs-bwt-file").as< string >();
+        LOG("mac", info) << ptree("validate_mutations_start").put("bwt_file", fn);
+        BWTIndexSet index_set;
+        index_set.pBWT = new BWT(fn);
+        Validate_Mutations()(g, index_set);
+        delete index_set.pBWT;
+        LOG("mac", info) << ptree("validate_mutations_end");
     }
     if (vm.at("unmap-read-ends").as< bool >())
     {
@@ -183,12 +203,10 @@ int real_main(const bo::variables_map& vm)
         hm.build(g);
         LOG("mac", info) << ptree("hap_map_end");
     }
-
     if (vm.at("interactive").as< bool >())
     {
         cli(std::cin, std::cout, g, hm);
     }
-
     if (vm.count("stats-file"))
     {
         const string& fn = vm.at("stats-file").as< string >();
@@ -283,6 +301,7 @@ int main(int argc, char* argv[])
         ("unmappable-contigs-file", bo::value< string >(), "unmappable contigs file")
         ("terminal-reads-file", bo::value< string >(), "terminal reads file")
         ("hapmap-stats-file", bo::value< string >(), "haplotype map stats file")
+        ("2gs-bwt-file", bo::value< string >(), "BWT index of 2GS reads that can be used to validate mutations")
         //
         // asqg loading options
         //
@@ -297,6 +316,7 @@ int main(int argc, char* argv[])
         ("print-at-end", bo::bool_switch(), "print graph at end")
         ("unmap-read-ends", bo::bool_switch(), "unmap read ends")
         ("resolve-unmappable-regions", bo::bool_switch(), "resolve unmappable regions")
+        ("2gs-validate-mutations", bo::bool_switch(), "validate mutations using 2GS data")
         ("unmap-single-chunks", bo::bool_switch(), "unmap single chunks")
         ("unmap-mut-clusters", bo::bool_switch(), "unmap mutation clusters")
         ("hap-map", bo::bool_switch(), "build haplotype map")

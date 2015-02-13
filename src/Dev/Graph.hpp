@@ -103,8 +103,8 @@ public:
     /// Return a list of supercontigs in the graph
     /// Each supercontig is a list of (contig, orientation) pairs
     /// Also sets Contig_Entry::supercontig_endpoint_mask bits in the contig tags
-    list< list< pair< Contig_Entry_BPtr, bool > > >
-    get_supercontigs(int unmappable_policy, size_t ignore_threshold = 1);
+    list< list< pair< Contig_Entry_CBPtr, bool > > >
+    get_supercontigs(int unmappable_policy, size_t ignore_threshold = 1) const;
 
     /** Unmap read chunks not mapped to lone contigs. */
     void unmap_single_chunks();
@@ -127,7 +127,7 @@ public:
 
     /** Stats. */
     void dump_detailed_counts(ostream& os) const;
-    void print_supercontig_stats(ostream& os);
+    void print_supercontig_stats(ostream& os) const;
     void print_mutations(ostream& os, size_t min_support = 1, Size_Type flank_len = 20) const;
 
     /** Print unmappable contigs between each pair of mappable ones. */
