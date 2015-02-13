@@ -256,6 +256,16 @@ public:
 
     static const uint64_t is_unmappable_mask = 1u << 31;
     static const uint64_t is_lowcomplex_mask = 1u << 30;
+    static uint64_t supercontig_endpoint_mask(int i)
+    {
+        static uint64_t _supercontig_endpoint_mask[2] = { 1u << 29, 1u << 28 };
+        return _supercontig_endpoint_mask[i];
+    }
+    static uint64_t visit_strand_mask(int i)
+    {
+        static uint64_t _visit_strand_mask[2] = { 1u << 27, 1u << 26 };
+        return _visit_strand_mask[i];
+    }
 
 private:
     friend struct detail::Contig_Entry_List_Node_Traits;

@@ -196,14 +196,13 @@ int real_main(const bo::variables_map& vm)
         fstr tmp_fs(fn, ios_base::out);
         g.dump_detailed_counts(tmp_fs);
     }
-    /*
-    if (not po.supercontig_lengths_file.empty())
+    if (vm.count("supercontig-stats-file"))
     {
-        //TODO
-        //ofstream lengths_file(po.supercontig_lengths_file);
-        //g.print_supercontig_lengths_2(lengths_file);
+        const string& fn = vm.at("supercontig-stats-file").as< string >();
+        LOG("mac", info) << ptree("supercontig_stats").put("file", fn);
+        fstr tmp_fs(fn, ios_base::out);
+        g.print_supercontig_stats(tmp_fs);
     }
-    */
     if (vm.count("mutations-file"))
     {
         const string& fn = vm.at("mutations-file").as< string >();
@@ -279,7 +278,7 @@ int main(int argc, char* argv[])
         ("load-file,L", bo::value< string >(), "load file")
         ("save-file,S", bo::value< string >(), "save file")
         ("stats-file", bo::value< string >(), "stats file")
-        //("supercontig-lengths-file,l", bo::value< string >(), "supercontig lengths file")
+        ("supercontig-stats-file", bo::value< string >(), "supercontig stats file")
         ("mutations-file", bo::value< string >(), "mutations file")
         ("unmappable-contigs-file", bo::value< string >(), "unmappable contigs file")
         ("terminal-reads-file", bo::value< string >(), "terminal reads file")

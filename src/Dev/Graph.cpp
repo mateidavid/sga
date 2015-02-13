@@ -2039,6 +2039,82 @@ void Graph::check_leaks() const
 #endif
 }
 
+list< list< pair< Contig_Entry_BPtr, bool > > >
+Graph::get_supercontigs(int unmappable_policy, size_t ignore_threshold)
+{
+    list< list< pair< Contig_Entry_BPtr, bool > > > res;
+    uint64_t visit_mask = 1;
+    for (auto ce_bptr : ce_cont() | referenced)
+    {
+        bitmask::reset(ce_bptr->tag(),
+                       Contig_Entry::supercontig_endpoint_mask(0)
+                       | Contig_Entry::supercontig_endpoint_mask(1)
+                       | visit_mask);
+    }
+    for (auto ce_bptr : ce_cont() | referenced)
+    {
+        if (not ce_bptr->is_normal()
+            or bitmask::any(ce_bptr->tag(), visit_mask))
+        {
+            continue;
+        }
+        // create new sc list and place current Contig Entry in it
+        list< pair< Contig_Entry_BPtr, bool > > crt_sc;
+        bitmask::set(ce_bptr->tag(), visit_mask);
+        crt_sc.emplace_back(ce_bptr, true);
+        // subfunction to find supercontig endpoint
+        // return true iff a supercontig cycle is detected
+        auto find_supercontig_endpoint = [&] (Contig_Entry_BPtr ce_bptr, bool c_right) -> bool
+        {
+            Contig_Entry_BPtr crt_ce_bptr = ce_bptr;
+            bool crt_c_right = c_right;
+            while (true)
+            {
+                auto oc = crt_ce_bptr->out_chunks_dir(crt_c_right, unmappable_policy, ignore_threshold);
+                if (oc.size() != 1)
+                {
+                    // supercontig ends here; out-degree >1 for this ce
+                    bitmask::set(crt_ce_bptr->tag(), Contig_Entry::supercontig_endpoint_mask(crt_c_right));
+                    return false;
+                }
+                Contig_Entry_BPtr next_ce_bptr = oc.begin()->first.first.unconst();
+                bool same_orientation = oc.begin()->first.second;
+                bool next_c_right = same_orientation? crt_c_right : not crt_c_right;
+                auto back_oc = next_ce_bptr->out_chunks_dir(not next_c_right, unmappable_policy, ignore_threshold);
+                if (back_oc.size() != 1)
+                {
+                    // supercontig ends here; out-degree >1 for next ce
+                    bitmask::set(crt_ce_bptr->tag(), Contig_Entry::supercontig_endpoint_mask(crt_c_right));
+                    return false;
+                }
+                ASSERT(back_oc.begin()->first == make_pair(ce_bptr, same_orientation));
+                if (next_ce_bptr == ce_bptr)
+                {
+                    // supercontig is a cycle!
+                    LOG("graph", info) << ptree("mark_supercontigs_cycle").put("ce_ptr", ce_bptr.to_int());
+                    // must be detected during the first call, with c_right == true
+                    ASSERT(c_right);
+                    bitmask::set(ce_bptr->tag(), Contig_Entry::supercontig_endpoint_mask(not c_right));
+                    bitmask::set(crt_ce_bptr->tag(), Contig_Entry::supercontig_endpoint_mask(crt_c_right));
+                    return true;
+                }
+                crt_ce_bptr = next_ce_bptr;
+                crt_c_right = next_c_right;
+                bitmask::set(crt_ce_bptr->tag(), visit_mask);
+                crt_sc.insert(c_right? crt_sc.end() : crt_sc.begin(), make_pair(next_ce_bptr, next_c_right));
+            }
+        };
+        // traverse past right endpoint, looking for supercontig endpoint
+        if (not find_supercontig_endpoint(ce_bptr, true))
+        {
+            // lambda returns false iff no cycle is detected, and we need to search for the other sc endpoint
+            find_supercontig_endpoint(ce_bptr, false);
+        }
+        res.emplace_back(move(crt_sc));
+    }
+    return res;
+}
+
 void Graph::dump_detailed_counts(ostream& os) const
 {
     LOG("graph", info) << ptree("dump_detailed_counts");
@@ -2212,6 +2288,44 @@ void Graph::dump_detailed_counts(ostream& os) const
         }
         os << '\n';
     } //for (ce_cbptr : ce_cont()
+}
+
+void Graph::print_supercontig_stats(ostream& os)
+{
+    LOG("graph", info) << ptree("print_supercontig_stats");
+    auto sc_list = get_supercontigs(3, 1);
+    os << "SCON\tbp.contigs\tnum.contigs\tcontig.lens\tcontigs" << endl;
+    for (auto& sc: sc_list)
+    {
+        size_t len = 0;
+        for (auto& t : sc)
+        {
+            len += t.first->len();
+        }
+        os << "SCON\t" << len << "\t" << sc.size() << "\t";
+        bool first = true;
+        for (auto& t : sc)
+        {
+            if (not first)
+            {
+                os << ",";
+            }
+            first = false;
+            os << t.first->len();
+        }
+        os << "\t";
+        first = true;
+        for (auto& t : sc)
+        {
+            if (not first)
+            {
+                os << ",";
+            }
+            first = false;
+            os << "(" << t.first.to_int() << "," << t.second << ")";
+        }
+        os << endl;
+    }
 }
 
 boost::property_tree::ptree Graph::to_ptree() const
