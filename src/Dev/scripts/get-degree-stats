@@ -1,0 +1,16 @@
+#!/bin/bash
+source lib.common.sh
+set -eEu
+set_custom_trap ERR
+
+[ $# -ge 1 ] || crash "use: $0 <stats_files>"
+stats_files=("$@")
+
+cat "${stats_files[@]}" |
+grep "^CE" |
+grep -v "len" |
+tawk '$4==0 && $5==0' |
+cut -f 21,24 |
+sort |
+uniq -c |
+sort -k 1nr

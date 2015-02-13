@@ -1,0 +1,23 @@
+#!/bin/bash
+source lib.common.sh
+set -eEu
+set_custom_trap ERR
+
+get_files () {
+    zc "${stats_files[@]}"
+}
+get_sc () {
+    get_files | grep "^SC" | grep -v "len" | cut -f 2-
+}
+
+[ $# -ge 1 ] || crash "use: $0 <stats_files>"
+stats_files=("$@")
+
+bp=$(get_sc |
+    cut -f 1 |
+    awk '{s+=$1} END{print s}')
+
+get_sc |
+cut -f 1 |
+sort -k 1nr |
+awk -v bp=$bp '{s+=$1; if (s>(bp/2)) {print; exit} }'

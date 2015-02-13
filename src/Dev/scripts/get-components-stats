@@ -1,0 +1,69 @@
+#!/bin/bash
+source lib.common.sh
+set -eEu
+set_custom_trap ERR
+
+get_files () {
+    zc $1
+}
+get_re () {
+    get_files $1 | grep "^RE" | grep -v "len" | cut -f 2-
+}
+get_ce () {
+    get_files $1 | grep "^CE" | grep -v "len" | cut -f 2-
+}
+get_ce_normal () {
+    get_ce $1 | awk '$3==0 && $4==0'
+}
+get_ce_unmappable () {
+    get_ce $1 | awk '$3==1'
+}
+get_ce_lowcomplex () {
+    get_ce $1 | awk '$4==1'
+}
+get_sum () {
+    awk 'BEGIN{s=0} {s+=$1} END{print s}'
+}
+
+[ $# -ge 1 ] || crash "use: $0 <stats_files>"
+stats_files=("$@")
+
+printab "cid" \
+    "num.re" "bp.re" \
+    "num.ce" "bp.ce" \
+    "num.ce.normal" "bp.ce.normal" \
+    "num.ce.unmappable" "bp.ce.unmappable" \
+    "num.ce.lowcomplex" "bp.ce.lowcomplex" \
+    "num.muts.normal" "bp.muts.normal" \
+    "pct.bp.muts.normal"
+
+for stats_file in "${stats_files[@]}"; do
+    cid=$stats_file
+    cid=${cid#graph.}
+    cid=${cid%%.*}
+
+    num_re=$(get_re $stats_file | wc -l)
+    bp_re=$(get_re $stats_file | cut -f2 | get_sum)
+    num_ce=$(get_ce $stats_file | wc -l)
+    bp_ce=$(get_ce $stats_file | cut -f2 | get_sum)
+    num_ce_normal=$(get_ce_normal $stats_file | wc -l)
+    bp_ce_normal=$(get_ce_normal $stats_file | cut -f2 | get_sum)
+    num_ce_unmappable=$(get_ce_unmappable $stats_file | wc -l)
+    bp_ce_unmappable=$(get_ce_unmappable $stats_file | cut -f2 | get_sum)
+    num_ce_lowcomplex=$(get_ce_lowcomplex $stats_file | wc -l)
+    bp_ce_lowcomplex=$(get_ce_lowcomplex $stats_file | cut -f2 | get_sum)
+    num_muts_normal=$(get_ce_normal $stats_file | cut -f6 | get_sum)
+    bp_muts_normal=$(get_ce_normal $stats_file | cut -f13 | get_sum)
+
+    bp_ce_normal_nonzero=$bp_ce_normal
+    [ "$bp_ce_normal_nonzero" -gt 0 ] || bp_ce_normal_nonzero=1
+
+    printab "$cid" \
+        "$num_re" "$bp_re" \
+        "$num_ce" "$bp_ce" \
+        "$num_ce_normal" "$bp_ce_normal" \
+        "$num_ce_unmappable" "$bp_ce_unmappable" \
+        "$num_ce_lowcomplex" "$bp_ce_lowcomplex" \
+        "$num_muts_normal" "$bp_muts_normal" \
+        "$(echo "scale=2; (100 * $bp_muts_normal) / $bp_ce_normal_nonzero" | bc)"
+done
