@@ -54,7 +54,7 @@ private:
     /** No copy constructor. */
     DELETE_COPY_CTOR(Mutation)
     /** Move constructor. */
-    Mutation(Mutation&& rhs) : Mutation() { *this = std::move(rhs); }
+    Mutation(Mutation&& rhs) : Mutation() { *this = move(rhs); }
 public:
     /** No copy assignment. */
     DELETE_COPY_ASOP(Mutation)
@@ -64,11 +64,11 @@ public:
         if (this != &rhs)
         {
             ASSERT(is_unlinked() and rhs.is_unlinked());
-            _seq = std::move(rhs._seq);
-            _start = std::move(rhs._start);
-            _len = std::move(rhs._len);
-            _seq_len = std::move(rhs._seq_len);
-            _chunk_ptr_cont = std::move(rhs._chunk_ptr_cont);
+            _seq = move(rhs._seq);
+            _start = move(rhs._start);
+            _len = move(rhs._len);
+            _seq_len = move(rhs._seq_len);
+            _chunk_ptr_cont = move(rhs._chunk_ptr_cont);
         }
         return *this;
     }

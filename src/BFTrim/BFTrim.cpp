@@ -31,6 +31,8 @@ namespace global
     string program_name;
     // parameters with types;
     // their default values are found in the option descriptions
+    vector< string > log_level;
+    long seed;
     unsigned num_threads;
     unsigned progress;
     unsigned chunk_size;
@@ -313,9 +315,9 @@ int main(int argc, char* argv[])
     generic_opts_desc.add_options()
         ("help,?", "produce help message")
         // hack, see: http://lists.boost.org/boost-users/2010/01/55054.php
-        ("log-level,d", bo::value< vector< string > >()->default_value(vector< string >(), ""), "log level")
+        ("log-level,d", bo::value(&global::log_level)->default_value(vector< string >(), ""), "log level")
+        ("seed", bo::value(&global::seed)->default_value(time(nullptr), "use time"), "random seed")
         ("threads,t", bo::value(&global::num_threads)->default_value(1), "number of threads")
-        ("seed", bo::value< unsigned >()->default_value(time(nullptr), "use time"), "random seed")
         ("progress", bo::value(&global::progress)->default_value(0), "progress count")
         ("chunk-size", bo::value(&global::chunk_size)->default_value(100), "progress count")
         ;
@@ -380,24 +382,9 @@ int main(int argc, char* argv[])
     }
 
     // set log levels
-    for (const auto& l : vm.at("log-level").as< vector< string > >())
-    {
-        size_t i = l.find(':');
-        if (i == string::npos)
-        {
-            Logger::set_default_level(l);
-            clog << "set default log level to: "
-                 << static_cast< int >(Logger::get_default_level()) << "\n";
-        }
-        else
-        {
-            Logger::set_facility_level(l.substr(0, i), l.substr(i + 1));
-            clog << "set log level of '" << l.substr(0, i) << "' to: "
-                 << static_cast< int >(Logger::get_facility_level(l.substr(0, i))) << "\n";
-        }
-    }
+    Logger::set_levels_from_options(global::log_level, &clog);
     // set random seed
-    srand48(vm.at("seed").as< unsigned >());
+    srand48(global::seed);
 
     // print options
     LOG("main", info) << variables_map_converter::to_ptree(vm, ac);

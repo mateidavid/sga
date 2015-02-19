@@ -1,18 +1,19 @@
-#ifndef __VALIDATE_MUTATIONS_HPP
-#define __VALIDATE_MUTATIONS_HPP
+#ifndef __VALIDATE_VARIATIONS_HPP
+#define __VALIDATE_VARIATIONS_HPP
 
 #include "Graph.hpp"
 #include "BWT.h"
 #include "BWTAlgorithms.h"
 
+
 namespace MAC
 {
 
-class Validate_Mutations
+class Validate_Variations
 {
 public:
-    Validate_Mutations() : Validate_Mutations(10, 2, 2, false) {}
-    Validate_Mutations(size_t flank_size,
+    Validate_Variations() : Validate_Variations(10, 2, 2, false) {}
+    Validate_Variations(size_t flank_size,
                        size_t min_graph_support_to_skip,
                        size_t min_read_support_to_validate,
                        bool check_both_strands)
@@ -25,11 +26,15 @@ public:
     void operator () (Graph& g, const BWTIndexSet& index_set) const;
 
 private:
+    bool validate_allele(const Range_Type& c_rg,
+                         const set< Read_Chunk_CBPtr >& rc_set,
+                         const BWTIndexSet& index_set) const;
+
     size_t _flank_size;
     size_t _min_graph_support_to_skip;
     size_t _min_read_support_to_validate;
     bool _check_both_strands;
-};
+}; // class Validate_Variations
 
 } // namespace MAC
 

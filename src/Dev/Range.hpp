@@ -27,6 +27,7 @@ public:
 
     GETTER(T, start, _start)
     GETTER(T, end, _end)
+    T len() const { return end() - start(); }
 
     friend bool operator == (const Range& lhs, const Range& rhs)
     {

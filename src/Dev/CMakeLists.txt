@@ -17,7 +17,7 @@ add_library(mac STATIC
     Contig_Entry.cpp
     Graph.cpp
     Unmap_Mut_Clusters.cpp
-    Validate_Mutations.cpp
+    Validate_Variations.cpp
     Hap_Map.cpp
     CLI.cpp
 )
@@ -27,8 +27,8 @@ add_executable(mac-bin mac.cpp)
 set_target_properties(mac-bin PROPERTIES OUTPUT_NAME mac)
 add_dependencies(mac-bin version)
 target_link_libraries(mac-bin
-    suffixtools
     mac
+    suffixtools
     util
     thirdparty
     ${Boost_IOSTREAMS_LIBRARY}

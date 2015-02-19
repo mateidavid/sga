@@ -46,6 +46,7 @@
 #define __LOGGER_HPP
 
 #include <string>
+#include <vector>
 #include <map>
 #include <sstream>
 #include <iostream>
@@ -122,6 +123,36 @@ public:
     static void set_facility_level(const std::string& facility, const std::string& s)
     {
         set_facility_level(facility, get_level(s));
+    }
+    // static methods for setting log levels from command-line options
+    static void set_level_from_option(const std::string& l, std::ostream* os_p = nullptr)
+    {
+        size_t i = l.find(':');
+        if (i == std::string::npos)
+        {
+            set_default_level(l);
+            if (os_p)
+            {
+                (*os_p) << "set default log level to: "
+                        << static_cast< int >(Logger::get_default_level()) << std::endl;
+            }
+        }
+        else
+        {
+            set_facility_level(l.substr(0, i), l.substr(i + 1));
+            if (os_p)
+            {
+                (*os_p) << "set log level of '" << l.substr(0, i) << "' to: "
+                        << static_cast< int >(Logger::get_facility_level(l.substr(0, i))) << std::endl;
+            }
+        }
+    }
+    static void set_levels_from_options(const std::vector< std::string >& v, std::ostream* os_p = nullptr)
+    {
+        for (const auto& l : v)
+        {
+            set_level_from_option(l, os_p);
+        }
     }
     // public static utility functions (used by LOG macro)
     static level get_level(level l) { return l; }
