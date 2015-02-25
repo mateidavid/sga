@@ -26,7 +26,7 @@ public:
     void operator () (Graph& g, const BWTIndexSet& index_set) const;
 
 private:
-    bool validate_allele(const Range_Type& c_rg,
+    bool validate_allele(Mutation_CBPtr mut_cbptr,
                          const set< Read_Chunk_CBPtr >& rc_set,
                          const BWTIndexSet& index_set) const;
 

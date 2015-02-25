@@ -47,11 +47,17 @@ public:
         allele_support_type res;
         if (is_mutation())
         {
-            auto p = ce_cbptr()->mut_support(mut_cbptr());
-            if (p.first.size() > 1)
-                res[Allele_Specifier(false)] = move(p.first);
-            if (p.second.size() > 1)
-                res[Allele_Specifier(true)] = move(p.second);
+            set< Read_Chunk_CBPtr > qr_set;
+            set< Read_Chunk_CBPtr > full_rf_set;
+            tie(qr_set, full_rf_set, ignore) = ce_cbptr()->mut_support(mut_cbptr());
+            if (full_rf_set.size() > 1)
+            {
+                res[Allele_Specifier(false)] = move(full_rf_set);
+            }
+            if (qr_set.size() > 1)
+            {
+                res[Allele_Specifier(true)] = move(qr_set);
+            }
         }
         else // is_endpoint
         {

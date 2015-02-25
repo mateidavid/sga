@@ -51,14 +51,95 @@ void Contig_Entry::cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size
     check();
 }
 
-pair< set< Read_Chunk_CBPtr >, set< Read_Chunk_CBPtr > >
+Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
+{
+    ASSERT(not mut_left_cbptr
+           or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
+
+    LOG("Contig_Entry", debug1) << ptree("cut")
+        .put("c_brk", c_brk)
+        .put("mut_left_ptr", mut_left_cbptr.to_ptree());
+
+    // there is nothing to cut if:
+    if (// cut is at the start, and no insertion goes to the left
+        (c_brk == 0 and not mut_left_cbptr)
+        // cut is at the end, and:
+        or (c_brk == len()
+            and (// there are no mutations
+                mut_cont().empty()
+                // or the last one is not an insertion
+                or not mut_cont().rbegin()->is_ins()
+                // or the last insertion is not at the end
+                or mut_cont().rbegin()->rf_start() < len())))
+    {
+        return nullptr;
+    }
+
+    // split any mutations that span c_pos
+    while (true)
+    {
+        Mutation_BPtr mut_bptr = mut_cont().find_span_pos(c_brk).unconst();
+        if (not mut_bptr)
+        {
+            break;
+        }
+        ASSERT(mut_bptr->rf_start() < c_brk and c_brk < mut_bptr->rf_end());
+        ASSERT(mut_bptr != mut_left_cbptr);
+        cut_mutation(mut_bptr, c_brk - mut_bptr->rf_start(), 0);
+    }
+
+    // create new contig entry object; set base sequences
+    Contig_Entry_BPtr ce_new_bptr = Contig_Entry_Fact::new_elem(Seq_Type(seq().substr(c_brk)));
+    seq().resize(c_brk);
+
+    // split Mutation_Cont, save rhs in new Contig_Entry
+    ce_new_bptr->mut_cont() = mut_cont().split(c_brk, mut_left_cbptr);
+
+    // unlink Read_Chunk objects from their RE containers
+    chunk_cont().erase_from_re_cont();
+
+    // split Read_Chunk_Cont, save rhs in new Contig_Entry
+    ce_new_bptr->chunk_cont() = chunk_cont().split(c_brk, mut_left_cbptr);
+    ASSERT(not chunk_cont().empty());
+    ASSERT(chunk_cont().max_end() <= c_brk);
+    ASSERT(ce_new_bptr->chunk_cont().empty() or c_brk <= ce_new_bptr->chunk_cont().begin()->get_c_start());
+
+    // rebase all mutations and read chunks from the rhs to the breakpoint
+    ce_new_bptr->mut_cont().shift(-int(c_brk));
+    ce_new_bptr->chunk_cont().shift(-int(c_brk));
+    ce_new_bptr->chunk_cont().set_ce_ptr(ce_new_bptr);
+
+    // link back the chunks into their RE containers
+    chunk_cont().insert_into_re_cont();
+    ce_new_bptr->chunk_cont().insert_into_re_cont();
+
+    // remove unused Mutation objects
+    mut_cont().drop_unused();
+    ce_new_bptr->mut_cont().drop_unused();
+
+    check();
+    if (ce_new_bptr->chunk_cont().empty())
+    {
+        Contig_Entry_Fact::del_elem(ce_new_bptr);
+        return nullptr;
+    }
+    else
+    {
+        ce_new_bptr->check();
+        return ce_new_bptr;
+    }
+} // cut
+
+tuple< set< Read_Chunk_CBPtr >, set< Read_Chunk_CBPtr >, set< Read_Chunk_CBPtr > >
 Contig_Entry::mut_support(Mutation_CBPtr mut_cbptr) const
 {
-    pair< set< Read_Chunk_CBPtr >, set< Read_Chunk_CBPtr > > res;
+    set< Read_Chunk_CBPtr > qr_set;
+    set< Read_Chunk_CBPtr > full_rf_set;
+    set< Read_Chunk_CBPtr > part_rf_set;
     // first, get support for qr allele
     for (auto mca_cbptr : mut_cbptr->chunk_ptr_cont() | referenced)
     {
-        res.second.insert(mca_cbptr->chunk_cbptr());
+        qr_set.insert(mca_cbptr->chunk_cbptr());
     }
     // next, get support for rf allele
     // add all chunks fully spanning mutation
@@ -66,7 +147,10 @@ Contig_Entry::mut_support(Mutation_CBPtr mut_cbptr) const
     for (auto rc_cbptr : iint_res | referenced)
     {
         // if chunk observes qr allele, skip it
-        if (res.second.count(rc_cbptr)) continue;
+        if (qr_set.count(rc_cbptr))
+        {
+            continue;
+        }
         // if the rf allele is empty, we require >=1bp mapped on either side
         if ((mut_cbptr->rf_len() > 0
              and rc_cbptr->get_c_start() <= mut_cbptr->rf_start()
@@ -75,10 +159,14 @@ Contig_Entry::mut_support(Mutation_CBPtr mut_cbptr) const
                 and rc_cbptr->get_c_start() < mut_cbptr->rf_start()
                 and rc_cbptr->get_c_end() > mut_cbptr->rf_end()))
         {
-            res.first.insert(rc_cbptr);
+            full_rf_set.insert(rc_cbptr);
+        }
+        else
+        {
+            part_rf_set.insert(rc_cbptr);
         }
     }
-    return res;
+    return make_tuple(qr_set, full_rf_set, part_rf_set);
 }
 
 void Contig_Entry::reverse()
@@ -341,6 +429,91 @@ void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_n
     }
     // deallocate rhs contig
     Contig_Entry_Fact::del_elem(ce_next_bptr);
+}
+
+Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mutation_CBPtr mut_cbptr)
+{
+    LOG("Contig_Entry", debug) << ptree("swap_mutation_alleles")
+        .put("ce_ptr", ce_bptr.to_int())
+        .put("mut_ptr", mut_cbptr.to_int());
+
+    // save a read entry that has this mutation, and its coordinates
+    ASSERT(not mut_cbptr->chunk_ptr_cont().empty());
+    Read_Chunk_CBPtr rc_cbptr = mut_cbptr->chunk_ptr_cont().begin()->chunk_cbptr();
+    Read_Entry_CBPtr re_cbptr = rc_cbptr->re_bptr();
+    Range_Type c_rg(mut_cbptr->rf_start(), mut_cbptr->rf_end());
+    // ask for maximal mapped read range iff mutation is an insertion
+    bool maximal = mut_cbptr->is_ins();
+    auto r_rg = rc_cbptr->mapped_range(c_rg, true, maximal, maximal);
+    ASSERT((c_rg.len() == 0) == mut_cbptr->is_ins());
+    ASSERT((r_rg.len() == 0) == mut_cbptr->is_del());
+
+    // cut contig entry into 3 slices, so that mutation spans the full middle contig
+    auto ce_mid_bptr = ce_bptr->cut(c_rg.start(), nullptr);
+    if (not ce_mid_bptr)
+    {
+        ce_mid_bptr = ce_bptr;
+        ce_bptr = nullptr;
+    }
+    rc_cbptr = re_cbptr->chunk_cont().get_chunk_with_pos(r_rg.start());
+    ASSERT(rc_cbptr->ce_bptr() == ce_mid_bptr);
+    ASSERT(rc_cbptr->get_c_start() == 0);
+    ASSERT(not rc_cbptr->mut_ptr_cont().empty());
+    mut_cbptr = rc_cbptr->mut_ptr_cont().begin()->mut_cbptr();
+    ASSERT(mut_cbptr->rf_start() == 0);
+    ASSERT(mut_cbptr->rf_len() == c_rg.len());
+    auto ce_rhs_bptr = ce_mid_bptr->cut(c_rg.len(), mut_cbptr);
+
+    if (r_rg.len() == 0)
+    {
+        // Mutation was a deletion.
+        // By slicing the contig entry, reads with the query allele now skip
+        // ce_mid_bptr, and go straight ce_bptr->ce_rhs_btr.
+        // We destroy the base sequence in ce_mid_bptr, and place all chunks
+        // into insertions.
+        if (not ce_mid_bptr->chunk_cont().empty())
+        {
+            Contig_Entry_BPtr ce_new_bptr = Contig_Entry_Fact::new_elem(Seq_Type());
+            for (Read_Chunk_CBPtr rc_cbptr : ce_mid_bptr->chunk_cont() | referenced)
+            {
+                Read_Chunk_BPtr rc_new_bptr = Read_Chunk_Fact::new_elem(
+                    rc_cbptr->get_r_start(), rc_cbptr->get_r_len(),
+                    0, 0,
+                    rc_cbptr->get_rc());
+                rc_new_bptr->re_bptr() = rc_cbptr->re_bptr();
+                rc_new_bptr->ce_bptr() = ce_new_bptr;
+                Mutation_BPtr mut_new_bptr = Mutation_Fact::new_elem(
+                    0, 0, Seq_Type(rc_cbptr->get_seq().revcomp(rc_cbptr->get_rc())));
+                mut_new_bptr = ce_new_bptr->mut_cont().find_equiv_or_add(mut_new_bptr).unconst();
+                Mutation_Chunk_Adapter_BPtr mca_new_bptr = Mutation_Chunk_Adapter_Fact::new_elem(
+                    mut_new_bptr, rc_new_bptr);
+                rc_new_bptr->mut_ptr_cont().push_back(mca_new_bptr);
+                mut_new_bptr->chunk_ptr_cont().insert(mca_new_bptr);
+            }
+            Contig_Entry::dispose(ce_mid_bptr);
+            ce_new_bptr->check();
+            ce_mid_bptr = ce_new_bptr;
+        }
+        // merge ce_mid_bptr back into ce_bptr
+        if (not ce_bptr)
+        {
+            ce_bptr = ce_mid_bptr;
+        }
+        else
+        {
+            //auto oc = ce_bptr->out_chunks_dir(true, 1);
+            //ASSERT(oc.count(make_pair(ce_rhs_bptr, true)));
+            //ASSERT(ce_mid_bptr->chunk_cont().empty());
+        }
+    }
+    else
+    {
+        //TODO
+        ASSERT(false);
+    }
+
+    //TODO
+    return mut_cbptr;
 }
 
 void Contig_Entry::check() const

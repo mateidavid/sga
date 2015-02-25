@@ -100,13 +100,28 @@ public:
      */
     void cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size_Type r_offset);
 
-    /** Get chunks supporting rf and qr alleles of a mutation.
-     * @param mut_cbptr Mutation of interest.
-     * @return A pair of sets; first = chunks supporting rf allele; second = chunks supporting qr allele.
-     * NOTE: A chunk supports the rf allele if it fully spans the rf span of the mutation;
-     * if the rf allele is empty (length 0, an insertion), we require >=1bp mapped on either side.
+    /** Cut Contig_Entry object.
+     * @param c_brk Contig position of the cut.
+     * @param mut_left_cbptr If not NULL, single insertion at breakpoint
+     * to be kept on the LHS (others are moved to RHS).
+     * @return RHS contig entry if one is created, nullptr otherwise.
+     * NOTE: If a new RHS contig entry is created, it is not added to the contig entry container.
      */
-    pair< set< Read_Chunk_CBPtr >, set< Read_Chunk_CBPtr > > mut_support(Mutation_CBPtr mut_cbptr) const;
+    Contig_Entry_BPtr cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
+
+    /** Get chunks supporting qr and rf alleles of a mutation.
+     * @param mut_cbptr Mutation of interest.
+     * @return A tuple of sets; first = chunks supporting qr allele;
+     * second = chunks supporting rf allele and fully spanning it;
+     * third = chunks supporting rf allele but only partially spanning it.
+     * NOTE: For a chunk to support the rf allele and fully span it:
+     * if the rf allele is non-empty, the chunk must start at or before the  mutation start
+     * and end at or after the mutation end;
+     * if the rf allele is empty (length 0, an insertion), we further require >=1bp
+     * to be mapped on either side of the mutation.
+     */
+    tuple< set< Read_Chunk_CBPtr >, set< Read_Chunk_CBPtr >, set< Read_Chunk_CBPtr > >
+    mut_support(Mutation_CBPtr mut_cbptr) const;
 
     /** Reverse the contig. */
     void reverse();
@@ -188,8 +203,8 @@ public:
      * Pre: The contig must be in the same orientation as this one.
      * Pre: The second contig must be unlinked.
      * Post: The second contig is deallocated.
-     * @param ce_cptr Initial contig.
-     * @param ce_next_cptr Next contig.
+     * @param ce_bptr Initial contig.
+     * @param ce_next_bptr Next contig.
      * @param rc_cbptr_cont Read chunks from first contig that span into the next contig.
      */
     static void cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_next_bptr,
@@ -235,6 +250,11 @@ public:
         }
         return true;
     }
+
+    /// Swap reference and query alleles at a mutation.
+    /// @param mut_cbptr Mutation whose alleles are to be swapped.
+    /// @return New Mutation object.
+    static Mutation_CBPtr swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mutation_CBPtr mut_cbptr);
 
     static void dispose(Contig_Entry_BPtr ce_bptr)
     {

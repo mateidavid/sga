@@ -70,13 +70,15 @@ void Mutation::to_stream(ostream& os, Mutation_CBPtr mut_cbptr, Contig_Entry_CBP
 {
     ASSERT(mut_cbptr);
     ASSERT(ce_cbptr);
-    auto p = ce_cbptr->mut_support(mut_cbptr);
+    set< Read_Chunk_CBPtr > qr_set;
+    set< Read_Chunk_CBPtr > full_rf_set;
+    tie(qr_set, full_rf_set, ignore) = ce_cbptr->mut_support(mut_cbptr);
     os << "mut " << setw(5) << left << mut_cbptr.to_int()
        << setw(5) << right << mut_cbptr->rf_start()
        << setw(5) << right << mut_cbptr->rf_len()
        << setw(5) << right << mut_cbptr->seq_len()
-       << setw(5) << right << p.first.size()
-       << setw(5) << right << p.second.size();
+       << setw(5) << right << full_rf_set.size()
+       << setw(5) << right << qr_set.size();
 }
 
 

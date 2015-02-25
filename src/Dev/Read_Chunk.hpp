@@ -58,6 +58,22 @@ private:
      * @param ce_bptr Contig entry.
      */
     Read_Chunk(Read_Entry_BPtr re_bptr, Contig_Entry_BPtr ce_bptr);
+
+    /// Construct Read_Chunk given mapping positions.
+    Read_Chunk(Size_Type r_start, Size_Type r_len,
+               Size_Type c_start, Size_Type c_len,
+               bool rc)
+        : _r_start(r_start),
+          _r_len(r_len),
+          _c_start(c_start),
+          _c_len(c_len),
+          _re_bptr(nullptr),
+          _ce_bptr(nullptr),
+          _mut_ptr_cont(),
+          _bits(0)
+    {
+        _set_rc(rc);
+    }
     /**@}*/
 
     // allow move only when unlinked

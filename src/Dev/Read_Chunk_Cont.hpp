@@ -259,18 +259,18 @@ struct Read_Chunk_Set_Comparator
 };
 
 class Read_Chunk_RE_Cont
-    : private bi::set< Read_Chunk,
-                       bi::compare< Read_Chunk_Set_Comparator >,
-                       bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
-                       bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
-                     >
+    : private bi::multiset< Read_Chunk,
+                            bi::compare< Read_Chunk_Set_Comparator >,
+                            bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
+                            bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
+                          >
 {
 private:
-    typedef bi::set< Read_Chunk,
-                     bi::compare< Read_Chunk_Set_Comparator >,
-                     bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
-                     bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
-                   > Base;
+    typedef bi::multiset< Read_Chunk,
+                          bi::compare< Read_Chunk_Set_Comparator >,
+                          bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
+                          bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
+                        > Base;
 public:
     // allow move only
     DEFAULT_DEF_CTOR(Read_Chunk_RE_Cont)
@@ -279,11 +279,11 @@ public:
     DELETE_COPY_ASOP(Read_Chunk_RE_Cont)
     DEFAULT_MOVE_ASOP(Read_Chunk_RE_Cont)
 
-    USING_INTRUSIVE_CONT(Base)
-    using Base::check;
-
     // check it is empty when deallocating
     ~Read_Chunk_RE_Cont() { ASSERT(empty()); }
+
+    USING_INTRUSIVE_CONT(Base)
+    using Base::check;
 
     Base::size_type size() = delete;
     Base::size_type nonconst_size() const { return Base::size(); }
@@ -291,10 +291,12 @@ public:
     /** Insert read chunk in this container. */
     void insert(Read_Chunk_BPtr rc_bptr)
     {
-        iterator it;
-        bool success;
-        std::tie(it, success) = static_cast< Base* >(this)->insert(*rc_bptr);
-        ASSERT(success);
+        static_cast< Base* >(this)->insert(*rc_bptr);
+    }
+    void insert_before(Read_Chunk_BPtr rc_old_bptr, Read_Chunk_BPtr rc_bptr)
+    {
+        auto it = iterator_to(*rc_old_bptr);
+        Base::insert_before(it, *rc_bptr);
     }
 
     /** Erase Read_Chunk from container. */
@@ -303,6 +305,8 @@ public:
     /** Find chunk which contains given read position.
      * @param r_pos Read position, 0-based.
      * @return Pointer to Read Chunk object, or NULL if no chunk contains r_pos.
+     * NOTE: If multiple chunks start at r_pos, this function retrieves the first such
+     * chunk.
      */
     Read_Chunk_CBPtr get_chunk_with_pos(Size_Type r_pos) const
     {

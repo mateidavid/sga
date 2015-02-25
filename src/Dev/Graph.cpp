@@ -34,6 +34,15 @@ void Graph::add_read(string&& name, Seq_Type&& seq)
 
 bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
+    auto ce_new_bptr = ce_bptr->cut(c_brk, mut_left_cbptr);
+    if (ce_new_bptr)
+    {
+        ce_cont().insert(ce_new_bptr);
+    }
+    return ce_new_bptr;
+/*
+    ASSERT(not mut_left_cbptr or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
+
     LOG("graph", debug1) << ptree("cut_contig_entry")
         .put("ce_ptr", ce_bptr.to_ptree())
         .put("c_brk", c_brk)
@@ -98,6 +107,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
 
     // if either contig has no read chunks mapped to it, remove it
     set< Contig_Entry_CBPtr > ce_to_check = { ce_bptr, ce_new_bptr };
+    ASSERT(not ce_bptr->chunk_cont().empty());
     if (ce_bptr->chunk_cont().empty())
     {
         ce_to_check.erase(ce_bptr);
@@ -110,9 +120,9 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
         ce_cont().erase(ce_new_bptr);
         Contig_Entry_Fact::del_elem(ce_new_bptr);
     }
-
     check(ce_to_check);
     return true;
+*/
 } // cut_contig_entry
 
 bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
@@ -2083,7 +2093,7 @@ Graph::get_supercontigs(int unmappable_policy, size_t ignore_threshold) const
                     //bitmask::set(crt_ce_bptr->tag(), Contig_Entry::supercontig_endpoint_mask(crt_c_right));
                     return false;
                 }
-                ASSERT(back_oc.begin()->first == make_pair(ce_cbptr, same_orientation));
+                ASSERT(back_oc.begin()->first == make_pair(crt_ce_cbptr, same_orientation));
                 if (next_ce_cbptr == ce_cbptr)
                 {
                     // supercontig is a cycle!
