@@ -77,7 +77,7 @@ private:
     /**@}*/
 
     // allow move only when unlinked
-    DELETE_COPY_CTOR(Read_Chunk)
+    DELETE_COPY_CTOR(Read_Chunk);
     Read_Chunk(Read_Chunk&& rhs) { *this = std::move(rhs); }
 
     // when deallocating, mut_ptr_cont must have been cleared
@@ -88,7 +88,7 @@ private:
     }
 
 public:
-    DELETE_COPY_ASOP(Read_Chunk)
+    DELETE_COPY_ASOP(Read_Chunk);
     Read_Chunk& operator = (Read_Chunk&& rhs)
     {
         if (this != &rhs)

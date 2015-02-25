@@ -39,8 +39,8 @@ private:
     Read_Entry(string&& name, Size_Type len) : _name(move(name)), _len(len) {}
 
     // allow move only
-    DEFAULT_DEF_CTOR(Read_Entry)
-    DELETE_COPY_CTOR(Read_Entry)
+    DEFAULT_DEF_CTOR(Read_Entry);
+    DELETE_COPY_CTOR(Read_Entry);
     Read_Entry(Read_Entry&& rhs) { *this = move(rhs); }
 
     ~Read_Entry()
@@ -50,7 +50,7 @@ private:
     }
 
 public:
-    DELETE_COPY_ASOP(Read_Entry)
+    DELETE_COPY_ASOP(Read_Entry);
     Read_Entry& operator = (Read_Entry&& rhs)
     {
         if (this != &rhs)

@@ -26,11 +26,11 @@ public:
     typedef Size_Type size_type;
 
     // Allow def ctor, copy&move ctor&asop
-    DEFAULT_DEF_CTOR(Cigar_Op)
-    DEFAULT_COPY_CTOR(Cigar_Op)
-    DEFAULT_MOVE_CTOR(Cigar_Op)
-    DEFAULT_COPY_ASOP(Cigar_Op)
-    DEFAULT_MOVE_ASOP(Cigar_Op)
+    DEFAULT_DEF_CTOR(Cigar_Op);
+    DEFAULT_COPY_CTOR(Cigar_Op);
+    DEFAULT_MOVE_CTOR(Cigar_Op);
+    DEFAULT_COPY_ASOP(Cigar_Op);
+    DEFAULT_MOVE_ASOP(Cigar_Op);
 
     /** Explicit constructor. */
     Cigar_Op(char op_type, Size_Type len, Size_Type rf_offset = 0, Size_Type qr_offset = 0)

@@ -82,11 +82,11 @@ private:
 
 public:
     // allow move only
-    DEFAULT_DEF_CTOR(Read_Chunk_CE_Cont)
-    DELETE_COPY_CTOR(Read_Chunk_CE_Cont)
-    DEFAULT_MOVE_CTOR(Read_Chunk_CE_Cont)
-    DELETE_COPY_ASOP(Read_Chunk_CE_Cont)
-    DEFAULT_MOVE_ASOP(Read_Chunk_CE_Cont)
+    DEFAULT_DEF_CTOR(Read_Chunk_CE_Cont);
+    DELETE_COPY_CTOR(Read_Chunk_CE_Cont);
+    DEFAULT_MOVE_CTOR(Read_Chunk_CE_Cont);
+    DELETE_COPY_ASOP(Read_Chunk_CE_Cont);
+    DEFAULT_MOVE_ASOP(Read_Chunk_CE_Cont);
 
     USING_INTRUSIVE_CONT(Base)
     using typename Base::intersection_const_iterator;
@@ -273,11 +273,11 @@ private:
                         > Base;
 public:
     // allow move only
-    DEFAULT_DEF_CTOR(Read_Chunk_RE_Cont)
-    DELETE_COPY_CTOR(Read_Chunk_RE_Cont)
-    DEFAULT_MOVE_CTOR(Read_Chunk_RE_Cont)
-    DELETE_COPY_ASOP(Read_Chunk_RE_Cont)
-    DEFAULT_MOVE_ASOP(Read_Chunk_RE_Cont)
+    DEFAULT_DEF_CTOR(Read_Chunk_RE_Cont);
+    DELETE_COPY_CTOR(Read_Chunk_RE_Cont);
+    DEFAULT_MOVE_CTOR(Read_Chunk_RE_Cont);
+    DELETE_COPY_ASOP(Read_Chunk_RE_Cont);
+    DEFAULT_MOVE_ASOP(Read_Chunk_RE_Cont);
 
     // check it is empty when deallocating
     ~Read_Chunk_RE_Cont() { ASSERT(empty()); }

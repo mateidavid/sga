@@ -22,11 +22,11 @@ private:
     friend class bounded::Factory< Hap_Entry >;
 
     // disallow copy or move
-    DEFAULT_DEF_CTOR(Hap_Entry)
-    DELETE_COPY_CTOR(Hap_Entry)
-    DELETE_MOVE_CTOR(Hap_Entry)
-    DELETE_COPY_ASOP(Hap_Entry)
-    DELETE_MOVE_ASOP(Hap_Entry)
+    DEFAULT_DEF_CTOR(Hap_Entry);
+    DELETE_COPY_CTOR(Hap_Entry);
+    DELETE_MOVE_CTOR(Hap_Entry);
+    DELETE_COPY_ASOP(Hap_Entry);
+    DELETE_MOVE_ASOP(Hap_Entry);
 
     ~Hap_Entry() { ASSERT(is_unlinked()); }
 

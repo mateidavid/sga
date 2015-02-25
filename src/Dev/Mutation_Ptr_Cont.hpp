@@ -88,11 +88,11 @@ private:
     //typedef detail::MCA_Mutation_Ptr_Cloner Cloner;
 public:
     // allow move only
-    DEFAULT_DEF_CTOR(Mutation_Ptr_Cont)
-    DELETE_COPY_CTOR(Mutation_Ptr_Cont)
-    DEFAULT_MOVE_CTOR(Mutation_Ptr_Cont)
-    DELETE_COPY_ASOP(Mutation_Ptr_Cont)
-    DEFAULT_MOVE_ASOP(Mutation_Ptr_Cont)
+    DEFAULT_DEF_CTOR(Mutation_Ptr_Cont);
+    DELETE_COPY_CTOR(Mutation_Ptr_Cont);
+    DEFAULT_MOVE_CTOR(Mutation_Ptr_Cont);
+    DELETE_COPY_ASOP(Mutation_Ptr_Cont);
+    DEFAULT_MOVE_ASOP(Mutation_Ptr_Cont);
 
     /*
     typedef boost::iterator::transform_iterator< std::mem_fn(&Mutation_Chunk_Adapter::mut_cbptr),

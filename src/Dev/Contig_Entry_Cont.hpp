@@ -64,11 +64,11 @@ private:
                       bi::header_holder_type< bounded::Pointer_Holder< Contig_Entry > >
                     > Base;
 public:
-    DEFAULT_DEF_CTOR(Contig_Entry_Cont)
-    DELETE_COPY_CTOR(Contig_Entry_Cont)
-    DEFAULT_MOVE_CTOR(Contig_Entry_Cont)
-    DELETE_COPY_ASOP(Contig_Entry_Cont)
-    DEFAULT_MOVE_ASOP(Contig_Entry_Cont)
+    DEFAULT_DEF_CTOR(Contig_Entry_Cont);
+    DELETE_COPY_CTOR(Contig_Entry_Cont);
+    DEFAULT_MOVE_CTOR(Contig_Entry_Cont);
+    DELETE_COPY_ASOP(Contig_Entry_Cont);
+    DEFAULT_MOVE_ASOP(Contig_Entry_Cont);
 
     USING_INTRUSIVE_CONT(Base)
     friend class Graph;

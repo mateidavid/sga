@@ -30,10 +30,10 @@ public:
     Graph() : _unmap_trigger_len(9), _cat_at_step(false) {}
 
     // disallow copy or move
-    DELETE_COPY_CTOR(Graph)
-    DELETE_MOVE_CTOR(Graph)
-    DELETE_COPY_ASOP(Graph)
-    DELETE_MOVE_ASOP(Graph)
+    DELETE_COPY_CTOR(Graph);
+    DELETE_MOVE_CTOR(Graph);
+    DELETE_COPY_ASOP(Graph);
+    DELETE_MOVE_ASOP(Graph);
 
     ~Graph()
     {

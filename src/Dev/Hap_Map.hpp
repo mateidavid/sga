@@ -14,11 +14,11 @@ class Hap_Map
 public:
     Hap_Map(const Graph& g) { build(g); }
 
-    DEFAULT_DEF_CTOR(Hap_Map)
-    DELETE_COPY_CTOR(Hap_Map)
-    DELETE_MOVE_CTOR(Hap_Map)
-    DELETE_COPY_ASOP(Hap_Map)
-    DELETE_MOVE_ASOP(Hap_Map)
+    DEFAULT_DEF_CTOR(Hap_Map);
+    DELETE_COPY_CTOR(Hap_Map);
+    DELETE_MOVE_CTOR(Hap_Map);
+    DELETE_COPY_ASOP(Hap_Map);
+    DELETE_MOVE_ASOP(Hap_Map);
 
     ~Hap_Map()
     {

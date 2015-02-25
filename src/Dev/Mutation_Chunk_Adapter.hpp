@@ -28,11 +28,11 @@ private:
     friend class bounded::Factory< Mutation_Chunk_Adapter >;
 
     // disallow copy or move
-    DEFAULT_DEF_CTOR(Mutation_Chunk_Adapter)
-    DELETE_COPY_CTOR(Mutation_Chunk_Adapter)
-    DELETE_MOVE_CTOR(Mutation_Chunk_Adapter)
-    DELETE_COPY_ASOP(Mutation_Chunk_Adapter)
-    DELETE_MOVE_ASOP(Mutation_Chunk_Adapter)
+    DEFAULT_DEF_CTOR(Mutation_Chunk_Adapter);
+    DELETE_COPY_CTOR(Mutation_Chunk_Adapter);
+    DELETE_MOVE_CTOR(Mutation_Chunk_Adapter);
+    DELETE_COPY_ASOP(Mutation_Chunk_Adapter);
+    DELETE_MOVE_ASOP(Mutation_Chunk_Adapter);
 
     /** Constructor from Mutation and Read_Chunk pointers. */
     Mutation_Chunk_Adapter(Mutation_CBPtr mut_cbptr, Read_Chunk_CBPtr chunk_cbptr)

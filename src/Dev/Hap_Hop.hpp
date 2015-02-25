@@ -23,11 +23,11 @@ private:
     friend class bounded::Factory< Hap_Hop >;
 
     // disallow copy or move
-    DEFAULT_DEF_CTOR(Hap_Hop)
-    DELETE_COPY_CTOR(Hap_Hop)
-    DELETE_MOVE_CTOR(Hap_Hop)
-    DELETE_COPY_ASOP(Hap_Hop)
-    DELETE_MOVE_ASOP(Hap_Hop)
+    DEFAULT_DEF_CTOR(Hap_Hop);
+    DELETE_COPY_CTOR(Hap_Hop);
+    DELETE_MOVE_CTOR(Hap_Hop);
+    DELETE_COPY_ASOP(Hap_Hop);
+    DELETE_MOVE_ASOP(Hap_Hop);
 
     Hap_Hop(Hap_Entry_CBPtr he_cbptr, const Allele_Anchor& allele_anchor,
             const Allele_Specifier& allele_specifier, bool c_direction)

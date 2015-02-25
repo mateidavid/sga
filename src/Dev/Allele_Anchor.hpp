@@ -12,11 +12,11 @@ namespace MAC
 class Allele_Anchor
 {
 public:
-    DEFAULT_DEF_CTOR(Allele_Anchor)
-    DEFAULT_COPY_CTOR(Allele_Anchor)
-    DEFAULT_MOVE_CTOR(Allele_Anchor)
-    DEFAULT_COPY_ASOP(Allele_Anchor)
-    DEFAULT_MOVE_ASOP(Allele_Anchor)
+    DEFAULT_DEF_CTOR(Allele_Anchor);
+    DEFAULT_COPY_CTOR(Allele_Anchor);
+    DEFAULT_MOVE_CTOR(Allele_Anchor);
+    DEFAULT_COPY_ASOP(Allele_Anchor);
+    DEFAULT_MOVE_ASOP(Allele_Anchor);
 
     explicit Allele_Anchor(Mutation_CBPtr mut_cbptr)
         : _mut_cbptr(mut_cbptr)

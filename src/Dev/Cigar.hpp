@@ -39,10 +39,10 @@ public:
     Cigar() : _rf_start(0), _qr_start(0), _rf_len(0), _qr_len(0), _reversed(false) {}
 
     // allow move only
-    DELETE_COPY_CTOR(Cigar)
-    DEFAULT_MOVE_CTOR(Cigar)
-    DELETE_COPY_ASOP(Cigar)
-    DEFAULT_MOVE_ASOP(Cigar)
+    DELETE_COPY_CTOR(Cigar);
+    DEFAULT_MOVE_CTOR(Cigar);
+    DELETE_COPY_ASOP(Cigar);
+    DEFAULT_MOVE_ASOP(Cigar);
 
     /** Constructor from string object.
      * @param cigar Cigar in string form.

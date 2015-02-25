@@ -50,10 +50,10 @@ private:
 
 public:
     // allow copy and move
-    DEFAULT_COPY_CTOR(Read_Chunk_Pos)
-    DEFAULT_MOVE_CTOR(Read_Chunk_Pos)
-    DEFAULT_COPY_ASOP(Read_Chunk_Pos)
-    DEFAULT_MOVE_ASOP(Read_Chunk_Pos)
+    DEFAULT_COPY_CTOR(Read_Chunk_Pos);
+    DEFAULT_MOVE_CTOR(Read_Chunk_Pos);
+    DEFAULT_COPY_ASOP(Read_Chunk_Pos);
+    DEFAULT_MOVE_ASOP(Read_Chunk_Pos);
 
 public:
     /** Check if position is past the last mutation in the read chunk. */

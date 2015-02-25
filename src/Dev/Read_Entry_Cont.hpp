@@ -89,11 +89,11 @@ private:
                      bi::header_holder_type< bounded::Pointer_Holder< Read_Entry > >
                    > Base;
 public:
-    DEFAULT_DEF_CTOR(Read_Entry_Cont)
-    DELETE_COPY_CTOR(Read_Entry_Cont)
-    DEFAULT_MOVE_CTOR(Read_Entry_Cont)
-    DELETE_COPY_ASOP(Read_Entry_Cont)
-    DEFAULT_MOVE_ASOP(Read_Entry_Cont)
+    DEFAULT_DEF_CTOR(Read_Entry_Cont);
+    DELETE_COPY_CTOR(Read_Entry_Cont);
+    DEFAULT_MOVE_CTOR(Read_Entry_Cont);
+    DELETE_COPY_ASOP(Read_Entry_Cont);
+    DEFAULT_MOVE_ASOP(Read_Entry_Cont);
 
     USING_INTRUSIVE_CONT(Base)
     friend class Graph;

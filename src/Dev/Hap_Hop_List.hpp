@@ -57,11 +57,11 @@ private:
                       bi::header_holder_type< bounded::Pointer_Holder< Hap_Hop > >
                     > Base;
 public:
-    DEFAULT_DEF_CTOR(Hap_Hop_List)
-    DELETE_COPY_CTOR(Hap_Hop_List)
-    DEFAULT_MOVE_CTOR(Hap_Hop_List)
-    DELETE_COPY_ASOP(Hap_Hop_List)
-    DEFAULT_MOVE_ASOP(Hap_Hop_List)
+    DEFAULT_DEF_CTOR(Hap_Hop_List);
+    DELETE_COPY_CTOR(Hap_Hop_List);
+    DEFAULT_MOVE_CTOR(Hap_Hop_List);
+    DELETE_COPY_ASOP(Hap_Hop_List);
+    DEFAULT_MOVE_ASOP(Hap_Hop_List);
 
     USING_INTRUSIVE_CONT(Base)
     using Base::check;

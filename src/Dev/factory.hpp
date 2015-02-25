@@ -65,10 +65,10 @@ private:
 public:
     // disable copy & move
     Storage(bool activate = true) : _cont(), _next_free_idx(0), _load(0) { if (activate) { make_active(); } }
-    DELETE_COPY_CTOR(Storage)
-    DELETE_MOVE_CTOR(Storage)
-    DELETE_COPY_ASOP(Storage)
-    DELETE_MOVE_ASOP(Storage)
+    DELETE_COPY_CTOR(Storage);
+    DELETE_MOVE_CTOR(Storage);
+    DELETE_COPY_ASOP(Storage);
+    DELETE_MOVE_ASOP(Storage);
 
     void make_active() { active_ptr() = this; }
 
@@ -218,10 +218,10 @@ struct Identifier
     Identifier(index_type idx = null_val) : _idx(idx) {}
 
     // allow copy & move
-    DEFAULT_COPY_CTOR(Identifier)
-    DEFAULT_MOVE_CTOR(Identifier)
-    DEFAULT_COPY_ASOP(Identifier)
-    DEFAULT_MOVE_ASOP(Identifier)
+    DEFAULT_COPY_CTOR(Identifier);
+    DEFAULT_MOVE_CTOR(Identifier);
+    DEFAULT_COPY_ASOP(Identifier);
+    DEFAULT_MOVE_ASOP(Identifier);
 
     /** Dereferencing operator, non-void types only. */
     template < T_ENABLE_IF((not is_void_t::value)) >
@@ -287,10 +287,10 @@ public:
     Pointer(std::nullptr_t = nullptr) {}
 
     // allow copy & move
-    DEFAULT_COPY_CTOR(Pointer)
-    DEFAULT_MOVE_CTOR(Pointer)
-    DEFAULT_COPY_ASOP(Pointer)
-    DEFAULT_MOVE_ASOP(Pointer)
+    DEFAULT_COPY_CTOR(Pointer);
+    DEFAULT_MOVE_CTOR(Pointer);
+    DEFAULT_COPY_ASOP(Pointer);
+    DEFAULT_MOVE_ASOP(Pointer);
 
     //CONST_CONVERSIONS(Pointer, val_type)
     // construct const Pointer from non-const Pointer
@@ -389,10 +389,10 @@ private:
 
 public:
     // allow construction only
-    DELETE_DEF_CTOR(Reference)
-    DEFAULT_COPY_CTOR(Reference)
-    DEFAULT_MOVE_CTOR(Reference)
-    DELETE_MOVE_ASOP(Reference)
+    DELETE_DEF_CTOR(Reference);
+    DEFAULT_COPY_CTOR(Reference);
+    DEFAULT_MOVE_CTOR(Reference);
+    DELETE_MOVE_ASOP(Reference);
 
     //CONST_CONVERSIONS(Reference, val_type)
     // construct const Reference from non-const Reference
@@ -504,10 +504,10 @@ public:
     Factory(bool activate = true) : Base(activate) {}
 
     // disable copy & move
-    DELETE_COPY_CTOR(Factory)
-    DELETE_MOVE_CTOR(Factory)
-    DELETE_COPY_ASOP(Factory)
-    DELETE_MOVE_ASOP(Factory)
+    DELETE_COPY_CTOR(Factory);
+    DELETE_MOVE_CTOR(Factory);
+    DELETE_COPY_ASOP(Factory);
+    DELETE_MOVE_ASOP(Factory);
 
     void make_active() { Base::make_active(); }
 
@@ -543,11 +543,11 @@ private:
     typedef detail::Storage< value_type, index_type > storage_type;
 
 public:
-    DEFAULT_DEF_CTOR(Allocator)
-    DEFAULT_COPY_CTOR(Allocator)
-    DEFAULT_MOVE_CTOR(Allocator)
-    DEFAULT_COPY_ASOP(Allocator)
-    DEFAULT_MOVE_ASOP(Allocator)
+    DEFAULT_DEF_CTOR(Allocator);
+    DEFAULT_COPY_CTOR(Allocator);
+    DEFAULT_MOVE_CTOR(Allocator);
+    DEFAULT_COPY_ASOP(Allocator);
+    DEFAULT_MOVE_ASOP(Allocator);
 
     pointer allocate(size_t n, std::allocator< void >::const_pointer = nullptr)
     {
@@ -580,10 +580,10 @@ public:
     template <typename... Args>
     Pointer_Holder(Args&& ... args) : _ptr(fact_type::new_elem(std::forward<Args>(args)...)) {}
 
-    DEFAULT_COPY_CTOR(Pointer_Holder)
-    DEFAULT_MOVE_CTOR(Pointer_Holder)
-    DEFAULT_COPY_ASOP(Pointer_Holder)
-    DEFAULT_MOVE_ASOP(Pointer_Holder)
+    DEFAULT_COPY_CTOR(Pointer_Holder);
+    DEFAULT_MOVE_CTOR(Pointer_Holder);
+    DEFAULT_COPY_ASOP(Pointer_Holder);
+    DEFAULT_MOVE_ASOP(Pointer_Holder);
 
     ~Pointer_Holder() { fact_type::del_elem(_ptr); }
 

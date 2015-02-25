@@ -52,12 +52,12 @@ private:
         : _start(start), _len(len), _seq_len(seq_len) {}
 
     /** No copy constructor. */
-    DELETE_COPY_CTOR(Mutation)
+    DELETE_COPY_CTOR(Mutation);
     /** Move constructor. */
     Mutation(Mutation&& rhs) : Mutation() { *this = move(rhs); }
 public:
     /** No copy assignment. */
-    DELETE_COPY_ASOP(Mutation)
+    DELETE_COPY_ASOP(Mutation);
     /** Move assignment: allow move only when unlinked. */
     Mutation& operator = (Mutation&& rhs)
     {

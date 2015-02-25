@@ -102,11 +102,11 @@ private:
                        bi::header_holder_type< bounded::Pointer_Holder< Mutation > > > Base;
 public:
     // allow move only
-    DEFAULT_DEF_CTOR(Mutation_Cont)
-    DELETE_COPY_CTOR(Mutation_Cont)
-    DEFAULT_MOVE_CTOR(Mutation_Cont)
-    DELETE_COPY_ASOP(Mutation_Cont)
-    DEFAULT_MOVE_ASOP(Mutation_Cont)
+    DEFAULT_DEF_CTOR(Mutation_Cont);
+    DELETE_COPY_CTOR(Mutation_Cont);
+    DEFAULT_MOVE_CTOR(Mutation_Cont);
+    DELETE_COPY_ASOP(Mutation_Cont);
+    DEFAULT_MOVE_ASOP(Mutation_Cont);
 
     USING_INTRUSIVE_CONT(Base)
     using Base::check;

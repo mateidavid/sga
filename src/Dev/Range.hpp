@@ -14,11 +14,11 @@ template < typename T >
 class Range
 {
 public:
-    DEFAULT_DEF_CTOR(Range)
-    DEFAULT_COPY_CTOR(Range)
-    DEFAULT_MOVE_CTOR(Range)
-    DEFAULT_COPY_ASOP(Range)
-    DEFAULT_MOVE_ASOP(Range)
+    DEFAULT_DEF_CTOR(Range);
+    DEFAULT_COPY_CTOR(Range);
+    DEFAULT_MOVE_CTOR(Range);
+    DEFAULT_COPY_ASOP(Range);
+    DEFAULT_MOVE_ASOP(Range);
 
     Range(const T& start, const T& end) : _start(start), _end(end) {}
     Range(const std::tuple< T, T >& t) : _start(std::get<0>(t)), _end(std::get<1>(t)) {}

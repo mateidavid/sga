@@ -82,11 +82,11 @@ private:
     typedef detail::MCA_Read_Chunk_Ptr_Cloner Cloner;
 public:
     // allow move only
-    DEFAULT_DEF_CTOR(Read_Chunk_Ptr_Cont)
-    DELETE_COPY_CTOR(Read_Chunk_Ptr_Cont)
-    DEFAULT_MOVE_CTOR(Read_Chunk_Ptr_Cont)
-    DELETE_COPY_ASOP(Read_Chunk_Ptr_Cont)
-    DEFAULT_MOVE_ASOP(Read_Chunk_Ptr_Cont)
+    DEFAULT_DEF_CTOR(Read_Chunk_Ptr_Cont);
+    DELETE_COPY_CTOR(Read_Chunk_Ptr_Cont);
+    DEFAULT_MOVE_CTOR(Read_Chunk_Ptr_Cont);
+    DELETE_COPY_ASOP(Read_Chunk_Ptr_Cont);
+    DEFAULT_MOVE_ASOP(Read_Chunk_Ptr_Cont);
 
     USING_INTRUSIVE_CONT(Base)
     using Base::check;

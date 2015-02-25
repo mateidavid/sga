@@ -185,15 +185,15 @@ private:
 
     friend class Sequence< String_Type, Complementer >;
 
-    DEFAULT_COPY_CTOR(Sequence_Proxy)
-    DELETE_COPY_ASOP(Sequence_Proxy)
+    DEFAULT_COPY_CTOR(Sequence_Proxy);
+    DELETE_COPY_ASOP(Sequence_Proxy);
     Sequence_Proxy(const String_Type* seq_p, size_t start, size_t len, bool reversed, bool complemented)
         : _seq_p(seq_p), _start(start), _len(len), _reversed(reversed), _complemented(complemented) {}
 
 public:
     Sequence_Proxy() : _seq_p(), _start(0), _len(0), _reversed(false), _complemented(false) {}
-    DEFAULT_MOVE_CTOR(Sequence_Proxy)
-    DEFAULT_MOVE_ASOP(Sequence_Proxy)
+    DEFAULT_MOVE_CTOR(Sequence_Proxy);
+    DEFAULT_MOVE_ASOP(Sequence_Proxy);
 
     Sequence_Proxy(const String_Type& s) : _seq_p(&s), _start(0), _len(s.size()), _reversed(false), _complemented(false) {}
 
@@ -350,11 +350,11 @@ class Sequence
 public:
     typedef Sequence_Proxy< String_Type, Complementer > proxy_type;
 
-    DEFAULT_DEF_CTOR(Sequence)
-    DEFAULT_COPY_CTOR(Sequence)
-    DEFAULT_MOVE_CTOR(Sequence)
-    DEFAULT_COPY_ASOP(Sequence)
-    DEFAULT_MOVE_ASOP(Sequence)
+    DEFAULT_DEF_CTOR(Sequence);
+    DEFAULT_COPY_CTOR(Sequence);
+    DEFAULT_MOVE_CTOR(Sequence);
+    DEFAULT_COPY_ASOP(Sequence);
+    DEFAULT_MOVE_ASOP(Sequence);
 
     /** Construction from base */
     Sequence(const String_Type& seq) : String_Type(seq) {}

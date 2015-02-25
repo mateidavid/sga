@@ -15,11 +15,11 @@ namespace MAC
 class Allele_Specifier
 {
 public:
-    DEFAULT_DEF_CTOR(Allele_Specifier)
-    DEFAULT_COPY_CTOR(Allele_Specifier)
-    DEFAULT_MOVE_CTOR(Allele_Specifier)
-    DEFAULT_COPY_ASOP(Allele_Specifier)
-    DEFAULT_MOVE_ASOP(Allele_Specifier)
+    DEFAULT_DEF_CTOR(Allele_Specifier);
+    DEFAULT_COPY_CTOR(Allele_Specifier);
+    DEFAULT_MOVE_CTOR(Allele_Specifier);
+    DEFAULT_COPY_ASOP(Allele_Specifier);
+    DEFAULT_MOVE_ASOP(Allele_Specifier);
 
     Allele_Specifier(Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation)
         : _ce_next_cbptr(ce_next_cbptr), _same_orientation(same_orientation), _strand(false) {}

@@ -25,29 +25,29 @@
 // E.g.:
 //   class My_Class
 //   {
-//     DEFAULT_DEF_CTOR(My_Class)
+//     DEFAULT_DEF_CTOR(My_Class);
 //   };
 //
 #define DELETE_COPY_CTOR(_type) \
-    _type(const _type&) = delete;
+    _type(const _type&) = delete
 #define DELETE_MOVE_CTOR(_type) \
-    _type(_type&&) = delete;
+    _type(_type&&) = delete
 #define DELETE_DEF_CTOR(_type) \
-    _type() = delete;
+    _type() = delete
 #define DELETE_COPY_ASOP(_type) \
-    _type& operator = (const _type&) = delete;
+    _type& operator = (const _type&) = delete
 #define DELETE_MOVE_ASOP(_type) \
-    _type& operator = (_type&&) = delete;
+    _type& operator = (_type&&) = delete
 #define DEFAULT_COPY_CTOR(_type) \
-    _type(const _type&) = default;
+    _type(const _type&) = default
 #define DEFAULT_MOVE_CTOR(_type) \
-    _type(_type&&) = default;
+    _type(_type&&) = default
 #define DEFAULT_DEF_CTOR(_type) \
-    _type() = default;
+    _type() = default
 #define DEFAULT_COPY_ASOP(_type) \
-    _type& operator = (const _type&) = default;
+    _type& operator = (const _type&) = default
 #define DEFAULT_MOVE_ASOP(_type) \
-    _type& operator = (_type&&) = default;
+    _type& operator = (_type&&) = default
 
 // Standard const&nonconst reference access to a private data member.
 //

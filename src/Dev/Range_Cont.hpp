@@ -27,11 +27,11 @@ public:
     typedef Range< T > range_type;
 
     // allow move but not copy
-    DEFAULT_DEF_CTOR(Range_Cont)
-    DELETE_COPY_CTOR(Range_Cont)
-    DEFAULT_MOVE_CTOR(Range_Cont)
-    DELETE_COPY_ASOP(Range_Cont)
-    DEFAULT_MOVE_ASOP(Range_Cont)
+    DEFAULT_DEF_CTOR(Range_Cont);
+    DELETE_COPY_CTOR(Range_Cont);
+    DEFAULT_MOVE_CTOR(Range_Cont);
+    DELETE_COPY_ASOP(Range_Cont);
+    DEFAULT_MOVE_ASOP(Range_Cont);
 
     USING_STD_CONT(Base)
 

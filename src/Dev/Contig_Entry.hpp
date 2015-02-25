@@ -42,7 +42,7 @@ private:
 
     // allow move only when unlinked
     Contig_Entry() : _seq_offset(0), _tag(0) {}
-    DELETE_COPY_CTOR(Contig_Entry)
+    DELETE_COPY_CTOR(Contig_Entry);
     Contig_Entry(Contig_Entry&& rhs) { *this = std::move(rhs); }
 
     ~Contig_Entry()
@@ -53,7 +53,7 @@ private:
     }
 
 public:
-    DELETE_COPY_ASOP(Contig_Entry)
+    DELETE_COPY_ASOP(Contig_Entry);
     Contig_Entry& operator = (Contig_Entry&& rhs)
     {
         if (this != &rhs)
