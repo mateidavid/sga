@@ -51,26 +51,28 @@ void Contig_Entry::cut_mutation(Mutation_BPtr mut_bptr, Size_Type c_offset, Size
     check();
 }
 
-Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
+Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict)
 {
     ASSERT(not mut_left_cbptr
            or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
 
     LOG("Contig_Entry", debug1) << ptree("cut")
         .put("c_brk", c_brk)
-        .put("mut_left_ptr", mut_left_cbptr.to_ptree());
+        .put("mut_left_ptr", mut_left_cbptr.to_ptree())
+        .put("strict", strict);
 
     // there is nothing to cut if:
-    if (// cut is at the start, and no insertion goes to the left
-        (c_brk == 0 and not mut_left_cbptr)
-        // cut is at the end, and:
-        or (c_brk == len()
-            and (// there are no mutations
-                mut_cont().empty()
-                // or the last one is not an insertion
-                or not mut_cont().rbegin()->is_ins()
-                // or the last insertion is not at the end
-                or mut_cont().rbegin()->rf_start() < len())))
+    if (not strict
+        and (// cut is at the start, and no insertion goes to the left
+            (c_brk == 0 and not mut_left_cbptr)
+            // cut is at the end, and:
+            or (c_brk == len()
+                and (// there are no mutations
+                    mut_cont().empty()
+                    // or the last one is not an insertion
+                    or not mut_cont().rbegin()->is_ins()
+                    // or the last insertion is not at the end
+                    or mut_cont().rbegin()->rf_start() < len()))))
     {
         return nullptr;
     }
@@ -99,7 +101,9 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
     chunk_cont().erase_from_re_cont();
 
     // split Read_Chunk_Cont, save rhs in new Contig_Entry
-    ce_new_bptr->chunk_cont() = chunk_cont().split(c_brk, mut_left_cbptr);
+    ASSERT(ce_new_bptr->chunk_cont().empty());
+    ce_new_bptr->chunk_cont() = chunk_cont().split(c_brk, mut_left_cbptr, strict);
+    //TODO
     ASSERT(not chunk_cont().empty());
     ASSERT(chunk_cont().max_end() <= c_brk);
     ASSERT(ce_new_bptr->chunk_cont().empty() or c_brk <= ce_new_bptr->chunk_cont().begin()->get_c_start());
@@ -286,6 +290,7 @@ Contig_Entry::unmappable_neighbour_range(bool c_right, const set< MAC::Read_Chun
     return make_pair(min_skip_len, max_skip_len);
 }
 
+#if 0
 auto Contig_Entry::neighbours(bool forward, Neighbour_Options opts, size_t ignore_threshold) -> neighbours_type
 {
     neighbours_type res;
@@ -342,6 +347,7 @@ auto Contig_Entry::neighbours(bool forward, Neighbour_Options opts, size_t ignor
     }
     return res;
 }
+#endif
 
 tuple< Contig_Entry_CBPtr, bool, set< Read_Chunk_CBPtr > >
 Contig_Entry::can_cat_dir(bool c_right) const

@@ -108,30 +108,33 @@ public:
             and not Base::node_traits::get_right(Base::node_traits::get_parent(Base::header_ptr()));
     }
 
-    /** Insert Read_Chunk in this container. */
+    /// Insert Read_Chunk in this container.
     void insert(Read_Chunk_BPtr rc_bptr) { Base::insert(*rc_bptr); }
-
-    /** Erase Read_Chunk from container. */
+    /// Erase Read_Chunk from container.
     void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(iterator_to(*rc_cbptr)); }
 
-    /** Split container and its Read_Chunk objects at a contig breakpoint.
+    /**
+     * Split container and its Read_Chunk objects at a contig breakpoint.
      * Pre: No Mutations may span c_pos.
      * Pre: Chunks must be unlinked from their RE container.
      * NOTE: Chunks that do not span the break stay unchanged;
-     * For Chunks that get split, we also fix Chunk back pointers
-     * in their Mutation ptr containers.
+     * For Chunks that get split, we also fix the back pointers
+     * in their Mutation_Ptr containers.
      * @param c_brk Contig position of the breakpoint.
      * @param mut_left_cbptr Insertion at c_pos to remain on the left of the cut, if any.
+     * @param strict If true, every non-terminal Read_Chunk object is split in 2 pieces,
+     * (even if one side of the split is empty).
      * @return New Read_Chunk_CE_Cont containing rhs.
      */
-    Read_Chunk_CE_Cont split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
+    Read_Chunk_CE_Cont split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict = false);
 
-    /** Erase all Chunks from their respective RE container. */
+    /// Erase all Chunks from their respective RE container.
     void erase_from_re_cont() const;
-    /** Insert all Chunks into their respective RE container. */
+    /// Insert all Chunks into their respective RE container.
     void insert_into_re_cont() const;
 
-    /** Shift contig coordinates of all Read_Chunk objects in this container.
+    /**
+     * Shift contig coordinates of all Read_Chunk objects in this container.
      * @param delta Signed integer value to add to all contig start points.
      */
     void shift(int delta)
@@ -143,7 +146,8 @@ public:
         Base::implement_shift(delta);
     }
 
-    /** Set ce_ptr of all chunks.
+    /**
+     * Set ce_ptr of all chunks.
      * @param ce_ptr New ce pointer.
      */
     void set_ce_ptr(Contig_Entry_BPtr ce_bptr)
@@ -154,7 +158,8 @@ public:
         }
     }
 
-    /** Copy chunks from given container into this one.
+    /**
+     * Copy chunks from given container into this one.
      * @param other_cont Container to clear.
      * @param ce_bptr Pointer to Contig_Entry object of this container.
      */
@@ -167,7 +172,8 @@ public:
         });
     }
 
-    /** Clear container and deallocate all Read_Chunk objects.
+    /**
+     * Clear container and deallocate all Read_Chunk objects.
      * Pre: Read_Chunk objects must be unlinked from their RE containers.
      * Post: MCAs are also deallocated, but not the Mutations themselves.
      */
@@ -180,8 +186,7 @@ public:
         });
     }
 
-    /** Reverse all chunks in this container.
-     */
+    /// Reverse all chunks in this container.
     void reverse()
     {
         Read_Chunk_CE_Cont new_cont;
@@ -239,9 +244,7 @@ struct Read_Chunk_Set_Value_Traits
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
 };
 
-} // namespace detail
-
-/** Comparator for storage in RE Cont. */
+/// Comparator for storage in RE Cont.
 struct Read_Chunk_Set_Comparator
 {
     bool operator () (const Read_Chunk& lhs, const Read_Chunk& rhs) const
@@ -258,16 +261,18 @@ struct Read_Chunk_Set_Comparator
     }
 };
 
+} // namespace detail
+
 class Read_Chunk_RE_Cont
     : private bi::multiset< Read_Chunk,
-                            bi::compare< Read_Chunk_Set_Comparator >,
+                            bi::compare< detail::Read_Chunk_Set_Comparator >,
                             bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
                             bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
                           >
 {
 private:
     typedef bi::multiset< Read_Chunk,
-                          bi::compare< Read_Chunk_Set_Comparator >,
+                          bi::compare< detail::Read_Chunk_Set_Comparator >,
                           bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
                           bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
                         > Base;
@@ -285,28 +290,31 @@ public:
     USING_INTRUSIVE_CONT(Base)
     using Base::check;
 
+    /// Disallow direct access to the potentially non-constant size() base member function.
     Base::size_type size() = delete;
+    /// Access the potentially non-constant size() base member function.
     Base::size_type nonconst_size() const { return Base::size(); }
 
-    /** Insert read chunk in this container. */
-    void insert(Read_Chunk_BPtr rc_bptr)
-    {
-        static_cast< Base* >(this)->insert(*rc_bptr);
-    }
+    /// Insert Read_Chunk in this container.
+    void insert(Read_Chunk_BPtr rc_bptr) { Base::insert(*rc_bptr); }
+    /**
+     * Insert Read_Chunk in this container before an existing Read_Chunk.
+     * @param rc_old_bptr Pointer to an existing Read_Chunk.
+     * @param rc_bptr Pointer to Read_Chunk to insert.
+     */
     void insert_before(Read_Chunk_BPtr rc_old_bptr, Read_Chunk_BPtr rc_bptr)
     {
-        auto it = iterator_to(*rc_old_bptr);
-        Base::insert_before(it, *rc_bptr);
+        Base::insert_before(iterator_to(*rc_old_bptr), *rc_bptr);
     }
-
-    /** Erase Read_Chunk from container. */
+    /// Erase Read_Chunk from container.
     void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(iterator_to(*rc_cbptr)); }
 
-    /** Find chunk which contains given read position.
+    /**
+     * Find Read_Chunk which contains given read position.
      * @param r_pos Read position, 0-based.
      * @return Pointer to Read Chunk object, or NULL if no chunk contains r_pos.
-     * NOTE: If multiple chunks start at r_pos, this function retrieves the first such
-     * chunk.
+     * NOTE: If multiple chunks start at r_pos, this function retrieves the first
+     * such chunk.
      */
     Read_Chunk_CBPtr get_chunk_with_pos(Size_Type r_pos) const
     {
@@ -325,7 +333,8 @@ public:
         return &*cit;
     }
 
-    /** Get the sibling of the given read chunk.
+    /**
+     * Get the sibling of the given Read_Chunk.
      * @param rc_cbptr Original Read_Chunk.
      * @param read Bool; true: right/left wrt to read; false: right/left wrt to contig.
      * @param right Bool; true: get chunk to the right; false: get chunk to the left.

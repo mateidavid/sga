@@ -118,7 +118,8 @@ public:
     Base::size_type size() = delete;
     Base::size_type nonconst_size() const { return Base::size(); }
 
-    /** Create a Mutation container using mutations from a cigar string.
+    /**
+     * Create a Mutation container using mutations from a cigar string.
      * Pre: Cigar contains no 'M' operations (use disambiguate() first).
      * Post: Adjacent non-match operations are merged.
      * @param cigar Cigar object describing the match.
@@ -126,15 +127,17 @@ public:
      */
     Mutation_Cont(const Cigar& cigar, const Seq_Proxy_Type& qr = Seq_Proxy_Type());
 
-    /** Get iterator to Mutation inside container. */
-    //const_iterator iterator_to(Mutation_CBPtr mut_cbptr) const { return Base::iterator_to(*mut_cbptr); }
-    //iterator iterator_to(Mutation_BPtr mut_bptr) { return Base::iterator_to(*mut_bptr); }
-
-    /** Insert Mutation in container. */
+    /// Insert Mutation in container.
     iterator insert(Mutation_BPtr mut_bptr) { return Base::insert(*mut_bptr); }
+    /// Erase Mutation from container.
+    void erase(Mutation_BPtr mut_bptr) { Base::erase(iterator_to(*mut_bptr)); }
 
-    /** Find an equivalent Mutation in container.
-     * @param find_exact Bool; if true, look for that Mutation only; if false, look for equivalent Mutations as well.
+    /**
+     * Find an equivalent Mutation in container.
+     * @param find_exact Bool; if true, look for that Mutation only; if false,
+     * look for equivalent Mutations as well.
+     * @return An exact (if find_exact is true) or equivalent Mutation in this
+     * container; or NULL if none exists.
      */
     Mutation_CBPtr find(Mutation_CBPtr mut_cbptr, bool find_exact) const
     {
@@ -150,7 +153,8 @@ public:
         return nullptr;
     }
 
-    /** Get equivalent Mutation from container;
+    /**
+     * Get equivalent Mutation from container;
      * if one exists, the given Mutation is deallocated;
      * if one doesn't exist, the given Mutation is added and returned.
      * Pre: Mutation is unlinked.
@@ -174,31 +178,34 @@ public:
         }
     }
 
-    /** Erase Mutation from container. */
-    void erase(Mutation_BPtr mut_bptr) { Base::erase(iterator_to(*mut_bptr)); }
-
-    /** Add Mutation to container; if an equivalent one already exists, use that one.
+#if 0
+    /**
+     * Add Mutation to container; if an equivalent one already exists, use that one.
      * Note: Does not deallocate new Mutation when reusing old one.
      * @param mut_bptr Pointer to Mutation to add.
      * @return Pointer to Mutation inside container.
      */
-    //Mutation_BPtr add_mut(Mutation_BPtr mut_bptr);
+    Mutation_BPtr add_mut(Mutation_BPtr mut_bptr);
+#endif
 
-    /** Search for a Mutation that completely spans a given contig position.
+    /**
+     * Search for a Mutation that completely spans a given contig position.
      * @param c_pos Contig position, 0-based.
      * @return Pointer to Mutation, or NULL if none exists.
      */
     Mutation_CBPtr find_span_pos(Size_Type c_pos) const;
 
-    /** Extract second half mutations, place them in new container.
+    /**
+     * Extract second half mutations, place them in new container.
      * Pre: No Mutation objects cross the cut.
      * @param c_brk Position of the cut.
-     * @param mut_left_cbptr Insertion at c_pos to remain on the left of the cut, if any.
+     * @param mut_left_cbptr Insertion at c_brk to remain on the left of the cut, if any.
      * @return New Mutation_Cont.
      */
     Mutation_Cont split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
 
-    /** Shift all Mutations in this container.
+    /**
+     * Shift all Mutations in this container.
      * @param delta Signed integer value to add to all start points.
      */
     template < typename delta_type >
@@ -211,10 +218,10 @@ public:
         Base::implement_shift(delta);
     }
 
-    /** Drop unused Mutation objects. */
+    /// Drop unused Mutation objects.
     void drop_unused();
 
-    /** Clear the container. */
+    /// Clear the container and deallocate Mutation objects.
     void clear_and_dispose()
     {
         Base::clear_and_dispose([] (Mutation_BPtr mut_bptr)
@@ -223,7 +230,8 @@ public:
         });
     }
 
-    /** Reverse Mutations in this container.
+    /**
+     * Reverse Mutations in this container (and their order).
      * @param ce_len Length of the Contig_Entry.
      */
     void reverse_mutations(Size_Type ce_len)
@@ -234,10 +242,11 @@ public:
             mut_bptr->reverse(ce_len);
             new_mut_cont.insert(mut_bptr);
         });
-        *this = std::move(new_mut_cont);
+        *this = move(new_mut_cont);
     }
 
-    /** Move all Mutations from given container into this one.
+    /**
+     * Move all Mutations from given container into this one.
      * @param other_cont Container to clear.
      */
     void splice(Mutation_Cont& other_cont)
@@ -248,7 +257,8 @@ public:
         });
     }
 
-    /** Acquire Mutations from given container.
+    /**
+     * Acquire Mutations from given container.
      * In contrast to splice(), this method looks for common Mutations. If such Mutations are found,
      * the existing copy is used, and the one in other_cont is deallocated. MCA-s are also adjusted.
      * @param other_cont Container to clear.

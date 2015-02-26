@@ -97,33 +97,32 @@ public:
     Base::size_type size() = delete;
     Base::size_type nonconst_size() const { return Base::size(); }
 
-    /** Insert read chunk in this container. */
-    void insert(Mutation_Chunk_Adapter_BPtr mca_bptr)
-    {
-        Base::push_back(*mca_bptr);
-    }
+    /// Insert Mutation_Chunk_Adapter in this container.
+    void insert(Mutation_Chunk_Adapter_BPtr mca_bptr) { Base::push_back(*mca_bptr); }
+    /// Erase Mutation_Chunk_Adapter from container. */
+    void erase(Mutation_Chunk_Adapter_CBPtr mca_cbptr) { Base::erase(iterator_to(*mca_cbptr)); }
 
-    /** Clone from another Read_Chunk_Ptr_Cont.
+    /**
+     * Clone from another Read_Chunk_Ptr_Cont.
      * @param src Source container.
      * @param new_mut_cbptr New Mutation pointer to use.
      */
     void clone_from(const Read_Chunk_Ptr_Cont& src, Mutation_CBPtr new_mut_cbptr)
     {
-        Base::clone_from(src, Read_Chunk_Ptr_Cont::Cloner(new_mut_cbptr), Mutation_Chunk_Adapter_Fact::disposer_type());
+        Base::clone_from(src,
+                         Read_Chunk_Ptr_Cont::Cloner(new_mut_cbptr),
+                         Mutation_Chunk_Adapter_Fact::disposer_type());
     }
 
-    /** Erase MCA from container. */
-    void erase(Mutation_Chunk_Adapter_CBPtr mca_cbptr)
-    {
-        Base::erase(iterator_to(*mca_cbptr));
-    }
-
-    /** Merge given container into this one at the end. */
+    /**
+     * Merge given container into this one at the end.
+     * @param other_cont Container to merge in.
+     */
     void splice(Read_Chunk_Ptr_Cont& other_cont)
     {
         Base::splice(end(), static_cast< Base& >(other_cont));
     }
-};
+}; // class Read_Chunk_Ptr_Cont
 
 } // namespace MAC
 

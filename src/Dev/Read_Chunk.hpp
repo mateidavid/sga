@@ -24,8 +24,8 @@ struct Read_Chunk_Set_Node_Traits;
 
 }
 
-/** Holds information about a read chunk.
- *
+/**
+ * Holds information about a read chunk.
  * Reads will be partitioned into chunks of non-zero size as they are mapped to contigs.
  * Each read chunk object contains information about the read it comes from (start, span),
  * the contig it is mapped to (start, span, orientation), and the contig mutations it observes.
@@ -38,9 +38,7 @@ private:
     // Can only be constructed by Factory object
     friend class bounded::Factory< Read_Chunk >;
 
-    /** @name Constructors */
-    /**@{*/
-    /** Empty constructor. */
+    // Default constructor.
     Read_Chunk()
         : _r_start(0),
           _r_len(0),
@@ -52,14 +50,15 @@ private:
           _bits(0)
     {}
 
-    /** Construct chunk mapping full read to single contig.
+    /**
+     * Constructor that maps a full read to a single contig.
      * Pre: Read and contig must be of the same length.
-     * @param re_bptr Read entry.
-     * @param ce_bptr Contig entry.
+     * @param re_bptr Read_Entry object.
+     * @param ce_bptr Contig_Entry object.
      */
     Read_Chunk(Read_Entry_BPtr re_bptr, Contig_Entry_BPtr ce_bptr);
 
-    /// Construct Read_Chunk given mapping positions.
+    /// Constructor from mapping positions.
     Read_Chunk(Size_Type r_start, Size_Type r_len,
                Size_Type c_start, Size_Type c_len,
                bool rc)
@@ -74,25 +73,24 @@ private:
     {
         _set_rc(rc);
     }
-    /**@}*/
 
-    // allow move only when unlinked
     DELETE_COPY_CTOR(Read_Chunk);
     Read_Chunk(Read_Chunk&& rhs) { *this = std::move(rhs); }
+    DELETE_COPY_ASOP(Read_Chunk);
 
-    // when deallocating, mut_ptr_cont must have been cleared
     ~Read_Chunk()
     {
+        // when deallocating, mut_ptr_cont must have been cleared
         ASSERT(mut_ptr_cont().empty());
         ASSERT(is_unlinked());
     }
 
 public:
-    DELETE_COPY_ASOP(Read_Chunk);
     Read_Chunk& operator = (Read_Chunk&& rhs)
     {
         if (this != &rhs)
         {
+            // allow move only when unlinked
             ASSERT(is_unlinked() and rhs.is_unlinked());
             _re_bptr = std::move(rhs._re_bptr);
             _ce_bptr = std::move(rhs._ce_bptr);
@@ -106,8 +104,8 @@ public:
         return *this;
     }
 
-    /** @name Getters */
-    /**@{*/
+    /// @name Getters
+    /// @{
     GETTER(Read_Entry_BPtr, re_bptr, _re_bptr)
     GETTER(Contig_Entry_BPtr, ce_bptr, _ce_bptr)
     GETTER(Size_Type, c_len, _c_len)
@@ -122,22 +120,22 @@ public:
     Seq_Type get_seq() const;
     bool is_unbreakable() const { return _get_is_unbreakable(); }
     Size_Type get_read_len() const;
-    /**@}*/
+    /// @}
 
-    /** Set of coordinates used to traverse a Read_Chunk mapping. */
-    /** Get mapping start position. */
+    /// Get mapping start position.
     Pos get_start_pos() const
     {
         return Pos(get_c_start(), (not get_rc()? get_r_start() : get_r_end()), _mut_ptr_cont.begin(), 0, this);
     }
 
-    /** Get mapping end position. */
+    /// Get mapping end position.
     Pos get_end_pos() const
     {
         return Pos(get_c_end(), (not get_rc()? get_r_end() : get_r_start()), _mut_ptr_cont.end(), 0, this);
     }
 
-    /** Split Read_Chunk based on contig position.
+    /**
+     * Split Read_Chunk based on contig position.
      * Pre: No Mutation may span c_brk.
      * Pre: Read_Chunk must be unlinked from all containers.
      * Post: If a split is not required, one component is the original pointer, and the other is NULL.
@@ -145,21 +143,15 @@ public:
      * @param rc_bptr Chunk to split.
      * @param c_brk Contig breakpoint.
      * @param mut_left_cbptr Insertion at c_pos to remain on the left of the cut, if any.
+     * @param strict If true, every non-terminal Read_Chunk that spans the break gets split
+     * into exactly 2 pieces (even if one is empty).
      * @return Tuple of Read_Chunk pointers that go on left&right of the cut.
      */
-    static std::tuple< Read_Chunk_BPtr, Read_Chunk_BPtr >
-    split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
+    static pair< Read_Chunk_BPtr, Read_Chunk_BPtr >
+    split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict = false);
 
-    /** Split read chunk based on contig position and mutation map.
-     * @param c_brk Contig breakpoint.
-     * @param mut_cptr_map Map of mutations which go to the right side.
-     * @param ce_cptr Pointer to new contig entry object.
-     * @return Flag whether to move read chunk to the right contig side; additional Read_Chunk object mapped to right side, if the chunk gets split
-     */
-    //std::tuple< bool, std::shared_ptr< Read_Chunk > > split(
-    //    Size_Type c_brk, const std::map< const Mutation*, const Mutation* >& mut_cptr_map, const Contig_Entry* ce_cptr);
-
-    /** Create Read_Chunk object from a cigar string.
+    /**
+     * Construct Read_Chunk object from a Cigar object.
      * Also creates a corresponding Contig_Entry object.
      * @param cigar Cigar string.
      * @param rf_ptr Reference string (either whole, or just mapped portion); Contig_Entry object takes ownership.
@@ -168,7 +160,8 @@ public:
     static Read_Chunk_BPtr
     make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf_ptr, const Seq_Proxy_Type& qr);
 
-    /** Create Read_Chunk object from a cigar string.
+    /**
+     * Construct Read_Chunk object from a Cigar object, given existing Contig_Entry.
      * This version assumes a Contig_Entry object exists holding the cigar rf sequence.
      * @param cigar Cigar string.
      * @param qr Query string (either whole, or just mapped portion).
@@ -177,7 +170,8 @@ public:
     static Read_Chunk_BPtr
     make_chunk_from_cigar(const Cigar& cigar, const Seq_Proxy_Type& qr, Contig_Entry_BPtr ce_bptr);
 
-    /** Create Read_Chunk and Contig_Entry objects from a cigar string and 2 existing Read_Chunk objects.
+    /**
+     * Create Read_Chunk and Contig_Entry objects from a cigar string and 2 existing Read_Chunk objects.
      * @param rc1_cbptr Read_Chunk corresponding to rf.
      * @param rc2_cbptr Read_Chunk corresponding to qr.
      * @param cigar Cigar string.
@@ -187,7 +181,8 @@ public:
     make_relative_chunk(Read_Chunk_CBPtr rc1_cbptr, Read_Chunk_CBPtr rc2_cbptr,
                         const Cigar& cigar);
 
-    /** Collapse mappings: from c1<-rc1 and rc1<-rc2, compute c1<-rc2.
+    /**
+     * Collapse mappings: from c1<-rc1 and rc1<-rc2, compute c1<-rc2.
      * Pre: Entire rc1 part where rc2 is mapped must in turn be mapped to c1.
      * Post: New Mutation objects are created and linked;
      * if equivalent Mutations exist in the container, they are used instead.
@@ -202,7 +197,8 @@ public:
     collapse_mapping(Read_Chunk_BPtr c1rc1_cbptr, Read_Chunk_BPtr rc1rc2_cbptr,
                      Mutation_Cont& mut_cont);
 
-    /** Invert mapping; from contig<-chunk, compute chunk<-contig.
+    /**
+     * Invert mapping; from contig<-chunk, compute chunk<-contig.
      * Post: New Read_Chunk and Contig_Entry objects are allocated.
      * Post: Contig_Entry only has the sequence in the original chunk;
      * several methods are unavailable in this case.
@@ -211,10 +207,11 @@ public:
     static Read_Chunk_BPtr
     invert_mapping(Read_Chunk_CBPtr rc_cbptr);
 
-    /** Reverse the contig mapping; Mutations and their container must be reversed externally. */
+    /// Reverse the contig mapping; Mutations and their container must be reversed externally.
     void reverse();
 
-    /** Merge read chunk with the next chunk of the same read along the contig.
+    /**
+     * Merge read chunk with the next chunk of the same read along the contig.
      * Pre: Chunks must be mapped to the same contig, in the same orientation, in order, continuously.
      * Pre: Chunks must be unlinked from their RE&CE containers.
      * Post: If the chunks have touching mutations at the breakpoint,
@@ -228,7 +225,8 @@ public:
      */
     static void cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bptr, Mutation_Cont& mut_cont);
 
-    /** Shift contig coordinates of this Read_Chunk object.
+    /**
+     * Shift contig coordinates of this Read_Chunk object.
      * @param delta Signed integer value to add to contig start point.
      */
     void shift(int delta)
@@ -237,7 +235,8 @@ public:
         _c_start = Size_Type(int(_c_start) + delta);
     }
 
-    /** Compute mapped range.
+    /**
+     * Compute mapped range.
      * Given a read/contig range, compute the corresponding contig/read range
      * under the mapping described in this object.
      * Pre: rg_start <= rg_end.
@@ -258,7 +257,8 @@ public:
     Range_Type mapped_range(Range_Type rg, bool on_contig,
                             bool rg_start_maximal, bool rg_end_maximal) const;
 
-    /** Make chunk unmappable.
+    /**
+     * Make chunk unmappable.
      * Creates a new contig entry containing only this chunk mapped to the positive strand.
      * Pre: Chunk should be removed from its previous contig entry container (call during clear and destroy).
      * NOTE: New contig entry is not inserted in the graph.
@@ -266,7 +266,7 @@ public:
      */
     static void make_unmappable(Read_Chunk_BPtr rc_bptr);
 
-    /** Integrity check. */
+    /// Integrity check.
     void check() const;
 
     //friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
@@ -274,13 +274,13 @@ public:
     static std::string to_string(Read_Chunk_CBPtr rc_cbptr, bool r_dir = true, bool forward = true);
 
 private:
-    /** Hooks for storage:
-     * 1. in intrusive interval trees inside Contig_Entry objects.
-     * 2. in intrusive trees inside Read_Entry objects.
-     */
     friend struct detail::Read_Chunk_ITree_Node_Traits;
     friend struct detail::Read_Chunk_Set_Node_Traits;
-    bool is_unlinked() const { return not(_ce_parent or _ce_l_child or _ce_r_child or _re_parent or _re_l_child or _re_r_child); }
+    bool is_unlinked() const
+    {
+        return not(_ce_parent or _ce_l_child or _ce_r_child
+                   or _re_parent or _re_l_child or _re_r_child);
+    }
 
     Size_Type _r_start;
     Size_Type _r_len;

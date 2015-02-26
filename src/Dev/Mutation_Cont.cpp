@@ -68,23 +68,6 @@ Mutation_Cont::Mutation_Cont(const Cigar& cigar, const Seq_Proxy_Type& qr)
     }
 }
 
-/*
-Mutation_BPtr Mutation_Cont::add_mut(Mutation_BPtr mut_bptr)
-{
-    Base::iterator it;
-    Base::iterator it_end;
-    for (std::tie(it, it_end) = this->equal_range(*mut_bptr); it != it_end; ++it)
-    {
-        if (*mut_bptr == *it)
-        {
-            return &*it;
-        }
-    }
-    this->insert(*mut_bptr);
-    return mut_bptr;
-}
-*/
-
 Mutation_CBPtr Mutation_Cont::find_span_pos(Size_Type c_pos) const
 {
     auto it_range = Base::iintersect(c_pos, c_pos);
@@ -100,7 +83,8 @@ Mutation_CBPtr Mutation_Cont::find_span_pos(Size_Type c_pos) const
 
 Mutation_Cont Mutation_Cont::split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
-    ASSERT(not mut_left_cbptr or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
+    ASSERT(not mut_left_cbptr
+           or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
     Mutation_Cont rhs_cont;
     auto it = begin();
     while (it != end())
