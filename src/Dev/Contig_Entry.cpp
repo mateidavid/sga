@@ -173,6 +173,35 @@ Contig_Entry::mut_support(Mutation_CBPtr mut_cbptr) const
     return make_tuple(qr_set, full_rf_set, part_rf_set);
 }
 
+Read_Chunk_CBPtr Contig_Entry::search_read_chunk(Contig_Entry_CBPtr ce_cbptr, Read_Entry_CBPtr re_cbptr,
+                                                 Size_Type pos, bool on_contig)
+{
+    if (on_contig)
+    {
+        auto iint_res = ce_cbptr->chunk_cont().iintersect(pos, pos);
+        for (auto rc_cbptr : iint_res | referenced)
+        {
+            if (rc_cbptr->re_bptr() == re_cbptr)
+            {
+                return rc_cbptr;
+            }
+        }
+    }
+    else // not on_contig
+    {
+        for (auto rc_cbptr = re_cbptr->chunk_cont().get_chunk_with_pos(pos);
+             rc_cbptr and rc_cbptr->get_r_start() <= pos;
+             rc_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, true))
+        {
+            if (rc_cbptr->ce_bptr() == ce_cbptr)
+            {
+                return rc_cbptr;
+            }
+        }
+    }
+    return nullptr;
+}
+
 void Contig_Entry::reverse()
 {
     // only reverse full contigs
