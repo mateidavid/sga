@@ -115,13 +115,13 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
         .put("mut_left_ptr", mut_left_cbptr.to_ptree())
         .put("strict", strict);
 
-    ASSERT(rc_bptr->is_unlinked());
     ASSERT(not mut_left_cbptr
            or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
+    ASSERT(rc_bptr->is_unlinked());
+
+/*
     Read_Chunk_BPtr left_rc_bptr = nullptr;
     Read_Chunk_BPtr right_rc_bptr = nullptr;
-
-    //TODO
     // chunk stays intact on the lhs of the cut if:
     if (// endpoint is before c_brk
         rc_bptr->get_c_end() < c_brk
@@ -248,6 +248,101 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
             return make_pair(rc_bptr, right_rc_bptr);
         }
     }
+*/
+
+    if (rc_bptr->get_c_end() < c_brk)
+    {
+        return make_pair(rc_bptr, nullptr);
+    }
+    if (c_brk < rc_bptr->get_c_start())
+    {
+        return make_pair(nullptr, rc_bptr);
+    }
+    ASSERT(rc_bptr->get_c_start() <= c_brk and c_brk <= rc_bptr->get_c_end());
+    // scan mutation_ptr container to find:
+    // - (iterator to) the first mutation which goes on the rhs of the split
+    // - the difference in read_len - contig_len on the lhs
+    ptrdiff_t delta_len = 0;
+    auto it = rc_bptr->mut_ptr_cont().begin();
+    while (it != rc_bptr->mut_ptr_cont().end()
+           and (it->mut_cbptr()->rf_start() < c_brk
+                or it->mut_cbptr() == mut_left_cbptr))
+    {
+        delta_len += it->mut_cbptr()->seq_len();
+        delta_len -= it->mut_cbptr()->rf_len();
+        ++it;
+    }
+    // compute lengths of the lhs and rhs
+    Size_Type lhs_c_len = c_brk - rc_bptr->get_c_start();
+    Size_Type rhs_c_len = rc_bptr->get_c_end() - c_brk;
+    ASSERT(lhs_c_len + rhs_c_len == rc_bptr->get_c_len());
+    ASSERT(static_cast< ptrdiff_t >(lhs_c_len) + delta_len >= 0);
+    Size_Type lhs_r_len = static_cast< ptrdiff_t >(lhs_c_len) + delta_len;
+    ASSERT(lhs_r_len <= rc_bptr->get_r_len());
+    Size_Type rhs_r_len = rc_bptr->get_r_len() - lhs_r_len;
+
+    Read_Chunk_BPtr left_rc_bptr = nullptr;
+    Read_Chunk_BPtr right_rc_bptr = nullptr;
+    if (lhs_r_len > 0)
+    {
+        // lhs not empty
+        // fix lhs
+        left_rc_bptr = rc_bptr;
+        left_rc_bptr->_c_len = lhs_c_len;
+        left_rc_bptr->_r_start += (not rc_bptr->get_rc()? 0 : rhs_r_len);
+        left_rc_bptr->_r_len = lhs_r_len;
+        if (rhs_r_len > 0 or rhs_c_len > 0 or strict)
+        {
+            // create new rhs
+            right_rc_bptr = Read_Chunk_Fact::new_elem(
+                (not rc_bptr->get_rc()? left_rc_bptr->get_r_end() : left_rc_bptr->get_r_start() - rhs_r_len), rhs_r_len,
+                c_brk, rhs_c_len,
+                rc_bptr->get_rc());
+            right_rc_bptr->re_bptr() = rc_bptr->re_bptr();
+            right_rc_bptr->ce_bptr() = rc_bptr->ce_bptr();
+            // transfer mutations [it, end) to rhs
+            right_rc_bptr->mut_ptr_cont().splice(left_rc_bptr->mut_ptr_cont(), right_rc_bptr, it);
+        }
+    }
+    else
+    {
+        // lhs is empty
+        // fix rhs
+        right_rc_bptr = rc_bptr;
+        right_rc_bptr->_c_start = c_brk;
+        right_rc_bptr->_c_len = rhs_c_len;
+        right_rc_bptr->_r_start += (not rc_bptr->get_rc()? lhs_r_len : 0);
+        right_rc_bptr->_r_len = rhs_r_len;
+        if (lhs_c_len > 0 or strict)
+        {
+            // create new lhs
+            left_rc_bptr = Read_Chunk_Fact::new_elem(
+                (not rc_bptr->get_rc()? right_rc_bptr->get_r_start() - lhs_r_len : right_rc_bptr->get_r_end()), lhs_r_len,
+                c_brk - lhs_c_len, lhs_c_len,
+                rc_bptr->get_rc());
+            left_rc_bptr->re_bptr() = rc_bptr->re_bptr();
+            left_rc_bptr->ce_bptr() = rc_bptr->ce_bptr();
+            // transfer mutations [begin, it) to lhs
+            left_rc_bptr->mut_ptr_cont().splice(right_rc_bptr->mut_ptr_cont(), right_rc_bptr,
+                                                right_rc_bptr->mut_ptr_cont().begin(), it);
+        }
+    }
+
+    // if the split is not strict, remove either chunk if empty
+    if (not strict)
+    {
+        auto deallocate_if_empty = [] (Read_Chunk_BPtr& rc_bptr) {
+            if (rc_bptr and rc_bptr->get_r_len() == 0)
+            {
+                rc_bptr->mut_ptr_cont().clear_and_dispose();
+                Read_Chunk_Fact::del_elem(rc_bptr);
+                rc_bptr = nullptr;
+            }
+        };
+        deallocate_if_empty(left_rc_bptr);
+        deallocate_if_empty(right_rc_bptr);
+    }
+    return make_pair(left_rc_bptr, right_rc_bptr);
 }
 
 Read_Chunk_BPtr
