@@ -861,28 +861,38 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
         .put("end", rc_end);
 
     // trim contig entry to the extent of the read chunk
-    cut_contig_entry(ce_bptr, rc_bptr->get_c_start(), NULL);
-    //rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rc_start);
+    {
+        auto ce_mid_bptr = ce_bptr->cut(rc_bptr->get_c_start(), nullptr, false);
+        if (ce_mid_bptr)
+        {
+            ce_cont().insert(ce_mid_bptr);
+            ce_bptr = ce_mid_bptr;
+        }
+    }
+    rc_bptr = Contig_Entry::search_read_chunk(ce_bptr, re_bptr, rc_start, false).unconst();
     // chunk should survive the cut
-    ASSERT(rc_bptr->re_bptr() == re_bptr);
+    ASSERT(rc_bptr);
     ASSERT(rc_bptr->get_r_start() == rc_start);
     ASSERT(rc_bptr->get_r_end() == rc_end);
-    ce_bptr = rc_bptr->ce_bptr();
-    Mutation_CBPtr last_ins_cbptr = NULL;
+    Mutation_CBPtr last_ins_cbptr = nullptr;
     if (not rc_bptr->mut_ptr_cont().empty()
         and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->is_ins()
         and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->rf_start() == rc_bptr->get_c_end())
     {
         last_ins_cbptr = rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr();
     }
-    cut_contig_entry(ce_bptr, rc_bptr->get_c_end(), last_ins_cbptr);
-    //rc_cptr = re_cptr->get_chunk_with_pos(rc_start);
+    {
+        auto ce_rhs_bptr = ce_bptr->cut(rc_bptr->get_c_end(), last_ins_cbptr, false);
+        if (ce_rhs_bptr)
+        {
+            ce_cont().insert(ce_rhs_bptr);
+        }
+    }
+    rc_bptr = Contig_Entry::search_read_chunk(ce_bptr, re_bptr, rc_start, false).unconst();
     // chunk should survive the cut
-    ASSERT(rc_bptr->re_bptr() == re_bptr);
+    ASSERT(rc_bptr);
     ASSERT(rc_bptr->get_r_start() == rc_start);
     ASSERT(rc_bptr->get_r_end() == rc_end);
-    ce_bptr = rc_bptr->ce_bptr();
-
     // at this point, the chunk should span the entire contig
     ASSERT(rc_bptr->get_c_start() == 0 and rc_bptr->get_c_end() == ce_bptr->len());
 
