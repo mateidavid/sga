@@ -624,7 +624,7 @@ void Read_Chunk::cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bp
         new_mut_bptr->chunk_ptr_cont().insert(new_mca_bptr);
     } // if [exist touching mutations]
     // grab rhs mutations
-    rc_bptr->mut_ptr_cont().splice_right(rc_next_bptr->mut_ptr_cont(), rc_bptr);
+    rc_bptr->mut_ptr_cont().splice(rc_next_bptr->mut_ptr_cont(), rc_bptr);
     // deallocate rhs chunk
     Read_Chunk_Fact::del_elem(rc_next_bptr);
 }

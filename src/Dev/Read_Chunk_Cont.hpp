@@ -114,19 +114,21 @@ public:
     void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(iterator_to(*rc_cbptr)); }
 
     /**
-     * Split container and its Read_Chunk objects at a contig breakpoint.
+     * Split container at a contig breakpoint, and move the rhs of the split into this container.
      * Pre: No Mutations may span c_pos.
      * Pre: Chunks must be unlinked from their RE container.
      * NOTE: Chunks that do not span the break stay unchanged;
      * For Chunks that get split, we also fix the back pointers
      * in their Mutation_Ptr containers.
+     * @param other_cont Source container.
      * @param c_brk Contig position of the breakpoint.
      * @param mut_left_cbptr Insertion at c_pos to remain on the left of the cut, if any.
      * @param strict If true, every non-terminal Read_Chunk object is split in 2 pieces,
      * (even if one side of the split is empty).
      * @return New Read_Chunk_CE_Cont containing rhs.
      */
-    Read_Chunk_CE_Cont split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict = false);
+    void splice(Read_Chunk_CE_Cont& other_cont,
+                Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict = false);
 
     /// Erase all Chunks from their respective RE container.
     void erase_from_re_cont() const;

@@ -81,13 +81,11 @@ Mutation_CBPtr Mutation_Cont::find_span_pos(Size_Type c_pos) const
     return nullptr;
 }
 
-Mutation_Cont Mutation_Cont::split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
+void Mutation_Cont::splice(Mutation_Cont& other_cont, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
     ASSERT(not mut_left_cbptr
            or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
-    Mutation_Cont rhs_cont;
-    auto it = begin();
-    while (it != end())
+    for (auto it = other_cont.begin(); it != other_cont.end(); )
     {
         Mutation_BPtr mut_bptr = &*it;
         ++it;
@@ -96,11 +94,10 @@ Mutation_Cont Mutation_Cont::split(Size_Type c_brk, Mutation_CBPtr mut_left_cbpt
         // move the ones starting at or past the break, except possibly for mut_left_cbptr
         if (mut_bptr->rf_start() >= c_brk and mut_bptr != mut_left_cbptr)
         {
-            erase(mut_bptr);
-            rhs_cont.insert(mut_bptr);
+            other_cont.erase(mut_bptr);
+            insert(mut_bptr);
         }
     }
-    return rhs_cont;
 }
 
 void Mutation_Cont::drop_unused()

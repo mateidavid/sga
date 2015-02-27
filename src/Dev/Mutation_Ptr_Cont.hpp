@@ -223,22 +223,34 @@ public:
         });
     }
 
-    /** Move Mutation pointers from the given container into this one;
+    /**
+     * Move Mutation pointers from the given container into this one;
      * also updates chunk back pointers.
-     * Pre: Mutations in other container are to the right of the ones in this container.
-     * @param other_cont Container to clear.
+     * Pre: Mutations to be moved from other container are to the right
+     * of the ones in this container.
+     * @param other_cont Container to move from.
+     * @param start Start position on other_cont.
      * @param rc_cbptr Chunk back pointer to use.
      */
-    void splice_right(Mutation_Ptr_Cont& other_cont, Read_Chunk_CBPtr rc_cbptr)
+    void splice(Mutation_Ptr_Cont& other_cont, Read_Chunk_CBPtr rc_cbptr,
+                Mutation_Ptr_Cont::iterator start = Mutation_Ptr_Cont::iterator(),
+                Mutation_Ptr_Cont::iterator stop = Mutation_Ptr_Cont::iterator())
     {
-        ASSERT(empty()
-               or other_cont.empty()
-               or rbegin()->mut_cbptr()->rf_end() < other_cont.begin()->mut_cbptr()->rf_start());
-        for (auto mca_bptr : other_cont | referenced)
+        if (start == Mutation_Ptr_Cont::iterator())
         {
-            mca_bptr->chunk_cbptr() = rc_cbptr;
+            start = other_cont.begin();
         }
-        Base::splice(end(), static_cast< Base& >(other_cont));
+        if (stop == Mutation_Ptr_Cont::iterator())
+        {
+            stop = other_cont.end();
+        }
+        ASSERT(empty() or start == stop
+               or rbegin()->mut_cbptr()->rf_end() <= start->mut_cbptr()->rf_start());
+        for (auto it = start; it != stop; ++it)
+        {
+            it->chunk_cbptr() = rc_cbptr;
+        }
+        Base::splice(end(), static_cast< Base& >(other_cont), start, stop);
     }
 };
 

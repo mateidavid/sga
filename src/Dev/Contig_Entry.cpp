@@ -95,14 +95,14 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
     seq().resize(c_brk);
 
     // split Mutation_Cont, save rhs in new Contig_Entry
-    ce_new_bptr->mut_cont() = mut_cont().split(c_brk, mut_left_cbptr);
+    ce_new_bptr->mut_cont().splice(mut_cont(), c_brk, mut_left_cbptr);
 
     // unlink Read_Chunk objects from their RE containers
     chunk_cont().erase_from_re_cont();
 
     // split Read_Chunk_Cont, save rhs in new Contig_Entry
     ASSERT(ce_new_bptr->chunk_cont().empty());
-    ce_new_bptr->chunk_cont() = chunk_cont().split(c_brk, mut_left_cbptr, strict);
+    ce_new_bptr->chunk_cont().splice(chunk_cont(), c_brk, mut_left_cbptr, strict);
     //TODO
     ASSERT(not chunk_cont().empty());
     ASSERT(chunk_cont().max_end() <= c_brk);

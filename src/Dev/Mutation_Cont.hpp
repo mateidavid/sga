@@ -178,16 +178,6 @@ public:
         }
     }
 
-#if 0
-    /**
-     * Add Mutation to container; if an equivalent one already exists, use that one.
-     * Note: Does not deallocate new Mutation when reusing old one.
-     * @param mut_bptr Pointer to Mutation to add.
-     * @return Pointer to Mutation inside container.
-     */
-    Mutation_BPtr add_mut(Mutation_BPtr mut_bptr);
-#endif
-
     /**
      * Search for a Mutation that completely spans a given contig position.
      * @param c_pos Contig position, 0-based.
@@ -196,13 +186,14 @@ public:
     Mutation_CBPtr find_span_pos(Size_Type c_pos) const;
 
     /**
-     * Extract second half mutations, place them in new container.
+     * Move second half mutations from given container to this one.
      * Pre: No Mutation objects cross the cut.
+     * @param other_cont Source container.
      * @param c_brk Position of the cut.
      * @param mut_left_cbptr Insertion at c_brk to remain on the left of the cut, if any.
-     * @return New Mutation_Cont.
      */
-    Mutation_Cont split(Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
+    void splice(Mutation_Cont& other_cont,
+                Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
 
     /**
      * Shift all Mutations in this container.
