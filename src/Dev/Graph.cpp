@@ -104,89 +104,6 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
         ce_cont().insert(ce_new_bptr);
     }
     return ce_new_bptr;
-/*
-    ASSERT(not mut_left_cbptr or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
-
-    LOG("graph", debug1) << ptree("cut_contig_entry")
-        .put("ce_ptr", ce_bptr.to_ptree())
-        .put("c_brk", c_brk)
-        .put("mut_left_ptr", mut_left_cbptr.to_ptree());
-
-    // there is nothing to cut if:
-    if (// cut is at the start, and no insertion goes to the left
-        (c_brk == 0 and not mut_left_cbptr)
-        // cut is at the end, and:
-        or (c_brk == ce_bptr->len()
-            and (// there are no mutations
-                ce_bptr->mut_cont().empty()
-                // or the last one is not an insertion
-                or not ce_bptr->mut_cont().rbegin()->is_ins()
-                // or the last insertion is not at the end
-                or ce_bptr->mut_cont().rbegin()->rf_start() < ce_bptr->len())))
-    {
-        return false;
-    }
-
-    // split any mutations that span c_pos
-    while (true)
-    {
-        Mutation_BPtr mut_bptr = ce_bptr->mut_cont().find_span_pos(c_brk).unconst();
-        if (not mut_bptr)
-        {
-            break;
-        }
-        ASSERT(mut_bptr->rf_start() < c_brk and c_brk < mut_bptr->rf_end());
-        ASSERT(mut_bptr != mut_left_cbptr);
-        ce_bptr->cut_mutation(mut_bptr, c_brk - mut_bptr->rf_start(), 0);
-    }
-
-    // create new contig entry object; set base sequences; add new one to container
-    Contig_Entry_BPtr ce_new_bptr = Contig_Entry_Fact::new_elem(Seq_Type(ce_bptr->seq().substr(c_brk)));
-    ce_cont().insert(ce_new_bptr);
-    ce_bptr->seq().resize(c_brk);
-
-    // split Mutation_Cont, save rhs in new Contig_Entry
-    ce_new_bptr->mut_cont() = ce_bptr->mut_cont().split(c_brk, mut_left_cbptr);
-
-    // unlink Read_Chunk objects from their RE containers
-    ce_bptr->chunk_cont().erase_from_re_cont();
-
-    // split Read_Chunk_Cont, save rhs in new Contig_Entry
-    ce_new_bptr->chunk_cont() = ce_bptr->chunk_cont().split(c_brk, mut_left_cbptr);
-    ASSERT(ce_bptr->chunk_cont().empty() or ce_bptr->chunk_cont().max_end() <= c_brk);
-    ASSERT(ce_new_bptr->chunk_cont().empty() or c_brk <= ce_new_bptr->chunk_cont().begin()->get_c_start());
-
-    // rebase all mutations and read chunks from the rhs to the breakpoint
-    ce_new_bptr->mut_cont().shift(-int(c_brk));
-    ce_new_bptr->chunk_cont().shift(-int(c_brk));
-    ce_new_bptr->chunk_cont().set_ce_ptr(ce_new_bptr);
-
-    // link back the chunks into their RE containers
-    ce_bptr->chunk_cont().insert_into_re_cont();
-    ce_new_bptr->chunk_cont().insert_into_re_cont();
-
-    // remove unused Mutation objects
-    ce_bptr->mut_cont().drop_unused();
-    ce_new_bptr->mut_cont().drop_unused();
-
-    // if either contig has no read chunks mapped to it, remove it
-    set< Contig_Entry_CBPtr > ce_to_check = { ce_bptr, ce_new_bptr };
-    ASSERT(not ce_bptr->chunk_cont().empty());
-    if (ce_bptr->chunk_cont().empty())
-    {
-        ce_to_check.erase(ce_bptr);
-        ce_cont().erase(ce_bptr);
-        Contig_Entry_Fact::del_elem(ce_bptr);
-    }
-    if (ce_new_bptr->chunk_cont().empty())
-    {
-        ce_to_check.erase(ce_new_bptr);
-        ce_cont().erase(ce_new_bptr);
-        Contig_Entry_Fact::del_elem(ce_new_bptr);
-    }
-    check(ce_to_check);
-    return true;
-*/
 } // cut_contig_entry
 
 bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
@@ -1289,7 +1206,7 @@ void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
             // or it's not the first in the chunk container
             or &*ce_bptr->chunk_cont().begin() != rc_bptr
             // or a second chunk exists and starts at c_start
-            or (not ce_bptr->chunk_cont().empty() and not ce_bptr->chunk_cont().single_node() and (++ce_bptr->chunk_cont().begin())->get_c_start() == 0))
+            or (not ce_bptr->chunk_cont().single_node() and (++ce_bptr->chunk_cont().begin())->get_c_start() == 0))
         {
             return;
         }
