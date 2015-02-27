@@ -87,7 +87,8 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
         }
         ASSERT(mut_bptr->rf_start() < c_brk and c_brk < mut_bptr->rf_end());
         ASSERT(mut_bptr != mut_left_cbptr);
-        cut_mutation(mut_bptr, c_brk - mut_bptr->rf_start(), 0);
+        Size_Type mut_rf_brk = c_brk - mut_bptr->rf_start();
+        cut_mutation(mut_bptr, mut_rf_brk, min(mut_rf_brk, mut_bptr->seq_len()));
     }
 
     // create new contig entry object; set base sequences
