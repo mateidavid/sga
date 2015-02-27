@@ -93,15 +93,6 @@ public:
     /// @}
 
     /**
-     * Search for a Read_Chunk of the given Read_Entry, by position.
-     * @param re_cbptr Read_Entry whose chunk to look for.
-     * @param pos Position where to look.
-     * @param on_contig If true: position is on contig; if false: position is on read.
-     */
-    static Read_Chunk_CBPtr search_read_chunk(Contig_Entry_CBPtr ce_cbptr, Read_Entry_CBPtr re_cbptr,
-                                              Size_Type pos, bool on_contig);
-
-    /**
      * Cut Mutation at given offsets.
      * Read chunks containing the original Mutation will get instead 2 adjacent mutations.
      * @param mut_bptr Mutation to cut.

@@ -11,6 +11,70 @@
 namespace MAC
 {
 
+Read_Chunk_CBPtr Graph::search_read_chunk(
+    Contig_Entry_CBPtr ce_cbptr, Read_Entry_CBPtr re_cbptr,
+    Size_Type pos, bool on_contig)
+{
+    if (on_contig)
+    {
+        auto iint_res = ce_cbptr->chunk_cont().iintersect(pos, pos);
+        for (auto rc_cbptr : iint_res | referenced)
+        {
+            if (rc_cbptr->re_bptr() == re_cbptr)
+            {
+                return rc_cbptr;
+            }
+        }
+    }
+    else // not on_contig
+    {
+        for (auto rc_cbptr = re_cbptr->chunk_cont().get_chunk_with_pos(pos);
+             rc_cbptr and rc_cbptr->get_r_start() <= pos;
+             rc_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, true))
+        {
+            if (rc_cbptr->ce_bptr() == ce_cbptr)
+            {
+                return rc_cbptr;
+            }
+        }
+    }
+    return nullptr;
+}
+
+Read_Chunk_CBPtr Graph::search_read_chunk_exact(
+    Contig_Entry_CBPtr ce_cbptr, Read_Entry_CBPtr re_cbptr,
+    Size_Type start_pos, Size_Type stop_pos, bool on_contig)
+{
+    if (on_contig)
+    {
+        auto iint_res = ce_cbptr->chunk_cont().iintersect(start_pos, stop_pos);
+        for (auto rc_cbptr : iint_res | referenced)
+        {
+            if (rc_cbptr->re_bptr() == re_cbptr
+                and rc_cbptr->get_c_start() == start_pos
+                and rc_cbptr->get_c_end() == stop_pos)
+            {
+                return rc_cbptr;
+            }
+        }
+    }
+    else // not on_contig
+    {
+        for (auto rc_cbptr = re_cbptr->chunk_cont().get_chunk_with_pos(start_pos);
+             rc_cbptr and rc_cbptr->get_r_start() <= start_pos;
+             rc_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, true))
+        {
+            if (rc_cbptr->ce_bptr() == ce_cbptr
+                and rc_cbptr->get_r_start() == start_pos
+                and rc_cbptr->get_r_end() == stop_pos)
+            {
+                return rc_cbptr;
+            }
+        }
+    }
+    return nullptr;
+}
+
 void Graph::add_read(string&& name, Seq_Type&& seq)
 {
     LOG("graph", debug) << ptree("add_read").put("name", name);
@@ -869,7 +933,7 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
             ce_bptr = ce_mid_bptr;
         }
     }
-    rc_bptr = Contig_Entry::search_read_chunk(ce_bptr, re_bptr, rc_start, false).unconst();
+    rc_bptr = search_read_chunk_exact(ce_bptr, re_bptr, rc_start, rc_end, false).unconst();
     // chunk should survive the cut
     ASSERT(rc_bptr);
     ASSERT(rc_bptr->get_r_start() == rc_start);
@@ -888,7 +952,7 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
             ce_cont().insert(ce_rhs_bptr);
         }
     }
-    rc_bptr = Contig_Entry::search_read_chunk(ce_bptr, re_bptr, rc_start, false).unconst();
+    rc_bptr = search_read_chunk_exact(ce_bptr, re_bptr, rc_start, rc_end, false).unconst();
     // chunk should survive the cut
     ASSERT(rc_bptr);
     ASSERT(rc_bptr->get_r_start() == rc_start);

@@ -171,7 +171,28 @@ public:
 private:
     friend class Unmap_Mut_Clusters;
 
-    /** Cut Read_Entry at given read coordinate.
+    /**
+     * Search for a Read_Chunk of the given Read_Entry, by position.
+     * @param re_cbptr Read_Entry whose chunk to look for.
+     * @param pos Position where to look.
+     * @param on_contig If true: position is on contig; if false: position is on read.
+     */
+    static Read_Chunk_CBPtr search_read_chunk(
+        Contig_Entry_CBPtr ce_cbptr, Read_Entry_CBPtr re_cbptr,
+        Size_Type pos, bool on_contig);
+    /**
+     * Search for a Read_Chunk of the given Read_Entry, by start&stop positions.
+     * @param re_cbptr Read_Entry whose chunk to look for.
+     * @param start_pos Start position.
+     * @param stop_pos End position.
+     * @param on_contig If true: positions are on contig; if false: positions are on read.
+     */
+    static Read_Chunk_CBPtr search_read_chunk_exact(
+        Contig_Entry_CBPtr ce_cbptr, Read_Entry_CBPtr re_cbptr,
+        Size_Type start_pos, Size_Type stop_pos, bool on_contig);
+
+    /**
+     * Cut Read_Entry at given read coordinate.
      * NOTE: A cut must be forced iff it is at the edge of a read.
      * @param re_bptr Read_Entry to cut.
      * @param r_brk Cut coordinate in read.
