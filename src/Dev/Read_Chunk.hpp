@@ -75,7 +75,7 @@ private:
     }
 
     DELETE_COPY_CTOR(Read_Chunk);
-    Read_Chunk(Read_Chunk&& rhs) { *this = std::move(rhs); }
+    Read_Chunk(Read_Chunk&& rhs) { *this = move(rhs); }
     DELETE_COPY_ASOP(Read_Chunk);
 
     ~Read_Chunk()
@@ -92,14 +92,14 @@ public:
         {
             // allow move only when unlinked
             ASSERT(is_unlinked() and rhs.is_unlinked());
-            _re_bptr = std::move(rhs._re_bptr);
-            _ce_bptr = std::move(rhs._ce_bptr);
-            _mut_ptr_cont = std::move(rhs._mut_ptr_cont);
-            _r_start = std::move(rhs._r_start);
-            _r_len = std::move(rhs._r_len);
-            _c_start = std::move(rhs._c_start);
-            _c_len = std::move(rhs._c_len);
-            _bits = std::move(rhs._bits);
+            _re_bptr = move(rhs._re_bptr);
+            _ce_bptr = move(rhs._ce_bptr);
+            _mut_ptr_cont = move(rhs._mut_ptr_cont);
+            _r_start = move(rhs._r_start);
+            _r_len = move(rhs._r_len);
+            _c_start = move(rhs._c_start);
+            _c_len = move(rhs._c_len);
+            _bits = move(rhs._bits);
         }
         return *this;
     }
@@ -269,9 +269,9 @@ public:
     /// Integrity check.
     void check() const;
 
-    //friend std::ostream& operator << (std::ostream&, const Read_Chunk&);
+    //friend ostream& operator << (ostream&, const Read_Chunk&);
     boost::property_tree::ptree to_ptree() const;
-    static std::string to_string(Read_Chunk_CBPtr rc_cbptr, bool r_dir = true, bool forward = true);
+    static string to_string(Read_Chunk_CBPtr rc_cbptr, bool r_dir = true, bool forward = true);
 
 private:
     friend struct detail::Read_Chunk_ITree_Node_Traits;
