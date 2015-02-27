@@ -38,24 +38,32 @@ void Read_Chunk_CE_Cont::splice(Read_Chunk_CE_Cont& other_cont,
     *this = move(rhs_cont);
 }
 
-void Read_Chunk_CE_Cont::erase_from_re_cont() const
+auto Read_Chunk_CE_Cont::erase_from_re_cont() const -> RE_It_Map
 {
+    RE_It_Map res;
     for (auto rc_cbptr : *this | referenced)
     {
         Read_Entry_BPtr re_bptr = rc_cbptr->re_bptr().unconst();
         if (re_bptr)
         {
+            auto it = ++(re_bptr->chunk_cont().iterator_to(*rc_cbptr));
+            res[re_bptr] = it;
             re_bptr->chunk_cont().erase(rc_cbptr);
         }
     }
+    return res;
 }
 
-void Read_Chunk_CE_Cont::insert_into_re_cont() const
+void Read_Chunk_CE_Cont::insert_into_re_cont(RE_It_Map& re_it_map) const
 {
     for (auto rc_cbptr : *this | referenced)
     {
         Read_Entry_BPtr re_bptr = rc_cbptr->re_bptr().unconst();
-        re_bptr->chunk_cont().insert(rc_cbptr.unconst());
+        re_bptr->chunk_cont().insert_before(re_it_map.at(re_bptr), rc_cbptr.unconst());
+        if (rc_cbptr->get_rc())
+        {
+            --re_it_map.at(re_bptr);
+        }
     }
 }
 

@@ -99,7 +99,7 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
     ce_new_bptr->mut_cont().splice(mut_cont(), c_brk, mut_left_cbptr);
 
     // unlink Read_Chunk objects from their RE containers
-    chunk_cont().erase_from_re_cont();
+    auto re_it_map = chunk_cont().erase_from_re_cont();
 
     // split Read_Chunk_Cont, save rhs in new Contig_Entry
     ASSERT(ce_new_bptr->chunk_cont().empty());
@@ -115,8 +115,8 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
     ce_new_bptr->chunk_cont().set_ce_ptr(ce_new_bptr);
 
     // link back the chunks into their RE containers
-    chunk_cont().insert_into_re_cont();
-    ce_new_bptr->chunk_cont().insert_into_re_cont();
+    chunk_cont().insert_into_re_cont(re_it_map);
+    ce_new_bptr->chunk_cont().insert_into_re_cont(re_it_map);
 
     // remove unused Mutation objects
     mut_cont().drop_unused();

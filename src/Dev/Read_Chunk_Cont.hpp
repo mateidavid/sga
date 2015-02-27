@@ -16,6 +16,169 @@ namespace MAC
 namespace detail
 {
 
+struct Read_Chunk_Set_Node_Traits
+{
+    typedef Read_Chunk node;
+    typedef Read_Chunk_Fact fact_type;
+    typedef fact_type::ptr_type node_ptr;
+    typedef fact_type::const_ptr_type const_node_ptr;
+    typedef bool color;
+
+    static node_ptr get_parent(const_node_ptr n) { return n->_re_parent; }
+    static void set_parent(node_ptr n, node_ptr ptr) { n->_re_parent = ptr; }
+    static node_ptr get_left(const_node_ptr n) { return n->_re_l_child; }
+    static void set_left(node_ptr n, node_ptr ptr) { n->_re_l_child = ptr; }
+    static node_ptr get_right(const_node_ptr n) { return n->_re_r_child; }
+    static void set_right(node_ptr n, node_ptr ptr) { n->_re_r_child = ptr; }
+    static color get_color(const_node_ptr n) { return n->_get_re_col(); }
+    static void set_color(node_ptr n, color c) { n->_set_re_col(c); }
+    static color black() { return false; }
+    static color red() { return true; }
+};
+
+struct Read_Chunk_Set_Value_Traits
+{
+    typedef Read_Chunk value_type;
+    typedef Read_Chunk_Set_Node_Traits node_traits;
+    typedef node_traits::node_ptr node_ptr;
+    typedef node_traits::const_node_ptr const_node_ptr;
+    typedef node_ptr pointer;
+    typedef const_node_ptr const_pointer;
+    typedef node_traits::fact_type::ref_type reference;
+    typedef node_traits::fact_type::const_ref_type const_reference;
+    typedef Read_Chunk_Set_Value_Traits* value_traits_ptr;
+
+    static const bi::link_mode_type link_mode = bi::safe_link;
+
+    static node_ptr to_node_ptr (reference value) { return &value; }
+    static const_node_ptr to_node_ptr (const_reference value) { return &value; }
+    static pointer to_value_ptr(node_ptr n) { return n; }
+    static const_pointer to_value_ptr(const_node_ptr n) { return n; }
+};
+
+/// Comparator for storage in RE Cont.
+struct Read_Chunk_Set_Comparator
+{
+    bool operator () (const Read_Chunk& lhs, const Read_Chunk& rhs) const
+    {
+        return lhs.get_r_start() < rhs.get_r_start();
+    }
+    bool operator () (const Read_Chunk& lhs, size_t rhs_val) const
+    {
+        return lhs.get_r_start() < rhs_val;
+    }
+    bool operator () (size_t lhs_val, const Read_Chunk& rhs) const
+    {
+        return lhs_val < rhs.get_r_start();
+    }
+};
+
+} // namespace detail
+
+class Read_Chunk_RE_Cont
+    : private bi::multiset< Read_Chunk,
+                            bi::compare< detail::Read_Chunk_Set_Comparator >,
+                            bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
+                            bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
+                          >
+{
+private:
+    typedef bi::multiset< Read_Chunk,
+                          bi::compare< detail::Read_Chunk_Set_Comparator >,
+                          bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
+                          bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
+                        > Base;
+public:
+    // allow move only
+    DEFAULT_DEF_CTOR(Read_Chunk_RE_Cont);
+    DELETE_COPY_CTOR(Read_Chunk_RE_Cont);
+    DEFAULT_MOVE_CTOR(Read_Chunk_RE_Cont);
+    DELETE_COPY_ASOP(Read_Chunk_RE_Cont);
+    DEFAULT_MOVE_ASOP(Read_Chunk_RE_Cont);
+
+    // check it is empty when deallocating
+    ~Read_Chunk_RE_Cont() { ASSERT(empty()); }
+
+    USING_INTRUSIVE_CONT(Base)
+    using Base::check;
+
+    /// Disallow direct access to the potentially non-constant size() base member function.
+    Base::size_type size() = delete;
+    /// Access the potentially non-constant size() base member function.
+    Base::size_type nonconst_size() const { return Base::size(); }
+
+    /// Insert Read_Chunk in this container.
+    void insert(Read_Chunk_BPtr rc_bptr) { Base::insert(*rc_bptr); }
+    /**
+     * Insert Read_Chunk in this container before a given position.
+     * @param p Iterator before which to insert the Read_Chunk.
+     * @param rc_bptr Pointer to Read_Chunk to insert.
+     */
+    void insert_before(const_iterator p, Read_Chunk_BPtr rc_bptr)
+    {
+        Base::insert_before(p, *rc_bptr);
+    }
+    /// Erase Read_Chunk from container.
+    void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(iterator_to(*rc_cbptr)); }
+
+    /**
+     * Find Read_Chunk which contains given read position.
+     * @param r_pos Read position, 0-based.
+     * @return Pointer to Read Chunk object, or NULL if no chunk contains r_pos.
+     * NOTE: If multiple chunks start at r_pos, this function retrieves the first
+     * such chunk.
+     */
+    Read_Chunk_CBPtr get_chunk_with_pos(Size_Type r_pos) const
+    {
+        ASSERT(not empty());
+        ASSERT(begin()->re_bptr());
+        if (r_pos >= begin()->get_read_len())
+        {
+            return nullptr;
+        }
+        auto cit = Base::lower_bound(r_pos, Base::value_compare());
+        if (cit == end() or cit->get_r_start() != r_pos)
+        {
+            ASSERT(cit != begin());
+            --cit;
+        }
+        return &*cit;
+    }
+
+    /**
+     * Get the sibling of the given Read_Chunk.
+     * @param rc_cbptr Original Read_Chunk.
+     * @param read Bool; true: right/left wrt to read; false: right/left wrt to contig.
+     * @param right Bool; true: get chunk to the right; false: get chunk to the left.
+     * @return Pointer to sibling chunk, or NULL if no sibling exists.
+     */
+    Read_Chunk_CBPtr get_sibling(Read_Chunk_CBPtr rc_cbptr, bool read, bool right) const
+    {
+        const_iterator rc_cit = iterator_to(*rc_cbptr);
+        bool r_right = (read? right : right != rc_cbptr->get_rc());
+        if (r_right)
+        {
+            ++rc_cit;
+            if (rc_cit == this->end())
+            {
+                return nullptr;
+            }
+        }
+        else
+        {
+            if (rc_cit == this->begin())
+            {
+                return nullptr;
+            }
+            --rc_cit;
+        }
+        return &*rc_cit;
+    }
+}; // class Read_Chunk_RE_Cont
+
+namespace detail
+{
+
 struct Read_Chunk_ITree_Node_Traits
 {
     typedef Read_Chunk node;
@@ -130,10 +293,20 @@ public:
     void splice(Read_Chunk_CE_Cont& other_cont,
                 Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict = false);
 
-    /// Erase all Chunks from their respective RE container.
-    void erase_from_re_cont() const;
-    /// Insert all Chunks into their respective RE container.
-    void insert_into_re_cont() const;
+    /// Map holding an iterator to a Read_Chunk for each Read_Entry.
+    typedef map< Read_Entry_CBPtr, Read_Chunk_RE_Cont::const_iterator > RE_It_Map;
+    /**
+     * Erase all Chunks from their respective RE container.
+     */
+    RE_It_Map erase_from_re_cont() const;
+    /**
+     * Insert all Chunks into their respective RE container.
+     * NOTE: For every Read_Chunk mapped to the complement strand of its Contig_Entry,
+     * the corresponding iterator is decremented. This allows a call to erase_from_re_cont()
+     * to be followed by two consecutive calls to insert_into_re_cont(), corresponding to
+     * LHS&RHS during a Contig_Entry split.
+     */
+    void insert_into_re_cont(RE_It_Map& re_it_map) const;
 
     /**
      * Shift contig coordinates of all Read_Chunk objects in this container.
@@ -202,169 +375,6 @@ public:
     }
 
 }; // class Read_Chunk_CE_Cont
-
-namespace detail
-{
-
-struct Read_Chunk_Set_Node_Traits
-{
-    typedef Read_Chunk node;
-    typedef Read_Chunk_Fact fact_type;
-    typedef fact_type::ptr_type node_ptr;
-    typedef fact_type::const_ptr_type const_node_ptr;
-    typedef bool color;
-
-    static node_ptr get_parent(const_node_ptr n) { return n->_re_parent; }
-    static void set_parent(node_ptr n, node_ptr ptr) { n->_re_parent = ptr; }
-    static node_ptr get_left(const_node_ptr n) { return n->_re_l_child; }
-    static void set_left(node_ptr n, node_ptr ptr) { n->_re_l_child = ptr; }
-    static node_ptr get_right(const_node_ptr n) { return n->_re_r_child; }
-    static void set_right(node_ptr n, node_ptr ptr) { n->_re_r_child = ptr; }
-    static color get_color(const_node_ptr n) { return n->_get_re_col(); }
-    static void set_color(node_ptr n, color c) { n->_set_re_col(c); }
-    static color black() { return false; }
-    static color red() { return true; }
-};
-
-struct Read_Chunk_Set_Value_Traits
-{
-    typedef Read_Chunk value_type;
-    typedef Read_Chunk_Set_Node_Traits node_traits;
-    typedef node_traits::node_ptr node_ptr;
-    typedef node_traits::const_node_ptr const_node_ptr;
-    typedef node_ptr pointer;
-    typedef const_node_ptr const_pointer;
-    typedef node_traits::fact_type::ref_type reference;
-    typedef node_traits::fact_type::const_ref_type const_reference;
-    typedef Read_Chunk_Set_Value_Traits* value_traits_ptr;
-
-    static const bi::link_mode_type link_mode = bi::safe_link;
-
-    static node_ptr to_node_ptr (reference value) { return &value; }
-    static const_node_ptr to_node_ptr (const_reference value) { return &value; }
-    static pointer to_value_ptr(node_ptr n) { return n; }
-    static const_pointer to_value_ptr(const_node_ptr n) { return n; }
-};
-
-/// Comparator for storage in RE Cont.
-struct Read_Chunk_Set_Comparator
-{
-    bool operator () (const Read_Chunk& lhs, const Read_Chunk& rhs) const
-    {
-        return lhs.get_r_start() < rhs.get_r_start();
-    }
-    bool operator () (const Read_Chunk& lhs, size_t rhs_val) const
-    {
-        return lhs.get_r_start() < rhs_val;
-    }
-    bool operator () (size_t lhs_val, const Read_Chunk& rhs) const
-    {
-        return lhs_val < rhs.get_r_start();
-    }
-};
-
-} // namespace detail
-
-class Read_Chunk_RE_Cont
-    : private bi::multiset< Read_Chunk,
-                            bi::compare< detail::Read_Chunk_Set_Comparator >,
-                            bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
-                            bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
-                          >
-{
-private:
-    typedef bi::multiset< Read_Chunk,
-                          bi::compare< detail::Read_Chunk_Set_Comparator >,
-                          bi::value_traits< detail::Read_Chunk_Set_Value_Traits >,
-                          bi::header_holder_type< bounded::Pointer_Holder< Read_Chunk > >
-                        > Base;
-public:
-    // allow move only
-    DEFAULT_DEF_CTOR(Read_Chunk_RE_Cont);
-    DELETE_COPY_CTOR(Read_Chunk_RE_Cont);
-    DEFAULT_MOVE_CTOR(Read_Chunk_RE_Cont);
-    DELETE_COPY_ASOP(Read_Chunk_RE_Cont);
-    DEFAULT_MOVE_ASOP(Read_Chunk_RE_Cont);
-
-    // check it is empty when deallocating
-    ~Read_Chunk_RE_Cont() { ASSERT(empty()); }
-
-    USING_INTRUSIVE_CONT(Base)
-    using Base::check;
-
-    /// Disallow direct access to the potentially non-constant size() base member function.
-    Base::size_type size() = delete;
-    /// Access the potentially non-constant size() base member function.
-    Base::size_type nonconst_size() const { return Base::size(); }
-
-    /// Insert Read_Chunk in this container.
-    void insert(Read_Chunk_BPtr rc_bptr) { Base::insert(*rc_bptr); }
-    /**
-     * Insert Read_Chunk in this container before an existing Read_Chunk.
-     * @param rc_old_bptr Pointer to an existing Read_Chunk.
-     * @param rc_bptr Pointer to Read_Chunk to insert.
-     */
-    void insert_before(Read_Chunk_BPtr rc_old_bptr, Read_Chunk_BPtr rc_bptr)
-    {
-        Base::insert_before(iterator_to(*rc_old_bptr), *rc_bptr);
-    }
-    /// Erase Read_Chunk from container.
-    void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(iterator_to(*rc_cbptr)); }
-
-    /**
-     * Find Read_Chunk which contains given read position.
-     * @param r_pos Read position, 0-based.
-     * @return Pointer to Read Chunk object, or NULL if no chunk contains r_pos.
-     * NOTE: If multiple chunks start at r_pos, this function retrieves the first
-     * such chunk.
-     */
-    Read_Chunk_CBPtr get_chunk_with_pos(Size_Type r_pos) const
-    {
-        ASSERT(not empty());
-        ASSERT(begin()->re_bptr());
-        if (r_pos >= begin()->get_read_len())
-        {
-            return nullptr;
-        }
-        auto cit = Base::lower_bound(r_pos, Base::value_compare());
-        if (cit == end() or cit->get_r_start() != r_pos)
-        {
-            ASSERT(cit != begin());
-            --cit;
-        }
-        return &*cit;
-    }
-
-    /**
-     * Get the sibling of the given Read_Chunk.
-     * @param rc_cbptr Original Read_Chunk.
-     * @param read Bool; true: right/left wrt to read; false: right/left wrt to contig.
-     * @param right Bool; true: get chunk to the right; false: get chunk to the left.
-     * @return Pointer to sibling chunk, or NULL if no sibling exists.
-     */
-    Read_Chunk_CBPtr get_sibling(Read_Chunk_CBPtr rc_cbptr, bool read, bool right) const
-    {
-        const_iterator rc_cit = iterator_to(*rc_cbptr);
-        bool r_right = (read? right : right != rc_cbptr->get_rc());
-        if (r_right)
-        {
-            ++rc_cit;
-            if (rc_cit == this->end())
-            {
-                return nullptr;
-            }
-        }
-        else
-        {
-            if (rc_cit == this->begin())
-            {
-                return nullptr;
-            }
-            --rc_cit;
-        }
-        return &*rc_cit;
-    }
-}; // class Read_Chunk_RE_Cont
 
 } // namespace MAC
 
