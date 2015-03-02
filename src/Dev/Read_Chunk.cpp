@@ -283,15 +283,14 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
 
     Read_Chunk_BPtr left_rc_bptr = nullptr;
     Read_Chunk_BPtr right_rc_bptr = nullptr;
-    if (lhs_r_len > 0)
+    if (lhs_r_len > 0 or strict)
     {
-        // lhs not empty
         // fix lhs
         left_rc_bptr = rc_bptr;
         left_rc_bptr->_c_len = lhs_c_len;
         left_rc_bptr->_r_start += (not rc_bptr->get_rc()? 0 : rhs_r_len);
         left_rc_bptr->_r_len = lhs_r_len;
-        if (rhs_r_len > 0 or rhs_c_len > 0 or strict)
+        if (rhs_r_len > 0 or strict)
         {
             // create new rhs
             right_rc_bptr = Read_Chunk_Fact::new_elem(
@@ -303,44 +302,28 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
             // transfer mutations [it, end) to rhs
             right_rc_bptr->mut_ptr_cont().splice(left_rc_bptr->mut_ptr_cont(), right_rc_bptr, it);
         }
+        else if (rhs_c_len > 0)
+        {
+            // rhs consists of a single deletion
+            ASSERT(it == prev(rc_bptr->mut_ptr_cont().end()));
+            rc_bptr->mut_ptr_cont().erase_and_dispose(&*it);
+        }
     }
     else
     {
-        // lhs is empty
+        // lhs is empty: do not create 2 chunks, original chunk stays on the right
         // fix rhs
         right_rc_bptr = rc_bptr;
         right_rc_bptr->_c_start = c_brk;
         right_rc_bptr->_c_len = rhs_c_len;
         right_rc_bptr->_r_start += (not rc_bptr->get_rc()? lhs_r_len : 0);
         right_rc_bptr->_r_len = rhs_r_len;
-        if (lhs_c_len > 0 or strict)
+        if (lhs_c_len > 0)
         {
-            // create new lhs
-            left_rc_bptr = Read_Chunk_Fact::new_elem(
-                (not rc_bptr->get_rc()? right_rc_bptr->get_r_start() - lhs_r_len : right_rc_bptr->get_r_end()), lhs_r_len,
-                c_brk - lhs_c_len, lhs_c_len,
-                rc_bptr->get_rc());
-            left_rc_bptr->re_bptr() = rc_bptr->re_bptr();
-            left_rc_bptr->ce_bptr() = rc_bptr->ce_bptr();
-            // transfer mutations [begin, it) to lhs
-            left_rc_bptr->mut_ptr_cont().splice(right_rc_bptr->mut_ptr_cont(), right_rc_bptr,
-                                                right_rc_bptr->mut_ptr_cont().begin(), it);
+            // lhs consists of a single deletion
+            ASSERT(it == next(rc_bptr->mut_ptr_cont().begin()));
+            rc_bptr->mut_ptr_cont().erase_and_dispose(&*prev(it));
         }
-    }
-
-    // if the split is not strict, remove either chunk if empty
-    if (not strict)
-    {
-        auto deallocate_if_empty = [] (Read_Chunk_BPtr& rc_bptr) {
-            if (rc_bptr and rc_bptr->get_r_len() == 0)
-            {
-                rc_bptr->mut_ptr_cont().clear_and_dispose();
-                Read_Chunk_Fact::del_elem(rc_bptr);
-                rc_bptr = nullptr;
-            }
-        };
-        deallocate_if_empty(left_rc_bptr);
-        deallocate_if_empty(right_rc_bptr);
     }
     return make_pair(left_rc_bptr, right_rc_bptr);
 }

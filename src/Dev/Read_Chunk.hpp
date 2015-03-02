@@ -140,6 +140,7 @@ public:
      * Pre: Read_Chunk must be unlinked from all containers.
      * Post: If a split is not required, one component is the original pointer, and the other is NULL.
      * If a split is required, a new Read_Chunk is allocated, and backpointers in Mutation_Ptr_Cont are updated.
+     * Whenever a split is required, the original Read_Chunk carries the LHS of the split.
      * @param rc_bptr Chunk to split.
      * @param c_brk Contig breakpoint.
      * @param mut_left_cbptr Insertion at c_pos to remain on the left of the cut, if any.

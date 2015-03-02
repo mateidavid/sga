@@ -99,11 +99,11 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
     ce_new_bptr->mut_cont().splice(mut_cont(), c_brk, mut_left_cbptr);
 
     // unlink Read_Chunk objects from their RE containers
-    auto re_it_map = chunk_cont().erase_from_re_cont();
+    auto rc_next_map = chunk_cont().erase_from_re_cont();
 
     // split Read_Chunk_Cont, save rhs in new Contig_Entry
     ASSERT(ce_new_bptr->chunk_cont().empty());
-    ce_new_bptr->chunk_cont().splice(chunk_cont(), c_brk, mut_left_cbptr, strict);
+    auto rc_split_map = ce_new_bptr->chunk_cont().splice(chunk_cont(), c_brk, mut_left_cbptr, strict);
     //TODO
     ASSERT(not chunk_cont().empty());
     ASSERT(chunk_cont().max_end() <= c_brk);
@@ -115,14 +115,40 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
     ce_new_bptr->chunk_cont().set_ce_ptr(ce_new_bptr);
 
     // link back the chunks into their RE containers
-    chunk_cont().insert_into_re_cont(re_it_map);
-    ce_new_bptr->chunk_cont().insert_into_re_cont(re_it_map);
+    chunk_cont().insert_into_re_cont(rc_next_map);
+    // move the insert-before iterators of chunks mapped to the negative strand of this Contig_Entry
+    decltype(rc_next_map) rhs_rc_next_map;
+    for (const auto& p : rc_next_map)
+    {
+        auto rc_cbptr = p.first;
+        auto rc_next_it = p.second;
+        if (rc_split_map.count(rc_cbptr))
+        {
+            // chunk was split
+            auto rhs_rc_cbptr = rc_split_map.at(rc_cbptr);
+            rhs_rc_next_map[rhs_rc_cbptr] = (not rc_cbptr->get_rc()? rc_next_it : prev(rc_next_it));
+        }
+        else
+        {
+            // chunk was not split, it could be on LHS or RHS
+            if (rc_cbptr->ce_bptr() == ce_new_bptr)
+            {
+                rhs_rc_next_map[rc_cbptr] = rc_next_it;
+            }
+        }
+    }
+    ce_new_bptr->chunk_cont().insert_into_re_cont(rhs_rc_next_map);
 
     // remove unused Mutation objects
     mut_cont().drop_unused();
     ce_new_bptr->mut_cont().drop_unused();
 
     check();
+    //TODO: remove
+    for (auto rc_bptr : chunk_cont() | referenced)
+    {
+        rc_bptr->re_bptr()->check();
+    }
     if (ce_new_bptr->chunk_cont().empty())
     {
         Contig_Entry_Fact::del_elem(ce_new_bptr);

@@ -288,25 +288,23 @@ public:
      * @param mut_left_cbptr Insertion at c_pos to remain on the left of the cut, if any.
      * @param strict If true, every non-terminal Read_Chunk object is split in 2 pieces,
      * (even if one side of the split is empty).
-     * @return New Read_Chunk_CE_Cont containing rhs.
+     * @return A map containing, for each original Read_Chunk that gets split, its RHS.
+     * NOTE: Original chunks always stay on the LHS if they get split.
      */
-    void splice(Read_Chunk_CE_Cont& other_cont,
-                Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict = false);
+    map< Read_Chunk_CBPtr, Read_Chunk_CBPtr >
+    splice(Read_Chunk_CE_Cont& other_cont,
+           Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict = false);
 
-    /// Map holding an iterator to a Read_Chunk for each Read_Entry.
-    typedef map< Read_Entry_CBPtr, Read_Chunk_RE_Cont::const_iterator > RE_It_Map;
+    /// Map holding an iterator to the next Read_Chunk for each Read_Chunk removed.
+    typedef map< Read_Chunk_CBPtr, Read_Chunk_RE_Cont::const_iterator > RC_Next_Map;
     /**
      * Erase all Chunks from their respective RE container.
      */
-    RE_It_Map erase_from_re_cont() const;
+    RC_Next_Map erase_from_re_cont() const;
     /**
      * Insert all Chunks into their respective RE container.
-     * NOTE: For every Read_Chunk mapped to the complement strand of its Contig_Entry,
-     * the corresponding iterator is decremented. This allows a call to erase_from_re_cont()
-     * to be followed by two consecutive calls to insert_into_re_cont(), corresponding to
-     * LHS&RHS during a Contig_Entry split.
      */
-    void insert_into_re_cont(RE_It_Map& re_it_map) const;
+    void insert_into_re_cont(const RC_Next_Map& rc_next_map) const;
 
     /**
      * Shift contig coordinates of all Read_Chunk objects in this container.

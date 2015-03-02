@@ -181,10 +181,16 @@ public:
     }
     */
 
-    /** Erase MCA from container. */
+    /// Erase MCA from container.
     void erase(Mutation_Chunk_Adapter_CBPtr mca_cbptr)
     {
         Base::erase(iterator_to(*mca_cbptr));
+    }
+    /// Erase MCA from container, remove it from its Read_Chunk_Ptr_Cont, and deallocate it.
+    void erase_and_dispose(Mutation_Chunk_Adapter_CBPtr mca_cbptr)
+    {
+        erase(mca_cbptr);
+        dispose(mca_cbptr);
     }
 
     /** Extract all elements starting with and beyond the given one,
@@ -210,17 +216,30 @@ public:
         return new_cont;
     }
 
+    /**
+     * Deallocate MCA corresponding to a Mutation_BPtr, and remove it from its Read_Chunk_Ptr_Cont.
+     */
+    static void dispose(Mutation_Chunk_Adapter_CBPtr mca_cbptr)
+    {
+        Mutation_BPtr mut_bptr = mca_cbptr->mut_cbptr().unconst();
+        mut_bptr->chunk_ptr_cont().erase(mca_cbptr);
+        Mutation_Chunk_Adapter_Fact::del_elem(mca_cbptr);
+    }
+
     /** Clear the container.
      * MCAs are removed from this container & and their corresponding Read_Chunk_Ptr_Cont, then deallocated.
      */
     void clear_and_dispose()
     {
-        Base::clear_and_dispose([] (Mutation_Chunk_Adapter_BPtr mca_bptr)
+        Base::clear_and_dispose(&dispose);
+        /*
+        [] (Mutation_Chunk_Adapter_BPtr mca_bptr)
         {
             Mutation_BPtr mut_bptr = mca_bptr->mut_cbptr().unconst();
             mut_bptr->chunk_ptr_cont().erase(mca_bptr);
             Mutation_Chunk_Adapter_Fact::del_elem(mca_bptr);
         });
+        */
     }
 
     /**
