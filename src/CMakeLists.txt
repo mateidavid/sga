@@ -156,7 +156,7 @@ message(STATUS "CMAKE_CXX_FLAGS='${CMAKE_CXX_FLAGS}'")
 ### build-specific flags
 #
 # compile flags for Debug build
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3 -fno-inline")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3 -ggdb -fno-inline")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 # compile flags for Test build
 set(CMAKE_CXX_FLAGS_TEST "-O3 -g3")
