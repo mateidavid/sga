@@ -147,7 +147,6 @@ int real_main()
 {
     Graph g;
     Hap_Map hm;
-
     // option validation
     if (opts::input_file.empty() == opts::load_file.empty())
     {

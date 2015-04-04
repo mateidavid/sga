@@ -309,9 +309,8 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
             rc_bptr->mut_ptr_cont().erase_and_dispose(&*it);
         }
     }
-    else
+    else // lhs is empty: do not create 2 chunks, original chunk stays on the right
     {
-        // lhs is empty: do not create 2 chunks, original chunk stays on the right
         // fix rhs
         right_rc_bptr = rc_bptr;
         right_rc_bptr->_c_start = c_brk;
