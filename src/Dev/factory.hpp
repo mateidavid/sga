@@ -217,12 +217,6 @@ struct Identifier
 
     Identifier(index_type idx = null_val) : _idx(idx) {}
 
-    // allow copy & move
-    DEFAULT_COPY_CTOR(Identifier);
-    DEFAULT_MOVE_CTOR(Identifier);
-    DEFAULT_COPY_ASOP(Identifier);
-    DEFAULT_MOVE_ASOP(Identifier);
-
     /** Dereferencing operator, non-void types only. */
     template < T_ENABLE_IF((not is_void_t::value)) >
     raw_ref_type dereference() const
@@ -286,13 +280,6 @@ public:
 
     Pointer(std::nullptr_t = nullptr) {}
 
-    // allow copy & move
-    DEFAULT_COPY_CTOR(Pointer);
-    DEFAULT_MOVE_CTOR(Pointer);
-    DEFAULT_COPY_ASOP(Pointer);
-    DEFAULT_MOVE_ASOP(Pointer);
-
-    //CONST_CONVERSIONS(Pointer, val_type)
     // construct const Pointer from non-const Pointer
     template < typename Other_Value,
                T_ENABLE_IF((std::is_same< Value, const unqual_val_type >::value
@@ -388,13 +375,6 @@ private:
     typedef detail::Identifier< unqual_val_type, index_type > idn_type;
 
 public:
-    // allow construction only
-    DELETE_DEF_CTOR(Reference);
-    DEFAULT_COPY_CTOR(Reference);
-    DEFAULT_MOVE_CTOR(Reference);
-    DELETE_MOVE_ASOP(Reference);
-
-    //CONST_CONVERSIONS(Reference, val_type)
     // construct const Reference from non-const Reference
     template < typename Other_Value,
                T_ENABLE_IF((std::is_same< Value, const unqual_val_type >::value
@@ -541,14 +521,7 @@ public:
     typedef Reference< const value_type, index_type > const_reference;
 private:
     typedef detail::Storage< value_type, index_type > storage_type;
-
 public:
-    DEFAULT_DEF_CTOR(Allocator);
-    DEFAULT_COPY_CTOR(Allocator);
-    DEFAULT_MOVE_CTOR(Allocator);
-    DEFAULT_COPY_ASOP(Allocator);
-    DEFAULT_MOVE_ASOP(Allocator);
-
     pointer allocate(size_t n, std::allocator< void >::const_pointer = nullptr)
     {
         static_cast< void >(n);
@@ -579,11 +552,6 @@ public:
 public:
     template <typename... Args>
     Pointer_Holder(Args&& ... args) : _ptr(fact_type::new_elem(std::forward<Args>(args)...)) {}
-
-    DEFAULT_COPY_CTOR(Pointer_Holder);
-    DEFAULT_MOVE_CTOR(Pointer_Holder);
-    DEFAULT_COPY_ASOP(Pointer_Holder);
-    DEFAULT_MOVE_ASOP(Pointer_Holder);
 
     ~Pointer_Holder() { fact_type::del_elem(_ptr); }
 
