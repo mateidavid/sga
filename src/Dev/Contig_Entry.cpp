@@ -60,7 +60,6 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
         .put("c_brk", c_brk)
         .put("mut_left_ptr", mut_left_cbptr.to_ptree())
         .put("strict", strict);
-
     // there is nothing to cut if:
     if (not strict
         and (// cut is at the start, and no insertion goes to the left
@@ -76,7 +75,6 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
     {
         return nullptr;
     }
-
     // split any mutations that span c_pos
     while (true)
     {
@@ -90,59 +88,69 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
         Size_Type mut_rf_brk = c_brk - mut_bptr->rf_start();
         cut_mutation(mut_bptr, mut_rf_brk, min(mut_rf_brk, mut_bptr->seq_len()));
     }
-
     // create new contig entry object; set base sequences
     Contig_Entry_BPtr ce_new_bptr = Contig_Entry_Fact::new_elem(Seq_Type(seq().substr(c_brk)));
     seq().resize(c_brk);
-
     // split Mutation_Cont, save rhs in new Contig_Entry
     ce_new_bptr->mut_cont().splice(mut_cont(), c_brk, mut_left_cbptr);
-
     // unlink Read_Chunk objects from their RE containers
     auto rc_next_map = chunk_cont().erase_from_re_cont();
-
     // split Read_Chunk_Cont, save rhs in new Contig_Entry
     ASSERT(ce_new_bptr->chunk_cont().empty());
     auto rc_split_map = ce_new_bptr->chunk_cont().splice(chunk_cont(), c_brk, mut_left_cbptr, strict);
-    //TODO
     ASSERT(not chunk_cont().empty());
     ASSERT(chunk_cont().max_end() <= c_brk);
     ASSERT(ce_new_bptr->chunk_cont().empty() or c_brk <= ce_new_bptr->chunk_cont().begin()->get_c_start());
-
     // rebase all mutations and read chunks from the rhs to the breakpoint
     ce_new_bptr->mut_cont().shift(-int(c_brk));
     ce_new_bptr->chunk_cont().shift(-int(c_brk));
     ce_new_bptr->chunk_cont().set_ce_ptr(ce_new_bptr);
-
-    // link back the chunks into their RE containers
-    chunk_cont().insert_into_re_cont(rc_next_map);
-    // move the insert-before iterators of chunks mapped to the negative strand of this Contig_Entry
-    decltype(rc_next_map) rhs_rc_next_map;
-    for (const auto& p : rc_next_map)
+    // fix rc_next_map to incorporate the split information
+    // 1. fix second components
+    for (auto p : rc_next_map)
     {
-        auto rc_cbptr = p.first;
-        auto rc_next_it = p.second;
-        if (rc_split_map.count(rc_cbptr))
+        Read_Chunk_CBPtr rc_cbptr = p.first;
+        Read_Chunk_CBPtr rc_next_cbptr = p.second;
+        if (rc_split_map.count(rc_next_cbptr))
         {
-            // chunk was split
-            auto rhs_rc_cbptr = rc_split_map.at(rc_cbptr);
-            rhs_rc_next_map[rhs_rc_cbptr] = (not rc_cbptr->get_rc()? rc_next_it : prev(rc_next_it));
-        }
-        else
-        {
-            // chunk was not split, it could be on LHS or RHS
-            if (rc_cbptr->ce_bptr() == ce_new_bptr)
+            // can only happen if next chunk is also involved in the split
+            ASSERT(rc_next_map.count(rc_next_cbptr));
+            // second component changes iff rc_next is mapped to the rc of its ce
+            if (rc_next_cbptr->get_rc())
             {
-                rhs_rc_next_map[rc_cbptr] = rc_next_it;
+                rc_next_map[rc_cbptr] = rc_split_map[rc_next_cbptr];
             }
         }
     }
-    ce_new_bptr->chunk_cont().insert_into_re_cont(rhs_rc_next_map);
-
+    // 2. fix first components
+    {
+        list< decltype(rc_next_map)::value_type > aux_list;
+        for (auto p : rc_next_map)
+        {
+            Read_Chunk_CBPtr rc_cbptr = p.first;
+            Read_Chunk_CBPtr rc_next_cbptr = p.second;
+            if (rc_split_map.count(rc_cbptr))
+            {
+                Read_Chunk_CBPtr rc_new_cbptr = rc_split_map[rc_cbptr];
+                ASSERT(rc_next_map.count(rc_new_cbptr) == 0);
+                if (not rc_cbptr->get_rc())
+                {
+                    aux_list.emplace_back(rc_new_cbptr, rc_next_cbptr);
+                    rc_next_map[rc_cbptr] = rc_new_cbptr;
+                }
+                else
+                {
+                    aux_list.emplace_back(rc_new_cbptr, rc_cbptr);
+                }
+            }
+        }
+        rc_next_map.insert(aux_list.begin(), aux_list.end());
+    }
+    // link back the chunks into their RE containers
+    Read_Chunk_CE_Cont::insert_into_re_cont(rc_next_map);
     // remove unused Mutation objects
     mut_cont().drop_unused();
     ce_new_bptr->mut_cont().drop_unused();
-
     check();
     //TODO: remove
     for (auto rc_bptr : chunk_cont() | referenced)

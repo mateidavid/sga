@@ -11,13 +11,13 @@
 namespace MAC
 {
 
-map< Read_Chunk_CBPtr, Read_Chunk_CBPtr >
-Read_Chunk_CE_Cont::splice(Read_Chunk_CE_Cont& other_cont,
-                           Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict)
+auto Read_Chunk_CE_Cont::splice(
+    Read_Chunk_CE_Cont& other_cont,
+    Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict) -> RC_Map
 {
     ASSERT(not mut_left_cbptr
            or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
-    map< Read_Chunk_CBPtr, Read_Chunk_CBPtr > res;
+    RC_Map res;
     Read_Chunk_CE_Cont lhs_cont;
     Read_Chunk_CE_Cont rhs_cont;
     while (not other_cont.empty())
@@ -46,30 +46,49 @@ Read_Chunk_CE_Cont::splice(Read_Chunk_CE_Cont& other_cont,
     return res;
 }
 
-auto Read_Chunk_CE_Cont::erase_from_re_cont() const -> RC_Next_Map
+auto Read_Chunk_CE_Cont::erase_from_re_cont() const -> RC_Map
 {
-    RC_Next_Map res;
+    RC_Map res;
+    // first save iterators to the next chunk
+    for (auto rc_cbptr : *this | referenced)
+    {
+        Read_Entry_BPtr re_bptr = rc_cbptr->re_bptr().unconst();
+        //ASSERT(re_bptr);
+        if (re_bptr)
+        {
+            auto it = ++(re_bptr->chunk_cont().iterator_to(*rc_cbptr));
+            res[rc_cbptr] = (it != re_bptr->chunk_cont().end()? &*it : nullptr);
+        }
+    }
+    // then remove them
     for (auto rc_cbptr : *this | referenced)
     {
         Read_Entry_BPtr re_bptr = rc_cbptr->re_bptr().unconst();
         if (re_bptr)
         {
-            auto it = ++(re_bptr->chunk_cont().iterator_to(*rc_cbptr));
-            res[rc_cbptr] = it;
             re_bptr->chunk_cont().erase(rc_cbptr);
         }
     }
     return res;
 }
 
-void Read_Chunk_CE_Cont::insert_into_re_cont(const RC_Next_Map& rc_next_map) const
+void Read_Chunk_CE_Cont::insert_into_re_cont(RC_Map& rc_map)
 {
-    for (auto rc_cbptr : *this | referenced)
+    while (not rc_map.empty())
     {
-        Read_Entry_BPtr re_bptr = rc_cbptr->re_bptr().unconst();
-        auto it = rc_next_map.at(rc_cbptr);
-        ASSERT(it == re_bptr->chunk_cont().end() or rc_cbptr->get_r_end() <= it->get_r_start());
-        re_bptr->chunk_cont().insert_before(it, rc_cbptr.unconst());
+        // find a chunk to insert whose next chunk is not in the map (i.e., it is already inserted)
+        auto it = rc_map.begin();
+        while (it != rc_map.end() and rc_map.count(it->second) > 0) ++it;
+        ASSERT(it != rc_map.end());
+        Read_Chunk_BPtr rc_bptr = it->first.unconst();
+        Read_Chunk_CBPtr rc_next_cbptr = it->second;
+        ASSERT(not rc_next_cbptr or rc_bptr->get_r_end() <= rc_next_cbptr->get_r_start());
+        Read_Entry_BPtr re_bptr = rc_bptr->re_bptr().unconst();
+        auto rc_next_it = (rc_next_cbptr?
+                           re_bptr->chunk_cont().iterator_to(*rc_next_cbptr)
+                           : re_bptr->chunk_cont().end());
+        re_bptr->chunk_cont().insert_before(rc_next_it, rc_bptr);
+        rc_map.erase(it);
     }
 }
 

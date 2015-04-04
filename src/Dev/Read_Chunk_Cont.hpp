@@ -276,6 +276,8 @@ public:
     /// Erase Read_Chunk from container.
     void erase(Read_Chunk_CBPtr rc_cbptr) { Base::erase(iterator_to(*rc_cbptr)); }
 
+    /// Map holding, for each chunk, another chunk of interest
+    typedef map< Read_Chunk_CBPtr, Read_Chunk_CBPtr > RC_Map;
     /**
      * Split container at a contig breakpoint, and move the rhs of the split into this container.
      * Pre: No Mutations may span c_pos.
@@ -291,20 +293,21 @@ public:
      * @return A map containing, for each original Read_Chunk that gets split, its RHS.
      * NOTE: Original chunks always stay on the LHS if they get split.
      */
-    map< Read_Chunk_CBPtr, Read_Chunk_CBPtr >
-    splice(Read_Chunk_CE_Cont& other_cont,
-           Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict = false);
+    RC_Map splice(Read_Chunk_CE_Cont& other_cont,
+                  Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict = false);
 
-    /// Map holding an iterator to the next Read_Chunk for each Read_Chunk removed.
-    typedef map< Read_Chunk_CBPtr, Read_Chunk_RE_Cont::const_iterator > RC_Next_Map;
     /**
      * Erase all Chunks from their respective RE container.
+     * @return A map containing, for each chunk removed, the next chunk in the RE cont
      */
-    RC_Next_Map erase_from_re_cont() const;
+    RC_Map erase_from_re_cont() const;
     /**
-     * Insert all Chunks into their respective RE container.
+     * Insert chunks back into their respective RE containers.
+     * @param rc_map A map containing, for each chunk to insert, the chunk
+     * which should appear after it in its RE cont.
+     * Note: As chunks are inserted, they are removed from the map.
      */
-    void insert_into_re_cont(const RC_Next_Map& rc_next_map) const;
+    static void insert_into_re_cont(RC_Map& rc_map);
 
     /**
      * Shift contig coordinates of all Read_Chunk objects in this container.
