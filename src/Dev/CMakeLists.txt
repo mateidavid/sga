@@ -76,7 +76,12 @@ target_link_libraries(test-RC_Sequence
 
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
   message(STATUS "Including debug and test files and targets; CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}.")
-  file(COPY factory.gdb mac-gdb.gdb DESTINATION .)
+  file(COPY
+      ${CMAKE_SOURCE_DIR}/interval-tree/include/boost/intrusive/itree.gdb
+      factory.gdb
+      mac-gdb.gdb
+      test-itree-and-factory-gdb.gdb
+      DESTINATION .)
   add_test(test-itree-and-factory test-itree-and-factory)
   add_test(test-Read_Chunk-traversal test-Read_Chunk-traversal)
   add_test(test-RC_Sequence test-RC_Sequence)
