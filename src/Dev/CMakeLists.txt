@@ -72,6 +72,9 @@ if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
       mac-gdb.gdb
       test-itree-and-factory-gdb.gdb
       DESTINATION .)
+  add_executable(test-Cigar_Op test-Cigar_Op.cpp)
+  add_executable(test-Cigar test-Cigar.cpp)
+  add_test(test-Cigar test-Cigar)
   add_test(test-itree-and-factory test-itree-and-factory)
   add_test(test-Read_Chunk-traversal test-Read_Chunk-traversal)
   add_test(test-RC_Sequence test-RC_Sequence)

@@ -282,6 +282,111 @@ public:
             .put("cigar", this->to_ptree());
     }
 
+    void trim(Size_Type rf_start, Size_Type rf_end, Size_Type qr_start, Size_Type qr_end)
+    {
+        trim_end(true, false, rf_start);
+        trim_end(true, true, rf_end);
+        trim_end(false, false, qr_start);
+        trim_end(false, true, qr_end);
+    }
+
+    void trim_end(bool trim_rf, bool trim_tail, Size_Type trim_pos)
+    {
+        bool forward_rf = not trim_tail;
+        if (not trim_rf and _reversed)
+        {
+            forward_rf = not forward_rf;
+        }
+        bool forward_qr = forward_rf == not _reversed;
+        size_t idx_start = 0;
+        size_t idx_end = n_ops();
+        // generic algorithm will use these lambdas
+        auto pos_past_first_op = [&] () {
+            if (trim_rf and forward_rf)
+                return op_rf_pos(idx_start) < trim_pos;
+            else if (trim_rf and not forward_rf)
+                return trim_pos < op_rf_pos(idx_end);
+            else if (not trim_rf and forward_qr)
+                return op_qr_pos(forward_rf? idx_start : idx_end) < trim_pos;
+            else
+                return trim_pos < op_qr_pos(forward_rf? idx_start : idx_end);
+        };
+        auto pos_in_first_op = [&] () {
+            if (trim_rf and forward_rf)
+                return trim_pos < op_rf_pos(idx_start + 1);
+            else if (trim_rf and not forward_rf)
+                return op_rf_pos(idx_end - 1) < trim_pos;
+            else if (not trim_rf and forward_qr)
+                return trim_pos < op_qr_pos(forward_rf? idx_start + 1 : idx_end - 1);
+            else
+                return op_qr_pos(forward_rf? idx_start + 1 : idx_end - 1 ) < trim_pos;
+        };
+        auto cut_first_op = [&] () {
+            if (trim_rf and forward_rf)
+            {
+                cut_op(idx_start, trim_pos - op_rf_pos(idx_start));
+            }
+            else if (trim_rf and not forward_rf)
+            {
+                cut_op(idx_end - 1, trim_pos - op_rf_pos(idx_end - 1));
+                //++idx_end;
+            }
+            else if (not trim_rf and forward_qr)
+            {
+                if (forward_rf)
+                {
+                    cut_op(idx_start, trim_pos - op_qr_pos(idx_start));
+                }
+                else
+                {
+                    cut_op(idx_end - 1, op_qr_pos(idx_end - 1) - trim_pos);
+                    //++idx_end;
+                }
+            }
+            else
+            {
+                if (forward_rf)
+                {
+                    cut_op(idx_start, op_qr_pos(idx_start) - trim_pos);
+                }
+                else
+                {
+                    cut_op(idx_end - 1, trim_pos - op_qr_pos(idx_end - 1));
+                    //++idx_end;
+                }
+            }
+            ++idx_end;
+        };
+        auto advance_op = [&] () {
+            if (forward_rf)
+                ++idx_start;
+            else
+                --idx_end;
+        };
+        // compute range of ops to keep using lambdas
+        while (idx_start < idx_end and pos_past_first_op())
+        {
+            if (pos_in_first_op())
+            {
+                cut_first_op();
+            }
+            ASSERT(pos_past_first_op() and not pos_in_first_op());
+            advance_op();
+        }
+        // implement trimming
+        Size_Type new_rf_start = op_rf_pos(idx_start);
+        Size_Type new_rf_end = op_rf_pos(idx_end);
+        Size_Type new_qr_start = not _reversed? op_qr_pos(idx_start) : op_qr_pos(idx_end);
+        Size_Type new_qr_end = not _reversed? op_qr_pos(idx_end) : op_qr_pos(idx_start);
+        vector< cigar_op_type > new_op_vect(_op_vect.begin() + idx_start, _op_vect.begin() + idx_end);
+        _rf_start = new_rf_start;
+        _rf_len = new_rf_end - new_rf_start;
+        _qr_start = new_qr_start;
+        _qr_len = new_qr_end - new_qr_start;
+        _op_vect = move(new_op_vect);
+        recompute_offsets();
+    }
+
     /** Check Cigar. */
     void check(const sequence_proxy_type& rf_seq_arg, const sequence_proxy_type& qr_seq_arg) const
     {
@@ -312,11 +417,6 @@ public:
             // check '=' ops
             if (op_type(i) == '=')
             {
-                /*
-                ASSERT(rf_seq.substr(op_rf_offset(i), op_rf_len(i))
-                       == (same_st()? qr_seq.substr(op_qr_offset(i), op_qr_len(i))
-                           : reverseComplement(qr_seq.substr(op_qr_offset(i) - op_qr_len(i), op_qr_len(i)))));
-                */
                 ASSERT(rf_seq.substr(op_rf_offset(i), op_rf_len(i))
                        == qr_seq.revcomp(diff_st()).substr(op_qr_roffset(i), op_qr_len(i)));
             }
