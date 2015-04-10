@@ -21,13 +21,15 @@ bool Read_Entry::is_terminal(bool check_start) const
             or (not check_start and rc_cbptr->get_rc() and rc_cbptr->get_c_start() == 0));
 }
 
-Seq_Type Read_Entry::get_seq() const
+Seq_Type Read_Entry::get_seq(bool trimmed) const
 {
     Seq_Type res;
+    if (not trimmed) res += _start_seq;
     for (auto rc_cbptr : chunk_cont() | referenced)
     {
         res += rc_cbptr->get_seq();
     }
+    if (not trimmed) res += _end_seq;
     return res;
 }
 
@@ -47,13 +49,13 @@ void Read_Entry::check() const
         // read start&end bounds
         if (rc_cit == chunk_cont().begin())
         {
-            ASSERT(rc_cbptr->get_r_start() == 0);
+            ASSERT(rc_cbptr->get_r_start() == start());
         }
         auto rc_next_cit = rc_cit;
         rc_next_cit++;
         if (rc_next_cit == chunk_cont().end())
         {
-            ASSERT(rc_cbptr->get_r_end() == len());
+            ASSERT(rc_cbptr->get_r_end() == end());
         }
         else
         {

@@ -14,8 +14,8 @@ namespace MAC
 {
 
 Read_Chunk::Read_Chunk(Read_Entry_BPtr re_bptr, Contig_Entry_BPtr ce_bptr)
-    : _r_start(0),
-      _r_len(re_bptr->len()),
+    : _r_start(re_bptr->start()),
+      _r_len(re_bptr->end() - re_bptr->start()),
       _c_start(0),
       _c_len(ce_bptr->len()),
       _re_bptr(re_bptr),
@@ -26,10 +26,10 @@ Read_Chunk::Read_Chunk(Read_Entry_BPtr re_bptr, Contig_Entry_BPtr ce_bptr)
     ASSERT(_r_len == _c_len);
 }
 
-Size_Type Read_Chunk::get_read_len() const
+Size_Type Read_Chunk::get_read_len(bool trimmed) const
 {
     ASSERT(re_bptr());
-    return re_bptr()->len();
+    return re_bptr()->get_len(trimmed);
 }
 
 Read_Chunk_BPtr
@@ -809,11 +809,9 @@ Seq_Type Read_Chunk::get_seq() const
         if (match_len > 0)
         {
             // match stretch follows
-            /*
-            string tmp = _ce_bptr->substr((not get_rc()? pos.c_pos : next_pos.c_pos) - _ce_bptr->seq_offset(), match_len);
-            res += (not get_rc()? tmp : reverseComplement(tmp));
-            */
-            res += _ce_bptr->substr((not get_rc()? pos.c_pos : next_pos.c_pos) - _ce_bptr->seq_offset(), match_len).revcomp(get_rc());
+            res += _ce_bptr->substr(
+                (not get_rc()? pos.c_pos : next_pos.c_pos) - _ce_bptr->seq_offset(), match_len)
+                .revcomp(get_rc());
         }
         else if (pos.r_pos != next_pos.r_pos)
         {
@@ -865,11 +863,11 @@ void Read_Chunk::check() const
     ASSERT((long long)c_len + delta == (long long)r_len);
 #ifndef ALLOW_PART_MAPPED_INNER_CHUNKS
     // chunks must end on contig breaks except for first and last
-    ASSERT(get_r_start() == 0
+    ASSERT(get_r_start() == re_bptr()->start()
            or (not get_rc()?
                get_c_start() == 0
                : get_c_end() == ce_bptr()->seq_offset() + ce_bptr()->len()));
-    ASSERT(get_r_end() == re_bptr()->len()
+    ASSERT(get_r_end() == re_bptr()->end()
            or (not get_rc()?
                get_c_end() == ce_bptr()->seq_offset() + ce_bptr()->len()
                : get_c_start() == 0));
@@ -879,7 +877,7 @@ void Read_Chunk::check() const
     {
         ASSERT(ce_bptr()->is_unmappable() or ce_bptr()->is_lowcomplex());
         ASSERT(mut_ptr_cont().empty());
-        ASSERT(ce_bptr()->chunk_cont().single_node());
+        ASSERT(size_one(ce_bptr()->chunk_cont()));
         ASSERT((&*(ce_bptr()->chunk_cont().begin())).raw() == this);
         ASSERT(ce_bptr()->mut_cont().empty());
     }
@@ -929,7 +927,7 @@ string Read_Chunk::to_string(Read_Chunk_CBPtr rc_cbptr, bool r_dir, bool forward
     }
 
     Size_Type re_len = (rc_cbptr->re_bptr()?
-                        rc_cbptr->re_bptr()->len() : rc_cbptr->get_r_len());
+                        rc_cbptr->re_bptr()->end() - rc_cbptr->re_bptr()->start() : rc_cbptr->get_r_len());
     Size_Type ce_len = rc_cbptr->ce_bptr()->len();
     ostringstream oss;
     oss << Read_Entry_Fact::size();

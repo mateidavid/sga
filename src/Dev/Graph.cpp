@@ -78,22 +78,23 @@ Read_Chunk_CBPtr Graph::search_read_chunk_exact(
 void Graph::add_read(string&& name, Seq_Type&& seq)
 {
     LOG("graph", debug) << ptree("add_read").put("name", name);
-
+    if (seq.size() < 3) return; // TODO:REMOVE
     // create read entry and place it in container
-    Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(move(name), seq.size());
+    Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(move(name), seq.size());  // TODO:FIX
+    re_bptr->trim_end(false, seq.substr(0, 1)); // TODO:REMOVE
+    re_bptr->trim_end(true, seq.substr(seq.size() - 1, 1)); // TODO:REMOVE
+    seq = seq.substr(1, seq.size() - 2); // TODO:REMOVE
     re_cont().insert(re_bptr);
-
     // create contig entry and place it in container
     Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(move(seq));
     ce_cont().insert(ce_bptr);
-
     // create initial read chunk
     Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem(re_bptr, ce_bptr);
     // add it to RE and CE containers
     re_bptr->chunk_cont().insert(rc_bptr);
     ce_bptr->chunk_cont().insert(rc_bptr);
-
-    check(set< Read_Entry_CBPtr >( { re_bptr }));
+    // check new entry
+    check(set< Read_Entry_CBPtr >({ re_bptr }));
 }
 
 bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
@@ -203,11 +204,13 @@ bool Graph::cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk)
         .put("re_ptr", re_bptr.to_ptree())
         .put("r_brk", r_brk);
 
-    if (r_brk == 0 or r_brk == re_bptr->len())
+    if (r_brk <= re_bptr->start() or r_brk >= re_bptr->end())
     {
         // cut is on the edge of the read; it must be forced
-        Read_Chunk_BPtr rc_bptr = (r_brk == 0? &*re_bptr->chunk_cont().begin() : &*re_bptr->chunk_cont().rbegin());
-        return cut_read_chunk(rc_bptr, r_brk);
+        Read_Chunk_BPtr rc_bptr = (r_brk <= re_bptr->start()?
+                                   &*re_bptr->chunk_cont().begin()
+                                   : &*re_bptr->chunk_cont().rbegin());
+        return cut_read_chunk(rc_bptr, r_brk <= re_bptr->start()? re_bptr->start() : re_bptr->end());
     }
     else
     {
@@ -279,14 +282,14 @@ void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPt
     // next, deallocate temporary structures
     // rc1rc2_chunk_bptr:
     Contig_Entry_BPtr rc1_ce_bptr = rc1rc2_chunk_bptr->ce_bptr();
-    ASSERT(rc1_ce_bptr->chunk_cont().single_node());
+    ASSERT(size_one(rc1_ce_bptr->chunk_cont()));
     rc1_ce_bptr->chunk_cont().clear_and_dispose();
     rc1_ce_bptr->mut_cont().clear_and_dispose();
     Contig_Entry_Fact::del_elem(rc1_ce_bptr);
 
     // rc2c2_chunk_bptr
     Contig_Entry_BPtr rc2_ce_bptr = rc2c2_chunk_bptr->ce_bptr();
-    ASSERT(rc2_ce_bptr->chunk_cont().single_node());
+    ASSERT(size_one(rc2_ce_bptr->chunk_cont()));
     rc2_ce_bptr->chunk_cont().clear_and_dispose();
     rc2_ce_bptr->mut_cont().clear_and_dispose();
     Contig_Entry_Fact::del_elem(rc2_ce_bptr);
@@ -615,7 +618,6 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     Cigar cigar(cigar_string, r2_rc, r1_start, r2_start);
     ASSERT(r1_len == cigar.rf_len());
     ASSERT(r2_len == cigar.qr_len());
-
     // discard indels at either end of the cigar string
     while (cigar.n_ops() > 0 and not cigar.op_is_match(0))
     {
@@ -629,40 +631,47 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     r1_len = cigar.rf_len();
     r2_start = cigar.qr_start();
     r2_len = cigar.qr_len();
-
     // if no match is left, nothing to do
     if (r1_len == 0)
     {
         return;
     }
-
+    // fetch read entries
     Read_Entry_BPtr re1_bptr = re_cont().find(r1_name).unconst();
+    if (not re1_bptr)
+    {
+        LOG("graph", warning) << ptree("missing_read").put("r_name", r1_name);
+        return;
+    }
     ASSERT(re1_bptr);
     Read_Entry_BPtr re2_bptr = re_cont().find(r2_name).unconst();
+    if (not re2_bptr)
+    {
+        LOG("graph", warning) << ptree("missing_read").put("r_name", r2_name);
+        return;
+    }
     ASSERT(re2_bptr);
-
-    Seq_Type r1_seq = re1_bptr->get_seq();
-    Seq_Type r2_seq = re2_bptr->get_seq();
+    // disambiguate cigar
+    Seq_Type r1_seq = re1_bptr->get_seq(false);
+    Seq_Type r2_seq = re2_bptr->get_seq(false);
     LOG("graph", debug1) << ptree("add_overlap_before_disambiguate")
         .put("re1", r1_seq.substr(r1_start, r1_len))
-        //.put("re2", (not cigar.reversed()?
-        //             r2_seq.substr(r2_start, r2_len)
-        //             : reverseComplement(r2_seq.substr(r2_start, r2_len))))
         .put("re2", r2_seq.substr(r2_start, r2_len).revcomp(cigar.reversed()))
         .put("cigar", cigar.to_ptree());
-
     cigar.disambiguate(r1_seq.substr(r1_start, r1_len), r2_seq.substr(r2_start, r2_len));
     LOG("graph", debug1) << ptree("add_overlap_after_disambiguate").put("cigar", cigar.to_ptree());
-
+    // fix cigar if read entries are trimmed
+    cigar.trim(re1_bptr->start(), re1_bptr->end(), re2_bptr->start(), re2_bptr->end());
+    cigar.check(r1_seq.substr(cigar.rf_start(), cigar.rf_end() - cigar.rf_start()),
+                r2_seq.substr(cigar.qr_start(), cigar.qr_end() - cigar.qr_start()));
     // cut r1 & r2 at the ends of the match region
     // NOTE: unbreakable chunks are never cut
-    cut_read_entry(re1_bptr, r1_start);
-    cut_read_entry(re1_bptr, r1_start + r1_len);
-    cut_read_entry(re2_bptr, r2_start);
-    cut_read_entry(re2_bptr, r2_start + r2_len);
-
+    cut_read_entry(re1_bptr, cigar.rf_start());
+    cut_read_entry(re1_bptr, cigar.rf_end());
+    cut_read_entry(re2_bptr, cigar.qr_start());
+    cut_read_entry(re2_bptr, cigar.qr_end());
+    // break reads into corresponding chunks
     auto rc_mapping = chunker(re1_bptr, re2_bptr, cigar);
-
     // reached when we have a complete rc map
     for (auto& tmp : rc_mapping)
     {
@@ -676,22 +685,19 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
         ASSERT(rc2_bptr->get_r_start() == rc2_start);
         merge_chunk_contigs(rc1_bptr, rc2_bptr, rc1rc2_cigar);
     }
-
     // find unmappable regions in the contigs recently merged
-    auto region_cont = find_unmappable_regions(re1_bptr, r1_start, r1_start + r1_len);
+    auto region_cont = find_unmappable_regions(re1_bptr, cigar.rf_start(), cigar.rf_end());
     for (const auto& rg : region_cont)
     {
         unmap_re_region(re1_bptr, rg);
     }
-
-    check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr }));
-
+    // check read entries
+    check(set< Read_Entry_CBPtr >({ re1_bptr, re2_bptr }));
+    // catenate at the end of each step
     if (cat_at_step())
     {
-        //cerr << "before merging:\n" << *this;
         cat_read_contigs(re1_bptr);
-        //cerr << "after merging:\n" << *this;
-        check(set< Read_Entry_CBPtr >( { re1_bptr, re2_bptr }));
+        check(set< Read_Entry_CBPtr >({ re1_bptr, re2_bptr }));
     }
 }
 
@@ -962,7 +968,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
         .put("r_right", r_right);
 
     bool r_left = not r_right;
-    Size_Type leftover_bp = (r_left? pos : re_bptr->len() - pos);
+    Size_Type leftover_bp = (r_left? pos - re_bptr->start() : re_bptr->end() - pos);
     while (leftover_bp > 0)
     {
         // calls in previous iterations might extend the unmapped region
@@ -972,7 +978,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
         ASSERT(not r_left or rc_bptr->get_r_start() <= pos);
         ASSERT(not r_right or pos <= rc_bptr->get_r_end());
         pos = (r_left? rc_bptr->get_r_start() : rc_bptr->get_r_end());
-        leftover_bp = (r_left? pos : re_bptr->len() - pos);
+        leftover_bp = (r_left? pos - re_bptr->start() : re_bptr->end() - pos);
         if (leftover_bp == 0)
         {
             break;
@@ -1160,8 +1166,8 @@ void Graph::unmap_single_chunks()
                 LOG("graph", debug1) << ptree("unmap_single_chunks_loop")
                     .put("ce_ptr", ce_bptr.to_int())
                     .put("is_unmappable", ce_bptr->is_unmappable())
-                    .put("single_node", ce_bptr->chunk_cont().single_node());
-                if (not ce_bptr->is_unmappable() and ce_bptr->chunk_cont().single_node())
+                    .put("size_one", size_one(ce_bptr->chunk_cont()));
+                if (not ce_bptr->is_unmappable() and size_one(ce_bptr->chunk_cont()))
                 {
                     LOG("graph", debug1) << ptree("unmap_single_chunks_unmap_start").put("re_ptr", re_bptr.to_int());
                     unmap_chunk(rc_bptr);
@@ -1191,7 +1197,7 @@ void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
     {
         return;
     }
-    if (rc_bptr->ce_bptr()->chunk_cont().single_node())
+    if (size_one(rc_bptr->ce_bptr()->chunk_cont()))
     {
         unmap_chunk(rc_bptr);
         return;
@@ -1206,7 +1212,7 @@ void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
             // or it's not the first in the chunk container
             or &*ce_bptr->chunk_cont().begin() != rc_bptr
             // or a second chunk exists and starts at c_start
-            or (not ce_bptr->chunk_cont().single_node() and (++ce_bptr->chunk_cont().begin())->get_c_start() == 0))
+            or (not size_one(ce_bptr->chunk_cont()) and (++ce_bptr->chunk_cont().begin())->get_c_start() == 0))
         {
             return;
         }
@@ -1316,8 +1322,6 @@ void Graph::print_unmappable_contigs(ostream& os) const
                     if (rc_next_cbptr->ce_bptr()->is_unmappable())
                     {
                         seq_v.insert(make_tuple(
-                                         //not rc_cbptr->get_rc()? rc_next_cbptr->get_seq()
-                                         //: reverseComplement(rc_next_cbptr->get_seq()),
                                          rc_next_cbptr->get_seq().revcomp(rc_cbptr->get_rc()),
                                          rc_cbptr->re_bptr()->name()));
                     }
@@ -2122,7 +2126,7 @@ void Graph::dump_detailed_counts(ostream& os) const
     {
         os << "RE\t"
            << re_cbptr->name() << '\t'
-           << re_cbptr->len() << '\t'
+           << re_cbptr->end() - re_cbptr->start() << '\t'
            << re_cbptr->chunk_cont().size() << '\t';
         for (const auto rc_cbptr : re_cbptr->chunk_cont() | referenced)
         {
@@ -2451,6 +2455,10 @@ void Graph::get_terminal_reads(ostream& os) const
                                              &*ce_cbptr->chunk_cont().begin()
                                              : &*ce_cbptr->chunk_cont().iintersect(ce_cbptr->len(), ce_cbptr->len()).begin());
                 Read_Entry_CBPtr re_cbptr = rc_cbptr->re_bptr();
+                os << ">" << re_cbptr->name() << ":" << re_cbptr->start() << "-" << re_cbptr->end()
+                   << " " << (c_right == rc_cbptr->get_rc()? "1" : "0") << endl
+                   << re_cbptr->get_seq(true).revcomp(c_right == rc_cbptr->get_rc()) << endl;
+                /*
                 if (c_right == rc_cbptr->get_rc())
                 {
                     // scontig ends with negative strand of read
@@ -2463,6 +2471,7 @@ void Graph::get_terminal_reads(ostream& os) const
                     os << ">" << re_cbptr->name() << " 0\n"
                        << re_cbptr->get_seq() << "\n";
                 }
+                */
             }
         }
     }

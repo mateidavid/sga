@@ -119,7 +119,7 @@ public:
     bool get_rc() const { return _get_rc(); }
     Seq_Type get_seq() const;
     bool is_unbreakable() const { return _get_is_unbreakable(); }
-    Size_Type get_read_len() const;
+    Size_Type get_read_len(bool trimmed) const;
     /// @}
 
     /// Get mapping start position.

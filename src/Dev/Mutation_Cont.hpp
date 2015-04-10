@@ -112,6 +112,10 @@ public:
     using Base::check;
     friend class Graph;
 
+    using typename Base::intersection_const_iterator;
+    using typename Base::intersection_const_iterator_range;
+    using Base::iintersect;
+
     // check it is empty before deallocating
     ~Mutation_Cont() { ASSERT(empty()); }
 

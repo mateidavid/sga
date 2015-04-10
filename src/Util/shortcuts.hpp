@@ -125,5 +125,12 @@
     _access: \
         operator _bool_type () const { return (_expr)? &_type::_bool_type_func : nullptr; }
 
+// Check container contains a single element
+//
+template < typename Container >
+bool size_one(const Container& c)
+{
+    return (c.begin() != c.end()) and (++c.begin() == c.end());
+}
 
 #endif

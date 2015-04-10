@@ -36,7 +36,7 @@ private:
      * @param name String containing read name; (take ownership).
      * @param len Length of the read.
      */
-    Read_Entry(string&& name, Size_Type len) : _name(move(name)), _len(len) {}
+    Read_Entry(string&& name, Size_Type len) : _name(move(name)), _len(len), _start(0) {}
 
     // allow move only
     DEFAULT_DEF_CTOR(Read_Entry);
@@ -59,6 +59,7 @@ public:
             _name = move(rhs._name);
             _chunk_cont = move(rhs._chunk_cont);
             _len = move(rhs._len);
+            _start = move(rhs._start);
         }
         return *this;
     }
@@ -67,8 +68,17 @@ public:
     /**@{*/
     GETTER(string, name, _name)
     GETTER(Read_Chunk_RE_Cont, chunk_cont, _chunk_cont)
-    Size_Type len() const { return _len; }
-    Seq_Type get_seq() const;
+    private:
+    GETTER(Size_Type, len, _len)
+    public:
+    GETTER(Size_Type, start, _start)
+    Size_Type end() const { return start() + len(); }
+    //Size_Type len() const { return _len; }
+    Seq_Type get_seq(bool trimmed) const;
+    Size_Type get_len(bool trimmed) const
+    {
+        return trimmed? len() : len() + _start_seq.size() + _end_seq.size();
+    }
     /**@}*/
 
     /** Check if this read ends the last contig where it is mapped.
@@ -76,6 +86,45 @@ public:
      * @return True if there are no more bases in the contig past the read end.
      */
     bool is_terminal(bool check_start) const;
+
+    /**
+     * Trim read entry by given amount.
+     * @param r_end Bool; if true, trim from the end; if false, trim from the start.
+     * @param trim_len Length to trim.
+     */
+    void trim_len(bool r_end, Size_Type trim_len)
+    {
+        ASSERT(len() >= trim_len);
+        auto crt_seq = get_seq(true);
+        if (r_end)
+        {
+            _end_seq = Seq_Type(crt_seq.substr(crt_seq.size() - trim_len)) + _end_seq;
+            _len -= trim_len;
+        }
+        else
+        {
+            _start_seq += crt_seq.substr(0, trim_len);
+            _len -= trim_len;
+            _start += trim_len;
+        }
+    }
+    void trim_end(bool r_end, Seq_Type&& s)
+    {
+        Size_Type trim_len = s.size();
+        ASSERT(len() >= trim_len);
+        if (r_end)
+        {
+            swap(s, _end_seq);
+            _end_seq += s;
+            _len -= trim_len;
+        }
+        else
+        {
+            _start_seq += s;
+            _len -= trim_len;
+            _start += trim_len;
+        }
+    }
 
     /** Integrity check. */
     void check() const;
@@ -85,8 +134,11 @@ public:
 
 private:
     string _name;
+    Seq_Type _start_seq;
+    Seq_Type _end_seq;
     Read_Chunk_RE_Cont _chunk_cont;
     Size_Type _len;
+    Size_Type _start;
 
     /** Hooks for storage in intrusive set inside Graph object. */
     friend struct detail::Read_Entry_Set_Node_Traits;

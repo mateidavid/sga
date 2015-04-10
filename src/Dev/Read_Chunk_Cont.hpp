@@ -132,7 +132,7 @@ public:
     {
         ASSERT(not empty());
         ASSERT(begin()->re_bptr());
-        if (r_pos >= begin()->get_read_len())
+        if (r_pos >= begin()->get_read_len(false))
         {
             return nullptr;
         }
@@ -264,12 +264,6 @@ public:
 
     Base::size_type size() = delete;
     Base::size_type nonconst_size() const { return Base::size(); }
-    bool single_node() const
-    {
-        return not empty()
-            and not Base::node_traits::get_left(Base::node_traits::get_parent(Base::header_ptr()))
-            and not Base::node_traits::get_right(Base::node_traits::get_parent(Base::header_ptr()));
-    }
 
     /// Insert Read_Chunk in this container.
     void insert(Read_Chunk_BPtr rc_bptr) { Base::insert(*rc_bptr); }

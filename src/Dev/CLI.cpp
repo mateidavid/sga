@@ -106,7 +106,8 @@ void cli(istream& is, ostream& os, const Graph&, const Hap_Map& hm)
                     Read_Entry_CBPtr re_cbptr = Read_Entry_CBPtr::from_index(id);
                     os << "Read_Entry: " << id
                        << " name: " << re_cbptr->name()
-                       << " len: " << re_cbptr->len() << "\n";
+                       << " start: " << re_cbptr->start()
+                       << " len: " << re_cbptr->end() - re_cbptr->start() << "\n";
                     for (auto rc_cbptr : re_cbptr->chunk_cont() | referenced)
                     {
                         os << "  " << Read_Chunk::to_string(rc_cbptr, true, true) << "\n";
@@ -204,8 +205,9 @@ void cli(istream& is, ostream& os, const Graph&, const Hap_Map& hm)
                     Read_Entry_CBPtr re_cbptr = Read_Entry_CBPtr::from_index(id);
                     os << "Read_Entry: " << id
                        << " name: " << re_cbptr->name()
-                       << " len: " << re_cbptr->len() << "\n"
-                       << re_cbptr->get_seq() << "\n";
+                       << " start: " << re_cbptr->start()
+                       << " len: " << re_cbptr->end() - re_cbptr->start() << "\n"
+                       << re_cbptr->get_seq(true) << "\n";
                 }
             }
             else if (tmp == "contig" or tmp == "ce")

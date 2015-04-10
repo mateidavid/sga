@@ -14,8 +14,8 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
     }
     for (auto re_bptr : g.re_cont() | referenced)
     {
-        Size_Type r_pos = 0;
-        while (r_pos < re_bptr->len())
+        Size_Type r_pos = re_bptr->start();
+        while (r_pos < re_bptr->end())
         {
             auto rc_cbptr = re_bptr->chunk_cont().get_chunk_with_pos(r_pos);
             ASSERT(rc_cbptr);
