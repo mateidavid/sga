@@ -26,12 +26,10 @@
 
 #include "shortcuts.hpp"
 #include "global.hpp"
-#include "global_assert.hpp"
 #include "factory.hpp"
 #include "ptree.hpp"
 #include "logger.hpp"
 #include "Cigar.hpp"
-//#include "Util.h"
 #include "bits.hpp"
 #include "ref_range.hpp"
 #include "RC_Sequence.hpp"

@@ -7,7 +7,6 @@ include_directories(BEFORE ${CMAKE_SOURCE_DIR}/interval-tree/include)
 include_directories(BEFORE ${CMAKE_SOURCE_DIR}/boost-intrusive/include) # <-first
 
 add_library(mac STATIC
-    global_assert.cpp
     Mutation.cpp
     Mutation_Cont.cpp
     Read_Chunk_Pos.cpp
@@ -36,27 +35,18 @@ target_link_libraries(mac-bin
     ${ZLIB_LIBRARIES}
 )
 
-add_executable(test-itree-and-factory
-    test-itree-and-factory.cpp
-    global_assert.cpp
-)
+add_executable(test-itree-and-factory test-itree-and-factory.cpp)
 target_link_libraries(test-itree-and-factory
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
 
-add_executable(test-Read_Chunk-traversal
-    test-Read_Chunk-traversal.cpp
-    globals.cpp
-    global_assert.cpp
-)
+add_executable(test-Read_Chunk-traversal test-Read_Chunk-traversal.cpp)
 target_link_libraries(test-Read_Chunk-traversal
     mac
     thirdparty
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
 )
-
-add_executable(check-assert check-assert.cpp global_assert.cpp)
 
 add_executable(test-affine-overlapper test-affine-overlapper.cpp)
 target_link_libraries(test-affine-overlapper

@@ -33,7 +33,7 @@ Seq_Type Read_Entry::get_seq() const
 
 void Read_Entry::check() const
 {
-#ifndef BOOST_DISABLE_ASSERTS
+#ifndef DISABLE_ASSERTS
     // name not empty
     ASSERT(not name().empty());
     // check integrity of Read_Chunk container

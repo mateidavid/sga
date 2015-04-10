@@ -1874,7 +1874,7 @@ void Graph::clear_and_dispose()
 
 void Graph::check_all() const
 {
-#ifndef BOOST_DISABLE_ASSERTS
+#ifndef DISABLE_ASSERTS
     LOG("graph", info) << ptree("check_all");
     size_t chunks_count_1 = 0;
     size_t chunks_count_2 = 0;
@@ -1898,7 +1898,7 @@ void Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry
 {
     static_cast< void >(re_set);
     static_cast< void >(ce_set);
-#ifndef BOOST_DISABLE_ASSERTS
+#ifndef DISABLE_ASSERTS
     // compute contig entries referenced by the selected read entries
     set< Contig_Entry_CBPtr > ce_extra_set;
     for (const auto& re_cbptr : re_set)
@@ -1951,7 +1951,7 @@ void Graph::check(const set< Read_Entry_CBPtr >& re_set, const set< Contig_Entry
 
 void Graph::check_leaks() const
 {
-#ifndef BOOST_DISABLE_ASSERTS
+#ifndef DISABLE_ASSERTS
     // check Read_Entry factory
     //   in addition to Read_Entry objects in the graph, there is 1
     //   in the unique Read_Entry_Cont header node

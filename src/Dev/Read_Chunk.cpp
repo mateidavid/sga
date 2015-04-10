@@ -835,7 +835,7 @@ Seq_Type Read_Chunk::get_seq() const
 
 void Read_Chunk::check() const
 {
-#ifndef BOOST_DISABLE_ASSERTS
+#ifndef DISABLE_ASSERTS
     // check integrity of mutation pointer container
     mut_ptr_cont().check();
     // no empty chunks

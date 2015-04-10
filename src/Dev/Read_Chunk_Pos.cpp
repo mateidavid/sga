@@ -29,7 +29,7 @@ bool Read_Chunk_Pos::past_first_mut() const
 
 void Read_Chunk_Pos::check() const
 {
-#ifndef BOOST_DISABLE_ASSERTS
+#ifndef DISABLE_ASSERTS
     ASSERT(rc_cptr != NULL);
     ASSERT(rc_cptr->get_c_start() <= c_pos and c_pos <= rc_cptr->get_c_end());
     ASSERT(rc_cptr->get_r_start() <= r_pos and r_pos <= rc_cptr->get_r_end());

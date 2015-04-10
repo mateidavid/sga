@@ -331,7 +331,7 @@ void Hap_Map::dump_stats(ostream& os, const Graph& g) const
 void Hap_Map::check_he(Hap_Entry_CBPtr he_cbptr) const
 {
     static_cast< void >(he_cbptr);
-#ifndef BOOST_DISABLE_ASSERTS
+#ifndef DISABLE_ASSERTS
     ASSERT(he_cbptr);
     he_cbptr->hh_cont().check();
     Hap_Hop_CBPtr last_hh_cbptr;
@@ -374,7 +374,7 @@ void Hap_Map::check_he(Hap_Entry_CBPtr he_cbptr) const
 void Hap_Map::check(const set< Hap_Entry_CBPtr >& he_set) const
 {
     static_cast< void >(he_set);
-#ifndef BOOST_DISABLE_ASSERTS
+#ifndef DISABLE_ASSERTS
     for (auto he_cbptr : he_set)
     {
         check_he(he_cbptr);
@@ -384,7 +384,7 @@ void Hap_Map::check(const set< Hap_Entry_CBPtr >& he_set) const
 
 void Hap_Map::check_all() const
 {
-#ifndef BOOST_DISABLE_ASSERTS
+#ifndef DISABLE_ASSERTS
     he_cont().check();
     hh_set().check();
     for (auto he_cbptr : he_cont() | referenced)

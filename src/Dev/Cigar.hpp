@@ -11,9 +11,7 @@
 #include <vector>
 #include <boost/range/adaptor/reversed.hpp>
 #include "global.hpp"
-#include "global_assert.hpp"
 #include "Cigar_Op.hpp"
-//#include "Util.h"
 #include "RC_Sequence.hpp"
 #include "logger.hpp"
 
@@ -285,13 +283,19 @@ public:
     }
 
     /** Check Cigar. */
-    void check(const sequence_proxy_type& rf_seq, const sequence_proxy_type& qr_seq) const
+    void check(const sequence_proxy_type& rf_seq_arg, const sequence_proxy_type& qr_seq_arg) const
     {
-        static_cast< void >(rf_seq);
-        static_cast< void >(qr_seq);
-#ifndef BOOST_DISABLE_ASSERTS
-        ASSERT(rf_seq.size() == rf_len());
-        ASSERT(qr_seq.size() == qr_len());
+        static_cast< void >(rf_seq_arg);
+        static_cast< void >(qr_seq_arg);
+#ifndef DISABLE_ASSERTS
+        ASSERT(rf_seq_arg.size() >= rf_len());
+        ASSERT(qr_seq_arg.size() >= qr_len());
+        sequence_proxy_type rf_seq = (rf_seq_arg.size() == rf_len()
+                                      ? rf_seq_arg.substr()
+                                      : rf_seq_arg.substr(_rf_start, _rf_len));
+        sequence_proxy_type qr_seq = (qr_seq_arg.size() == qr_len()
+                                      ? qr_seq_arg.substr()
+                                      : qr_seq_arg.substr(_qr_start, _qr_len));
         Size_Type check_rf_len = 0;
         Size_Type check_qr_len = 0;
         for (size_t i = 0; i < _op_vect.size(); ++i)

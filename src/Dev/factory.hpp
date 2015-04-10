@@ -17,7 +17,7 @@
 #include <boost/utility/enable_if.hpp>
 #include <boost/tti/tti.hpp>
 
-#include "global_assert.hpp"
+#include "global.hpp"
 #include "nonconst_methods.hpp"
 #include "ptree.hpp"
 #include "logger.hpp"

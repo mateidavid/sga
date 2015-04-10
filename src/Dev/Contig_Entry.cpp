@@ -559,7 +559,7 @@ Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mu
 
 void Contig_Entry::check() const
 {
-#ifndef BOOST_DISABLE_ASSERTS
+#ifndef DISABLE_ASSERTS
     // there are chunks mapped to this contig
     ASSERT(not chunk_cont().empty());
     if (is_unmappable())
