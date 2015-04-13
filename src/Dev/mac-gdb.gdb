@@ -19,6 +19,8 @@ def get_first_subclass(v):
 def identity(v):
     return v
 
+boost.add_trivial_printer('rc_sequence::Sequence', get_first_subclass)
+
 boost.static_method[("MAC::detail::Mutation_ITree_Value_Traits", "to_value_ptr")] = identity
 boost.static_method[("MAC::detail::Mutation_ITree_Node_Traits", "get_left")] = lambda v: v['_l_child']
 boost.static_method[("MAC::detail::Mutation_ITree_Node_Traits", "get_right")] = lambda v: v['_r_child']
