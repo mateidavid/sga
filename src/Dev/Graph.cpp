@@ -614,28 +614,6 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
         .put("r2_rc", r2_rc)
         .put("cigar", cigar_string);
 
-    // construct cigar object
-    Cigar cigar(cigar_string, r2_rc, r1_start, r2_start);
-    ASSERT(r1_len == cigar.rf_len());
-    ASSERT(r2_len == cigar.qr_len());
-    // discard indels at either end of the cigar string
-    while (cigar.n_ops() > 0 and not cigar.op_is_match(0))
-    {
-        cigar = cigar.subcigar(1, cigar.n_ops() - 1);
-    }
-    while (cigar.n_ops() > 0 and not cigar.op_is_match(cigar.n_ops() - 1))
-    {
-        cigar = cigar.subcigar(0, cigar.n_ops() - 1);
-    }
-    r1_start = cigar.rf_start();
-    r1_len = cigar.rf_len();
-    r2_start = cigar.qr_start();
-    r2_len = cigar.qr_len();
-    // if no match is left, nothing to do
-    if (r1_len == 0)
-    {
-        return;
-    }
     // fetch read entries
     Read_Entry_BPtr re1_bptr = re_cont().find(r1_name).unconst();
     if (not re1_bptr)
@@ -651,6 +629,10 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
         return;
     }
     ASSERT(re2_bptr);
+    // construct cigar object
+    Cigar cigar(cigar_string, r2_rc, r1_start, r2_start);
+    ASSERT(r1_len == cigar.rf_len());
+    ASSERT(r2_len == cigar.qr_len());
     // disambiguate cigar
     Seq_Type r1_seq = re1_bptr->get_seq(false);
     Seq_Type r2_seq = re2_bptr->get_seq(false);
@@ -664,6 +646,12 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     cigar.trim(re1_bptr->start(), re1_bptr->end(), re2_bptr->start(), re2_bptr->end());
     cigar.check(r1_seq.substr(cigar.rf_start(), cigar.rf_end() - cigar.rf_start()),
                 r2_seq.substr(cigar.qr_start(), cigar.qr_end() - cigar.qr_start()));
+    // discard indels at either end of the cigar string
+    cigar.drop_terminal_indels();
+    if (cigar.rf_len() == 0)
+    {
+        return;
+    }
     // cut r1 & r2 at the ends of the match region
     // NOTE: unbreakable chunks are never cut
     cut_read_entry(re1_bptr, cigar.rf_start());

@@ -180,7 +180,8 @@ public:
         return res;
     }
 
-    /** Compute sub-cigar.
+    /**
+     * Compute sub-cigar.
      * @param i Start op.
      * @param cnt Number of ops to include.
      */
@@ -196,7 +197,24 @@ public:
         return res;
     }
 
-    /** Cut op.
+    /**
+     * Drop terminal indels.
+     */
+    void drop_terminal_indels()
+    {
+        size_t start_idx = 0;
+        size_t end_idx = n_ops();
+        while (start_idx < end_idx and not op_is_match(start_idx)) ++start_idx;
+        while (start_idx < end_idx and not op_is_match(end_idx - 1)) --end_idx;
+        Cigar tmp;
+        rf_start() = op_rf_pos(start_idx);
+        qr_start() = same_st()? op_qr_pos(start_idx) : op_qr_pos(end_idx);
+        _op_vect = decltype(_op_vect)(_op_vect.begin() + start_idx, _op_vect.begin() + end_idx);
+        recompute_offsets();
+    }
+
+    /**
+     * Cut op.
      * @param idx Index of the op to cut.
      * @param len Op length before the cut.
      */
