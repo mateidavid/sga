@@ -202,6 +202,7 @@ int real_main()
         g.check_all();
         LOG("mac", info) << ptree("cat_at_end_end");
     }
+
     if (opts::validate_variations)
     {
         BWTIndexSet index_set;
@@ -226,6 +227,7 @@ int real_main()
         Unmap_Mut_Clusters()(g);
         g.check_all();
         LOG("mac", info) << ptree("unmap_mut_clusters_end");
+        g.test_mutation_allele_swapping(); //TODO: remove
     }
     if (opts::resolve_unmappable_regions)
     {

@@ -458,6 +458,8 @@ void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_n
         ASSERT(rc_next_bptr->get_c_start() == rc_bptr->get_c_end());
         ASSERT(rc_bptr->get_rc() == rc_next_bptr->get_rc());
         // unlink chunks from RE&CE containers
+        auto before_cit = ++rc_bptr->re_bptr()->chunk_cont().iterator_to(
+            not rc_bptr->get_rc()? *rc_next_bptr : *rc_bptr);
         rc_bptr->re_bptr()->chunk_cont().erase(rc_bptr);
         rc_bptr->re_bptr()->chunk_cont().erase(rc_next_bptr);
         ce_bptr->chunk_cont().erase(rc_bptr);
@@ -465,7 +467,7 @@ void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_n
         // cat left&right
         Read_Chunk::cat_c_right(rc_bptr, rc_next_bptr, ce_bptr->mut_cont());
         // insert resulting chunk back in its RE&CE containers
-        rc_bptr->re_bptr()->chunk_cont().insert(rc_bptr);
+        rc_bptr->re_bptr()->chunk_cont().insert_before(before_cit, rc_bptr);
         ce_bptr->chunk_cont().insert(rc_bptr);
     }
     // deallocate rhs contig
@@ -490,18 +492,20 @@ Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mu
     ASSERT((r_rg.len() == 0) == mut_cbptr->is_del());
 
     // check there are no other mutations touching the endpoints of the contig range
-    ASSERT(all_of(ce_bptr->mut_cont().begin(), ce_bptr->mut_cont().end(),
-                  [&] (Mutation_CBRef mut_other_cbref) {
-                      Mutation_CBPtr mut_other_cbptr = &mut_other_cbref;
-                      return (mut_other_cbptr == mut_cbptr
-                              or mut_other_cbptr->rf_end() < c_rg.start()
-                              or mut_other_cbptr->rf_start() > c_rg.end());
-                  }));
+    ASSERT_MSG(all_of(ce_bptr->mut_cont().begin(), ce_bptr->mut_cont().end(),
+                      [&] (Mutation_CBRef mut_other_cbref) {
+                          Mutation_CBPtr mut_other_cbptr = &mut_other_cbref;
+                          return (mut_other_cbptr == mut_cbptr
+                                  or mut_other_cbptr->rf_end() < c_rg.start()
+                                  or mut_other_cbptr->rf_start() > c_rg.end());
+                      }),
+        "unmap_mutation_clusters must be run before swapping mutation alleles");
 
     // cut contig entry into 3 slices, so that mutation spans the full middle contig
     auto ce_mid_bptr = ce_bptr->cut(c_rg.start(), nullptr, true);
     ASSERT(ce_mid_bptr);
     rc_cbptr = re_cbptr->chunk_cont().get_chunk_with_pos(r_rg.start());
+    if (rc_cbptr->get_rc() and r_rg.start() == rc_cbptr->get_r_start()) rc_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, false);
     ASSERT(rc_cbptr->ce_bptr() == ce_mid_bptr);
     ASSERT(rc_cbptr->get_c_start() == 0);
     ASSERT(not rc_cbptr->mut_ptr_cont().empty());
@@ -550,7 +554,7 @@ Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mu
         }
         // create new read chunk
         Read_Chunk_BPtr rc_new_bptr = Read_Chunk_Fact::new_elem(
-            rc_cbptr->get_r_start(), rc_cbptr->get_r_end(),
+            rc_cbptr->get_r_start(), rc_cbptr->get_r_len(),
             0, ce_new_bptr->len(),
             rc_cbptr->get_rc());
         rc_new_bptr->re_bptr() = rc_cbptr->re_bptr();

@@ -837,7 +837,7 @@ void Read_Chunk::check() const
     // check integrity of mutation pointer container
     mut_ptr_cont().check();
     // no empty chunks
-    ASSERT(get_r_len() > 0);
+    //ASSERT(get_r_len() > 0); // TODO: re-enable?
     // contigs coordinates
     ASSERT(get_c_start() <= get_c_end());
     ASSERT(get_c_start() <= ce_bptr()->seq_offset() + ce_bptr()->len());

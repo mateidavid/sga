@@ -78,12 +78,8 @@ Read_Chunk_CBPtr Graph::search_read_chunk_exact(
 void Graph::add_read(string&& name, Seq_Type&& seq)
 {
     LOG("graph", debug) << ptree("add_read").put("name", name);
-    if (seq.size() < 3) return; // TODO:REMOVE
     // create read entry and place it in container
     Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(move(name), seq.size());  // TODO:FIX
-    re_bptr->trim_end(false, seq.substr(0, 1)); // TODO:REMOVE
-    re_bptr->trim_end(true, seq.substr(seq.size() - 1, 1)); // TODO:REMOVE
-    seq = seq.substr(1, seq.size() - 2); // TODO:REMOVE
     re_cont().insert(re_bptr);
     // create contig entry and place it in container
     Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(move(seq));
@@ -2316,6 +2312,39 @@ void Graph::print_supercontig_stats(ostream& os) const
             os << "(" << t.first.to_int() << "," << t.second << ")";
         }
         os << endl;
+    }
+}
+
+void Graph::test_mutation_allele_swapping()
+{
+    for (auto re_bptr : re_cont() | referenced)
+    {
+        auto pos = re_bptr->start();
+        while (pos < re_bptr->end())
+        {
+            auto rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(pos);
+            auto ce_bptr = rc_bptr->ce_bptr();
+            ASSERT(rc_bptr);
+            auto rc_init_pos = not rc_bptr->get_rc()? rc_bptr->get_start_pos() : rc_bptr->get_end_pos();
+            auto rc_next_pos = rc_init_pos.jump_to_brk(pos, false);
+            ASSERT(rc_next_pos.r_pos == pos);
+            auto match_len = rc_next_pos.get_match_len(not rc_bptr->get_rc());
+            if (match_len > 0) rc_next_pos.advance(not rc_bptr->get_rc());
+            ASSERT(rc_next_pos.get_match_len(not rc_bptr->get_rc()) == 0);
+            ASSERT(rc_next_pos.r_pos >= pos);
+            pos = rc_next_pos.r_pos;
+            auto mca_cit = rc_next_pos.mca_cit;
+            if (mca_cit == (not rc_bptr->get_rc()
+                            ? rc_bptr->mut_ptr_cont().end()
+                            : rc_bptr->mut_ptr_cont().begin()))
+            {
+                ASSERT(pos == rc_bptr->get_r_end());
+                continue;
+            }
+            if (rc_bptr->get_rc()) --mca_cit;
+            Contig_Entry::swap_mutation_alleles(ce_bptr, mca_cit->mut_cbptr());
+            check(set< Contig_Entry_CBPtr >({ ce_bptr }));
+        }
     }
 }
 
