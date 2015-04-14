@@ -227,7 +227,6 @@ int real_main()
         Unmap_Mut_Clusters()(g);
         g.check_all();
         LOG("mac", info) << ptree("unmap_mut_clusters_end");
-        g.test_mutation_allele_swapping(); //TODO: remove
     }
     if (opts::resolve_unmappable_regions)
     {

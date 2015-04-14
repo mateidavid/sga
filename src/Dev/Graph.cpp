@@ -78,17 +78,17 @@ Read_Chunk_CBPtr Graph::search_read_chunk_exact(
 void Graph::add_read(string&& name, Seq_Type&& seq)
 {
     LOG("graph", debug) << ptree("add_read").put("name", name);
-    // create read entry and place it in container
-    Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(move(name), seq.size());  // TODO:FIX
-    re_cont().insert(re_bptr);
-    // create contig entry and place it in container
+    // create RE & CE
+    Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(move(name), seq.size());
     Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(move(seq));
-    ce_cont().insert(ce_bptr);
-    // create initial read chunk
+    // create initial chunk
     Read_Chunk_BPtr rc_bptr = Read_Chunk_Fact::new_elem(re_bptr, ce_bptr);
-    // add it to RE and CE containers
+    // add chunk to RE and CE containers
     re_bptr->chunk_cont().insert(rc_bptr);
     ce_bptr->chunk_cont().insert(rc_bptr);
+    // add RE and CE to graph containers
+    re_cont().insert(re_bptr);
+    ce_cont().insert(ce_bptr);
     // check new entry
     check(set< Read_Entry_CBPtr >({ re_bptr }));
 }

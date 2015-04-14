@@ -88,34 +88,19 @@ public:
     bool is_terminal(bool check_start) const;
 
     /**
-     * Trim read entry by given amount.
+     * Trim read entry.
      * @param r_end Bool; if true, trim from the end; if false, trim from the start.
-     * @param trim_len Length to trim.
+     * @param s Sequence that was trimmed.
      */
-    void trim_len(bool r_end, Size_Type trim_len)
-    {
-        ASSERT(len() >= trim_len);
-        auto crt_seq = get_seq(true);
-        if (r_end)
-        {
-            _end_seq = Seq_Type(crt_seq.substr(crt_seq.size() - trim_len)) + _end_seq;
-            _len -= trim_len;
-        }
-        else
-        {
-            _start_seq += crt_seq.substr(0, trim_len);
-            _len -= trim_len;
-            _start += trim_len;
-        }
-    }
-    void trim_end(bool r_end, Seq_Type&& s)
+    void trim_end(bool r_end, const Seq_Proxy_Type& s)
     {
         Size_Type trim_len = s.size();
         ASSERT(len() >= trim_len);
         if (r_end)
         {
-            swap(s, _end_seq);
-            _end_seq += s;
+            Seq_Type tmp(s);
+            tmp += _end_seq;
+            swap(tmp, _end_seq);
             _len -= trim_len;
         }
         else
