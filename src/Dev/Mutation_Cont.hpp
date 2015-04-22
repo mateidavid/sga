@@ -134,7 +134,7 @@ public:
     /// Insert Mutation in container.
     iterator insert(Mutation_BPtr mut_bptr) { return Base::insert(*mut_bptr); }
     /// Erase Mutation from container.
-    void erase(Mutation_BPtr mut_bptr) { Base::erase(iterator_to(*mut_bptr)); }
+    void erase(Mutation_CBPtr mut_cbptr) { Base::erase(iterator_to(*mut_cbptr)); }
 
     /**
      * Find an equivalent Mutation in container.

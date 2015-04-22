@@ -174,7 +174,7 @@ int real_main()
     }
     if (opts::validate_variations and opts::aux_bwt_file.empty())
     {
-        LOG("mac", error) << "--aux-bwt-file must be specifed with --validate-mutations" << endl;
+        LOG("mac", error) << "--aux-bwt-file must be specifed with --validate-variations" << endl;
         abort();
     }
     // main work
@@ -310,10 +310,10 @@ int real_main()
 int main(int argc, char* argv[])
 {
     global::program_name() = argv[0];
-    cin.sync_with_stdio(false);
-    cout.sync_with_stdio(false);
-    cerr.sync_with_stdio(false);
-    clog.sync_with_stdio(false);
+    //cin.sync_with_stdio(false);
+    //cout.sync_with_stdio(false);
+    //cerr.sync_with_stdio(false);
+    //clog.sync_with_stdio(false);
 
     bo::options_description generic_opts_desc("Generic options");
     bo::options_description config_opts_desc("Configuration options");
