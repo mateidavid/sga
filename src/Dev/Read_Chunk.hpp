@@ -108,6 +108,8 @@ public:
     /// @{
     GETTER(Read_Entry_BPtr, re_bptr, _re_bptr)
     GETTER(Contig_Entry_BPtr, ce_bptr, _ce_bptr)
+    GETTER(Size_Type, r_start, _r_start)
+    GETTER(Size_Type, r_len, _r_len)
     GETTER(Size_Type, c_len, _c_len)
     GETTER(Mutation_Ptr_Cont, mut_ptr_cont, _mut_ptr_cont)
     Size_Type get_r_start() const { return _r_start; }

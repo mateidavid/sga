@@ -11,21 +11,25 @@ void Validate_Variations::operator () (Graph& g, const BWTIndexSet& index_set) c
     for (auto ce_bptr : g.ce_cont() | referenced)
     {
         size_t min_mut_start = 0;
-        for (Mutation_CBPtr mut_bptr : ce_bptr->mut_cont() | referenced)
+        LOG("Validate_Variations", debug1) << ptree().put("ce_bptr", ce_bptr.to_int());
+        auto mut_cit = ce_bptr->mut_cont().cbegin();
+        while (mut_cit != ce_bptr->mut_cont().cend())
         {
+            auto mut_cbptr = &*mut_cit;
+            ++mut_cit;
             // check no previous mutation overlaps current one
-            if (mut_bptr->rf_start() < min_mut_start)
+            if (mut_cbptr->rf_start() < min_mut_start)
             {
-                min_mut_start = max(min_mut_start, mut_bptr->rf_end());
+                min_mut_start = max(min_mut_start, mut_cbptr->rf_end());
                 continue;
             }
-            min_mut_start = mut_bptr->rf_end();
+            min_mut_start = mut_cbptr->rf_end();
             // check next mutation doesn't overlap it either
             {
-                auto next_mut_it = next(ce_bptr->mut_cont().iterator_to(*mut_bptr));
-                if (next_mut_it != ce_bptr->mut_cont().end() and next_mut_it->rf_start() < min_mut_start)
+                auto next_mut_cit = next(ce_bptr->mut_cont().iterator_to(*mut_cbptr));
+                if (next_mut_cit != ce_bptr->mut_cont().end() and next_mut_cit->rf_start() < min_mut_start)
                 {
-                    min_mut_start = max(min_mut_start, next_mut_it->rf_end());
+                    min_mut_start = max(min_mut_start, next_mut_cit->rf_end());
                     continue;
                 }
             }
@@ -39,17 +43,17 @@ void Validate_Variations::operator () (Graph& g, const BWTIndexSet& index_set) c
             set< Read_Chunk_CBPtr > full_rf_set;
             bool validated_qr;
             bool validated_rf;
-            auto validate_allele_pair = [&] (Mutation_CBPtr mut_cbptr) {
+            auto validate_allele_pair = [&] () {
                 tie(qr_set, full_rf_set, part_rf_set) = ce_bptr->mut_support(mut_cbptr);
                 validated_qr = ((qr_set.size() >= _min_graph_support_to_skip)
                                 or validate_allele(mut_cbptr, qr_set, index_set));
                 validated_rf = ((full_rf_set.size() >= _min_graph_support_to_skip)
                                 or validate_allele(mut_cbptr, full_rf_set, index_set));
             };
-            validate_allele_pair(mut_bptr);
+            validate_allele_pair();
 
             LOG("Validate_Variations", debug) << ptree("validation_result")
-                .put("mut_ptr", mut_bptr.to_int())
+                .put("mut_ptr", mut_cbptr.to_int())
                 .put("validated_qr", validated_qr)
                 .put("validated_rf", validated_rf);
 
@@ -62,22 +66,52 @@ void Validate_Variations::operator () (Graph& g, const BWTIndexSet& index_set) c
             {
                 // neither validated; we don't to anything for now; perhaps unmap this region?
                 LOG("Validate_Variations", info) << ptree("neither_allele_validated")
-                    .put("mut_ptr", mut_bptr.to_int());
+                    .put("mut_bptr", mut_cbptr.to_int());
                 continue;
             }
             if (not validated_rf)
             {
                 ASSERT(validated_qr);
                 // we swap the mutation allele with the reference allele
-                mut_bptr = Contig_Entry::swap_mutation_alleles(ce_bptr, mut_bptr).unconst();
+                mut_cbptr = Contig_Entry::swap_mutation_alleles(ce_bptr, mut_cbptr).unconst();
                 // re-run validation
-                validate_allele_pair(mut_bptr);
+                validate_allele_pair();
             }
             ASSERT(validated_rf);
             ASSERT(not validated_qr);
-            //TODO
+            // we edit the reads that contain the mutation allele
+            set< Read_Entry_CBPtr > re_set;
+            Range_Type c_rg(mut_cbptr->rf_start(), mut_cbptr->rf_end());
+            for (auto mca_bptr : mut_cbptr->chunk_ptr_cont() | referenced)
+            {
+                auto rc_bptr = mca_bptr->chunk_cbptr().unconst();
+                auto re_bptr = rc_bptr->re_bptr();
+                auto r_rg = rc_bptr->mapped_range(c_rg, true, true, true);
+                LOG("Validate_Variations", info) << ptree("erasing_nonvalidated_allele")
+                    .put("re_bptr", re_bptr.to_int())
+                    .put("r_rg_start", r_rg.start())
+                    .put("r_rg_end", r_rg.end());
+                ASSERT(r_rg.len() == mut_cbptr->seq_len());
+                re_bptr->add_edit(r_rg.start(), c_rg.len(), mut_cbptr->seq().revcomp(rc_bptr->get_rc()));
+                ptrdiff_t delta = static_cast< ptrdiff_t >(c_rg.len()) - static_cast< ptrdiff_t >(r_rg.len());
+                rc_bptr->r_len() = static_cast< ptrdiff_t >(rc_bptr->r_len()) + delta;
+                for (auto rc_it = next(re_bptr->chunk_cont().iterator_to(*rc_bptr));
+                     rc_it != re_bptr->chunk_cont().end();
+                     ++rc_it)
+                {
+                    rc_it->r_start() = static_cast< ptrdiff_t >(rc_it->r_start()) + delta;
+                }
+                re_set.insert(re_bptr);
+            }
+            // remove the Mutation
+            ce_bptr->mut_cont().erase(mut_cbptr);
+            mut_cbptr.unconst()->chunk_ptr_cont().clear_and_dispose();
+            Mutation_Fact::del_elem(mut_cbptr);
+            g.check(re_set);
         }
+        g.check(set< Contig_Entry_CBPtr >({ ce_bptr }));
     }
+    g.check_all();
     LOG("Validate_Variations", info) << ptree("Validate_Variations__end");
 } // Validate_Variations::operator ()
 
