@@ -17,13 +17,6 @@
 namespace MAC
 {
 
-namespace detail
-{
-
-struct Contig_Entry_List_Node_Traits;
-
-}
-
 /**
  * Holds information about a contig.
  * Each object holds a base sequence, a list of observed mutations, and a list of pointers

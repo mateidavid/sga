@@ -15,13 +15,6 @@
 namespace MAC
 {
 
-namespace detail
-{
-
-struct Read_Entry_Set_Node_Traits;
-
-}
-
 /** Holds information about a read.
  *
  * The read sequence gets assigned to various contigs. The Read_Entry object holds the read name,

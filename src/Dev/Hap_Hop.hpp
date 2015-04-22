@@ -8,14 +8,6 @@
 namespace MAC
 {
 
-namespace detail
-{
-
-struct Hap_Hop_List_Node_Traits;
-struct Hap_Hop_Set_Node_Traits;
-
-}
-
 class Hap_Hop
 {
 private:

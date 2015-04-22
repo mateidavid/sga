@@ -421,7 +421,8 @@ private:
     const idn_type _idn;
 }; // class Reference
 
-namespace detail {
+namespace detail
+{
 
 template < typename Value, typename Index = uint32_t >
 struct Cloner

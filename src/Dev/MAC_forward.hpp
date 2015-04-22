@@ -75,6 +75,20 @@ class Hap_Hop;
 class Hap_Entry;
 class Graph;
 
+namespace detail
+{
+    struct Mutation_ITree_Node_Traits;
+    struct Mutation_Ptr_List_Node_Traits;
+    struct Read_Chunk_Ptr_List_Node_Traits;
+    struct Read_Chunk_ITree_Node_Traits;
+    struct Read_Chunk_Set_Node_Traits;
+    struct Read_Entry_Set_Node_Traits;
+    struct Contig_Entry_List_Node_Traits;
+    struct Hap_Entry_List_Node_Traits;
+    struct Hap_Hop_List_Node_Traits;
+    struct Hap_Hop_Set_Node_Traits;
+} // namespace detail
+
 typedef bounded::Factory< Mutation > Mutation_Fact;
 typedef Mutation_Fact::ptr_type Mutation_BPtr;
 typedef Mutation_Fact::const_ptr_type Mutation_CBPtr;

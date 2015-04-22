@@ -16,14 +16,6 @@
 namespace MAC
 {
 
-namespace detail
-{
-
-struct Read_Chunk_ITree_Node_Traits;
-struct Read_Chunk_Set_Node_Traits;
-
-}
-
 /**
  * Holds information about a read chunk.
  * Reads will be partitioned into chunks of non-zero size as they are mapped to contigs.

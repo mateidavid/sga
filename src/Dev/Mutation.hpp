@@ -14,12 +14,6 @@
 namespace MAC
 {
 
-namespace detail {
-
-struct Mutation_ITree_Node_Traits;
-
-}
-
 /**
  * Holds information about a mutation from a base sequence.
  * The class holds the start and span of the base sequence region affected by a mutation,

@@ -8,13 +8,6 @@
 namespace MAC
 {
 
-namespace detail
-{
-
-struct Hap_Entry_List_Node_Traits;
-
-}
-
 class Hap_Entry
 {
 private:
