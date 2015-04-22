@@ -36,7 +36,7 @@ private:
      * @param name String containing read name; (take ownership).
      * @param len Length of the read.
      */
-    Read_Entry(string&& name, Size_Type len) : _name(move(name)), _len(len), _start(0) {}
+    Read_Entry(string&& name, Size_Type len) : _name(move(name)), _orig_len(len), _len(len), _start(0), _delta(0) {}
 
     // allow move only
     DEFAULT_DEF_CTOR(Read_Entry);
@@ -111,6 +111,16 @@ public:
         }
     }
 
+    void add_edit(Size_Type start, Size_Type len, const Seq_Proxy_Type& seq)
+    {
+        (void)start;
+        (void)len;
+        (void)seq;
+        ptrdiff_t delta = static_cast< ptrdiff_t >(len) - seq.size();
+        _len = delta + _len;
+        _delta += delta;
+    }
+
     /** Integrity check. */
     void check() const;
 
@@ -118,12 +128,15 @@ public:
     boost::property_tree::ptree to_ptree() const;
 
 private:
+    friend class Graph; // for saving&loading _start_seq and _end_seq
     string _name;
     Seq_Type _start_seq;
     Seq_Type _end_seq;
     Read_Chunk_RE_Cont _chunk_cont;
+    Size_Type _orig_len;
     Size_Type _len;
     Size_Type _start;
+    ptrdiff_t _delta;
 
     /** Hooks for storage in intrusive set inside Graph object. */
     friend struct detail::Read_Entry_Set_Node_Traits;

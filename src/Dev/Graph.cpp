@@ -2381,28 +2381,31 @@ void Graph::save(ostream& os) const
     // list order:
     // - for every read entry in _re_cont:
     //   - read name
+    //   - start_seq
+    //   - end_seq
     // - for every contig entry in _ce_cont:
     //   - base sequence
     //   - for every mutation in its mut_cont
     //     - alternate sequence
     size_t n_strings = 0;
     size_t n_bytes = 0;
+    auto save_string = [&] (const string& s) {
+        os.write(s.c_str(), s.size() + 1);
+        ++n_strings;
+        n_bytes += s.size() + 1;
+    };
     for (const auto re_cbptr : re_cont() | referenced)
     {
-        os.write(re_cbptr->name().c_str(), re_cbptr->name().size() + 1);
-        ++n_strings;
-        n_bytes += re_cbptr->name().size() + 1;
+        save_string(re_cbptr->name());
+        save_string(re_cbptr->_start_seq);
+        save_string(re_cbptr->_end_seq);
     }
     for (const auto ce_cbptr : ce_cont() | referenced)
     {
-        os.write(ce_cbptr->seq().c_str(), ce_cbptr->seq().size() + 1);
-        ++n_strings;
-        n_bytes += ce_cbptr->seq().size() + 1;
+        save_string(ce_cbptr->seq());
         for (const auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
         {
-            os.write(mut_cbptr->seq().c_str(), mut_cbptr->seq().size() + 1);
-            ++n_strings;
-            n_bytes += mut_cbptr->seq().size() + 1;
+            save_string(mut_cbptr->seq());
         }
     }
     LOG("io", info) << "saving graph: n_strings=" << n_strings << ", n_bytes=" << n_bytes << "\n";
@@ -2425,31 +2428,44 @@ void Graph::load(istream& is)
     is.read(reinterpret_cast< char* >(&_ce_cont), sizeof(_ce_cont));
     // construct in-place empty strings in container headers (ow, destruction causes SEGV)
     new (&_re_cont.header_ptr()->name()) string();
+    new (&_re_cont.header_ptr()->_start_seq) string();
+    new (&_re_cont.header_ptr()->_end_seq) string();
     new (&_ce_cont.get_root_node()->seq()) string();
     new (&_ce_cont.get_root_node()->mut_cont().header_ptr()->seq()) string();
     // load strings
     size_t n_strings = 0;
     size_t n_bytes = 0;
+    auto load_string = [&] (string& s) {
+        new (&s) string();
+        getline(is, s, '\0');
+        ++n_strings;
+        n_bytes += s.size() + 1;
+    };
     for (auto re_bptr : re_cont() | referenced)
     {
-        new (&re_bptr->name()) string();
-        getline(is, re_bptr->name(), '\0');
-        ++n_strings;
-        n_bytes += re_bptr->name().size() + 1;
+        //new (&re_bptr->name()) string();
+        //getline(is, re_bptr->name(), '\0');
+        //++n_strings;
+        //n_bytes += re_bptr->name().size() + 1;
+        load_string(re_bptr->name());
+        load_string(re_bptr->_start_seq);
+        load_string(re_bptr->_end_seq);
     }
     for (auto ce_bptr : ce_cont() | referenced)
     {
-        new (&ce_bptr->seq()) string();
+        //new (&ce_bptr->seq()) string();
+        //getline(is, ce_bptr->seq(), '\0');
+        //++n_strings;
+        //n_bytes += ce_bptr->seq().size() + 1;
+        load_string(ce_bptr->seq());
         new (&ce_bptr->mut_cont().header_ptr()->seq()) string();
-        getline(is, ce_bptr->seq(), '\0');
-        ++n_strings;
-        n_bytes += ce_bptr->seq().size() + 1;
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
-            new (&mut_bptr->seq()) string();
-            getline(is, mut_bptr->seq(), '\0');
-            ++n_strings;
-            n_bytes += mut_bptr->seq().size() + 1;
+            //new (&mut_bptr->seq()) string();
+            //getline(is, mut_bptr->seq(), '\0');
+            //++n_strings;
+            //n_bytes += mut_bptr->seq().size() + 1;
+            load_string(mut_bptr->seq());
         }
     }
     LOG("io", info) << "loading graph: n_strings=" << n_strings << ", n_bytes=" << n_bytes << "\n";

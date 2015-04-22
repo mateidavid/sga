@@ -67,6 +67,8 @@ void Read_Entry::check() const
     {
         rc_cbptr->check();
     }
+    // check length
+    ASSERT(_delta + _orig_len == _len + _start_seq.size() + _end_seq.size());
 #endif
 }
 
