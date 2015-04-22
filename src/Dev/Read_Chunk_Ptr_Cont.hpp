@@ -122,6 +122,12 @@ public:
     {
         Base::splice(end(), static_cast< Base& >(other_cont));
     }
+
+    /**
+     * Clear the container.
+     * MCAs are removed from this container & and their corresponding Mutation_Ptr_Cont, then deallocated.
+     */
+    void clear_and_dispose();
 }; // class Read_Chunk_Ptr_Cont
 
 } // namespace MAC
