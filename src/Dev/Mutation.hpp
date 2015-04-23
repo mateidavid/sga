@@ -29,6 +29,12 @@ private:
     Mutation()
         : _start(0), _len(0), _seq_len(0) {}
 
+    // disallow copy or move
+    DELETE_COPY_CTOR(Mutation);
+    DELETE_MOVE_CTOR(Mutation);
+    DELETE_COPY_ASOP(Mutation);
+    DELETE_MOVE_ASOP(Mutation);
+
     /**
      * Constructor from sequence.
      * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
@@ -47,10 +53,6 @@ private:
     Mutation(Size_Type start, Size_Type len, Size_Type seq_len = 0)
         : _start(start), _len(len), _seq_len(seq_len) {}
 
-    DELETE_COPY_CTOR(Mutation);
-    Mutation(Mutation&& rhs) : Mutation() { *this = move(rhs); }
-    DELETE_COPY_ASOP(Mutation);
-
     ~Mutation()
     {
         ASSERT(chunk_ptr_cont().empty());
@@ -58,21 +60,6 @@ private:
     }
 
 public:
-    Mutation& operator = (Mutation&& rhs)
-    {
-        if (this != &rhs)
-        {
-            // allow move only when unlinked
-            ASSERT(is_unlinked() and rhs.is_unlinked());
-            _seq = move(rhs._seq);
-            _start = move(rhs._start);
-            _len = move(rhs._len);
-            _seq_len = move(rhs._seq_len);
-            _chunk_ptr_cont = move(rhs._chunk_ptr_cont);
-        }
-        return *this;
-    }
-
     /// @name Getters
     /// @{
     Size_Type rf_start() const { return _start; }

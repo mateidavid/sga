@@ -19,8 +19,10 @@ class Mutation_Chunk_Adapter
 private:
     friend class bounded::Factory< Mutation_Chunk_Adapter >;
 
-    // disallow copy or move
+    /// Trivial default constructor
     DEFAULT_DEF_CTOR(Mutation_Chunk_Adapter);
+
+    // disallow copy or move
     DELETE_COPY_CTOR(Mutation_Chunk_Adapter);
     DELETE_MOVE_CTOR(Mutation_Chunk_Adapter);
     DELETE_COPY_ASOP(Mutation_Chunk_Adapter);

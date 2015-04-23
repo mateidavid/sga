@@ -30,7 +30,7 @@ private:
     // Can only be constructed by Factory object
     friend class bounded::Factory< Read_Chunk >;
 
-    // Default constructor.
+    /// Default constructor.
     Read_Chunk()
         : _r_start(0),
           _r_len(0),
@@ -41,6 +41,12 @@ private:
           _mut_ptr_cont(),
           _bits(0)
     {}
+
+    // disallow copy or move
+    DELETE_COPY_CTOR(Read_Chunk);
+    DELETE_MOVE_CTOR(Read_Chunk);
+    DELETE_COPY_ASOP(Read_Chunk);
+    DELETE_MOVE_ASOP(Read_Chunk);
 
     /**
      * Constructor that maps a full read to a single contig.
@@ -66,10 +72,6 @@ private:
         _set_rc(rc);
     }
 
-    DELETE_COPY_CTOR(Read_Chunk);
-    Read_Chunk(Read_Chunk&& rhs) { *this = move(rhs); }
-    DELETE_COPY_ASOP(Read_Chunk);
-
     ~Read_Chunk()
     {
         // when deallocating, mut_ptr_cont must have been cleared
@@ -78,24 +80,6 @@ private:
     }
 
 public:
-    Read_Chunk& operator = (Read_Chunk&& rhs)
-    {
-        if (this != &rhs)
-        {
-            // allow move only when unlinked
-            ASSERT(is_unlinked() and rhs.is_unlinked());
-            _re_bptr = move(rhs._re_bptr);
-            _ce_bptr = move(rhs._ce_bptr);
-            _mut_ptr_cont = move(rhs._mut_ptr_cont);
-            _r_start = move(rhs._r_start);
-            _r_len = move(rhs._r_len);
-            _c_start = move(rhs._c_start);
-            _c_len = move(rhs._c_len);
-            _bits = move(rhs._bits);
-        }
-        return *this;
-    }
-
     /// @name Getters
     /// @{
     GETTER(Read_Entry_BPtr, re_bptr, _re_bptr)

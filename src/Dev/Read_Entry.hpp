@@ -25,16 +25,21 @@ class Read_Entry
 private:
     friend class bounded::Factory< Read_Entry >;
 
-    /** Constructor.
+    /// Trivial default constructor
+    DEFAULT_DEF_CTOR(Read_Entry);
+
+    // disallow copy or move
+    DELETE_COPY_CTOR(Read_Entry);
+    DELETE_MOVE_CTOR(Read_Entry);
+    DELETE_COPY_ASOP(Read_Entry);
+    DELETE_MOVE_ASOP(Read_Entry);
+
+    /**
+     * Constructor.
      * @param name String containing read name; (take ownership).
      * @param len Length of the read.
      */
     Read_Entry(string&& name, Size_Type len) : _name(move(name)), _orig_len(len), _len(len), _start(0) {}
-
-    // allow move only
-    DEFAULT_DEF_CTOR(Read_Entry);
-    DELETE_COPY_CTOR(Read_Entry);
-    Read_Entry(Read_Entry&& rhs) { *this = move(rhs); }
 
     ~Read_Entry()
     {
@@ -43,21 +48,6 @@ private:
     }
 
 public:
-    DELETE_COPY_ASOP(Read_Entry);
-    Read_Entry& operator = (Read_Entry&& rhs)
-    {
-        if (this != &rhs)
-        {
-            ASSERT(is_unlinked() and rhs.is_unlinked());
-            _name = move(rhs._name);
-            _chunk_cont = move(rhs._chunk_cont);
-            _orig_len = move(rhs._orig_len);
-            _len = move(rhs._len);
-            _start = move(rhs._start);
-        }
-        return *this;
-    }
-
     /** @name Getters */
     /**@{*/
     GETTER(string, name, _name)

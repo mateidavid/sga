@@ -14,8 +14,10 @@ private:
     // only constructed by Factory object
     friend class bounded::Factory< Hap_Hop >;
 
-    // disallow copy or move
+    /// Trivial default constructor
     DEFAULT_DEF_CTOR(Hap_Hop);
+
+    // disallow copy or move
     DELETE_COPY_CTOR(Hap_Hop);
     DELETE_MOVE_CTOR(Hap_Hop);
     DELETE_COPY_ASOP(Hap_Hop);

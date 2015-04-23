@@ -28,14 +28,19 @@ private:
     // only constructed by Factory object
     friend class bounded::Factory< Contig_Entry >;
 
+    // Default constructor
+    Contig_Entry() : _seq_offset(0), _tag(0) {}
+
+    // disallow copy or move
+    DELETE_COPY_CTOR(Contig_Entry);
+    DELETE_MOVE_CTOR(Contig_Entry);
+    DELETE_COPY_ASOP(Contig_Entry);
+    DELETE_MOVE_ASOP(Contig_Entry);
+
     /// Constructor from sequence.
     /// @param seq RVR to read sequence (assume ownership).
     Contig_Entry(Seq_Type&& seq, Size_Type seq_offset = 0)
         : _seq(move(seq)), _seq_offset(seq_offset), _tag(0) {}
-
-    Contig_Entry() : _seq_offset(0), _tag(0) {}
-    DELETE_COPY_CTOR(Contig_Entry);
-    Contig_Entry(Contig_Entry&& rhs) { *this = move(rhs); }
 
     ~Contig_Entry()
     {
@@ -45,22 +50,6 @@ private:
     }
 
 public:
-    DELETE_COPY_ASOP(Contig_Entry);
-    Contig_Entry& operator = (Contig_Entry&& rhs)
-    {
-        if (this != &rhs)
-        {
-            // allow move only when unlinked
-            ASSERT(is_unlinked());
-            _seq = move(rhs._seq);
-            _seq_offset = move(rhs._seq_offset);
-            _tag = move(rhs._tag);
-            _mut_cont = move(rhs._mut_cont);
-            _chunk_cont = move(rhs._chunk_cont);
-        }
-        return *this;
-    }
-
     /// @name Getters
     /// @{
     GETTER(Seq_Type, seq, _seq)
