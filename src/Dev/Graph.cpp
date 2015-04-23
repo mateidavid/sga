@@ -630,8 +630,8 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     ASSERT(r1_len == cigar.rf_len());
     ASSERT(r2_len == cigar.qr_len());
     // disambiguate cigar
-    Seq_Type r1_seq = re1_bptr->get_seq(false);
-    Seq_Type r2_seq = re2_bptr->get_seq(false);
+    Seq_Type r1_seq = re1_bptr->get_seq();
+    Seq_Type r2_seq = re2_bptr->get_seq();
     LOG("graph", debug1) << ptree("add_overlap_before_disambiguate")
         .put("re1", r1_seq.substr(r1_start, r1_len))
         .put("re2", r2_seq.substr(r2_start, r2_len).revcomp(cigar.reversed()))
@@ -2346,6 +2346,7 @@ void Graph::test_mutation_allele_swapping()
             check(set< Contig_Entry_CBPtr >({ ce_bptr }));
         }
     }
+    check_all();
 }
 
 boost::property_tree::ptree Graph::to_ptree() const
@@ -2389,23 +2390,16 @@ void Graph::save(ostream& os) const
     //     - alternate sequence
     size_t n_strings = 0;
     size_t n_bytes = 0;
-    auto save_string = [&] (const string& s) {
-        os.write(s.c_str(), s.size() + 1);
-        ++n_strings;
-        n_bytes += s.size() + 1;
-    };
     for (const auto re_cbptr : re_cont() | referenced)
     {
-        save_string(re_cbptr->name());
-        save_string(re_cbptr->_start_seq);
-        save_string(re_cbptr->_end_seq);
+        re_cbptr->save_strings(os, n_strings, n_bytes);
     }
     for (const auto ce_cbptr : ce_cont() | referenced)
     {
-        save_string(ce_cbptr->seq());
+        ce_cbptr->save_strings(os, n_strings, n_bytes);
         for (const auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
         {
-            save_string(mut_cbptr->seq());
+            mut_cbptr->save_strings(os, n_strings, n_bytes);
         }
     }
     LOG("io", info) << "saving graph: n_strings=" << n_strings << ", n_bytes=" << n_bytes << "\n";
@@ -2427,45 +2421,26 @@ void Graph::load(istream& is)
     is.read(reinterpret_cast< char* >(&_re_cont), sizeof(_re_cont));
     is.read(reinterpret_cast< char* >(&_ce_cont), sizeof(_ce_cont));
     // construct in-place empty strings in container headers (ow, destruction causes SEGV)
-    new (&_re_cont.header_ptr()->name()) string();
-    new (&_re_cont.header_ptr()->_start_seq) string();
-    new (&_re_cont.header_ptr()->_end_seq) string();
-    new (&_ce_cont.get_root_node()->seq()) string();
-    new (&_ce_cont.get_root_node()->mut_cont().header_ptr()->seq()) string();
+    _re_cont.header_ptr()->init_strings();
+    _ce_cont.get_root_node()->init_strings();
+    _ce_cont.get_root_node()->mut_cont().header_ptr()->init_strings();
     // load strings
     size_t n_strings = 0;
     size_t n_bytes = 0;
-    auto load_string = [&] (string& s) {
-        new (&s) string();
-        getline(is, s, '\0');
-        ++n_strings;
-        n_bytes += s.size() + 1;
-    };
     for (auto re_bptr : re_cont() | referenced)
     {
-        //new (&re_bptr->name()) string();
-        //getline(is, re_bptr->name(), '\0');
-        //++n_strings;
-        //n_bytes += re_bptr->name().size() + 1;
-        load_string(re_bptr->name());
-        load_string(re_bptr->_start_seq);
-        load_string(re_bptr->_end_seq);
+        re_bptr->init_strings();
+        re_bptr->load_strings(is, n_strings, n_bytes);
     }
     for (auto ce_bptr : ce_cont() | referenced)
     {
-        //new (&ce_bptr->seq()) string();
-        //getline(is, ce_bptr->seq(), '\0');
-        //++n_strings;
-        //n_bytes += ce_bptr->seq().size() + 1;
-        load_string(ce_bptr->seq());
-        new (&ce_bptr->mut_cont().header_ptr()->seq()) string();
+        ce_bptr->init_strings();
+        ce_bptr->mut_cont().header_ptr()->init_strings();
+        ce_bptr->load_strings(is, n_strings, n_bytes);
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
-            //new (&mut_bptr->seq()) string();
-            //getline(is, mut_bptr->seq(), '\0');
-            //++n_strings;
-            //n_bytes += mut_bptr->seq().size() + 1;
-            load_string(mut_bptr->seq());
+            mut_bptr->init_strings();
+            mut_bptr->load_strings(is, n_strings, n_bytes);
         }
     }
     LOG("io", info) << "loading graph: n_strings=" << n_strings << ", n_bytes=" << n_bytes << "\n";
@@ -2490,21 +2465,7 @@ void Graph::get_terminal_reads(ostream& os) const
                 Read_Entry_CBPtr re_cbptr = rc_cbptr->re_bptr();
                 os << ">" << re_cbptr->name() << ":" << re_cbptr->start() << "-" << re_cbptr->end()
                    << " " << (c_right == rc_cbptr->get_rc()? "1" : "0") << endl
-                   << re_cbptr->get_seq(true).revcomp(c_right == rc_cbptr->get_rc()) << endl;
-                /*
-                if (c_right == rc_cbptr->get_rc())
-                {
-                    // scontig ends with negative strand of read
-                    os << ">" << re_cbptr->name() << " 1\n"
-                       << re_cbptr->get_seq().revcomp() << "\n";
-                }
-                else
-                {
-                    // scontig ends with positive strand of read
-                    os << ">" << re_cbptr->name() << " 0\n"
-                       << re_cbptr->get_seq() << "\n";
-                }
-                */
+                   << re_cbptr->get_seq().revcomp(c_right == rc_cbptr->get_rc()) << endl;
             }
         }
     }

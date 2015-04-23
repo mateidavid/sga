@@ -73,6 +73,9 @@ namespace opts
     // other
     //
     bool interactive;
+    bool test_1;
+    bool test_2;
+    bool test_3;
 } // namespace opts
 
 
@@ -248,6 +251,10 @@ int real_main()
         hm.build(g);
         LOG("mac", info) << ptree("hap_map_end");
     }
+    if (opts::test_1)
+    {
+        g.test_mutation_allele_swapping();
+    }
     if (opts::interactive)
     {
         cli(std::cin, std::cout, g, hm);
@@ -415,6 +422,15 @@ int main(int argc, char* argv[])
         ("interactive",
              bo::bool_switch(&opts::interactive),
                  "run interactive commands")
+        ("test-1",
+             bo::bool_switch(&opts::test_1),
+                 "internal test 1")
+        ("test-2",
+             bo::bool_switch(&opts::test_2),
+                 "internal test 2")
+        ("test-3",
+             bo::bool_switch(&opts::test_3),
+                 "internal test 3")
         ;
     any_converter ac;
     ac.add_string_converter< string >();

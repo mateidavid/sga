@@ -21,15 +21,13 @@ bool Read_Entry::is_terminal(bool check_start) const
             or (not check_start and rc_cbptr->get_rc() and rc_cbptr->get_c_start() == 0));
 }
 
-Seq_Type Read_Entry::get_seq(bool trimmed) const
+Seq_Type Read_Entry::get_seq() const
 {
     Seq_Type res;
-    if (not trimmed) res += _start_seq;
     for (auto rc_cbptr : chunk_cont() | referenced)
     {
         res += rc_cbptr->get_seq();
     }
-    if (not trimmed) res += _end_seq;
     return res;
 }
 
@@ -67,8 +65,6 @@ void Read_Entry::check() const
     {
         rc_cbptr->check();
     }
-    // check length
-    ASSERT(_delta + _orig_len == _len + _start_seq.size() + _end_seq.size());
 #endif
 }
 
@@ -77,6 +73,25 @@ boost::property_tree::ptree Read_Entry::to_ptree() const
     return ptree().put("name", name())
                   .put("len", len())
                   .put("chunk_cont", cont_to_ptree(chunk_cont()));
+}
+
+void Read_Entry::save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const
+{
+    os.write(_name.c_str(), _name.size() + 1);
+    ++n_strings;
+    n_bytes += _name.size() + 1;
+}
+
+void Read_Entry::init_strings()
+{
+    new (&_name) string();
+}
+
+void Read_Entry::load_strings(istream& is, size_t& n_strings, size_t& n_bytes)
+{
+    getline(is, _name, '\0');
+    ++n_strings;
+    n_bytes += _name.size() + 1;
 }
 
 } // namespace MAC

@@ -92,15 +92,9 @@ void Validate_Variations::operator () (Graph& g, const BWTIndexSet& index_set) c
                     .put("r_rg_start", r_rg.start())
                     .put("r_rg_end", r_rg.end());
                 ASSERT(r_rg.len() == mut_cbptr->seq_len());
-                re_bptr->add_edit(r_rg.start(), c_rg.len(), mut_cbptr->seq().revcomp(rc_bptr->get_rc()));
-                ptrdiff_t delta = static_cast< ptrdiff_t >(c_rg.len()) - static_cast< ptrdiff_t >(r_rg.len());
-                rc_bptr->r_len() = static_cast< ptrdiff_t >(rc_bptr->r_len()) + delta;
-                for (auto rc_it = next(re_bptr->chunk_cont().iterator_to(*rc_bptr));
-                     rc_it != re_bptr->chunk_cont().end();
-                     ++rc_it)
-                {
-                    rc_it->r_start() = static_cast< ptrdiff_t >(rc_it->r_start()) + delta;
-                }
+                re_bptr->edit(rc_bptr, r_rg.start(),
+                              mut_cbptr->seq().revcomp(rc_bptr->get_rc()),
+                              ce_bptr->substr(c_rg.start(), c_rg.len()));
                 re_set.insert(re_bptr);
             }
             // remove the Mutation
@@ -138,8 +132,8 @@ bool Validate_Variations::validate_allele(Mutation_CBPtr mut_cbptr,
         return false;
     }
     Read_Chunk_CBPtr rc_cbptr = *rc_cbptr_it;
-    Seq_Type s = rc_cbptr->re_bptr()->get_seq(false).substr(r_rg.start() - _flank_size,
-                                                            2 * _flank_size + r_rg.len());
+    Seq_Type s = rc_cbptr->re_bptr()->get_seq().substr(r_rg.start() - _flank_size,
+                                                       2 * _flank_size + r_rg.len());
     if (_check_both_strands)
     {
         auto cnt_0 = BWTAlgorithms::countSequenceOccurrencesSingleStrand(s, index_set);

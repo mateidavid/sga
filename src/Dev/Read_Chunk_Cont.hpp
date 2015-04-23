@@ -132,7 +132,7 @@ public:
     {
         ASSERT(not empty());
         ASSERT(begin()->re_bptr());
-        if (r_pos >= begin()->get_read_len(false))
+        if (r_pos >= begin()->get_read_len())
         {
             return nullptr;
         }
@@ -174,6 +174,22 @@ public:
         }
         return &*rc_cit;
     }
+
+    /**
+     * Implement edit operation.
+     * Adjust all chunks to accomodate for change in initial chunk.
+     * @param rc_bptr Chunk where the original edit occurs.
+     * @param delta Difference in length that the edit adds to the chunk.
+     */
+    void implement_edit(Read_Chunk_BPtr rc_bptr, ptrdiff_t delta)
+    {
+        rc_bptr->r_len() = static_cast< ptrdiff_t >(rc_bptr->r_len()) + delta;
+        for (auto rc_it = next(iterator_to(*rc_bptr)); rc_it != end(); ++rc_it)
+        {
+            rc_it->r_start() = static_cast< ptrdiff_t >(rc_it->r_start()) + delta;
+        }
+    }
+
 }; // class Read_Chunk_RE_Cont
 
 namespace detail

@@ -317,6 +317,10 @@ public:
         return _visit_strand_mask[i];
     }
 
+    void save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const;
+    void init_strings();
+    void load_strings(istream& is, size_t& n_strings, size_t& n_bytes);
+
 private:
     friend struct detail::Contig_Entry_List_Node_Traits;
     bool is_unlinked() const { return not(_previous or _next); }

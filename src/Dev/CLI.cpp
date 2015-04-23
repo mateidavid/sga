@@ -207,7 +207,7 @@ void cli(istream& is, ostream& os, const Graph&, const Hap_Map& hm)
                        << " name: " << re_cbptr->name()
                        << " start: " << re_cbptr->start()
                        << " len: " << re_cbptr->end() - re_cbptr->start() << "\n"
-                       << re_cbptr->get_seq(true) << "\n";
+                       << re_cbptr->get_seq() << "\n";
                 }
             }
             else if (tmp == "contig" or tmp == "ce")

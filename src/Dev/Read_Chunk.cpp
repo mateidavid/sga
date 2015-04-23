@@ -26,10 +26,10 @@ Read_Chunk::Read_Chunk(Read_Entry_BPtr re_bptr, Contig_Entry_BPtr ce_bptr)
     ASSERT(_r_len == _c_len);
 }
 
-Size_Type Read_Chunk::get_read_len(bool trimmed) const
+Size_Type Read_Chunk::get_read_len() const
 {
     ASSERT(re_bptr());
-    return re_bptr()->get_len(trimmed);
+    return re_bptr()->len();
 }
 
 Read_Chunk_BPtr

@@ -83,5 +83,23 @@ void Mutation::to_stream(ostream& os, Mutation_CBPtr mut_cbptr, Contig_Entry_CBP
        << setw(5) << right << qr_set.size();
 }
 
+void Mutation::save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const
+{
+    os.write(_seq.c_str(), _seq.size() + 1);
+    ++n_strings;
+    n_bytes += _seq.size() + 1;
+}
+
+void Mutation::init_strings()
+{
+    new (&_seq) string();
+}
+
+void Mutation::load_strings(istream& is, size_t& n_strings, size_t& n_bytes)
+{
+    getline(is, _seq, '\0');
+    ++n_strings;
+    n_bytes += _seq.size() + 1;
+}
 
 } // namespace MAC

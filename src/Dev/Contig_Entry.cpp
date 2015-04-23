@@ -530,37 +530,36 @@ Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mu
     // create replacement mutation
     Mutation_BPtr mut_new_bptr = Mutation_Fact::new_elem(0, ce_new_bptr->len(), Seq_Type(ce_mid_bptr->seq()));
     ce_new_bptr->mut_cont().insert(mut_new_bptr);
-    auto rc_map = ce_mid_bptr->chunk_cont().erase_from_re_cont();
+    map< Read_Chunk_CBPtr, Read_Chunk_CBPtr > rc_replacement_map;
     // create new chunks
-    for (Read_Chunk_CBPtr rc_cbptr : ce_mid_bptr->chunk_cont() | referenced)
+    for (Read_Chunk_BPtr rc_bptr : ce_mid_bptr->chunk_cont() | referenced)
     {
-        auto it = rc_map.find(rc_cbptr);
-        ASSERT(it != rc_map.end());
-        auto p = *it;
-        ASSERT(p.first == rc_cbptr);
-        rc_map.erase(it);
+        auto re_bptr = rc_bptr->re_bptr();
         // remove terminal chunks which end in the middle of a mutation
-        if (rc_cbptr->mut_ptr_cont().empty()
-            and (rc_cbptr->get_c_start() > 0 or rc_cbptr->get_c_end() < ce_mid_bptr->len()))
+        if (rc_bptr->mut_ptr_cont().empty()
+            and (rc_bptr->get_c_start() > 0 or rc_bptr->get_c_end() < ce_mid_bptr->len()))
         {
-            bool r_end = ((rc_cbptr->get_c_start() > 0 and rc_cbptr->get_rc())
-                          or (rc_cbptr->get_c_end() < ce_mid_bptr->len() and not rc_cbptr->get_rc()));
+            bool r_end = ((rc_bptr->get_c_start() > 0 and rc_bptr->get_rc())
+                          or (rc_bptr->get_c_end() < ce_mid_bptr->len() and not rc_bptr->get_rc()));
             // check the chunk is terminal
-            ASSERT(r_end or p.second == &*rc_cbptr->re_bptr()->chunk_cont().begin());
-            ASSERT(not r_end or not p.second);
+            ASSERT(not re_bptr->chunk_cont().get_sibling(rc_bptr, true, r_end));
             // trim the Read_Entry
-            rc_cbptr->re_bptr()->trim_end(r_end, rc_cbptr->get_seq());
+            Seq_Type old_seq = rc_bptr->get_seq();
+            Seq_Type new_seq;
+            re_bptr->edit(rc_bptr, rc_bptr->r_start(), old_seq, new_seq);
+            // WARNING: rc_bptr is inconsistent at this point, until it is destroyed
+            // the edit modifies read extent but not contig extent
             continue;
         }
         // create new read chunk
         Read_Chunk_BPtr rc_new_bptr = Read_Chunk_Fact::new_elem(
-            rc_cbptr->get_r_start(), rc_cbptr->get_r_len(),
+            rc_bptr->get_r_start(), rc_bptr->get_r_len(),
             0, ce_new_bptr->len(),
-            rc_cbptr->get_rc());
-        rc_new_bptr->re_bptr() = rc_cbptr->re_bptr();
+            rc_bptr->get_rc());
+        rc_new_bptr->re_bptr() = rc_bptr->re_bptr();
         rc_new_bptr->ce_bptr() = ce_new_bptr;
         // if old chunk didn't have the mutation, the new one does
-        if (rc_cbptr->mut_ptr_cont().empty())
+        if (rc_bptr->mut_ptr_cont().empty())
         {
             Mutation_Chunk_Adapter_BPtr mca_new_bptr = Mutation_Chunk_Adapter_Fact::new_elem(
                 mut_new_bptr, rc_new_bptr);
@@ -568,13 +567,36 @@ Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mu
             mut_new_bptr->chunk_ptr_cont().insert(mca_new_bptr);
         }
         ce_new_bptr->chunk_cont().insert(rc_new_bptr);
-        rc_map[rc_new_bptr] = p.second;
+        //rc_map[rc_new_bptr] = p.second;
+        rc_replacement_map[rc_bptr] = rc_new_bptr;
     }
     // drop mutation if no chunks use it
     ce_new_bptr->mut_cont().drop_unused();
-    // insert new chunks into their re containers
-    ce_new_bptr->chunk_cont().insert_into_re_cont(rc_map);
-    ASSERT(rc_map.empty());
+    // replace chunks into their re containers
+    {
+        auto rc_map = ce_mid_bptr->chunk_cont().erase_from_re_cont();
+        decltype(rc_map) new_rc_map;
+        while (not rc_map.empty())
+        {
+            auto it = rc_map.begin();
+            Read_Chunk_CBPtr rc_cbptr;
+            Read_Chunk_CBPtr rc_next_cbptr;
+            tie(rc_cbptr, rc_next_cbptr) = *it;
+            rc_map.erase(it);
+            if (rc_replacement_map.count(rc_cbptr) == 0)
+            {
+                ASSERT(rc_cbptr->get_r_len() == 0);
+                ASSERT(rc_cbptr->get_r_start() == (rc_next_cbptr
+                                                   ? rc_cbptr->re_bptr()->start()
+                                                   : rc_cbptr->re_bptr()->end()));
+                continue;
+            }
+            Read_Chunk_CBPtr rc_new_cbptr = rc_replacement_map[rc_cbptr];
+            new_rc_map[rc_new_cbptr] = rc_next_cbptr;
+        }
+        ce_new_bptr->chunk_cont().insert_into_re_cont(new_rc_map);
+        ASSERT(new_rc_map.empty());
+    }
     // destroy old middle contig
     ce_mid_bptr->chunk_cont().clear_and_dispose();
     ce_mid_bptr->mut_cont().clear_and_dispose();
@@ -663,6 +685,25 @@ boost::property_tree::ptree Contig_Entry::to_ptree() const
                   .put("is_unmappable", is_unmappable())
                   .put("mut_cont", cont_to_ptree(mut_cont()))
                   .put("chunk_cont", cont_to_ptree(chunk_cont()));
+}
+
+void Contig_Entry::save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const
+{
+    os.write(_seq.c_str(), _seq.size() + 1);
+    ++n_strings;
+    n_bytes += _seq.size() + 1;
+}
+
+void Contig_Entry::init_strings()
+{
+    new (&_seq) string();
+}
+
+void Contig_Entry::load_strings(istream& is, size_t& n_strings, size_t& n_bytes)
+{
+    getline(is, _seq, '\0');
+    ++n_strings;
+    n_bytes += _seq.size() + 1;
 }
 
 

@@ -214,6 +214,10 @@ public:
     }
     static void to_stream(ostream& os, Mutation_CBPtr mut_cbptr, Contig_Entry_CBPtr ce_cbptr);
 
+    void save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const;
+    void init_strings();
+    void load_strings(istream& is, size_t& n_strings, size_t& n_bytes);
+
 private:
     // Hooks for storage in intrusive interval trees inside Contig_Entry objects.
     friend struct detail::Mutation_ITree_Node_Traits;

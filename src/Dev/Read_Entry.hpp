@@ -29,7 +29,7 @@ private:
      * @param name String containing read name; (take ownership).
      * @param len Length of the read.
      */
-    Read_Entry(string&& name, Size_Type len) : _name(move(name)), _orig_len(len), _len(len), _start(0), _delta(0) {}
+    Read_Entry(string&& name, Size_Type len) : _name(move(name)), _orig_len(len), _len(len), _start(0) {}
 
     // allow move only
     DEFAULT_DEF_CTOR(Read_Entry);
@@ -51,6 +51,7 @@ public:
             ASSERT(is_unlinked() and rhs.is_unlinked());
             _name = move(rhs._name);
             _chunk_cont = move(rhs._chunk_cont);
+            _orig_len = move(rhs._orig_len);
             _len = move(rhs._len);
             _start = move(rhs._start);
         }
@@ -61,57 +62,42 @@ public:
     /**@{*/
     GETTER(string, name, _name)
     GETTER(Read_Chunk_RE_Cont, chunk_cont, _chunk_cont)
-    private:
     GETTER(Size_Type, len, _len)
-    public:
     GETTER(Size_Type, start, _start)
     Size_Type end() const { return start() + len(); }
-    //Size_Type len() const { return _len; }
-    Seq_Type get_seq(bool trimmed) const;
-    Size_Type get_len(bool trimmed) const
-    {
-        return trimmed? len() : len() + _start_seq.size() + _end_seq.size();
-    }
+    Seq_Type get_seq() const;
     /**@}*/
 
-    /** Check if this read ends the last contig where it is mapped.
+    /**
+     * Check if this read ends the last contig where it is mapped.
      * @param check_start True to check read start, false to check read end.
      * @return True if there are no more bases in the contig past the read end.
      */
     bool is_terminal(bool check_start) const;
 
     /**
-     * Trim read entry.
-     * @param r_end Bool; if true, trim from the end; if false, trim from the start.
-     * @param s Sequence that was trimmed.
+     * Edit read sequence.
+     * This operation irreversibly changes the read sequence of this entry
+     * by altering its implicit representation.
+     * @param rc_bptr Chunk where the edit occurs.
+     * @param start Absolute read position of the edit (it must be inside rc_bptr).
+     * @param old_seq Old read sequence which is being deleted.
+     * @param new_seq New read sequence which is being inserted.
      */
-    void trim_end(bool r_end, const Seq_Proxy_Type& s)
+    void edit(Read_Chunk_BPtr rc_bptr, Size_Type start, const Seq_Proxy_Type& old_seq, const Seq_Proxy_Type& new_seq)
     {
-        Size_Type trim_len = s.size();
-        ASSERT(len() >= trim_len);
-        if (r_end)
-        {
-            Seq_Type tmp(s);
-            tmp += _end_seq;
-            swap(tmp, _end_seq);
-            _len -= trim_len;
-        }
-        else
-        {
-            _start_seq += s;
-            _len -= trim_len;
-            _start += trim_len;
-        }
-    }
-
-    void add_edit(Size_Type start, Size_Type len, const Seq_Proxy_Type& seq)
-    {
-        (void)start;
-        (void)len;
-        (void)seq;
-        ptrdiff_t delta = static_cast< ptrdiff_t >(len) - seq.size();
-        _len = delta + _len;
-        _delta += delta;
+        LOG("Read_Entry", info) << ptree("edit")
+            .put("re_name", name())
+            .put("start", start)
+            .put("old_seq", old_seq)
+            .put("new_seq", new_seq);
+        Size_Type old_seq_len = old_seq.size();
+        Size_Type new_seq_len = new_seq.size();
+        ptrdiff_t delta = static_cast< ptrdiff_t >(new_seq_len) - static_cast< ptrdiff_t >(old_seq_len);
+        ASSERT(rc_bptr->get_r_start() <= start);
+        ASSERT(start + old_seq_len <= rc_bptr->get_r_end());
+        chunk_cont().implement_edit(rc_bptr, delta);
+        _len = static_cast< ptrdiff_t >(_len) + delta;
     }
 
     /** Integrity check. */
@@ -120,16 +106,16 @@ public:
     //friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);
     boost::property_tree::ptree to_ptree() const;
 
+    void save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const;
+    void init_strings();
+    void load_strings(istream& is, size_t& n_strings, size_t& n_bytes);
+
 private:
-    friend class Graph; // for saving&loading _start_seq and _end_seq
     string _name;
-    Seq_Type _start_seq;
-    Seq_Type _end_seq;
     Read_Chunk_RE_Cont _chunk_cont;
     Size_Type _orig_len;
     Size_Type _len;
     Size_Type _start;
-    ptrdiff_t _delta;
 
     /** Hooks for storage in intrusive set inside Graph object. */
     friend struct detail::Read_Entry_Set_Node_Traits;
