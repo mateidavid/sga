@@ -16,7 +16,7 @@
 #include "variables_map_converter.hpp"
 
 #include "logger.hpp"
-#include "ixstream.hpp"
+#include "zstr.hpp"
 #include "RC_Sequence.hpp"
 #include "BloomFilter.h"
 #include "pfor.hpp"
@@ -209,25 +209,28 @@ void process_qr_read(SimpleRead& r, Thread_Output_Storage& tos)
         size_t i = *it;
         ++global::qr_kmers_used;
 
-        bool found;
         if (i == next_i and global::bf_p->test(&r.sq[0][i], global::k))
         {
+            LOG("main", debug1, tos.es) << "found kmer: " << r.sq[0].substr(i, global::k) << "\n";
             // contiguous with previous
-            found = true;
             ++global::qr_kmers_in_rf;
             next_i = i + 1;
         }
         else
         {
+            if (i == next_i)
+            {
+                LOG("main", debug1, tos.es) << "missing kmer: " << r.sq[0].substr(i, global::k) << "\n";
+            }
+            else
+            {
+                LOG("main", debug1, tos.es) << "skipping from next_i=" << next_i << " to i=" << i << "\n";
+            }
             // jump
-            found = false;
             add_int_to_res(res, min_i, next_i);
             min_i = i + 1;
             next_i = i + 1;
         }
-
-        LOG("process_qr_read", debug2, tos.es)
-            << r.sq[0].substr(i, global::k) << "\t" << (found? "yes" : "no") << endl;
     }
     add_int_to_res(res, min_i, next_i);
 
@@ -346,6 +349,7 @@ int main(int argc, char* argv[])
     ac.add_string_converter< string >();
     ac.add_string_converter< bool >();
     ac.add_string_converter< unsigned >();
+    ac.add_string_converter< long >();
     ac.add_string_converter< size_t >();
     ac.add_converter(&cont_to_ptree< vector< string > >);
     cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
@@ -392,12 +396,20 @@ int main(int argc, char* argv[])
     if (not global::rf_reads_fn.empty())
     {
         // create Bloom Filter from ref reads
-        ixstream rf_reads_is(global::rf_reads_fn);
-        build_rf_graph(rf_reads_is);
+        unique_ptr< std::istream > rf_reads_is_p;
+        if (global::rf_reads_fn == "-")
+        {
+            rf_reads_is_p = unique_ptr< std::istream >(new zstr::istream(std::cin));
+        }
+        else
+        {
+            rf_reads_is_p = unique_ptr< std::istream >(new zstr::ifstream(global::rf_reads_fn));
+        }
+        build_rf_graph(*rf_reads_is_p);
         // save Bloom Filter
         if (not global::bf_save_fn.empty())
         {
-            fstr bf_save_os(global::bf_save_fn, ios_base::out | ios_base::binary);
+            strict_fstream::fstream bf_save_os(global::bf_save_fn, ios_base::out | ios_base::binary);
             LOG("main", info) << "saving Bloom Filter to file: " << global::bf_save_fn << endl;
             global::bf_p->save(bf_save_os);
             LOG("main", info) << "done saving Bloom Filter" << endl;
@@ -406,7 +418,7 @@ int main(int argc, char* argv[])
     else
     {
         // load BF from file
-        fstr bf_load_is(global::bf_load_fn, ios_base::in | ios_base::binary);
+        strict_fstream::fstream bf_load_is(global::bf_load_fn, ios_base::in | ios_base::binary);
         global::bf_p = new BloomFilter();
         LOG("main", info) << "loading Bloom Filter from file: " << global::bf_load_fn << endl;
         global::bf_p->load(bf_load_is);
@@ -414,7 +426,16 @@ int main(int argc, char* argv[])
     }
     if (not global::qr_reads_fn.empty())
     {
-        ixstream qr_reads_is(global::qr_reads_fn);
-        process_qr_reads(qr_reads_is);
+        unique_ptr< std::istream > qr_reads_is_p;
+        if (global::qr_reads_fn == "-")
+        {
+            qr_reads_is_p = unique_ptr< std::istream >(new zstr::istream(std::cin));
+        }
+        else
+        {
+            qr_reads_is_p = unique_ptr< std::istream >(new zstr::ifstream(global::qr_reads_fn));
+        }
+        process_qr_reads(*qr_reads_is_p);
     }
+    if (global::bf_p) delete global::bf_p;
 }

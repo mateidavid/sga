@@ -24,6 +24,7 @@ set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 
 set(HEADER_SUBDIRS
     Algorithm Bigraph Concurrency GraphDiff Scaffold SGA SQG StringGraph SuffixTools Thirdparty Util
+    zstr/src
     CACHE INTERNAL "Subdirectories containing header files")
 set(SUBDIRS
     BFTrim Dev SuffixTools Thirdparty Util
