@@ -4,7 +4,7 @@
 #include "Read_Chunk.hpp"
 #include "Contig_Entry.hpp"
 #include "Read_Entry.hpp"
-#include "fstr.hpp"
+#include "zstr.hpp"
 
 using namespace std;
 using namespace MAC;
@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
             usage(std::cout, argv[0]);
             exit(EXIT_SUCCESS);
         }
-        fstr tmp_fs(filename);
+        strict_fstream::fstream tmp_fs(filename);
         string cigar_string;
         while (tmp_fs >> cigar_string)
         {

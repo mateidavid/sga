@@ -31,7 +31,6 @@ target_link_libraries(mac-bin
     suffixtools
     util
     thirdparty
-    ${Boost_IOSTREAMS_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
 )

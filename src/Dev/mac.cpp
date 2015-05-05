@@ -6,10 +6,9 @@
 #include <list>
 #include <boost/program_options.hpp>
 
+#include "zstr.hpp"
 #include "Graph.hpp"
 #include "Hap_Map.hpp"
-#include "ixstream.hpp"
-#include "fstr.hpp"
 #include "logger.hpp"
 #include "variables_map_converter.hpp"
 #include "CLI.hpp"
@@ -185,7 +184,7 @@ int real_main()
     {
         // load asqg graph
         LOG("mac", info) << ptree("loading").put("input_file", opts::input_file);
-        ixstream tmp_fs(opts::input_file);
+        zstr::ifstream tmp_fs(opts::input_file);
         g.unmap_trigger_len() = opts::unmap_trigger_len;
         g.cat_at_step() = opts::cat_at_step;
         load_asqg(tmp_fs, g);
@@ -194,7 +193,7 @@ int real_main()
     {
         // load mac graph
         LOG("mac", info) << ptree("loading").put("load-file", opts::load_file);
-        fstr ifs(opts::load_file, ios_base::in | ios_base::binary);
+        strict_fstream::fstream ifs(opts::load_file, ios_base::in | ios_base::binary);
         g.load(ifs);
     }
     LOG("mac", info) << ptree("factory_stats", g.factory_stats());
@@ -262,25 +261,25 @@ int real_main()
     if (not opts::stats_file.empty())
     {
         LOG("mac", info) << ptree("print_stats").put("stats_file", opts::stats_file);
-        fstr tmp_fs(opts::stats_file, ios_base::out);
+        strict_fstream::fstream tmp_fs(opts::stats_file, ios_base::out);
         g.dump_detailed_counts(tmp_fs);
     }
     if (not opts::supercontigs_stats_file.empty())
     {
         LOG("mac", info) << ptree("supercontigs_stats").put("file", opts::supercontigs_stats_file);
-        fstr tmp_fs(opts::supercontigs_stats_file, ios_base::out);
+        strict_fstream::fstream tmp_fs(opts::supercontigs_stats_file, ios_base::out);
         g.print_supercontig_stats(tmp_fs);
     }
     if (not opts::mutations_file.empty())
     {
         LOG("mac", info) << ptree("print_mutations").put("file", opts::mutations_file);
-        fstr tmp_fs(opts::mutations_file, ios_base::out);
+        strict_fstream::fstream tmp_fs(opts::mutations_file, ios_base::out);
         g.print_mutations(tmp_fs);
     }
     if (not opts::terminal_reads_file.empty())
     {
         LOG("mac", info) << ptree("print_terminal_reads").put("file", opts::terminal_reads_file);
-        fstr tmp_fs(opts::terminal_reads_file, ios_base::out);
+        strict_fstream::fstream tmp_fs(opts::terminal_reads_file, ios_base::out);
         g.get_terminal_reads(tmp_fs);
     }
     if (opts::print_at_end)
@@ -290,13 +289,13 @@ int real_main()
     if (not opts::unmappable_contigs_file.empty())
     {
         LOG("mac", info) << ptree("print_unmappable_contigs").put("file", opts::unmappable_contigs_file);
-        fstr tmp_fs(opts::unmappable_contigs_file, ios_base::out);
+        strict_fstream::fstream tmp_fs(opts::unmappable_contigs_file, ios_base::out);
         g.print_unmappable_contigs(tmp_fs);
     }
     if (not opts::hapmap_stats_file.empty())
     {
         LOG("mac", info) << ptree("hapmap-stats").put("file", opts::hapmap_stats_file);
-        fstr tmp_fs(opts::hapmap_stats_file, ios_base::out);
+        strict_fstream::fstream tmp_fs(opts::hapmap_stats_file, ios_base::out);
         hm.dump_stats(tmp_fs, g);
     }
     LOG("mac", info) << ptree("done_output");
@@ -304,7 +303,7 @@ int real_main()
     if (not opts::save_file.empty())
     {
         LOG("mac", info) << ptree("saving").put("save_file", opts::save_file);
-        fstr tmp_fs(opts::save_file, ios_base::out | ios_base::binary);
+        strict_fstream::fstream tmp_fs(opts::save_file, ios_base::out | ios_base::binary);
         g.save(tmp_fs);
     }
     LOG("mac", info) << ptree("factory_stats", g.factory_stats());
