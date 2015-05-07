@@ -9,6 +9,5 @@ add_executable(BFTrim
 target_link_libraries(BFTrim
     util
     thirdparty
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
     )

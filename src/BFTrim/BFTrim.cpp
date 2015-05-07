@@ -12,8 +12,8 @@
 #include <time.h>
 #include <atomic>
 
-#include <boost/program_options.hpp>
-#include "variables_map_converter.hpp"
+#include "version.h"
+#include <tclap/CmdLine.h>
 
 #include "logger.hpp"
 #include "zstr.hpp"
@@ -23,29 +23,11 @@
 #include "kmer_gen.hpp"
 
 using namespace std;
-namespace bo = boost::program_options;
-
 
 namespace global
 {
     string program_name;
-    // parameters with types;
-    // their default values are found in the option descriptions
-    vector< string > log_level;
-    long seed;
-    unsigned num_threads;
-    unsigned progress;
-    unsigned chunk_size;
-    string rf_reads_fn;
-    string qr_reads_fn;
-    string bf_load_fn;
-    string bf_save_fn;
-    bool fasta_input;
-    unsigned phred_offset;
-    unsigned k;
-    unsigned min_qv;
-    size_t bf_size;
-    unsigned bf_hashes;
+
     // main Bloom Filter
     BloomFilter* bf_p;
     // run stats
@@ -55,6 +37,32 @@ namespace global
     atomic< long long > qr_kmers_used;
     atomic< long long > qr_kmers_in_rf;
     const string allowed_chars("ACGT");
+
+    TCLAP::CmdLine cmd_parser("Bloom Filter trimmer", ' ', PACKAGE_VERSION);
+    //
+    // general parameters
+    //
+    TCLAP::MultiArg< string > log_level("d", "log-level", "Log level.", false, "string", cmd_parser);
+    TCLAP::ValueArg< long > seed("", "seed", "Random seed (0: use time).", false, -1, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned > num_threads("t", "threads",   "Number of threads.", false, 1, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned > progress("", "progress",   "Progress count.", false, 0, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned > chunk_size("", "chunk-size", "Thread chunk size.", false, 100, "int", cmd_parser);
+    //
+    // i/o-related parameters
+    //
+    TCLAP::ValueArg< string > rf_reads_fn("r", "rf-reads", "Reference reads.", false, "", "file", cmd_parser);
+    TCLAP::ValueArg< string > qr_reads_fn("q", "qr-reads", "Query reads.", false, "", "file", cmd_parser);
+    TCLAP::ValueArg< string > bf_load_fn("l", "bf-load", "BF to load.", false, "", "file", cmd_parser);
+    TCLAP::ValueArg< string > bf_save_fn("s", "bf-save", "BF to save.", false, "", "file", cmd_parser);
+    TCLAP::SwitchArg fasta_input("f", "fasta-input", "Reads in fasta input, not fastq.", cmd_parser, false);
+    TCLAP::ValueArg< unsigned > phred_offset("", "phred-offset", "PHRED offset.", false, 33, "int", cmd_parser);
+    //
+    // core parameters
+    //
+    TCLAP::ValueArg< unsigned > k("k", "kmer-size", "Kmer size.", false, 61, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned > min_qv("m", "min-qv", "Minimum quality value.", false, 20, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned long > bf_size("", "bf-size", "BF size, in bits.", false, 20llu * 2llu * 3100000000llu, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned > bf_hashes("", "bf-hashes", "BF hashes.", false, 10, "int", cmd_parser);
 }
 
 // no frills sequence holder, along with istream reader
@@ -310,6 +318,7 @@ int main(int argc, char* argv[])
 {
     global::program_name = argv[0];
 
+    /*
     bo::options_description generic_opts_desc("Generic options");
     bo::options_description config_opts_desc("Configuration options");
     bo::options_description hidden_opts_desc("Hidden options");
@@ -374,30 +383,48 @@ int main(int argc, char* argv[])
         cerr << visible_opts_desc;
         exit(EXIT_FAILURE);
     }
+    */
+
+    global::cmd_parser.parse(argc, argv);
 
     // validate command-line options
-    if (global::rf_reads_fn.empty() == global::bf_load_fn.empty()
-        or (not global::bf_load_fn.empty() and not global::bf_save_fn.empty())
-        or (global::qr_reads_fn.empty() and global::bf_save_fn.empty()))
+    if (global::rf_reads_fn.getValue().empty() == global::bf_load_fn.getValue().empty()
+        or (not global::bf_load_fn.getValue().empty() and not global::bf_save_fn.getValue().empty())
+        or (global::qr_reads_fn.getValue().empty() and global::bf_save_fn.getValue().empty()))
     {
         usage(cerr);
-        cerr << visible_opts_desc;
+        //cerr << visible_opts_desc;
         exit(EXIT_FAILURE);
     }
 
     // set log levels
     Logger::set_levels_from_options(global::log_level, &clog);
     // set random seed
+    if (global::seed < 0)
+    {
+        global::seed.getValue() = time(nullptr);
+    }
     srand48(global::seed);
 
     // print options
-    LOG("main", info) << variables_map_converter::to_ptree(vm, ac);
+    LOG("main", info) << "program: " << global::cmd_parser.getProgramName() << endl;
+    LOG("main", info) << "version: " << global::cmd_parser.getVersion() << endl;
+    if (Logger::get_facility_level("main") <= level_wrapper::info)
+    {
+        ostringstream oss;
+        for (int i = 1; i < argc; ++i)
+        {
+            oss << (i > 1? " " : "") << argv[i];
+        }
+        LOG("main", info) << "args: " << oss.str() << endl;
+    }
+    //LOG("main", info) << variables_map_converter::to_ptree(vm, ac);
 
-    if (not global::rf_reads_fn.empty())
+    if (not global::rf_reads_fn.getValue().empty())
     {
         // create Bloom Filter from ref reads
         unique_ptr< std::istream > rf_reads_is_p;
-        if (global::rf_reads_fn == "-")
+        if (global::rf_reads_fn.getValue() == "-")
         {
             rf_reads_is_p = unique_ptr< std::istream >(new zstr::istream(std::cin));
         }
@@ -407,10 +434,10 @@ int main(int argc, char* argv[])
         }
         build_rf_graph(*rf_reads_is_p);
         // save Bloom Filter
-        if (not global::bf_save_fn.empty())
+        if (not global::bf_save_fn.getValue().empty())
         {
             strict_fstream::fstream bf_save_os(global::bf_save_fn, ios_base::out | ios_base::binary);
-            LOG("main", info) << "saving Bloom Filter to file: " << global::bf_save_fn << endl;
+            LOG("main", info) << "saving Bloom Filter to file: " << global::bf_save_fn.getValue() << endl;
             global::bf_p->save(bf_save_os);
             LOG("main", info) << "done saving Bloom Filter" << endl;
         }
@@ -420,14 +447,14 @@ int main(int argc, char* argv[])
         // load BF from file
         strict_fstream::fstream bf_load_is(global::bf_load_fn, ios_base::in | ios_base::binary);
         global::bf_p = new BloomFilter();
-        LOG("main", info) << "loading Bloom Filter from file: " << global::bf_load_fn << endl;
+        LOG("main", info) << "loading Bloom Filter from file: " << global::bf_load_fn.getValue() << endl;
         global::bf_p->load(bf_load_is);
         LOG("main", info) << "done loading Bloom Filter" << endl;
     }
-    if (not global::qr_reads_fn.empty())
+    if (not global::qr_reads_fn.getValue().empty())
     {
         unique_ptr< std::istream > qr_reads_is_p;
-        if (global::qr_reads_fn == "-")
+        if (global::qr_reads_fn.getValue() == "-")
         {
             qr_reads_is_p = unique_ptr< std::istream >(new zstr::istream(std::cin));
         }
