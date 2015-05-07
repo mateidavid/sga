@@ -1,6 +1,6 @@
 message(STATUS "Processing: main")
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_VERBOSE_MAKEFILE TRUE CACHE BOOL "Enable verbose make output.") #TODO: remove
 project(SGA C CXX)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
