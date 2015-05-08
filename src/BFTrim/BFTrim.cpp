@@ -317,74 +317,6 @@ void usage(ostream & os)
 int main(int argc, char* argv[])
 {
     global::program_name = argv[0];
-
-    /*
-    bo::options_description generic_opts_desc("Generic options");
-    bo::options_description config_opts_desc("Configuration options");
-    bo::options_description hidden_opts_desc("Hidden options");
-    bo::options_description cmdline_opts_desc;
-    bo::options_description visible_opts_desc("Allowed options");
-    generic_opts_desc.add_options()
-        ("help,?", "produce help message")
-        // hack, see: http://lists.boost.org/boost-users/2010/01/55054.php
-        ("log-level,d", bo::value(&global::log_level)->default_value(vector< string >(), ""), "log level")
-        ("seed", bo::value(&global::seed)->default_value(time(nullptr), "use time"), "random seed")
-        ("threads,t", bo::value(&global::num_threads)->default_value(1), "number of threads")
-        ("progress", bo::value(&global::progress)->default_value(0), "progress count")
-        ("chunk-size", bo::value(&global::chunk_size)->default_value(100), "progress count")
-        ;
-    config_opts_desc.add_options()
-        //
-        // file-related options
-        //
-        ("rf-reads,r", bo::value(&global::rf_reads_fn), "reference reads file")
-        ("qr-reads,q", bo::value(&global::qr_reads_fn), "query reads file")
-        ("bf-load,l", bo::value(&global::bf_load_fn), "load Bloom Filter from file")
-        ("bf-save,s", bo::value(&global::bf_save_fn), "save Bloom Filter to file")
-        ("fasta-input,f", bo::bool_switch(&global::fasta_input)->default_value(false), "input reads in fasta (not fastq) format")
-        ("phred-offset", bo::value(&global::phred_offset)->default_value(33), "phred offset")
-        //
-        // general parameters
-        //
-        ("kmer-size,k", bo::value(&global::k)->default_value(61), "kmer size")
-        ("min-qv,m", bo::value(&global::min_qv)->default_value(20), "minimum quality value")
-        //
-        // Bloom Filter parameters
-        //
-        ("bf-size", bo::value(&global::bf_size)->default_value(20ll * 2ll * 3100000000ll), "Bloom Filter size, in bits")
-        ("bf-hashes", bo::value(&global::bf_hashes)->default_value(10), "Bloom Filter number of hashes")
-        ;
-    any_converter ac;
-    ac.add_string_converter< string >();
-    ac.add_string_converter< bool >();
-    ac.add_string_converter< unsigned >();
-    ac.add_string_converter< long >();
-    ac.add_string_converter< size_t >();
-    ac.add_converter(&cont_to_ptree< vector< string > >);
-    cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
-    visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
-    bo::variables_map vm;
-    try
-    {
-        store(bo::command_line_parser(argc, argv).options(cmdline_opts_desc).run(), vm);
-        // if help requested, print it and stop
-        if (vm.count("help"))
-        {
-            usage(cout);
-            cout << visible_opts_desc;
-            exit(EXIT_SUCCESS);
-        }
-        notify(vm);
-    }
-    catch(bo::error& e) 
-    { 
-        cerr << "ERROR: " << e.what() << endl << endl;
-        usage(cerr);
-        cerr << visible_opts_desc;
-        exit(EXIT_FAILURE);
-    }
-    */
-
     global::cmd_parser.parse(argc, argv);
 
     // validate command-line options
@@ -418,7 +350,6 @@ int main(int argc, char* argv[])
         }
         LOG("main", info) << "args: " << oss.str() << endl;
     }
-    //LOG("main", info) << variables_map_converter::to_ptree(vm, ac);
 
     if (not global::rf_reads_fn.getValue().empty())
     {

@@ -135,7 +135,7 @@ message(STATUS "INCLUDE_DIRECTORIES='${include_directories}'")
 
 ### general compile flags
 #
-set(EXTRA_FLAGS "-Wall -Wextra -pedantic")
+set(EXTRA_FLAGS "-Wall -Wextra -pedantic -pthread")
 
 # compiler-specific flags
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -145,9 +145,9 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 # if OpenMP was found, add flags
-if(OPENMP_FOUND)
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} ${OpenMP_C_FLAGS}")
-endif()
+#if(OPENMP_FOUND)
+#    set(EXTRA_FLAGS "${EXTRA_FLAGS} ${OpenMP_C_FLAGS}")
+#endif()
 
 # consolidate flags
 set(CMAKE_C_FLAGS "$ENV{CFLAGS} ${EXTRA_FLAGS}")
