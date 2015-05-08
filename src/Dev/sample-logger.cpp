@@ -23,11 +23,11 @@ namespace global
 
 int real_main()
 {
-    cerr << "setting default log level to: " << global::default_log_level.getValue() << endl;
+    cerr << "setting default log level to: " << global::default_log_level.get() << endl;
     Logger::set_default_level(global::default_log_level);
 
 #define LOG_FACILITY TEST_FACILITY
-    cerr << "setting " << LOG_FACILITY << " log level to: " << global::log_level.getValue() << endl;
+    cerr << "setting " << LOG_FACILITY << " log level to: " << global::log_level.get() << endl;
     Logger::set_facility_level(LOG_FACILITY, global::log_level);
     int x = 0;
     LOG(error) << "this is an error message; x=" << x++ << endl;
