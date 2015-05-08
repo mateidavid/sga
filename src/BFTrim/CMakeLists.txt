@@ -11,5 +11,6 @@ target_link_libraries(BFTrim
     )
 
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    message(STATUS "Including debug and test files and targets; CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}.")
     add_executable(test-kmer_gen test-kmer_gen.cpp)
 endif()

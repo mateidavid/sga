@@ -9,7 +9,7 @@ include(CheckIncludeFileCXX)
 
 # check that "SGA/sga.cpp" exists; if not, assume the source dir is wrong
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/SGA/sga.cpp")
-  message(FATAL_ERROR "${PROJECT_SOURCE_DIR}: source files not found")
+    message(FATAL_ERROR "${PROJECT_SOURCE_DIR}: source files not found")
 endif()
 
 # set project-related variables that appear in config.h.in
@@ -42,11 +42,11 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH true)
 # check for OpenMP support
 # => OPENMP_FOUND, OpenMP_C_FLAGS, OpenMP_CXX_FLAGS
 if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") AND NOT OpenMP_DETECTED)
-  find_package(OpenMP)
-  set(OpenMP_DETECTED TRUE CACHE BOOL "OpenMP detection was run")
-  set(OPENMP_FOUND ${OPENMP_FOUND} CACHE BOOL "OpenMP found")
-  set(OpenMP_C_FLAGS ${OpenMP_C_FLAGS} CACHE STRING "OpenMP C flags")
-  set(OpenMP_CXX_FLAGS ${OpenMP_CXX_FLAGS} CACHE STRING "OpenMP CXX flags")
+    find_package(OpenMP)
+    set(OpenMP_DETECTED TRUE CACHE BOOL "OpenMP detection was run")
+    set(OPENMP_FOUND ${OPENMP_FOUND} CACHE BOOL "OpenMP found")
+    set(OpenMP_C_FLAGS ${OpenMP_C_FLAGS} CACHE STRING "OpenMP C flags")
+    set(OpenMP_CXX_FLAGS ${OpenMP_CXX_FLAGS} CACHE STRING "OpenMP CXX flags")
 endif()
 
 # find zlib
@@ -64,15 +64,15 @@ find_package(SparseHash REQUIRED)
 # check for Boost 1.57
 # => Boost_INCLUDE_DIRS, Boost_<COMPONENT>_LIBRARY
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${Boost_COMPILER}" STREQUAL "")
-  message(WARNING
-    "The cmake FindBoost package does not properly detect the compiler name when using CLang. Boost libraries built with 'versioned' layout (compiler name in library name, e.g. 'libboost_program_options-clang35-mt-1_57.so') might be incorrectly detected. To find such libraries, give the compiler name on the cmake command line, e.g. 'cmake -DBoost_COMPILER=\"-clang35\" [...]'. To check which libraries have been detected, use: 'grep libboost_program_options CMakeCache.txt'")
+    message(WARNING
+        "The cmake FindBoost package does not properly detect the compiler name when using CLang. Boost libraries built with 'versioned' layout (compiler name in library name, e.g. 'libboost_program_options-clang35-mt-1_57.so') might be incorrectly detected. To find such libraries, give the compiler name on the cmake command line, e.g. 'cmake -DBoost_COMPILER=\"-clang35\" [...]'. To check which libraries have been detected, use: 'grep libboost_program_options CMakeCache.txt'")
 endif()
 set(BOOST_ROOT "$ENV{BOOST_ROOT}" CACHE PATH "Path to Boost")
 # Use static libraries to avoid LD_RUN_PATH issues
 #set(Boost_USE_STATIC_LIBS true)
 find_package(Boost 1.57.0 EXACT REQUIRED COMPONENTS iostreams program_options)
 if(NOT Boost_FOUND)
-  message(FATAL_ERROR "Boost 1.57.0 not found")
+    message(FATAL_ERROR "Boost 1.57.0 not found")
 endif()
 
 # check for Hoard
@@ -103,17 +103,17 @@ check_include_file_cxx(unordered_map HAVE_UNORDERED_MAP)
 # check for alloc libraries
 # => HAVE_LIBHOARD, HAVE_LIBJEMALLOC, HAVE_LIBTCMALLOC
 if(HOARD_FOUND)
-  #check_library_exists(hoard malloc ${Hoard_LIBRARY} HAVE_LIBHOARD)
-  set(HAVE_LIBHOARD 1)
-  set(External_Malloc_LIBRARY ${Hoard_LIBRARY})
+    #check_library_exists(hoard malloc ${Hoard_LIBRARY} HAVE_LIBHOARD)
+    set(HAVE_LIBHOARD 1)
+    set(External_Malloc_LIBRARY ${Hoard_LIBRARY})
 elseif(JEMALLOC_FOUND)
-  #check_library_exists(jemalloc malloc ${JEMalloc_LIBRARY} HAVE_LIBJEMALLOC)
-  set(HAVE_LIBJEMALLOC 1)
-  set(External_Malloc_LIBRARY ${JEMalloc_LIBRARY})
+    #check_library_exists(jemalloc malloc ${JEMalloc_LIBRARY} HAVE_LIBJEMALLOC)
+    set(HAVE_LIBJEMALLOC 1)
+    set(External_Malloc_LIBRARY ${JEMalloc_LIBRARY})
 elseif(TCMALLOC_FOUND)
-  #check_library_exists(tcmalloc malloc ${TCMalloc_LIBRARY} HAVE_LIBTCMALLOC)
-  set(HAVE_LIBTCMALLOC 1)
-  set(External_Malloc_LIBRARY ${TCMalloc_LIBRARY})
+    #check_library_exists(tcmalloc malloc ${TCMalloc_LIBRARY} HAVE_LIBTCMALLOC)
+    set(HAVE_LIBTCMALLOC 1)
+    set(External_Malloc_LIBRARY ${TCMalloc_LIBRARY})
 endif()
 
 # generate configuration file
@@ -123,13 +123,13 @@ configure_file(config.h.cmake.in config.h)
 #
 # headers
 include_directories(SYSTEM
-  ${ZLIB_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS}
-  ${BamTools_INCLUDE_DIR}
-  ${SparseHash_INCLUDE_DIR})
+    ${ZLIB_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
+    ${BamTools_INCLUDE_DIR}
+    ${SparseHash_INCLUDE_DIR})
 include_directories(
-  ${PROJECT_BINARY_DIR}
-  ${HEADER_SUBDIRS})
+    ${PROJECT_BINARY_DIR}
+    ${HEADER_SUBDIRS})
 get_directory_property(include_directories INCLUDE_DIRECTORIES)
 message(STATUS "INCLUDE_DIRECTORIES='${include_directories}'")
 
@@ -139,9 +139,9 @@ set(EXTRA_FLAGS "-Wall -Wextra -pedantic -pthread")
 
 # compiler-specific flags
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} -fmax-errors=1")
+    set(EXTRA_FLAGS "${EXTRA_FLAGS} -fmax-errors=1")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-  set(EXTRA_FLAGS "${EXTRA_FLAGS} -ferror-limit=1")
+    set(EXTRA_FLAGS "${EXTRA_FLAGS} -ferror-limit=1")
 endif()
 
 # if OpenMP was found, add flags
@@ -184,7 +184,7 @@ message(STATUS "CMAKE_EXE_LINKER_FLAGS='${CMAKE_EXE_LINKER_FLAGS}'")
 ### Add target that updates version
 #
 add_custom_target(version ALL
-  ${CMAKE_COMMAND} -DSRC_ROOT=${PROJECT_SOURCE_DIR} -DBIN_ROOT=${PROJECT_BINARY_DIR} -P ${PROJECT_SOURCE_DIR}/version.cmake)
+    ${CMAKE_COMMAND} -DSRC_ROOT=${PROJECT_SOURCE_DIR} -DBIN_ROOT=${PROJECT_BINARY_DIR} -P ${PROJECT_SOURCE_DIR}/version.cmake)
 
 ### Enable testing targets
 #
@@ -193,5 +193,5 @@ enable_testing()
 ### Descend into subdirectories
 #
 foreach(dir ${SUBDIRS})
-  add_subdirectory(${dir})
+    add_subdirectory(${dir})
 endforeach()

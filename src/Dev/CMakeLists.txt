@@ -20,7 +20,7 @@ add_library(mac STATIC
     Validate_Variations.cpp
     Hap_Map.cpp
     CLI.cpp
-)
+    )
 
 # workaround library&executable having the same name
 add_executable(mac-bin mac.cpp)
@@ -33,12 +33,12 @@ target_link_libraries(mac-bin
     thirdparty
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
-)
+    )
 
 add_executable(test-itree-and-factory test-itree-and-factory.cpp)
 target_link_libraries(test-itree-and-factory
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
-)
+    )
 
 add_executable(test-Read_Chunk-traversal test-Read_Chunk-traversal.cpp)
 target_link_libraries(test-Read_Chunk-traversal
@@ -46,7 +46,7 @@ target_link_libraries(test-Read_Chunk-traversal
     thirdparty
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
-)
+    )
 
 add_executable(test-affine-overlapper test-affine-overlapper.cpp)
 target_link_libraries(test-affine-overlapper
@@ -54,7 +54,7 @@ target_link_libraries(test-affine-overlapper
     thirdparty
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
-)
+    )
 
 add_executable(test-RC_Sequence test-RC_Sequence.cpp)
 target_link_libraries(test-RC_Sequence
@@ -62,33 +62,33 @@ target_link_libraries(test-RC_Sequence
     thirdparty
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
-)
+    )
 
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
-  message(STATUS "Including debug and test files and targets; CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}.")
-  file(COPY
-      ${CMAKE_SOURCE_DIR}/interval-tree/include/boost/intrusive/itree.gdb
-      factory.gdb
-      mac-gdb.gdb
-      test-itree-and-factory-gdb.gdb
-      DESTINATION .)
-  add_executable(test-Cigar_Op test-Cigar_Op.cpp)
-  add_executable(test-Cigar test-Cigar.cpp)
-  add_test(test-Cigar test-Cigar)
-  add_test(test-itree-and-factory test-itree-and-factory)
-  add_test(test-Read_Chunk-traversal test-Read_Chunk-traversal)
-  add_test(test-RC_Sequence test-RC_Sequence)
-  add_test(test-affine-overlapper test-affine-overlapper)
-  file(GLOB test_graphs test_graphs/test.*)
-  file(GLOB test_graphs_real test_graphs/test-real.*)
-  foreach(f ${test_graphs})
-    get_filename_component(f_name ${f} NAME)
-    add_test(mac-${f_name} mac -i ${f} -s)
-  endforeach()
-  foreach(f ${test_graphs_real})
-    get_filename_component(f_name ${f} NAME)
-    add_test(mac-${f_name} mac -i ${f} -s --unmap-single-chunks --unmap-mut-clusters)
-  endforeach()
-  add_executable(sample-logger sample-logger.cpp)
-  add_executable(sample-pfor sample-pfor.cpp)
+    message(STATUS "Including debug and test files and targets; CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}.")
+    file(COPY
+        ${CMAKE_SOURCE_DIR}/interval-tree/include/boost/intrusive/itree.gdb
+        factory.gdb
+        mac-gdb.gdb
+        test-itree-and-factory-gdb.gdb
+        DESTINATION .)
+    add_executable(test-Cigar_Op test-Cigar_Op.cpp)
+    add_executable(test-Cigar test-Cigar.cpp)
+    add_test(test-Cigar test-Cigar)
+    add_test(test-itree-and-factory test-itree-and-factory)
+    add_test(test-Read_Chunk-traversal test-Read_Chunk-traversal)
+    add_test(test-RC_Sequence test-RC_Sequence)
+    add_test(test-affine-overlapper test-affine-overlapper)
+    file(GLOB test_graphs test_graphs/test.*)
+    file(GLOB test_graphs_real test_graphs/test-real.*)
+    foreach(f ${test_graphs})
+        get_filename_component(f_name ${f} NAME)
+        add_test(mac-${f_name} mac -i ${f} -s)
+    endforeach()
+    foreach(f ${test_graphs_real})
+        get_filename_component(f_name ${f} NAME)
+        add_test(mac-${f_name} mac -i ${f} -s --unmap-single-chunks --unmap-mut-clusters)
+    endforeach()
+    add_executable(sample-logger sample-logger.cpp)
+    add_executable(sample-pfor sample-pfor.cpp)
 endif()
