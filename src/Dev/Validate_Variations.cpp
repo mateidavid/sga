@@ -20,17 +20,19 @@ void Validate_Variations::operator () (Graph& g, const BWTIndexSet& index_set) c
             // check no previous mutation overlaps current one
             if (mut_cbptr->rf_start() < min_mut_start)
             {
+                LOG("Validate_Variations", debug) << ptree("validation_skip")
+                    .put("mut_ptr", mut_cbptr.to_int());
                 min_mut_start = max(min_mut_start, mut_cbptr->rf_end());
                 continue;
             }
             min_mut_start = mut_cbptr->rf_end();
             // check next mutation doesn't overlap it either
+            if (mut_cit != ce_bptr->mut_cont().end() and mut_cit->rf_start() < min_mut_start)
             {
-                if (mut_cit != ce_bptr->mut_cont().end() and mut_cit->rf_start() < min_mut_start)
-                {
-                    min_mut_start = max(min_mut_start, mut_cit->rf_end());
-                    continue;
-                }
+                LOG("Validate_Variations", debug) << ptree("validation_skip")
+                    .put("mut_ptr", mut_cbptr.to_int());
+                min_mut_start = max(min_mut_start, mut_cit->rf_end());
+                continue;
             }
             // found a separated mutation
             // place chunks into bins:
