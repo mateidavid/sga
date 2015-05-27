@@ -48,9 +48,9 @@ namespace global
     // general parameters
     //
     TCLAP::MultiArg< string > log_level("d", "log-level", "Log level.", false, "string", cmd_parser);
-    TCLAP::ValueArg< long > seed("", "seed", "Random seed (0: use time).", false, -1, "int", cmd_parser);
-    TCLAP::ValueArg< unsigned > num_threads("t", "threads",   "Number of threads.", false, 1, "int", cmd_parser);
+    TCLAP::ValueArg< long > seed("", "seed", "Random seed (-1: use time).", false, -1, "int", cmd_parser);
     TCLAP::ValueArg< unsigned > progress("", "progress",   "Progress count.", false, 0, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned > num_threads("t", "threads",   "Number of threads.", false, 1, "int", cmd_parser);
     TCLAP::ValueArg< unsigned > chunk_size("", "chunk-size", "Thread chunk size.", false, 100, "int", cmd_parser);
     //
     // i/o-related parameters

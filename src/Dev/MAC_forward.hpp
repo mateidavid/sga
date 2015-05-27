@@ -25,7 +25,7 @@
 #include <boost/variant.hpp>
 
 #include "shortcuts.hpp"
-#include "global.hpp"
+#include "global_assert.hpp"
 #include "factory.hpp"
 #include "ptree.hpp"
 #include "logger.hpp"

@@ -31,20 +31,15 @@ target_link_libraries(mac-bin
     suffixtools
     util
     thirdparty
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
     )
 
 add_executable(test-itree-and-factory test-itree-and-factory.cpp)
-target_link_libraries(test-itree-and-factory
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    )
 
 add_executable(test-Read_Chunk-traversal test-Read_Chunk-traversal.cpp)
 target_link_libraries(test-Read_Chunk-traversal
     mac
     thirdparty
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
     )
 
@@ -52,7 +47,6 @@ add_executable(test-affine-overlapper test-affine-overlapper.cpp)
 target_link_libraries(test-affine-overlapper
     mac
     thirdparty
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
     )
 
@@ -60,7 +54,6 @@ add_executable(test-RC_Sequence test-RC_Sequence.cpp)
 target_link_libraries(test-RC_Sequence
     util
     thirdparty
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${ZLIB_LIBRARIES}
     )
 

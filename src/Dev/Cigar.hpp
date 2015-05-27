@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 #include <boost/range/adaptor/reversed.hpp>
-#include "global.hpp"
+#include "global_assert.hpp"
 #include "Cigar_Op.hpp"
 #include "RC_Sequence.hpp"
 #include "logger.hpp"

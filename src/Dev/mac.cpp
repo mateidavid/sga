@@ -4,13 +4,13 @@
 #include <fstream>
 #include <vector>
 #include <list>
-#include <boost/program_options.hpp>
+#include <tclap/CmdLine.h>
 
+#include "version.h"
 #include "zstr.hpp"
 #include "Graph.hpp"
 #include "Hap_Map.hpp"
 #include "logger.hpp"
-#include "variables_map_converter.hpp"
 #include "CLI.hpp"
 
 #include "Unmap_Mut_Clusters.hpp"
@@ -21,60 +21,89 @@
 
 using namespace std;
 using namespace MAC;
-namespace bo = boost::program_options;
 
 /// Program options.
 /// Global variables storing program options. Their default values are specified
 /// in the option descriptions.
 namespace opts
 {
-    // main variable map
-    bo::variables_map vm;
+    using namespace TCLAP;
+    string prog_desc =
+        "Multi-Allelic Contig assembler";
+    CmdLine cmd_parser(prog_desc, ' ', PACKAGE_VERSION);
     //
     // generic
     //
-    vector< string > log_level;
-    long seed;
-    unsigned progress_count;
+    //vector< string > log_level;
+    //long seed;
+    //unsigned progress_count;
+    MultiArg< string > log_level("d", "log-level", "Log level.", false, "string", cmd_parser);
+    ValueArg< long > seed("", "seed", "Random seed (-1: use time).", false, -1, "int", cmd_parser);
+    ValueArg< unsigned > progress_count("c", "progress-count", "Progress count.", false, 0, "int", cmd_parser);
     //
     // file-related
     //
-    string input_file;
-    string load_file;
-    string save_file;
-    string stats_file;
-    string supercontigs_stats_file;
-    string mutations_file;
-    string unmappable_contigs_file;
-    string terminal_reads_file;
-    string hapmap_stats_file;
-    string bwt_file;
-    string aux_bwt_file;
+    //string input_file;
+    //string load_file;
+    //string save_file;
+    //string stats_file;
+    //string supercontigs_stats_file;
+    //string mutations_file;
+    //string unmappable_contigs_file;
+    //string terminal_reads_file;
+    //string hapmap_stats_file;
+    //string aux_bwt_file;
+    ValueArg< string > input_file("i", "input-file", "Load ASQG input file.", false, "", "file", cmd_parser);
+    ValueArg< string > load_file("L", "load-file", "Load MAC graph from file.", false, "", "file", cmd_parser);
+    ValueArg< string > save_file("S", "save-file", "Save MAC graph to file.", false, "", "file", cmd_parser);
+    ValueArg< string > aux_bwt_file("", "aux-bwt-file", "BWT index of 2GS reads used to validate variations.", false, "", "file", cmd_parser);
+    ValueArg< string > stats_file("", "stats-file", "Stats file.", false, "", "file", cmd_parser);
+    ValueArg< string > supercontigs_stats_file("", "supercontigs-stats-file", "Supercontigs stats file.", false, "", "file", cmd_parser);
+    ValueArg< string > mutations_file("", "mutations-file", "Mutations file.", false, "", "file", cmd_parser);
+    ValueArg< string > unmappable_contigs_file("", "unmappable-contigs-file", "Unmappable contigs file.", false, "", "file", cmd_parser);
+    ValueArg< string > terminal_reads_file("", "terminal-reads-file", "Terminal reads file.", false, "", "file", cmd_parser);
+    ValueArg< string > hapmap_stats_file("", "hapmap-stats-file", "Haplotype map stats file.", false, "", "file", cmd_parser);
     //
     // asqg loading
     //
-    unsigned unmap_trigger_len;
-    bool cat_at_step;
-    bool print_at_step;
-    bool check_at_step;
+    //unsigned unmap_trigger_len;
+    //bool cat_at_step;
+    //bool print_at_step;
+    //bool check_at_step;
+    ValueArg< unsigned > unmap_trigger_len("u", "unmap-trigger-len", "Trigger length for unmapping.", false, 9, "int", cmd_parser);
+    SwitchArg cat_at_step("s", "cat-at-step", "Catenate contigs after each operation.", cmd_parser, false);
+    SwitchArg print_at_step("", "print-at-step", "Print graph after each operation.", cmd_parser, false);
+    SwitchArg check_at_step("", "check-at-step", "Check graph after each operation.", cmd_parser, false);
     //
     // post-loading
     //
-    bool cat_at_end;
-    bool print_at_end;
-    bool unmap_read_ends;
-    bool resolve_unmappable_regions;
-    bool validate_variations;
-    bool unmap_single_chunks;
-    bool unmap_mut_clusters;
-    bool build_hap_map;
+    //bool cat_at_end;
+    //bool print_at_end;
+    //bool unmap_read_ends;
+    //bool resolve_unmappable_regions;
+    //bool validate_variations;
+    //bool unmap_single_chunks;
+    //bool unmap_mut_clusters;
+    //bool build_hap_map;
+    SwitchArg cat_at_end("", "cat-at-end", "Catenate contigs after loading graph.", cmd_parser, false);
+    SwitchArg print_at_end("", "print-at-end", "Print graph after loading graph.", cmd_parser, false);
+    SwitchArg unmap_read_ends("", "unmap-read-ends", "Unmap read ends.", cmd_parser, false);
+    SwitchArg resolve_unmappable_regions("", "resolve-unmappable-regions", "Resolve unmappable regions.", cmd_parser, false);
+    SwitchArg validate_variations("", "validate-variations", "Validate variations with auxiliary 2GS data.", cmd_parser, false);
+    SwitchArg unmap_single_chunks("", "unmap-single-chunks", "Unmap single chunks.", cmd_parser, false);
+    SwitchArg unmap_mut_clusters("", "unmap-mut-clusters", "Unmap mutation clusters.", cmd_parser, false);
+    SwitchArg build_hap_map("", "build-hap-map", "Build haplotype map.", cmd_parser, false);
     //
     // other
     //
-    bool interactive;
-    bool test_1;
-    bool test_2;
-    bool test_3;
+    //bool interactive;
+    //bool test_1;
+    //bool test_2;
+    //bool test_3;
+    SwitchArg interactive("", "interactive", "Enter interactive mode.", cmd_parser, false);
+    SwitchArg test_1("", "test-1", "Internal switch.", cmd_parser, false);
+    SwitchArg test_2("", "test-2", "Internal switch.", cmd_parser, false);
+    SwitchArg test_3("", "test-3", "Internal switch.", cmd_parser, false);
 } // namespace opts
 
 
@@ -103,7 +132,7 @@ void load_asqg(std::istream& is, Graph& g)
             string r_seq;
             iss >> r_id >> r_seq;
             ASSERT(not iss.eof());
-            global::assert_message() = string("VT ") + r_id;
+            global_assert::global_msg() = string("VT ") + r_id;
             g.add_read(std::move(r_id), std::move(r_seq));
         }
         else if (rec_type == "ED")
@@ -123,7 +152,7 @@ void load_asqg(std::istream& is, Graph& g)
             // switch to open interval ends
             ++r1_end;
             ++r2_end;
-            global::assert_message() = string("ED ") + r1_id + " " + r2_id;
+            global_assert::global_msg() = string("ED ") + r1_id + " " + r2_id;
             g.add_overlap(r1_id, r2_id, r1_start, r1_end - r1_start, r2_start, r2_end - r2_start, rc, sam_cigar.substr(5));
         }
         if (opts::check_at_step)
@@ -136,7 +165,7 @@ void load_asqg(std::istream& is, Graph& g)
         {
             if ((++line_count % opts::progress_count) == 0)
             {
-                LOG("mac", info) << ptree("progress").put("count", line_count);
+                LOG("mac", info) << ptree("progress_count").put("count", line_count);
             }
         }
     }
@@ -150,18 +179,19 @@ int real_main()
     Graph g;
     Hap_Map hm;
     // option validation
-    if (opts::input_file.empty() == opts::load_file.empty())
+    if (opts::input_file.get().empty() == opts::load_file.get().empty())
     {
         LOG("mac", error) << "exactly 1 of input-file or load-file options must be specified" << endl;
         abort();
     }
-    if (not opts::load_file.empty())
+    if (not opts::load_file.get().empty())
     {
+        /*
         vector< string > forbidden_options = { "unmap-trigger-len" };
         vector< string > forbidden_bool_switches = { "cat-at-step", "print-at-step", "check-at-step" };
         for (const auto& s : forbidden_options)
         {
-            if (opts::vm.count(s))
+            if (opts::cat_at_step)
             {
                 LOG("mac", warning) << s << ": ignored when loading a mac graph";
             }
@@ -173,17 +203,18 @@ int real_main()
                 LOG("mac", warning) << s << ": ignored when loading a mac graph";
             }
         }
+        */
     }
-    if (opts::validate_variations and opts::aux_bwt_file.empty())
+    if (opts::validate_variations and opts::aux_bwt_file.get().empty())
     {
         LOG("mac", error) << "--aux-bwt-file must be specifed with --validate-variations" << endl;
         abort();
     }
     // main work
-    if (not opts::input_file.empty())
+    if (not opts::input_file.get().empty())
     {
         // load asqg graph
-        LOG("mac", info) << ptree("loading").put("input_file", opts::input_file);
+        LOG("mac", info) << ptree("loading").put("input_file", opts::input_file.get());
         zstr::ifstream tmp_fs(opts::input_file);
         g.unmap_trigger_len() = opts::unmap_trigger_len;
         g.cat_at_step() = opts::cat_at_step;
@@ -192,7 +223,7 @@ int real_main()
     else
     {
         // load mac graph
-        LOG("mac", info) << ptree("loading").put("load-file", opts::load_file);
+        LOG("mac", info) << ptree("loading").put("load-file", opts::load_file.get());
         strict_fstream::fstream ifs(opts::load_file, ios_base::in | ios_base::binary);
         g.load(ifs);
     }
@@ -208,7 +239,7 @@ int real_main()
     if (opts::validate_variations)
     {
         BWTIndexSet index_set;
-        LOG("mac", info) << ptree("validate_variations__load_index__start").put("aux_bwt_file", opts::aux_bwt_file);
+        LOG("mac", info) << ptree("validate_variations__load_index__start").put("aux_bwt_file", opts::aux_bwt_file.get());
         index_set.pBWT = new BWT(opts::aux_bwt_file);
         LOG("mac", info) << ptree("validate_variations__load_index__end");
         Validate_Variations()(g, index_set);
@@ -258,27 +289,27 @@ int real_main()
     {
         cli(std::cin, std::cout, g, hm);
     }
-    if (not opts::stats_file.empty())
+    if (not opts::stats_file.get().empty())
     {
-        LOG("mac", info) << ptree("print_stats").put("stats_file", opts::stats_file);
+        LOG("mac", info) << ptree("print_stats").put("stats_file", opts::stats_file.get());
         strict_fstream::fstream tmp_fs(opts::stats_file, ios_base::out);
         g.dump_detailed_counts(tmp_fs);
     }
-    if (not opts::supercontigs_stats_file.empty())
+    if (not opts::supercontigs_stats_file.get().empty())
     {
-        LOG("mac", info) << ptree("supercontigs_stats").put("file", opts::supercontigs_stats_file);
+        LOG("mac", info) << ptree("supercontigs_stats").put("file", opts::supercontigs_stats_file.get());
         strict_fstream::fstream tmp_fs(opts::supercontigs_stats_file, ios_base::out);
         g.print_supercontig_stats(tmp_fs);
     }
-    if (not opts::mutations_file.empty())
+    if (not opts::mutations_file.get().empty())
     {
-        LOG("mac", info) << ptree("print_mutations").put("file", opts::mutations_file);
+        LOG("mac", info) << ptree("print_mutations").put("file", opts::mutations_file.get());
         strict_fstream::fstream tmp_fs(opts::mutations_file, ios_base::out);
         g.print_mutations(tmp_fs);
     }
-    if (not opts::terminal_reads_file.empty())
+    if (not opts::terminal_reads_file.get().empty())
     {
-        LOG("mac", info) << ptree("print_terminal_reads").put("file", opts::terminal_reads_file);
+        LOG("mac", info) << ptree("print_terminal_reads").put("file", opts::terminal_reads_file.get());
         strict_fstream::fstream tmp_fs(opts::terminal_reads_file, ios_base::out);
         g.get_terminal_reads(tmp_fs);
     }
@@ -286,23 +317,23 @@ int real_main()
     {
         cout << g.to_ptree();
     }
-    if (not opts::unmappable_contigs_file.empty())
+    if (not opts::unmappable_contigs_file.get().empty())
     {
-        LOG("mac", info) << ptree("print_unmappable_contigs").put("file", opts::unmappable_contigs_file);
+        LOG("mac", info) << ptree("print_unmappable_contigs").put("file", opts::unmappable_contigs_file.get());
         strict_fstream::fstream tmp_fs(opts::unmappable_contigs_file, ios_base::out);
         g.print_unmappable_contigs(tmp_fs);
     }
-    if (not opts::hapmap_stats_file.empty())
+    if (not opts::hapmap_stats_file.get().empty())
     {
-        LOG("mac", info) << ptree("hapmap-stats").put("file", opts::hapmap_stats_file);
+        LOG("mac", info) << ptree("hapmap-stats").put("file", opts::hapmap_stats_file.get());
         strict_fstream::fstream tmp_fs(opts::hapmap_stats_file, ios_base::out);
         hm.dump_stats(tmp_fs, g);
     }
     LOG("mac", info) << ptree("done_output");
 
-    if (not opts::save_file.empty())
+    if (not opts::save_file.get().empty())
     {
-        LOG("mac", info) << ptree("saving").put("save_file", opts::save_file);
+        LOG("mac", info) << ptree("saving").put("save_file", opts::save_file.get());
         strict_fstream::fstream tmp_fs(opts::save_file, ios_base::out | ios_base::binary);
         g.save(tmp_fs);
     }
@@ -313,9 +344,10 @@ int real_main()
     return EXIT_SUCCESS;
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char * argv[])
 {
-    global::program_name() = argv[0];
+    /*
+    global_assert::prog_name() = argv[0];
     //cin.sync_with_stdio(false);
     //cout.sync_with_stdio(false);
     //cerr.sync_with_stdio(false);
@@ -464,5 +496,21 @@ int main(int argc, char* argv[])
     srand48(opts::seed);
     // print options
     LOG("mac", info) << variables_map_converter::to_ptree(opts::vm, ac);
+    */
+
+    opts::cmd_parser.parse(argc, argv);
+    global_assert::prog_name() = opts::cmd_parser.getProgramName();
+    // set log levels
+    Logger::set_levels_from_options(opts::log_level, &clog);
+    // set random seed
+    if (opts::seed < 0)
+    {
+        opts::seed.get() = time(nullptr);
+    }
+    srand48(opts::seed);
+    // print options
+    LOG("main", info) << "program: " << opts::cmd_parser.getProgramName() << endl;
+    LOG("main", info) << "version: " << opts::cmd_parser.getVersion() << endl;
+    LOG("main", info) << "args: " << opts::cmd_parser.getOrigArgv() << endl;
     return real_main();
 }

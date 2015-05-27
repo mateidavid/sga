@@ -4,29 +4,29 @@
 // Released under the GPL license
 //-----------------------------------------------
 
-#ifndef __GLOBAL_HPP
-#define __GLOBAL_HPP
+#ifndef __GLOBAL_ASSERT_HPP
+#define __GLOBAL_ASSERT_HPP
 
 #include <iostream>
 #include <string>
 
-
-struct global
+struct global_assert
 {
-    static std::string& program_name()
+    static std::string& prog_name()
     {
-        static std::string _program_name;
-        return _program_name;
+        static std::string _prog_name;
+        return _prog_name;
     }
-    static std::string& assert_message()
+    static std::string& global_msg()
     {
-        static std::string _assert_message;
-        return _assert_message;
+        static std::string _global_msg;
+        return _global_msg;
     }
+
     static void assertion_failed(const std::string& expr, const std::string& msg,
                                  const std::string& function, const std::string& file, long line)
     {
-        std::cerr << program_name() << ": "
+        std::cerr << prog_name() << ": "
                   << file << ":" << line << ": "
                   << function << ": "
                   << "Assertion '" << expr << "' failed";
@@ -34,14 +34,14 @@ struct global
         {
             std::cerr << ": " << msg;
         }
-        if (not assert_message().empty())
+        if (not global_msg().empty())
         {
-            std::cerr << ": [" << assert_message() << "]";
+            std::cerr << ": [" << global_msg() << "]";
         }
         std::cerr << std::endl;
         abort();
     }
-}; // struct global
+}; // struct global_assert
 
 #undef ASSERT
 #undef ASSERT_MSG
@@ -56,7 +56,7 @@ struct global
 #include <boost/config.hpp> // for BOOST_LIKELY
 #include <boost/current_function.hpp>
 
-#define ASSERT_MSG(expr, msg) (BOOST_LIKELY(!!(expr))? ((void)0): global::assertion_failed(#expr, msg, BOOST_CURRENT_FUNCTION, __FILE__, __LINE__))
+#define ASSERT_MSG(expr, msg) (BOOST_LIKELY(!!(expr))? ((void)0): global_assert::assertion_failed(#expr, msg, BOOST_CURRENT_FUNCTION, __FILE__, __LINE__))
 #define ASSERT(expr) ASSERT_MSG(expr, "")
 
 #endif

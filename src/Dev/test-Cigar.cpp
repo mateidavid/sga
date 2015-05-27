@@ -4,7 +4,7 @@
 #undef DISABLE_ASSERTS
 #endif
 
-#include "global.hpp"
+#include "global_assert.hpp"
 #include "Cigar.hpp"
 #include "RC_Sequence.hpp"
 
@@ -79,8 +79,9 @@ void check_cigar(const string& cigar_string, const string& rf_seq, const string&
     }
 }
 
-int main()
+int main(int argc, char * argv[])
 {
+    global_assert::prog_name() = argv[0];
     vector< pair< string, pair< string, string > > > test_v = {
         { "1M", { "A", "A" } },
         { "2M", { "AA", "AA" } },

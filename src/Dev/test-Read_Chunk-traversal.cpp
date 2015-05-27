@@ -54,7 +54,7 @@ void test_traversal(Read_Chunk_BPtr rc_bptr, bool forward, Size_Type brk, bool o
     {
         oss.str(string());
         oss << tmp_ptree.put("i", i);
-        global::assert_message() = oss.str();
+        global_assert::global_msg() = oss.str();
         ASSERT(it != res.end());
         ASSERT(pos.c_pos == (*it)[0]);
         ASSERT(pos.r_pos == (*it)[1]);
@@ -286,7 +286,7 @@ void usage(std::ostream& os, const std::string& prog_name)
 
 int main(int argc, char* argv[])
 {
-    global::program_name() = argv[0];
+    global_assert::prog_name() = argv[0];
 
     Mutation_Fact mut_fact;
     Mutation_Chunk_Adapter_Fact mca_fact;

@@ -1,17 +1,35 @@
 #include "shortcuts.hpp"
 #include <iostream>
 #include <time.h>
-#include <boost/program_options.hpp>
 #include <boost/intrusive/list.hpp>
 #include <boost/intrusive/itree.hpp>
 #include <boost/tti/tti.hpp>
+#include <tclap/CmdLine.h>
 #include "factory.hpp"
 #include "ref_range.hpp"
 #include "type_str.hpp"
 
 using namespace std;
 namespace bi = boost::intrusive;
-namespace bo = boost::program_options;
+
+namespace global
+{
+    string prog_desc =
+        "Test intrusive itree and list with bounded pointers. "
+        "The program tests the data structures by performing a series of random operations, such as:\n"
+        "- insert new element\n"
+        "- delete existing element\n"
+        "- compute intersection with some interval\n"
+        "- check max_end fields\n"
+        "- clone tree\n";
+    TCLAP::CmdLine cmd_parser(prog_desc);
+
+    TCLAP::ValueArg< long > seed("", "seed", "Random seed (-1: use time).", false, -1, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned > max_load("", "max-load", "Maximum load of the interval tree.", false, 100, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned > range_max("", "range-max", "Maximum endpoint.", false, 20, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned > n_ops("", "n-ops", "Number of operations.", false, 1000, "int", cmd_parser);
+    TCLAP::SwitchArg print_tree("", "print-tree", "Print tree after each operation.", cmd_parser, false);
+}
 
 namespace detail
 {
@@ -292,23 +310,13 @@ void check_max_ends(itree_type& t, fact_type&)
     }
 }
 
-struct Program_Options
-{
-    size_t max_load;
-    size_t range_max;
-    size_t n_ops;
-    size_t seed;
-    bool print_tree_each_op;
-};
-
-
-void real_main(const Program_Options& po)
+void real_main()
 {
     clog << "----- program options:"
-         << "\nmax_load=" << po.max_load
-         << "\nrange_max=" << po.range_max
-         << "\nn_ops=" << po.n_ops
-         << "\nseed=" << po.seed << '\n';
+         << "\nmax_load=" << global::max_load
+         << "\nrange_max=" << global::range_max
+         << "\nn_ops=" << global::n_ops
+         << "\nseed=" << global::seed << '\n';
 
     clog << "--- type names:"
          << "\nValue: " << type_str< Value >()
@@ -335,22 +343,22 @@ void real_main(const Program_Options& po)
         list_type l;
 
         clog << "----- initializing random number generator\n";
-        srand48(po.seed);
+        srand48(global::seed);
 
         clog << "----- main loop\n";
-        for (size_t i = 0; i < po.n_ops; ++i)
+        for (size_t i = 0; i < global::n_ops; ++i)
         {
             int op = int(drand48()*5);
             if (op == 0)
             {
                 // insert new element
-                if (l.size() >= po.max_load)
+                if (l.size() >= global::max_load)
                 {
                     continue;
                 }
                 ptr_type a = f.new_elem();
-                size_t e1 = size_t(drand48() * po.range_max);
-                size_t e2 = size_t(drand48() * po.range_max);
+                size_t e1 = size_t(drand48() * global::range_max);
+                size_t e2 = size_t(drand48() * global::range_max);
                 a->_start = min(e1, e2);
                 a->_end = max(e1, e2);
                 clog << "adding: " << *a << '\n';
@@ -380,8 +388,8 @@ void real_main(const Program_Options& po)
             else if (op == 2)
             {
                 // compute intersection with some interval
-                size_t e1 = size_t(drand48() * po.range_max);
-                size_t e2 = size_t(drand48() * po.range_max);
+                size_t e1 = size_t(drand48() * global::range_max);
+                size_t e2 = size_t(drand48() * global::range_max);
                 if (e1 > e2)
                 {
                     swap(e1, e2);
@@ -444,7 +452,7 @@ void real_main(const Program_Options& po)
                 ptr_type tmp;
                 t2.clear_and_dispose(fact_type::disposer_type());
             }
-            if (po.print_tree_each_op)
+            if (global::print_tree)
             {
                 print_tree(t);
             }
@@ -463,45 +471,12 @@ void real_main(const Program_Options& po)
 
 int main(int argc, char* argv[])
 {
-    Program_Options po;
-
-    bo::options_description generic_opts_desc("Generic options");
-    bo::options_description config_opts_desc("Configuration options");
-    bo::options_description hidden_opts_desc("Hidden options");
-    bo::options_description cmdline_opts_desc;
-    bo::options_description visible_opts_desc("Allowed options");
-    generic_opts_desc.add_options()
-        ("help,?", "produce help message")
-        ;
-    config_opts_desc.add_options()
-        ("max-load", bo::value<size_t>(&po.max_load)->default_value(100), "maximum load of the interval tree")
-        ("range-max", bo::value<size_t>(&po.range_max)->default_value(20), "maximum endpoint")
-        ("n-ops", bo::value<size_t>(&po.n_ops)->default_value(1000), "number of operations")
-        ("seed", bo::value<size_t>(&po.seed)->default_value(0), "random number generator seed")
-        ("print-tree", "print tree after each operation")
-        ;
-    cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
-    visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
-    bo::variables_map vm;
-    store(bo::command_line_parser(argc, argv).options(cmdline_opts_desc).run(), vm);
-    notify(vm);
-    if (vm.count("help"))
+    global::cmd_parser.parse(argc, argv);
+    global_assert::prog_name() = global::cmd_parser.getProgramName();
+    if (global::seed < 0)
     {
-        cout << "Test intrusive itree and list with bounded pointers.\n"
-            "The program tests the data structures by performing a series of random operations, such as:\n"
-            "- insert new element\n"
-            "- delete existing element\n"
-            "- compute intersection with some interval\n"
-            "- check max_end fields\n"
-            "- clone tree\n\n";
-        cout << visible_opts_desc;
-        exit(EXIT_SUCCESS);
+        global::seed.get() = time(nullptr);
     }
-    if (po.seed == 0)
-    {
-        po.seed = time(NULL);
-    }
-    po.print_tree_each_op = vm.count("print-tree") > 0;
-
-    real_main(po);
+    srand48(global::seed);
+    real_main();
 }

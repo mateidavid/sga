@@ -4,43 +4,54 @@
 
 #include <string>
 #include <iostream>
-#include <boost/program_options.hpp>
+#include <tclap/CmdLine.h>
 #include "RC_Sequence.hpp"
 #include "Util.h"
 
 using namespace std;
-namespace bo = boost::program_options;
+
+namespace global
+{
+    string prog_desc =
+        "Test RC Sequence type. "
+        "The program repeats the following random test several times:\n"
+        " - pick a DNA sequence\n"
+        " - pick a substring position\n"
+        " - optionally do a reverse operation\n"
+        " - optionally do a complement operation\n"
+        " - pick order of substring vs rev&comp\n"
+        " - perform the operations using the old library\n"
+        " - perform the operations using the new library\n\n";
+    TCLAP::CmdLine cmd_parser(prog_desc);
+
+    TCLAP::ValueArg< long > seed("", "seed", "Random seed (-1: use time).", false, -1, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned > n_ops("", "n-ops", "Number of operations.", false, 100000, "int", cmd_parser);
+    TCLAP::ValueArg< unsigned > max_len("", "max-len", "Maximum string length.", false, 100, "int", cmd_parser);
+    TCLAP::SwitchArg rc_only("", "rc-only", "Only id or rc operations.", cmd_parser, false);
+} // namespace global
 
 typedef rc_sequence::Sequence< std::string > sequence_type;
 typedef sequence_type::proxy_type sequence_proxy_type;
-
-struct Program_Options
-{
-    size_t max_len;
-    size_t n_ops;
-    size_t seed;
-    bool rc_only;
-};
 
 size_t rand_int(size_t max)
 {
     return static_cast< size_t >(drand48() * max);
 }
 
-void real_main(const Program_Options& po)
+void real_main()
 {
-    cout << "parameters: seed=" << po.seed << " max_len=" << po.max_len
-         << " n_ops=" << po.n_ops << " rc_only=" << po.rc_only << "\n";
+    cout << "parameters: seed=" << global::seed << " max_len=" << global::max_len
+         << " n_ops=" << global::n_ops << " rc_only=" << global::rc_only << "\n";
     size_t old_lib_us = 0;
     size_t new_lib_us = 0;
     vector< size_t > op_count(8, 0);
     const vector< string > op_tag = { "id + substr", "comp + substr", "rev + substr", "revcomp + substr",
                                       "substr + id", "substr + comp", "substr + rev", "substr + revcomp" };
-    for (size_t i = 0; i < po.n_ops; ++i)
+    for (size_t i = 0; i < global::n_ops; ++i)
     {
         // pick 2 strings
-        size_t s_len = rand_int(po.max_len - 1) + 1;
-        size_t s_comp_len = rand_int(po.max_len - 1) + 1;
+        size_t s_len = rand_int(global::max_len - 1) + 1;
+        size_t s_comp_len = rand_int(global::max_len - 1) + 1;
         string s_old_lib;
         string s_comp_old_lib;
         for (size_t j = 0; j < s_len; ++j)
@@ -60,7 +71,7 @@ void real_main(const Program_Options& po)
         // pick operation order, rev/comp combo, and substr coordinates
         bool substr_first = rand_int(2);
         bool do_rev = rand_int(2);
-        bool do_comp = po.rc_only? do_rev : rand_int(2);
+        bool do_comp = global::rc_only? do_rev : rand_int(2);
         size_t cut_start = rand_int(s_len);
         size_t cut_len = rand_int(s_len - cut_start) + 1;
         size_t check_idx = rand_int(cut_len);
@@ -143,46 +154,13 @@ void real_main(const Program_Options& po)
     cout << "new lib time: " << new_lib_us << "\n";
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char * argv[])
 {
-    Program_Options po;
-
-    bo::options_description generic_opts_desc("Generic options");
-    bo::options_description config_opts_desc("Configuration options");
-    bo::options_description hidden_opts_desc("Hidden options");
-    bo::options_description cmdline_opts_desc;
-    bo::options_description visible_opts_desc("Allowed options");
-    generic_opts_desc.add_options()
-        ("help,?", "produce help message")
-        ;
-    config_opts_desc.add_options()
-        ("max-len", bo::value<size_t>(&po.max_len)->default_value(100), "maximum string length")
-        ("n-ops", bo::value<size_t>(&po.n_ops)->default_value(100000), "number of operations")
-        ("seed", bo::value<size_t>(&po.seed)->default_value(0), "random number generator seed")
-        ("rc-only", bo::bool_switch(&po.rc_only), "only id or rc operations")
-        ;
-    cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
-    visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
-    bo::variables_map vm;
-    store(bo::command_line_parser(argc, argv).options(cmdline_opts_desc).run(), vm);
-    notify(vm);
-    if (vm.count("help"))
+    global::cmd_parser.parse(argc, argv);
+    if (global::seed < 0)
     {
-        cout << "Test RC Sequence type.\n"
-            "The program repeats the following random test several times:\n"
-            " - pick a DNA sequence\n"
-            " - pick a substring position\n"
-            " - optionally do a reverse operation\n"
-            " - optionally do a complement operation\n"
-            " - pick order of substring vs rev&comp\n"
-            " - perform the operations using the old library\n"
-            " - perform the operations using the new library\n\n";
-        cout << visible_opts_desc;
-        exit(EXIT_SUCCESS);
+        global::seed.get() = time(nullptr);
     }
-    if (po.seed == 0)
-    {
-        po.seed = time(NULL);
-    }
-    real_main(po);
+    srand48(global::seed);
+    real_main();
 }
