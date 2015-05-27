@@ -26,10 +26,9 @@ void Validate_Variations::operator () (Graph& g, const BWTIndexSet& index_set) c
             min_mut_start = mut_cbptr->rf_end();
             // check next mutation doesn't overlap it either
             {
-                auto next_mut_cit = next(ce_bptr->mut_cont().iterator_to(*mut_cbptr));
-                if (next_mut_cit != ce_bptr->mut_cont().end() and next_mut_cit->rf_start() < min_mut_start)
+                if (mut_cit != ce_bptr->mut_cont().end() and mut_cit->rf_start() < min_mut_start)
                 {
-                    min_mut_start = max(min_mut_start, next_mut_cit->rf_end());
+                    min_mut_start = max(min_mut_start, mut_cit->rf_end());
                     continue;
                 }
             }
