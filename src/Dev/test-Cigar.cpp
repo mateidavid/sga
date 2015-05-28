@@ -79,7 +79,7 @@ void check_cigar(const string& cigar_string, const string& rf_seq, const string&
     }
 }
 
-int main(int argc, char * argv[])
+int main(int, char * argv[])
 {
     global_assert::prog_name() = argv[0];
     vector< pair< string, pair< string, string > > > test_v = {
