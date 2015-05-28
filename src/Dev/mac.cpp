@@ -503,14 +503,17 @@ int main(int argc, char * argv[])
     // set log levels
     Logger::set_levels_from_options(opts::log_level, &clog);
     // set random seed
+    bool seed_is_random = false;
     if (opts::seed < 0)
     {
+        seed_is_random = true;
         opts::seed.get() = time(nullptr);
     }
     srand48(opts::seed);
     // print options
-    LOG("main", info) << "program: " << opts::cmd_parser.getProgramName() << endl;
-    LOG("main", info) << "version: " << opts::cmd_parser.getVersion() << endl;
-    LOG("main", info) << "args: " << opts::cmd_parser.getOrigArgv() << endl;
+    LOG("main", info) << "program: " << opts::cmd_parser.getProgramName() << endl
+                      << "version: " << opts::cmd_parser.getVersion() << endl
+                      << "args: " << opts::cmd_parser.getOrigArgv() << endl;
+    if (seed_is_random) LOG("main", info) << "seed: " << opts::seed << endl;
     return real_main();
 }
