@@ -186,7 +186,7 @@ int real_main()
     }
     if (not opts::load_file.get().empty())
     {
-        /*
+        /* TODO:
         vector< string > forbidden_options = { "unmap-trigger-len" };
         vector< string > forbidden_bool_switches = { "cat-at-step", "print-at-step", "check-at-step" };
         for (const auto& s : forbidden_options)
@@ -293,7 +293,11 @@ int real_main()
     {
         LOG("mac", info) << ptree("print_stats").put("stats_file", opts::stats_file.get());
         strict_fstream::fstream tmp_fs(opts::stats_file, ios_base::out);
-        g.dump_detailed_counts(tmp_fs);
+        g.print_detailed_counts(tmp_fs);
+    }
+    else
+    {
+        g.print_basic_stats(clog);
     }
     if (not opts::supercontigs_stats_file.get().empty())
     {

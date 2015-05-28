@@ -126,7 +126,8 @@ public:
     void check_leaks() const;
 
     /** Stats. */
-    void dump_detailed_counts(ostream& os) const;
+    void print_basic_stats(ostream& os) const;
+    void print_detailed_counts(ostream& os) const;
     void print_supercontig_stats(ostream& os) const;
     void print_mutations(ostream& os, size_t min_support = 1, Size_Type flank_len = 20) const;
 

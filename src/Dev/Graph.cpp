@@ -2101,9 +2101,56 @@ Graph::get_supercontigs(int unmappable_policy, size_t ignore_threshold) const
     return res;
 }
 
-void Graph::dump_detailed_counts(ostream& os) const
+void Graph::print_basic_stats(ostream& os) const
 {
-    LOG("graph", info) << ptree("dump_detailed_counts");
+    LOG("graph", info) << ptree("print_basic_stats");
+    unsigned long num_re = 0;
+    unsigned long bp_re = 0;
+    unsigned long num_ce = 0;
+    unsigned long num_ce_normal = 0;
+    unsigned long bp_ce_normal = 0;
+    unsigned long mut_ce_normal = 0;
+    unsigned long snp_ce_normal = 0;
+    unsigned long sc_branch = 0;
+    for (const auto re_cbptr : re_cont() | referenced)
+    {
+        ++num_re;
+        bp_re += re_cbptr->len();
+    }
+    for (const auto ce_cbptr : ce_cont() | referenced)
+    {
+        ++num_ce;
+        if (not ce_cbptr->is_normal()) continue;
+        ++num_ce_normal;
+        bp_ce_normal += ce_cbptr->len();
+        for (const auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
+        {
+            ++mut_ce_normal;
+            if (not mut_cbptr->is_snp()) continue;
+            ++snp_ce_normal;
+        }
+        auto cont = ce_cbptr->out_chunks_dir(false, 3, 1);
+        sc_branch += cont.size() > 1;
+        cont = ce_cbptr->out_chunks_dir(true, 3, 1);
+        sc_branch += cont.size() > 1;
+    }
+
+    os << "TOT\tnum_re\tbp_re\tnum_ce\tnum_ce_n\tbp_ce_n\tmut_ce_n\tsnp_ce_n\tsc_branch" << endl
+       << "TOT\t"
+       << num_re << "\t"
+       << bp_re << "\t"
+       << num_ce << "\t"
+       << num_ce_normal << "\t"
+       << bp_ce_normal << "\t"
+       << mut_ce_normal << "\t"
+       << snp_ce_normal << "\t"
+       << sc_branch << endl;
+}
+
+void Graph::print_detailed_counts(ostream& os) const
+{
+    print_basic_stats(os);
+    LOG("graph", info) << ptree("print_detailed_counts");
     // First read stats
     os << "RE\tname\tlen\tnum.chunks\tchunk.lens\tcontigs\n";
     for (const auto re_cbptr : re_cont() | referenced)
