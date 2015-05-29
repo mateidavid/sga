@@ -190,19 +190,28 @@ Contig_Entry::mut_support(Mutation_CBPtr mut_cbptr) const
         {
             continue;
         }
-        // if the rf allele is empty, we require >=1bp mapped on either side
-        if ((mut_cbptr->rf_len() > 0
-             and rc_cbptr->get_c_start() <= mut_cbptr->rf_start()
-             and rc_cbptr->get_c_end() >= mut_cbptr->rf_end())
-            or (mut_cbptr->rf_len() == 0
-                and rc_cbptr->get_c_start() < mut_cbptr->rf_start()
-                and rc_cbptr->get_c_end() > mut_cbptr->rf_end()))
+        if (mut_cbptr->rf_len() > 0)
         {
-            full_rf_set.insert(rc_cbptr);
+            if (rc_cbptr->get_c_start() <= mut_cbptr->rf_start()
+                and rc_cbptr->get_c_end() >= mut_cbptr->rf_end())
+            {
+                full_rf_set.insert(rc_cbptr);
+            }
+            else if (rc_cbptr->get_c_start() < mut_cbptr->rf_end()
+                     or rc_cbptr->get_c_end() > mut_cbptr->rf_start())
+            {
+                part_rf_set.insert(rc_cbptr);
+            }
         }
-        else
+        else // mut_cbptr->rf_len() == 0
         {
-            part_rf_set.insert(rc_cbptr);
+            // if the rf allele is empty, the read must not end on the mutation endpoint
+            Range_Type c_rg(mut_cbptr->rf_start(), mut_cbptr->rf_start());
+            auto r_rg = rc_cbptr->mapped_range(c_rg, true, true, true);
+            if (rc_cbptr->re_bptr()->start() < r_rg.start() and r_rg.end() < rc_cbptr->re_bptr()->end())
+            {
+                full_rf_set.insert(rc_cbptr);
+            }
         }
     }
     return make_tuple(qr_set, full_rf_set, part_rf_set);
