@@ -54,6 +54,7 @@ void Validate_Variations::operator () (Graph& g, const BWTIndexSet& index_set) c
             validate_allele_pair();
 
             LOG("Validate_Variations", debug) << ptree("validation_result")
+                .put("ce_ptr", ce_bptr.to_int())
                 .put("mut_ptr", mut_cbptr.to_int())
                 .put("validated_qr", validated_qr)
                 .put("validated_rf", validated_rf);
