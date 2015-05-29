@@ -1247,7 +1247,7 @@ void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
 
 void Graph::print_mutations(ostream& os, size_t min_support, Size_Type flank_len) const
 {
-    os << "CE\tlen.ce\tpos.rf\tlen.rf\tlen.alt\tseq.rf\tseq.alt\tflank.left\tflank.right\tnum.cks.rf\tnum.cks.alt\n";
+    os << "MUT\tid.ce\tlen.ce\tpos.rf\tlen.rf\tlen.alt\tseq.rf\tseq.alt\tflank.left\tflank.right\tnum.cks.rf\tnum.cks.alt\n";
     for (auto ce_bptr : ce_cont() | referenced |
              ba::filtered([] (Contig_Entry_CBPtr ce_cbptr) { return ce_cbptr->is_normal(); }))
     {
@@ -1261,7 +1261,7 @@ void Graph::print_mutations(ostream& os, size_t min_support, Size_Type flank_len
             {
                 continue;
             }
-            os << ce_bptr.to_int() << "\t" << ce_bptr->len() << "\t"
+            os << "MUT\t" << ce_bptr.to_int() << "\t" << ce_bptr->len() << "\t"
                << mut_bptr->rf_start() << "\t" << mut_bptr->rf_len() << "\t" << mut_bptr->seq_len() << "\t"
                << ce_bptr->seq().substr(mut_bptr->rf_start(), mut_bptr->rf_len()) << "\t"
                << mut_bptr->seq() << "\t"
