@@ -76,6 +76,11 @@ void Validate_Variations::operator () (Graph& g, const BWTIndexSet& index_set) c
                 ASSERT(validated_qr);
                 // we swap the mutation allele with the reference allele
                 mut_cbptr = Contig_Entry::swap_mutation_alleles(ce_bptr, mut_cbptr).unconst();
+                if (not mut_cbptr)
+                {
+                    LOG("Validate_Variations", info) << ptree("mutation_disappeared");
+                    continue;
+                }
                 // re-run validation
                 validate_allele_pair();
             }

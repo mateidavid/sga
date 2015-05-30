@@ -513,8 +513,18 @@ Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mu
     // cut contig entry into 3 slices, so that mutation spans the full middle contig
     auto ce_mid_bptr = ce_bptr->cut(c_rg.start(), nullptr, true);
     ASSERT(ce_mid_bptr);
-    rc_cbptr = re_cbptr->chunk_cont().get_chunk_with_pos(r_rg.start());
-    if (rc_cbptr->get_rc() and r_rg.start() == rc_cbptr->get_r_start()) rc_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, false);
+    //rc_cbptr = re_cbptr->chunk_cont().get_chunk_with_pos(r_rg.start());
+    //if (rc_cbptr->get_rc() and r_rg.end() == rc_cbptr->get_r_start()) rc_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, false);
+    rc_cbptr = nullptr;
+    for (auto rc_cit = ce_mid_bptr->chunk_cont().begin(); rc_cit != ce_mid_bptr->chunk_cont().end(); ++rc_cit)
+    {
+        if (rc_cit->re_bptr() == re_cbptr)
+        {
+            rc_cbptr = &*rc_cit;
+            break;
+        }
+    }
+    ASSERT(rc_cbptr);
     ASSERT(rc_cbptr->ce_bptr() == ce_mid_bptr);
     ASSERT(rc_cbptr->get_c_start() == 0);
     ASSERT(not rc_cbptr->mut_ptr_cont().empty());
@@ -625,10 +635,9 @@ Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mu
         Contig_Entry::cat_c_right(ce_bptr, ce_new_bptr, get<2>(res));
     }
     auto rg = ce_bptr->mut_cont().iintersect(c_rg.start(), c_rg.start());
-    ASSERT(rg.begin() != rg.end());
-    ASSERT(++rg.begin() == rg.end());
+    ASSERT((rg.begin() == rg.end()) or (rg.begin() != rg.end() and ++rg.begin() == rg.end()));
 
-    return &*rg.begin();
+    return rg.begin() != rg.end()? &*rg.begin() : nullptr;
 }
 
 void Contig_Entry::check() const
