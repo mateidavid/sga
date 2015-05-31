@@ -119,137 +119,6 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
            or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
     ASSERT(rc_bptr->is_unlinked());
 
-/*
-    Read_Chunk_BPtr left_rc_bptr = nullptr;
-    Read_Chunk_BPtr right_rc_bptr = nullptr;
-    // chunk stays intact on the lhs of the cut if:
-    if (// endpoint is before c_brk
-        rc_bptr->get_c_end() < c_brk
-        // or at c_brk, and:
-        or (rc_bptr->get_c_end() == c_brk
-            and (// there are no mutations
-                rc_bptr->mut_ptr_cont().empty()
-                // or last mutation is not an insertion
-                or not rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->is_ins()
-                // or last insertion is not at c_brk
-                or rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->rf_start() < c_brk
-                // or last insertion at c_brk is selected to stay on lhs
-                or rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr() == mut_left_cbptr)))
-    {
-        return make_pair(rc_bptr, right_rc_bptr);
-    }
-
-    // chunk stays intact on the rhs of the cut if:
-    else if (// startpoint is after c_brk
-        c_brk < rc_bptr->get_c_start()
-        // or at c_brk, and:
-        or (c_brk == rc_bptr->get_c_start()
-            and (// there are no mutations
-                rc_bptr->mut_ptr_cont().empty()
-                // or first mutation is not the insertion selected to stay on lhs
-                or rc_bptr->mut_ptr_cont().begin()->mut_cbptr() != mut_left_cbptr)))
-    {
-        return make_pair(left_rc_bptr, rc_bptr);
-    }
-
-    else
-    {
-        // the chunk gets altered
-        ASSERT(rc_bptr->get_c_start() <= c_brk and c_brk <= rc_bptr->get_c_end());
-        // first compute the cut position
-        Pos pos = rc_bptr->get_start_pos();
-        pos.jump_to_brk(c_brk, true);
-        // we are guaranteed no mutations span the break
-        ASSERT(pos.c_pos == c_brk);
-        ASSERT(pos.mut_offset == 0);
-        // advance past an insertion at c_brk that is selected to stay on the lhs
-        if (not pos.past_last_mut() and pos.mca_cit->mut_cbptr() == mut_left_cbptr)
-        {
-            pos.increment();
-        }
-
-        if (pos.r_pos == rc_bptr->get_r_start() or pos.r_pos == rc_bptr->get_r_end())
-        {
-            // the chunk stays in one piece
-            if ((not rc_bptr->get_rc() and pos.r_pos == rc_bptr->get_r_start())
-                or (rc_bptr->get_rc() and pos.r_pos == rc_bptr->get_r_end()))
-            {
-                // chunk goes on the rhs
-                ASSERT((rc_bptr->get_c_start() == c_brk
-                        and pos.mca_cit == rc_bptr->mut_ptr_cont().begin())
-                       or (rc_bptr->get_c_start() < c_brk
-                           and not rc_bptr->mut_ptr_cont().empty()
-                           and pos.mca_cit == ++(rc_bptr->mut_ptr_cont().begin())
-                           and rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->is_del()
-                           and rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->rf_start() == rc_bptr->get_c_start()
-                           and rc_bptr->mut_ptr_cont().begin()->mut_cbptr()->rf_end() == c_brk));
-                if (rc_bptr->get_c_start() < c_brk)
-                {
-                    // remove initial deletion and adjust contig coordinates
-                    Mutation_Chunk_Adapter_BPtr mca_bptr = &*rc_bptr->mut_ptr_cont().begin();
-                    Mutation_BPtr mut_bptr = mca_bptr->mut_cbptr().unconst();
-                    rc_bptr->mut_ptr_cont().erase(mca_bptr);
-                    mut_bptr->chunk_ptr_cont().erase(mca_bptr);
-                    Mutation_Chunk_Adapter_Fact::del_elem(mca_bptr);
-                    rc_bptr->_c_start = c_brk;
-                    rc_bptr->_c_len -= mut_bptr->rf_len();
-                }
-                return make_pair(left_rc_bptr, rc_bptr);
-            }
-            else
-            {
-                // chunk goes on the lhs
-                ASSERT((c_brk == rc_bptr->get_c_end()
-                        and pos.mca_cit == rc_bptr->mut_ptr_cont().end())
-                       or (c_brk < rc_bptr->get_c_end()
-                           and not rc_bptr->mut_ptr_cont().empty()
-                           and pos.mca_cit == --(rc_bptr->mut_ptr_cont().end())
-                           and pos.mca_cit->mut_cbptr()->is_del()
-                           and pos.mca_cit->mut_cbptr()->rf_end() == rc_bptr->get_c_end()));
-                if (c_brk < rc_bptr->get_c_end())
-                {
-                    // remove final deletion and adjust contig coordinates
-                    Mutation_Chunk_Adapter_BPtr mca_bptr = &*rc_bptr->mut_ptr_cont().rbegin();
-                    Mutation_BPtr mut_bptr = mca_bptr->mut_cbptr().unconst();
-                    rc_bptr->mut_ptr_cont().erase(mca_bptr);
-                    mut_bptr->chunk_ptr_cont().erase(mca_bptr);
-                    Mutation_Chunk_Adapter_Fact::del_elem(mca_bptr);
-                    rc_bptr->_c_len -= mut_bptr->rf_len();
-                }
-                return make_pair(rc_bptr, right_rc_bptr);
-            }
-        }
-        else
-        {
-            // chunk gets cut
-            ASSERT(rc_bptr->get_r_start() < pos.r_pos and pos.r_pos < rc_bptr->get_r_end());
-            right_rc_bptr = Read_Chunk_Fact::new_elem();
-            // fix inner fields of both chunks
-            right_rc_bptr->_set_rc(rc_bptr->get_rc());
-            right_rc_bptr->_re_bptr = rc_bptr->_re_bptr;
-            right_rc_bptr->_ce_bptr = rc_bptr->_ce_bptr;
-            right_rc_bptr->_c_start = c_brk;
-            right_rc_bptr->_c_len = rc_bptr->_c_start + rc_bptr->_c_len - c_brk;
-            rc_bptr->_c_len -= right_rc_bptr->_c_len;
-            if (not rc_bptr->get_rc())
-            {
-                right_rc_bptr->_r_start = pos.r_pos;
-                right_rc_bptr->_r_len = rc_bptr->_r_start + rc_bptr->_r_len - pos.r_pos;
-            }
-            else
-            {
-                right_rc_bptr->_r_start = rc_bptr->_r_start;
-                right_rc_bptr->_r_len = pos.r_pos - rc_bptr->_r_start;
-                rc_bptr->_r_start = pos.r_pos;
-            }
-            rc_bptr->_r_len -= right_rc_bptr->_r_len;
-            // transfer mutations beyond breakpoint from left to right chunk
-            right_rc_bptr->mut_ptr_cont() = rc_bptr->mut_ptr_cont().split(pos.mca_cit, right_rc_bptr);
-            return make_pair(rc_bptr, right_rc_bptr);
-        }
-    }
-*/
-
     if (rc_bptr->get_c_end() < c_brk)
     {
         return make_pair(rc_bptr, nullptr);
@@ -259,6 +128,12 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
         return make_pair(nullptr, rc_bptr);
     }
     ASSERT(rc_bptr->get_c_start() <= c_brk and c_brk <= rc_bptr->get_c_end());
+    bool is_left_terminal = not rc_bptr->get_rc()
+        ? rc_bptr->get_r_start() == rc_bptr->re_bptr()->start()
+        : rc_bptr->get_r_end() == rc_bptr->re_bptr()->end();
+    bool is_right_terminal = not rc_bptr->get_rc()
+        ? rc_bptr->get_r_end() == rc_bptr->re_bptr()->end()
+        : rc_bptr->get_r_start() == rc_bptr->re_bptr()->start();
     // scan mutation_ptr container to find:
     // - (iterator to) the first mutation which goes on the rhs of the split
     // - the difference in read_len - contig_len on the lhs
@@ -283,14 +158,14 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
 
     Read_Chunk_BPtr left_rc_bptr = nullptr;
     Read_Chunk_BPtr right_rc_bptr = nullptr;
-    if (lhs_r_len > 0 or strict)
+    if (lhs_r_len > 0 or (strict and not is_left_terminal))
     {
         // fix lhs
         left_rc_bptr = rc_bptr;
         left_rc_bptr->_c_len = lhs_c_len;
         left_rc_bptr->_r_start += (not rc_bptr->get_rc()? 0 : rhs_r_len);
         left_rc_bptr->_r_len = lhs_r_len;
-        if (rhs_r_len > 0 or strict)
+        if (rhs_r_len > 0 or (strict and not is_right_terminal))
         {
             // create new rhs
             right_rc_bptr = Read_Chunk_Fact::new_elem(
