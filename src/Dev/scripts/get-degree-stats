@@ -9,8 +9,7 @@ stats_files=("$@")
 cat "${stats_files[@]}" |
 grep "^CE" |
 grep -v "len" |
-tawk '$4==0 && $5==0' |
-cut -f 21,24 |
+tawk '$4==0 && $5==0 {if ($21<=$24) print $21, $24; else print $24, $21}' |
 sort |
 uniq -c |
-sort -k 1nr
+sort -k 3n -k 2n
