@@ -2087,7 +2087,7 @@ Graph::get_supercontigs(int unmappable_policy, size_t ignore_threshold) const
                 crt_c_right = next_c_right;
                 //bitmask::set(crt_ce_bptr->tag(), visit_mask);
                 visit_t.insert(crt_ce_cbptr);
-                crt_sc.insert(c_right? crt_sc.end() : crt_sc.begin(), make_pair(next_ce_cbptr, next_c_right));
+                crt_sc.insert(c_right? crt_sc.end() : crt_sc.begin(), make_pair(next_ce_cbptr, next_c_right == c_right));
             }
         };
         // traverse past right endpoint, looking for supercontig endpoint
@@ -2328,7 +2328,7 @@ void Graph::print_supercontig_stats(ostream& os) const
 {
     LOG("graph", info) << ptree("print_supercontig_stats");
     auto sc_list = get_supercontigs(3, 1);
-    os << "SC\tbp.contigs\tnum.contigs\tcontig.lens\tcontigs" << endl;
+    os << "SC\tbp.contigs\tnum.contigs\tcontig.lens\tcontigs\tdeg.left\tdeg.right" << endl;
     for (auto& sc: sc_list)
     {
         size_t len = 0;
@@ -2358,7 +2358,11 @@ void Graph::print_supercontig_stats(ostream& os) const
             first = false;
             os << "(" << t.first.to_int() << "," << t.second << ")";
         }
-        os << endl;
+        os << "\t";
+        auto oc = sc.begin()->first->out_chunks_dir(not sc.begin()->second, 3, 1);
+        os << oc.size() << "\t";
+        oc = sc.rbegin()->first->out_chunks_dir(sc.rbegin()->second, 3, 1);
+        os << oc.size() << endl;
     }
 }
 
