@@ -42,10 +42,6 @@ public:
         return hh_cbptr == (right_end? hh_cbptr->he_cbptr()->hh_cont().back()
                             : hh_cbptr->he_cbptr()->hh_cont().front());
     }
-    static bool is_end_hop(Hap_Hop_CBPtr hh_cbptr)
-    {
-        return is_end_hop(hh_cbptr, false) or is_end_hop(hh_cbptr, true);
-    }
 
     void dump_stats(ostream& os, const Graph& g) const;
 

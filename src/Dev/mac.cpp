@@ -34,25 +34,12 @@ namespace opts
     //
     // generic
     //
-    //vector< string > log_level;
-    //long seed;
-    //unsigned progress_count;
     MultiArg< string > log_level("d", "log-level", "Log level.", false, "string", cmd_parser);
     ValueArg< long > seed("", "seed", "Random seed (-1: use time).", false, -1, "int", cmd_parser);
     ValueArg< unsigned > progress_count("c", "progress-count", "Progress count.", false, 0, "int", cmd_parser);
     //
     // file-related
     //
-    //string input_file;
-    //string load_file;
-    //string save_file;
-    //string stats_file;
-    //string supercontigs_stats_file;
-    //string mutations_file;
-    //string unmappable_contigs_file;
-    //string terminal_reads_file;
-    //string hapmap_stats_file;
-    //string aux_bwt_file;
     ValueArg< string > input_file("i", "input-file", "Load ASQG input file.", false, "", "file", cmd_parser);
     ValueArg< string > load_file("L", "load-file", "Load MAC graph from file.", false, "", "file", cmd_parser);
     ValueArg< string > save_file("S", "save-file", "Save MAC graph to file.", false, "", "file", cmd_parser);
@@ -66,10 +53,6 @@ namespace opts
     //
     // asqg loading
     //
-    //unsigned unmap_trigger_len;
-    //bool cat_at_step;
-    //bool print_at_step;
-    //bool check_at_step;
     ValueArg< unsigned > unmap_trigger_len("u", "unmap-trigger-len", "Trigger length for unmapping.", false, 9, "int", cmd_parser);
     SwitchArg cat_at_step("s", "cat-at-step", "Catenate contigs after each operation.", cmd_parser, false);
     SwitchArg print_at_step("", "print-at-step", "Print graph after each operation.", cmd_parser, false);
@@ -77,14 +60,6 @@ namespace opts
     //
     // post-loading
     //
-    //bool cat_at_end;
-    //bool print_at_end;
-    //bool unmap_read_ends;
-    //bool resolve_unmappable_regions;
-    //bool validate_variations;
-    //bool unmap_single_chunks;
-    //bool unmap_mut_clusters;
-    //bool build_hap_map;
     SwitchArg cat_at_end("", "cat-at-end", "Catenate contigs after loading graph.", cmd_parser, false);
     SwitchArg print_at_end("", "print-at-end", "Print graph after loading graph.", cmd_parser, false);
     SwitchArg unmap_read_ends("", "unmap-read-ends", "Unmap read ends.", cmd_parser, false);
@@ -92,14 +67,10 @@ namespace opts
     SwitchArg validate_variations("", "validate-variations", "Validate variations with auxiliary 2GS data.", cmd_parser, false);
     SwitchArg unmap_single_chunks("", "unmap-single-chunks", "Unmap single chunks.", cmd_parser, false);
     SwitchArg unmap_mut_clusters("", "unmap-mut-clusters", "Unmap mutation clusters.", cmd_parser, false);
-    SwitchArg build_hap_map("", "build-hap-map", "Build haplotype map.", cmd_parser, false);
+    SwitchArg build_hapmap("", "build-hapmap", "Build haplotype map.", cmd_parser, false);
     //
     // other
     //
-    //bool interactive;
-    //bool test_1;
-    //bool test_2;
-    //bool test_3;
     SwitchArg interactive("", "interactive", "Enter interactive mode.", cmd_parser, false);
     SwitchArg test_1("", "test-1", "Internal switch.", cmd_parser, false);
     SwitchArg test_2("", "test-2", "Internal switch.", cmd_parser, false);
@@ -275,11 +246,11 @@ int real_main()
         g.check_all();
         LOG("mac", info) << ptree("unmap_single_chunks_end");
     }
-    if (opts::build_hap_map)
+    if (opts::build_hapmap)
     {
-        LOG("mac", info) << ptree("hap_map_start");
+        LOG("mac", info) << ptree("build_hapmap_start");
         hm.build(g);
-        LOG("mac", info) << ptree("hap_map_end");
+        LOG("mac", info) << ptree("build_hapmap_end");
     }
     if (opts::test_1)
     {
@@ -350,158 +321,6 @@ int real_main()
 
 int main(int argc, char * argv[])
 {
-    /*
-    global_assert::prog_name() = argv[0];
-    //cin.sync_with_stdio(false);
-    //cout.sync_with_stdio(false);
-    //cerr.sync_with_stdio(false);
-    //clog.sync_with_stdio(false);
-
-    bo::options_description generic_opts_desc("Generic options");
-    bo::options_description config_opts_desc("Configuration options");
-    bo::options_description hidden_opts_desc("Hidden options");
-    bo::options_description cmdline_opts_desc;
-    bo::options_description visible_opts_desc("Allowed options");
-    generic_opts_desc.add_options()
-        ("help,?", "produce help message")
-        // hack, see: http://lists.boost.org/boost-users/2010/01/55054.php
-        ("log-level,d",
-             bo::value(&opts::log_level)->default_value(vector< string >(), ""),
-                 "log level")
-        ("seed",
-             bo::value(&opts::seed)->default_value(time(nullptr), "use time"),
-                 "random seed")
-        ("progress-count,c",
-             bo::value(&opts::progress_count)->default_value(0),
-                 "progress count")
-        ;
-    config_opts_desc.add_options()
-        //
-        // file-related options
-        //
-        ("input-file,i",
-             bo::value(&opts::input_file),
-                 "input file")
-        ("load-file,L",
-             bo::value(&opts::load_file),
-                 "load file")
-        ("save-file,S",
-             bo::value(&opts::save_file),
-                 "save file")
-        ("stats-file",
-             bo::value(&opts::stats_file),
-                 "stats file")
-        ("supercontigs-stats-file",
-             bo::value(&opts::supercontigs_stats_file),
-                 "supercontig stats file")
-        ("mutations-file",
-             bo::value(&opts::mutations_file),
-                 "mutations file")
-        ("unmappable-contigs-file",
-             bo::value(&opts::unmappable_contigs_file),
-                 "unmappable contigs file")
-        ("terminal-reads-file",
-             bo::value(&opts::terminal_reads_file),
-                 "terminal reads file")
-        ("hapmap-stats-file",
-             bo::value(&opts::hapmap_stats_file),
-                 "haplotype map stats file")
-        ("aux-bwt-file",
-             bo::value(&opts::aux_bwt_file),
-                 "BWT index of 2GS reads used to validate variations")
-        //
-        // asqg loading options
-        //
-        ("unmap-trigger-len,u",
-             bo::value(&opts::unmap_trigger_len)->default_value(9),
-                 "unmap trigger len")
-        ("cat-at-step,s",
-             bo::bool_switch(&opts::cat_at_step),
-                 "cat contigs at each step")
-        ("print-at-step",
-             bo::bool_switch(&opts::print_at_step),
-                 "print graph at each step")
-        ("check-at-step",
-             bo::bool_switch(&opts::check_at_step),
-                 "check graph at each step")
-        //
-        // post-loading options
-        //
-        ("cat-at-end",
-             bo::bool_switch(&opts::cat_at_end),
-                 "cat contigs at end")
-        ("print-at-end",
-             bo::bool_switch(&opts::print_at_end),
-                 "print graph at end")
-        ("unmap-read-ends",
-             bo::bool_switch(&opts::unmap_read_ends),
-                 "unmap read ends")
-        ("resolve-unmappable-regions",
-             bo::bool_switch(&opts::resolve_unmappable_regions),
-                 "resolve unmappable regions")
-        ("validate-variations",
-             bo::bool_switch(&opts::validate_variations),
-                 "validate variations with auxiliary 2GS data")
-        ("unmap-single-chunks",
-             bo::bool_switch(&opts::unmap_single_chunks),
-                 "unmap single chunks")
-        ("unmap-mut-clusters",
-             bo::bool_switch(&opts::unmap_mut_clusters),
-                 "unmap mutation clusters")
-        ("hap-map",
-             bo::bool_switch(&opts::build_hap_map),
-                 "build haplotype map")
-        //
-        // other
-        //
-        ("interactive",
-             bo::bool_switch(&opts::interactive),
-                 "run interactive commands")
-        ("test-1",
-             bo::bool_switch(&opts::test_1),
-                 "internal test 1")
-        ("test-2",
-             bo::bool_switch(&opts::test_2),
-                 "internal test 2")
-        ("test-3",
-             bo::bool_switch(&opts::test_3),
-                 "internal test 3")
-        ;
-    any_converter ac;
-    ac.add_string_converter< string >();
-    ac.add_string_converter< bool >();
-    ac.add_string_converter< unsigned >();
-    ac.add_string_converter< long >();
-    ac.add_converter(&cont_to_ptree< vector< string > >);
-    cmdline_opts_desc.add(generic_opts_desc).add(config_opts_desc).add(hidden_opts_desc);
-    visible_opts_desc.add(generic_opts_desc).add(config_opts_desc);
-    try
-    {
-        store(bo::command_line_parser(argc, argv).options(cmdline_opts_desc).run(), opts::vm);
-        // if help requested, print it and stop
-        if (opts::vm.count("help"))
-        {
-            //usage(cout);
-            cout << visible_opts_desc;
-            exit(EXIT_SUCCESS);
-        }
-        notify(opts::vm);
-    }
-    catch(bo::error& e) 
-    { 
-        cerr << "ERROR: " << e.what() << endl << endl;
-        //usage(cerr);
-        cerr << visible_opts_desc;
-        exit(EXIT_FAILURE);
-    }
-    // set log levels
-    Logger::set_levels_from_options(opts::log_level, &clog);
-    // set random seed
-    srand48(opts::seed);
-    // print options
-    LOG("mac", info) << variables_map_converter::to_ptree(opts::vm, ac);
-    */
-
     opts::cmd_parser.parse(argc, argv);
     global_assert::prog_name() = opts::cmd_parser.getProgramName();
     // set log levels

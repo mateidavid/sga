@@ -78,7 +78,6 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::extend_endpoint_haps(cons
                 Hap_Entry_BPtr he_bptr = hh_bptr->he_cbptr().unconst();
                 ASSERT(he_bptr);
                 ASSERT(not he_bptr->hh_cont().empty());
-                ASSERT(Hap_Map::is_end_hop(hh_bptr));
                 // create new hop for current allele
                 Hap_Hop_BPtr hh_new_bptr = Hap_Hop_Fact::new_elem(he_bptr, anchor, allele,
                                                                   hh_bptr->c_direction() == allele.same_orientation());
@@ -146,11 +145,11 @@ void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
     // check there is 1 hop per allele, and all hops are terminal
     ASSERT(all_of(a1_hops.begin(), a1_hops.end(),
                   [] (const pair< Allele_Specifier, set< Hap_Hop_CBPtr > >& p) {
-                      return p.second.size() == 1 and Hap_Map::is_end_hop(*p.second.begin());
+                      return p.second.size() == 1 and Hap_Map::is_end_hop(*p.second.begin(), not (*p.second.begin())->c_direction());
                   }));
     ASSERT(all_of(a2_hops.begin(), a2_hops.end(),
                   [] (const pair< Allele_Specifier, set< Hap_Hop_CBPtr > >& p) {
-                      return p.second.size() == 1 and Hap_Map::is_end_hop(*p.second.begin());
+                      return p.second.size() == 1 and Hap_Map::is_end_hop(*p.second.begin(), (*p.second.begin())->c_direction());
                   }));
     auto a1_support = a1.support();
     auto a2_support = a2.support();
@@ -190,7 +189,7 @@ void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
         auto a2_hop_cbptr = *a2_hops[a2_allele].begin();
         auto he1_bptr = a1_hop_cbptr->he_cbptr().unconst();
         auto he2_bptr = a2_hop_cbptr->he_cbptr().unconst();
-        // if they are on the same haplotype, this consitututes a haplotype cycle
+        // if they are on the same haplotype, this constitutes a haplotype cycle
         if (he1_bptr == he2_bptr)
         {
             LOG("hap_map", debug) << ptree("connect_unique__hap_cycle")
@@ -310,7 +309,7 @@ void Hap_Map::dump_consecutive_anchor_pair_stats(ostream& os, const Allele_Ancho
 
 void Hap_Map::dump_stats(ostream& os, const Graph& g) const
 {
-    os << "consec.anchors\ta1\ta2\tdist\tsize.supp.a1\tsize.supp.a2\tsize.conn\tnum.term.hops.a1\tnum.term.hops.a2\t2-2-degs" << endl;
+    os << "consec.anchors\ta1\ta2\tdist\tnum.alleles.a1\tnum.alleles.a2\tsize.conn\tnum.term.hops.a1\tnum.term.hops.a2\t2-2-degs" << endl;
     for (auto ce_cbptr : g.ce_cont() | referenced)
     {
         if (not ce_cbptr->is_normal()) continue;
