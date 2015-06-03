@@ -100,11 +100,13 @@ public:
     void print_supercontig_lengths_2(ostream& os);
     */
 
+    typedef list< pair< Contig_Entry_CBPtr, bool > > supercontig_type;
+    typedef list< supercontig_type > supercontig_list;
     /// Return a list of supercontigs in the graph
     /// Each supercontig is a list of (contig, orientation) pairs
     /// Also sets Contig_Entry::supercontig_endpoint_mask bits in the contig tags
-    list< list< pair< Contig_Entry_CBPtr, bool > > >
-    get_supercontigs(int unmappable_policy, size_t ignore_threshold = 1) const;
+    supercontig_list get_supercontigs(int unmappable_policy, size_t ignore_threshold = 1) const;
+    Size_Type skip_supercontig_bulges(supercontig_list & l) const;
 
     /** Unmap read chunks not mapped to lone contigs. */
     void unmap_single_chunks();

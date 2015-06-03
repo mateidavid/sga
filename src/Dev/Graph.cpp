@@ -2029,10 +2029,9 @@ void Graph::check_leaks() const
 #endif
 }
 
-list< list< pair< Contig_Entry_CBPtr, bool > > >
-Graph::get_supercontigs(int unmappable_policy, size_t ignore_threshold) const
+Graph::supercontig_list Graph::get_supercontigs(int unmappable_policy, size_t ignore_threshold) const
 {
-    list< list< pair< Contig_Entry_CBPtr, bool > > > res;
+    supercontig_list res;
     unordered_set< Contig_Entry_CBPtr > visit_t(ce_cont().size());
     for (auto ce_cbptr : ce_cont() | referenced)
     {
@@ -2043,7 +2042,7 @@ Graph::get_supercontigs(int unmappable_policy, size_t ignore_threshold) const
             continue;
         }
         // create new sc list and place current Contig Entry in it
-        list< pair< Contig_Entry_CBPtr, bool > > crt_sc;
+        supercontig_type crt_sc;
         //bitmask::set(ce_bptr->tag(), visit_mask);
         visit_t.insert(ce_cbptr);
         crt_sc.emplace_back(ce_cbptr, true);
@@ -2098,6 +2097,125 @@ Graph::get_supercontigs(int unmappable_policy, size_t ignore_threshold) const
         }
         res.emplace_back(move(crt_sc));
     }
+    return res;
+}
+
+Size_Type Graph::skip_supercontig_bulges(supercontig_list & l) const
+{
+    Size_Type res = 0;
+    bool done;
+    do
+    {
+        done = true;
+        for (auto it = l.begin(); it != l.end(); ++it)
+        {
+            pair< pair< Contig_Entry_CBPtr, bool >, pair< Contig_Entry_CBPtr, bool > > bulge_ends(*(it->begin()), *(it->rbegin()));
+            // check out-degree is 1 in both directions
+            auto oc_left = bulge_ends.first.first->out_chunks_dir(not bulge_ends.first.second, 3, 1);
+            if (oc_left.size() != 1) continue;
+            auto oc_right = bulge_ends.second.first->out_chunks_dir(bulge_ends.second.second, 3, 1);
+            if (oc_right.size() != 1) continue;
+            Contig_Entry_CBPtr ce_left_cbptr;
+            bool same_orientation_left;
+            tie(ce_left_cbptr, same_orientation_left) = oc_left.begin()->first;
+            Contig_Entry_CBPtr ce_right_cbptr;
+            bool same_orientation_right;
+            tie(ce_right_cbptr, same_orientation_right) = oc_right.begin()->first;
+            // check out-degree is 2 just outside of the bulge
+            auto oc_from_left = ce_left_cbptr->out_chunks_dir(bulge_ends.first.second == same_orientation_left, 3, 1);
+            if (oc_from_left.size() != 2) continue;
+            auto oc_from_right = ce_right_cbptr->out_chunks_dir(not bulge_ends.second.second == same_orientation_right, 3, 1);
+            if (oc_from_right.size() != 2) continue;
+            // check left&right of the bulge are connected
+            if (oc_from_left.count(
+                    make_pair(ce_right_cbptr,
+                              (bulge_ends.first.second == same_orientation_left)
+                              == (bulge_ends.second.second == same_orientation_right))) == 0)
+            {
+                continue;
+            }
+            // found a bulge
+            // compute size
+            done = false;
+            Size_Type sc_len = 0;
+            for (auto p : *it)
+            {
+                sc_len += p.first->len();
+            }
+            res += sc_len;
+            LOG("graph", info) << ptree("bulge")
+                .put("left_ce_ptr", bulge_ends.first.first.to_int())
+                .put("left_c_right", bulge_ends.first.second)
+                .put("right_ce_ptr", bulge_ends.second.first.to_int())
+                .put("right_c_right", bulge_ends.second.second)
+                .put("len", sc_len);
+            // remove bulge
+            l.erase(it);
+            // find supercontig ending at ce_left_cbptr
+            supercontig_list::iterator it_l;
+            bool it_l_orientation = false;
+            for (it_l = l.begin(); it_l != l.end(); ++it_l)
+            {
+                if ((it_l->begin()->first == ce_left_cbptr
+                     and it_l->begin()->second == (not bulge_ends.first.second == same_orientation_left)))
+                {
+                    it_l_orientation = false;
+                    break;
+                }
+                if ((it_l->rbegin()->first == ce_left_cbptr
+                     and it_l->rbegin()->second == (bulge_ends.first.second == same_orientation_left)))
+                {
+                    it_l_orientation = true;
+                    break;
+                }
+            }
+            ASSERT(it_l != l.end());
+            // find supercontig ending at ce_right_cbptr
+            supercontig_list::iterator it_r;
+            bool it_r_orientation = false;
+            for (it_r = l.begin(); it_r != l.end(); ++it_r)
+            {
+                if ((it_r->begin()->first == ce_right_cbptr
+                     and it_r->begin()->second == (bulge_ends.second.second == same_orientation_right)))
+                {
+                    it_r_orientation = true;
+                    break;
+                }
+                if ((it_r->rbegin()->first == ce_right_cbptr
+                     and it_r->rbegin()->second == (not bulge_ends.second.second == same_orientation_right)))
+                {
+                    it_r_orientation = false;
+                    break;
+                }
+            }
+            ASSERT(it_r != l.end());
+            // if the orientations are wrong, reverse it_r
+            if (it_l_orientation != it_r_orientation)
+            {
+                supercontig_type sc;
+                for (const auto& p : *it_r)
+                {
+                    sc.push_front(make_pair(p.first, not p.second));
+                }
+                swap(*it_r, sc);
+                it_r_orientation = not it_r_orientation;
+            }
+            // merge l&r supercontigs
+            ASSERT(it_l_orientation == it_r_orientation);
+            if (it_l_orientation)
+            {
+                it_l->splice(it_l->end(), *it_r);
+                l.erase(it_r);
+            }
+            else
+            {
+                it_r->splice(it_r->end(), *it_l);
+                l.erase(it_l);
+            }
+            break;
+        }
+    }
+    while (not done);
     return res;
 }
 
@@ -2328,42 +2446,50 @@ void Graph::print_supercontig_stats(ostream& os) const
 {
     LOG("graph", info) << ptree("print_supercontig_stats");
     auto sc_list = get_supercontigs(3, 1);
-    os << "SC\tbp.contigs\tnum.contigs\tcontig.lens\tcontigs\tdeg.left\tdeg.right" << endl;
-    for (auto& sc: sc_list)
+    auto print_list = [&os] (const supercontig_list & l, const string & tag)
     {
-        size_t len = 0;
-        for (auto& t : sc)
+        os << tag <<"\tbp.contigs\tnum.contigs\tcontig.lens\tcontigs\tdeg.left\tdeg.right" << endl;
+        for (auto& sc: l)
         {
-            len += t.first->len();
-        }
-        os << "SC\t" << len << "\t" << sc.size() << "\t";
-        bool first = true;
-        for (auto& t : sc)
-        {
-            if (not first)
+            size_t len = 0;
+            for (auto& t : sc)
             {
-                os << ",";
+                len += t.first->len();
             }
-            first = false;
-            os << t.first->len();
-        }
-        os << "\t";
-        first = true;
-        for (auto& t : sc)
-        {
-            if (not first)
+            os << tag << "\t" << len << "\t" << sc.size() << "\t";
+            bool first = true;
+            for (auto& t : sc)
             {
-                os << ",";
+                if (not first)
+                {
+                    os << ",";
+                }
+                first = false;
+                os << t.first->len();
             }
-            first = false;
-            os << "(" << t.first.to_int() << "," << t.second << ")";
+            os << "\t";
+            first = true;
+            for (auto& t : sc)
+            {
+                if (not first)
+                {
+                    os << ",";
+                }
+                first = false;
+                os << "(" << t.first.to_int() << "," << t.second << ")";
+            }
+            os << "\t";
+            auto oc = sc.begin()->first->out_chunks_dir(not sc.begin()->second, 3, 1);
+            os << oc.size() << "\t";
+            oc = sc.rbegin()->first->out_chunks_dir(sc.rbegin()->second, 3, 1);
+            os << oc.size() << endl;
         }
-        os << "\t";
-        auto oc = sc.begin()->first->out_chunks_dir(not sc.begin()->second, 3, 1);
-        os << oc.size() << "\t";
-        oc = sc.rbegin()->first->out_chunks_dir(sc.rbegin()->second, 3, 1);
-        os << oc.size() << endl;
-    }
+    };
+    print_list(sc_list, "SC");
+    auto bulge_len = skip_supercontig_bulges(sc_list);
+    print_list(sc_list, "SSC");
+    os << "BLGL\tlen" << endl
+       << "BLGL\t" << bulge_len << endl;
 }
 
 void Graph::test_mutation_allele_swapping()
