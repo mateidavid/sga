@@ -8,3 +8,7 @@
 	path = src/boost-intrusive-augmented
 	url = https://github.com/mateidavid/intrusive.git
 	branch = augmented-bstree-rebase
+[submodule "src/interval-tree"]
+	path = src/interval-tree
+	url = https://github.com/mateidavid/interval-tree.git
+	branch = header-holder
