@@ -2,9 +2,9 @@ message(STATUS "Processing: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 # adjust compile flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-# order matters: local boost-intrusive must appear before general boost
+# order matters: boost-intrusive-augmented must appear before general boost
 include_directories(BEFORE ${CMAKE_SOURCE_DIR}/interval-tree/include)
-include_directories(BEFORE ${CMAKE_SOURCE_DIR}/boost-intrusive/include) # <-first
+include_directories(BEFORE ${CMAKE_SOURCE_DIR}/boost-intrusive-augmented/include) # <-first
 
 add_library(mac STATIC
     Mutation.cpp

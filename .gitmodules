@@ -4,3 +4,7 @@
 [submodule "src/tclap"]
 	path = src/tclap
 	url = https://github.com/mateidavid/tclap.git
+[submodule "src/boost-intrusive-augmented"]
+	path = src/boost-intrusive-augmented
+	url = https://github.com/mateidavid/intrusive.git
+	branch = augmented-bstree-rebase
