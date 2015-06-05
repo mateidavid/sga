@@ -251,8 +251,9 @@ void process_qr_read(SimpleRead& r, Thread_Output_Storage& tos)
     size_t last_bp;
     if (res.size() == 0)
     {
-        first_bp = r.sq[0].size() + 1;
-        last_bp = r.sq[0].size();
+        // avoid trimming reads to size 0: keep initial base only
+        first_bp = 1;
+        last_bp = 1;
     }
     else
     {
