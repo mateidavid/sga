@@ -1,53 +1,58 @@
 message(STATUS "Processing: ${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_executable(sga
-    sga.cpp
-    index.cpp 
-    overlap.cpp 
-    assemble.cpp 
-    correct.cpp 
-    oview.cpp 
-    preprocess.cpp 
-    rmdup.cpp 
-    merge.cpp 
-    subgraph.cpp 
-    scaffold.cpp 
-    scaffold2fasta.cpp 
-    connect.cpp 
-    walk.cpp 
-    filter.cpp 
-    stats.cpp 
-    fm-merge.cpp 
-    gmap.cpp
-    filterBAM.cpp
-    cluster.cpp
-    gen-ssa.cpp
-    bwt2fa.cpp
-    graph-diff.cpp
-    gapfill.cpp
-    preqc.cpp
-    overlap-long.cpp
-    variant-detectability.cpp
-    rewrite-evidence-bam.cpp
-    haplotype-filter.cpp
-    OverlapCommon.cpp
-    graph-concordance.cpp
-    somatic-variant-filters.cpp
-    kmer-count.cpp
-)
-add_dependencies(sga version)
-target_link_libraries(sga
-    scaffold
-    graphdiff
-    stringgraph
-    concurrency
-    algorithm
-    suffixtools
-    bigraph
-    util
-    sqg
-    thirdparty
-    ${BamTools_LIBRARY}
-    ${ZLIB_LIBRARIES}
-    ${External_Malloc_LIBRARY}
-)
+if(NOT OpenMP_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_C_FLAGS}")
+    add_executable(sga
+        sga.cpp
+        index.cpp 
+        overlap.cpp 
+        assemble.cpp 
+        correct.cpp 
+        oview.cpp 
+        preprocess.cpp 
+        rmdup.cpp 
+        merge.cpp 
+        subgraph.cpp 
+        scaffold.cpp 
+        scaffold2fasta.cpp 
+        connect.cpp 
+        walk.cpp 
+        filter.cpp 
+        stats.cpp 
+        fm-merge.cpp 
+        gmap.cpp
+        filterBAM.cpp
+        cluster.cpp
+        gen-ssa.cpp
+        bwt2fa.cpp
+        graph-diff.cpp
+        gapfill.cpp
+        preqc.cpp
+        overlap-long.cpp
+        variant-detectability.cpp
+        rewrite-evidence-bam.cpp
+        haplotype-filter.cpp
+        OverlapCommon.cpp
+        graph-concordance.cpp
+        somatic-variant-filters.cpp
+        kmer-count.cpp
+        )
+    add_dependencies(sga version)
+    target_link_libraries(sga
+        scaffold
+        graphdiff
+        stringgraph
+        concurrency
+        algorithm
+        suffixtools
+        bigraph
+        util
+        sqg
+        thirdparty
+        ${BamTools_LIBRARY}
+        ${ZLIB_LIBRARIES}
+        ${External_Malloc_LIBRARY}
+        )
+else()
+    message(WARNING "Cannot build sga: OpenMP not found")
+endif()

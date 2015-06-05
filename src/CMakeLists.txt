@@ -6,6 +6,7 @@ project(SGA C CXX)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 include(CheckLibraryExists)
 include(CheckIncludeFileCXX)
+include(ExternalProject)
 
 # check that "SGA/sga.cpp" exists; if not, assume the source dir is wrong
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/SGA/sga.cpp")
@@ -21,6 +22,8 @@ set(PACKAGE "${PROJECT_NAME}")
 set(PACKAGE_NAME "${PROJECT_NAME}")
 set(PACKAGE_TARNAME "${PROJECT_NAME}")
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
+set(OPTIONAL_SUBMODULE_DIR ${PROJECT_SOURCE_DIR}/optional CACHE INTERNAL "Directory for downloading and building optional submodules")
+set(OPTIONAL_SUBMODULE_PREFIX ${PROJECT_SOURCE_DIR}/optional-prefix CACHE INTERNAL "Directory for installing optional submodules")
 
 set(HEADER_SUBDIRS
     Algorithm Bigraph Concurrency GraphDiff Scaffold SGA SQG StringGraph SuffixTools Thirdparty Util
@@ -28,6 +31,7 @@ set(HEADER_SUBDIRS
     CACHE INTERNAL "Subdirectories containing header files")
 set(SUBDIRS
     BFTrim Dev SuffixTools Thirdparty Util
+#    Algorithm Bigraph Concurrency GraphDiff Scaffold SGA SQG StringGraph
     CACHE INTERNAL "Subdirectories to descend into")
 
 ### Resolve external dependencies
@@ -55,11 +59,36 @@ find_package(ZLIB REQUIRED)
 
 # check for BamTools
 # => BamTools_INCLUDE_DIR, BamTools_LIBRARY
-find_package(BamTools REQUIRED)
+if(BUILD_BAMTOOLS)
+    message(STATUS "Building BamTools in: ${OPTIONAL_SUBMODULE_PREFIX}")
+    ExternalProject_Add(bamtools
+        GIT_REPOSITORY https://github.com/pezmaster31/bamtools.git
+        GIT_TAG v2.3.0
+        PREFIX ${OPTIONAL_SUBMODULE_PREFIX}
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${OPTIONAL_SUBMODULE_PREFIX}
+        )
+    set(BamTools_INCLUDE_DIR ${OPTIONAL_SUBMODULE_PREFIX}/include/bamtools)
+    set(BamTools_LIBRARY ${OPTIONAL_SUBMODULE_PREFIX}/lib/bamtools/${CMAKE_STATIC_LIBRARY_PREFIX}bamtools${CMAKE_STATIC_LIBRARY_SUFFIX})
+else()
+    find_package(BamTools REQUIRED)
+endif()
 
 # check for Google Sparsehash
 # => SparseHash_INCLUDE_DIR
-find_package(SparseHash REQUIRED)
+if (BUILD_SPARSEHASH)
+    message(STATUS "Building SparseHash in: ${OPTIONAL_SUBMODULE_PREFIX}")
+    ExternalProject_Add(sparsehash
+        URL http://sparsehash.googlecode.com/files/sparsehash-2.0.2.tar.gz
+        PREFIX ${OPTIONAL_SUBMODULE_PREFIX}
+        CONFIGURE_COMMAND ./configure --prefix=${OPTIONAL_SUBMODULE_PREFIX}
+        BUILD_IN_SOURCE 1
+        BUILD_COMMAND ""
+        INSTALL_COMMAND make install
+        )
+    set(SparseHash_INCLUDE_DIR ${OPTIONAL_SUBMODULE_PREFIX}/include)
+else()
+    find_package(SparseHash REQUIRED)
+endif()
 
 # check for Boost 1.57
 # => Boost_INCLUDE_DIRS, Boost_<COMPONENT>_LIBRARY
