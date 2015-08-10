@@ -322,17 +322,17 @@ int main(int argc, char* argv[])
 
     // set log levels
     Logger::set_levels_from_options(global::log_level, &clog);
-    // set random seed
-    if (global::seed < 0)
-    {
-        global::seed.get() = time(nullptr);
-    }
-    srand48(global::seed);
-
     // print options
     LOG("main", info) << "program: " << global::cmd_parser.getProgramName() << endl;
     LOG("main", info) << "version: " << global::cmd_parser.getVersion() << endl;
     LOG("main", info) << "args: " << global::cmd_parser.getOrigArgv() << endl;
+    // set random seed
+    if (global::seed < 0)
+    {
+        global::seed.get() = time(nullptr);
+        LOG("main", info) << "seed: " << global::seed << endl;
+    }
+    srand48(global::seed);
 
     if (not global::rf_reads_fn.get().empty())
     {
