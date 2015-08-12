@@ -23,30 +23,38 @@ public:
     Size_Type c_pos;
     /** Read position. */
     Size_Type r_pos;
-    /** Number of mutations passed. */
-    //size_t mut_idx;
     /** Iterator with next mutation pointer. */
-    Mutation_Ptr_Cont::const_iterator mca_cit;
+    Mutation_Cont::const_iterator mut_cit;
+    /** Allele index for next mutation. */
+    Allele_Idx_Cont::const_iterator allele_idx_cit;
     /** If non-zero, offset into current mutation. */
     Size_Type mut_offset;
 private:
     /** Read_Chunk parent object. */
     const Read_Chunk* rc_cptr;
+    Mutation_Cont::const_iterator mut_it_begin;
+    Mutation_Cont::const_iterator mut_it_end;
 
 private:
     // Constructed only by Read_Chunk objects
     friend class Read_Chunk;
     /** Constructor. */
-    Read_Chunk_Pos(Size_Type _c_pos = 0,
-                   Size_Type _r_pos = 0,
-                   Mutation_Ptr_Cont::const_iterator _mca_cit = Mutation_Ptr_Cont::const_iterator(),
-                   Size_Type _mut_offset = 0,
-                   const Read_Chunk* _rc_cptr = NULL)
+    Read_Chunk_Pos(Size_Type _c_pos,
+                   Size_Type _r_pos,
+                   Mutation_Cont::const_iterator _mut_cit,
+                   Allele_Idx_Cont::const_iterator _allele_idx_cit,
+                   Size_Type _mut_offset,
+                   const Read_Chunk* _rc_cptr)
         : c_pos(_c_pos),
           r_pos(_r_pos),
-          mca_cit(_mca_cit),
+          mut_cit(_mut_cit),
+          allele_idx_cit(_allele_idx_cit),
           mut_offset(_mut_offset),
-          rc_cptr(_rc_cptr) {}
+          rc_cptr(_rc_cptr)
+    {
+        mut_it_begin = rc_cptr->mut_it_begin();
+        mut_it_end = rc_cptr->mut_it_end();
+    }
 
 public:
     // allow copy and move
@@ -67,7 +75,7 @@ public:
     {
         ASSERT(rc_cptr);
         ASSERT(not past_last_mut());
-        return *(mca_cit->mut_cbptr());
+        return *mut_cit;
     }
 
     /** Get previous mutation. */
@@ -75,8 +83,8 @@ public:
     {
         ASSERT(rc_cptr);
         ASSERT(past_first_mut());
-        auto tmp_cit = mca_cit;
-        return *((--tmp_cit)->mut_cbptr());
+        auto tmp_cit = mut_cit;
+        return *(--tmp_cit);
     }
 
     /** Get length of unmutated mapped stretch starting at given position.
@@ -136,7 +144,7 @@ public:
     {
         return (lhs.c_pos == rhs.c_pos
                 and lhs.r_pos == rhs.r_pos
-                and lhs.mca_cit == rhs.mca_cit
+                and lhs.mut_cit == rhs.mut_cit
                 and lhs.mut_offset == rhs.mut_offset);
     }
     friend bool operator != (const Read_Chunk_Pos& lhs, const Read_Chunk_Pos& rhs) { return !(lhs == rhs); }

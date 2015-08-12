@@ -199,14 +199,15 @@ bool Graph::cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk)
     LOG("graph", debug1) << ptree("cut_read_entry")
         .put("re_ptr", re_bptr.to_ptree())
         .put("r_brk", r_brk);
+    ASSERT(re_bptr->start() <= r_brk and r_brk <= re_bptr->end());
 
-    if (r_brk <= re_bptr->start() or r_brk >= re_bptr->end())
+    if (r_brk == re_bptr->start() or r_brk == re_bptr->end())
     {
         // cut is on the edge of the read; it must be forced
-        Read_Chunk_BPtr rc_bptr = (r_brk <= re_bptr->start()?
-                                   &*re_bptr->chunk_cont().begin()
+        Read_Chunk_BPtr rc_bptr = (r_brk <= re_bptr->start()
+                                   ? &*re_bptr->chunk_cont().begin()
                                    : &*re_bptr->chunk_cont().rbegin());
-        return cut_read_chunk(rc_bptr, r_brk <= re_bptr->start()? re_bptr->start() : re_bptr->end());
+        return cut_read_chunk(rc_bptr, r_brk);
     }
     else
     {

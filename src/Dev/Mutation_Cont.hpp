@@ -16,7 +16,7 @@ namespace MAC
 namespace detail
 {
 
-struct Mutation_ITree_Node_Traits
+struct Mutation_Set_Node_Traits
 {
     typedef Mutation node;
     typedef Mutation_Fact fact_type;
@@ -33,39 +33,14 @@ struct Mutation_ITree_Node_Traits
     static void set_right(node_ptr n, node_ptr ptr) { n->_r_child = ptr; }
     static color black() { return 0; }
     static color red() { return 1; }
-    static color get_color(const_node_ptr n)
-    {
-        return static_cast< color >(n->_col_n_max_end >> (8 * sizeof(key_type) - 1));
-    }
-    static void clear_color(node_ptr n)
-    {
-        n->_col_n_max_end &= ~(static_cast< key_type >(1) << (8 * sizeof(key_type) - 1));
-    }
-    static void set_cleared_color(node_ptr n, color c)
-    {
-        n->_col_n_max_end |= (static_cast< key_type >(c) << (8 * sizeof(key_type) - 1));
-    }
-    static void set_color(node_ptr n, color c)
-    {
-        clear_color(n);
-        set_cleared_color(n, c);
-    }
-    static key_type get_max_end(const_node_ptr n)
-    {
-        return ((n->_col_n_max_end << 1) >> 1);
-    }
-    static void set_max_end(node_ptr n, key_type k)
-    {
-        color c = get_color(n);
-        n->_col_n_max_end = k;
-        set_cleared_color(n, c);
-    }
-};
+    static color get_color(const_node_ptr n) { return n->_color; }
+    static color set_color(node_ptr n, color c) { n->_color = c; }
+}; // struct Mutation_Set_Node_Traits
 
-struct Mutation_ITree_Value_Traits
+struct Mutation_Set_Value_Traits
 {
     typedef Mutation value_type;
-    typedef Mutation_ITree_Node_Traits node_traits;
+    typedef Mutation_Set_Node_Traits node_traits;
     typedef typename node_traits::key_type key_type;
     typedef typename node_traits::node_ptr node_ptr;
     typedef typename node_traits::const_node_ptr const_node_ptr;
@@ -73,7 +48,7 @@ struct Mutation_ITree_Value_Traits
     typedef const_node_ptr const_pointer;
     typedef typename node_traits::fact_type::ref_type reference;
     typedef typename node_traits::fact_type::const_ref_type const_reference;
-    typedef Mutation_ITree_Value_Traits* value_traits_ptr;
+    typedef Mutation_Set_Value_Traits* value_traits_ptr;
 
     static const bi::link_mode_type link_mode = bi::safe_link;
 
@@ -81,25 +56,21 @@ struct Mutation_ITree_Value_Traits
     static const_node_ptr to_node_ptr (const_reference value) { return &value; }
     static pointer to_value_ptr(node_ptr n) { return n; }
     static const_pointer to_value_ptr(const_node_ptr n) { return n; }
-    static key_type get_start(const_pointer n) { return n->rf_start(); }
-    static key_type get_start(const value_type* n) { return n->rf_start(); }
-    static key_type get_end(const_pointer n) { return n->rf_end(); }
-    static key_type get_end(const value_type* n) { return n->rf_end(); }
-};
+}; // struct Mutation_Set_Value_Traits
 
 } // namespace detail
 
 class Mutation_Cont
-    : private bi::itree< Mutation,
-                         bi::value_traits< detail::Mutation_ITree_Value_Traits >,
-                         bi::constant_time_size< false >,
-                         bi::header_holder_type< bounded::Pointer_Holder< Mutation > > >
+    : private bi::set< Mutation,
+                       bi::value_traits< detail::Mutation_Set_Value_Traits >,
+                       bi::constant_time_size< false >,
+                       bi::header_holder_type< bounded::Pointer_Holder< Mutation > > >
 {
 private:
-    typedef bi::itree< Mutation,
-                       bi::value_traits< detail::Mutation_ITree_Value_Traits >,
-                       bi::constant_time_size< false >,
-                       bi::header_holder_type< bounded::Pointer_Holder< Mutation > > > Base;
+    typedef bi::Set< Mutation,
+                     bi::value_traits< detail::Mutation_Set_Value_Traits >,
+                     bi::constant_time_size< false >,
+                     bi::header_holder_type< bounded::Pointer_Holder< Mutation > > > Base;
 public:
     // allow move only
     DEFAULT_DEF_CTOR(Mutation_Cont);
@@ -112,10 +83,6 @@ public:
     using Base::check;
     friend class Graph;
 
-    using typename Base::intersection_const_iterator;
-    using typename Base::intersection_const_iterator_range;
-    using Base::iintersect;
-
     // check it is empty before deallocating
     ~Mutation_Cont() { ASSERT(empty()); }
 
@@ -127,9 +94,9 @@ public:
      * Pre: Cigar contains no 'M' operations (use disambiguate() first).
      * Post: Adjacent non-match operations are merged.
      * @param cigar Cigar object describing the match.
-     * @param qr Query string; optional: if not given, Mutation objects contain alternate string lengths only.
+     * @param qr Query string.
      */
-    Mutation_Cont(const Cigar& cigar, const Seq_Proxy_Type& qr = Seq_Proxy_Type());
+    Mutation_Cont(const Cigar& cigar, const Seq_Proxy_Type& qr);
 
     /// Insert Mutation in container.
     iterator insert(Mutation_BPtr mut_bptr) { return Base::insert(*mut_bptr); }

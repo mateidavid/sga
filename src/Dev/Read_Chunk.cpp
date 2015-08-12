@@ -32,6 +32,18 @@ Size_Type Read_Chunk::get_read_len() const
     return re_bptr()->len();
 }
 
+Mutation_Cont::const_iterator Read_Chunk::mut_it_begin() const
+{
+    ASSERT(ce_bptr());
+    return ce_bptr()->mut_cont().lower_bound(_c_start);
+}
+
+Mutation_Cont::const_iterator Read_Chunk::mut_it_end() const
+{
+    ASSERT(ce_bptr());
+    return ce_bptr()->mut_cont().lower_bound(_c_end);
+}
+
 Read_Chunk_BPtr
 Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf, const Seq_Proxy_Type& qr)
 {

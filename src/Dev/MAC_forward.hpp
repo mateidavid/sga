@@ -66,6 +66,8 @@ typedef cigar::Cigar< Size_Type > Cigar;
 typedef range::Range< Size_Type > Range_Type;
 typedef range::Range_Cont< Size_Type > Range_Cont;
 
+class Allele;
+class Allele_Idx;
 class Mutation;
 class Mutation_Chunk_Adapter;
 class Read_Chunk;
@@ -77,6 +79,8 @@ class Graph;
 
 namespace detail
 {
+    struct Allele_List_Node_Traits;
+    struct Allele_Idx_List_Node_Traits;
     struct Mutation_ITree_Node_Traits;
     struct Mutation_Ptr_List_Node_Traits;
     struct Read_Chunk_Ptr_List_Node_Traits;
@@ -88,6 +92,18 @@ namespace detail
     struct Hap_Hop_List_Node_Traits;
     struct Hap_Hop_Set_Node_Traits;
 } // namespace detail
+
+typedef bounded::Factory< Allele > Allele_Fact;
+typedef Allele_Fact::ptr_type Allele_BPtr;
+typedef Allele_Fact::const_ptr_type Allele_CBPtr;
+typedef Allele_Fact::ref_type Allele_BRef;
+typedef Allele_Fact::const_ref_type Allele_CBRef;
+
+typedef bounded::Factory< Allele_Idx > Allele_Idx_Fact;
+typedef Allele_Idx_Fact::ptr_type Allele_Idx_BPtr;
+typedef Allele_Idx_Fact::const_ptr_type Allele_Idx_CBPtr;
+typedef Allele_Idx_Fact::ref_type Allele_Idx_BRef;
+typedef Allele_Idx_Fact::const_ref_type Allele_Idx_CBRef;
 
 typedef bounded::Factory< Mutation > Mutation_Fact;
 typedef Mutation_Fact::ptr_type Mutation_BPtr;

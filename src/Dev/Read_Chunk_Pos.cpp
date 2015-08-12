@@ -17,20 +17,20 @@ namespace MAC
 bool Read_Chunk_Pos::past_last_mut() const
 {
     ASSERT(rc_cptr);
-    return mca_cit == rc_cptr->mut_ptr_cont().end();
+    return mut_cit == mut_it_end;
 }
 
 /// Check if position is past first mutation in the read chunk.
 bool Read_Chunk_Pos::past_first_mut() const
 {
     ASSERT(rc_cptr);
-    return mca_cit != rc_cptr->mut_ptr_cont().begin();
+    return mut_cit != mut_it_begin;
 }
 
 void Read_Chunk_Pos::check() const
 {
 #ifndef DISABLE_ASSERTS
-    ASSERT(rc_cptr != NULL);
+    ASSERT(rc_cptr);
     ASSERT(rc_cptr->get_c_start() <= c_pos and c_pos <= rc_cptr->get_c_end());
     ASSERT(rc_cptr->get_r_start() <= r_pos and r_pos <= rc_cptr->get_r_end());
     // if offset == 0; c_pos <= mut_start (or c_end if no more mutations)
@@ -104,7 +104,7 @@ void Read_Chunk_Pos::increment(Size_Type brk, bool on_contig)
         if (mut_offset >= mut().rf_len() and mut_offset >= mut().seq_len())
         {
             mut_offset = 0;
-            ++mca_cit;
+            ++mut_cit;
         }
     }
     else
@@ -146,7 +146,7 @@ void Read_Chunk_Pos::decrement(Size_Type brk, bool on_contig)
         // at the end or inside a mutation
         if (mut_offset == 0)
         {
-            --mca_cit;
+            --mut_cit;
             mut_offset = max(mut().rf_len(), mut().seq_len());
         }
         ASSERT(mut_offset > 0);

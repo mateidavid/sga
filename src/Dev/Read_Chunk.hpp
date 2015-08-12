@@ -8,7 +8,7 @@
 #define __READ_CHUNK_HPP
 
 #include "MAC_forward.hpp"
-#include "Read_Chunk_Pos.hpp"
+#include "Read_Sub_Chunk.hpp"
 #include "Mutation.hpp"
 #include "Mutation_Ptr_Cont.hpp"
 
@@ -24,8 +24,6 @@ namespace MAC
  */
 class Read_Chunk
 {
-public:
-    typedef Read_Chunk_Pos Pos;
 private:
     // Can only be constructed by Factory object
     friend class bounded::Factory< Read_Chunk >;
@@ -38,7 +36,6 @@ private:
           _c_len(0),
           _re_bptr(nullptr),
           _ce_bptr(nullptr),
-          _mut_ptr_cont(),
           _bits(0)
     {}
 
@@ -66,7 +63,6 @@ private:
           _c_len(c_len),
           _re_bptr(nullptr),
           _ce_bptr(nullptr),
-          _mut_ptr_cont(),
           _bits(0)
     {
         _set_rc(rc);
@@ -87,7 +83,6 @@ public:
     GETTER(Size_Type, r_start, _r_start)
     GETTER(Size_Type, r_len, _r_len)
     GETTER(Size_Type, c_len, _c_len)
-    GETTER(Mutation_Ptr_Cont, mut_ptr_cont, _mut_ptr_cont)
     Size_Type get_r_start() const { return _r_start; }
     Size_Type get_r_len() const { return _r_len; }
     Size_Type get_r_end() const { return _r_start + _r_len; }
@@ -98,18 +93,30 @@ public:
     Seq_Type get_seq() const;
     bool is_unbreakable() const { return _get_is_unbreakable(); }
     Size_Type get_read_len() const;
+    Mutation_Cont::const_iterator mut_it_begin() const;
+    Mutation_Cont::const_iterator mut_it_end() const;
     /// @}
 
-    /// Get mapping start position.
-    Pos get_start_pos() const
+    /// Get first subchunk
+    Read_Sub_Chunk get_first_sub_chunk() const
     {
-        return Pos(get_c_start(), (not get_rc()? get_r_start() : get_r_end()), _mut_ptr_cont.begin(), 0, this);
+        Read_Sub_Chunk res{c_start(), 0, r_start(), 0, 0, 0, c_start(), c_len(),
+                mut_it_begin(), mut_it_begin(), mut_it_end(), _allele_idx_cont.begin(),
+                0, 0, 0, 0,
+                get_rc()};
+        res.set_convenience_fields();
+        return res;
     }
 
-    /// Get mapping end position.
-    Pos get_end_pos() const
+    /// Get last subchunk
+    Read_Sub_Chunk get_last_sub_chunk() const
     {
-        return Pos(get_c_end(), (not get_rc()? get_r_end() : get_r_start()), _mut_ptr_cont.end(), 0, this);
+        Read_Sub_Chunk res{c_end(), 0, r_end(), 0, 0, 0, c_start(), c_len(),
+                mut_it_end(), mut_it_begin(), mut_it_end(), _allele_idx_cont.end(),
+                0, 0, 0, 0,
+                get_rc()};
+        res.set_convenience_fields();
+        return res;
     }
 
     /**
@@ -269,7 +276,8 @@ private:
 
     Read_Entry_BPtr _re_bptr;
     Contig_Entry_BPtr _ce_bptr;
-    Mutation_Ptr_Cont _mut_ptr_cont;
+    Allele_Idx_Cont _allele_idx_cont;
+
     Read_Chunk_BPtr _ce_parent;
     Read_Chunk_BPtr _ce_l_child;
     Read_Chunk_BPtr _ce_r_child;

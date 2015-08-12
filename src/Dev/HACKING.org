@@ -1,0 +1,51 @@
+# -*- mode:org; mode:visual-line; coding:utf-8; -*-
+
+* Graph.cpp
+
+** add_read
+
+- Allocate new RE
+- Allocate new CE
+- Allocate new RC
+
+** add_overlap
+
+- Search RE by read name (x2)
+- Construct Cigar object from cigar string
+- Disambiguate cigar
+- Trim Cigar if REs are trimmed
+- Discard terminal indels from Cigar
+- Cut REs at Cigar boundaries
+- Break REs into corresponding chunks
+- Merge CEs of corresponding chunks
+- Find unmappable regions in recently merged CEs
+- Catenate CEs
+
+** cut_read_entry
+
+Arg: r_pos
+
+- if re.start < r_pos < re.end:
+  - find rc containing r_pos, cut it
+
+- else:
+  - find first/last chunk, cut at the end
+
+** cut_read_chunk
+
+Arg: r_pos
+
+- if unbreakable:
+  - return false
+
+- if rc.r_start < r_pos < rc.r_end:
+  - if r_pos falls inside mutation, cut mutation
+  - check if an insertion must remain on left of cut
+  - call cut_contig_entry
+
+** cut_contig_entry
+
+Arg: c_pos, ins_left
+
+- call ce.cut(c_pos, ins_left)
+- if return value not NULL, insert new CE into CE_Cont
