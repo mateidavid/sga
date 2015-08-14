@@ -24,6 +24,24 @@ private:
     ~Allele() { ASSERT(is_unlinked()); }
 public:
     GETTER(Seq_Type, seq, _seq)
+
+    void save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const
+    {
+        os.write(_seq.c_str(), _seq.size() + 1);
+        ++n_strings;
+        n_bytes += _seq.size() + 1;
+    }
+    void init_strings()
+    {
+        new (&_seq) string();
+    }
+    void load_strings(istream& is, size_t& n_strings, size_t& n_bytes)
+    {
+        getline(is, _seq, '\0');
+        ++n_strings;
+        n_bytes += _seq.size() + 1;
+    }
+
 private:
     Seq_Type _seq;
     /// Hooks for storage in Allele_Cont

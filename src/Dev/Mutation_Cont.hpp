@@ -34,7 +34,7 @@ struct Mutation_Set_Node_Traits
     static color black() { return 0; }
     static color red() { return 1; }
     static color get_color(const_node_ptr n) { return n->_color; }
-    static color set_color(node_ptr n, color c) { n->_color = c; }
+    static void set_color(node_ptr n, color c) { n->_color = c; }
 }; // struct Mutation_Set_Node_Traits
 
 struct Mutation_Set_Value_Traits
@@ -61,16 +61,16 @@ struct Mutation_Set_Value_Traits
 } // namespace detail
 
 class Mutation_Cont
-    : private bi::set< Mutation,
-                       bi::value_traits< detail::Mutation_Set_Value_Traits >,
-                       bi::constant_time_size< false >,
-                       bi::header_holder_type< bounded::Pointer_Holder< Mutation > > >
+    : private bi::multiset< Mutation,
+                            bi::value_traits< detail::Mutation_Set_Value_Traits >,
+                            bi::constant_time_size< false >,
+                            bi::header_holder_type< bounded::Pointer_Holder< Mutation > > >
 {
 private:
-    typedef bi::Set< Mutation,
-                     bi::value_traits< detail::Mutation_Set_Value_Traits >,
-                     bi::constant_time_size< false >,
-                     bi::header_holder_type< bounded::Pointer_Holder< Mutation > > > Base;
+    typedef bi::multiset< Mutation,
+                          bi::value_traits< detail::Mutation_Set_Value_Traits >,
+                          bi::constant_time_size< false >,
+                          bi::header_holder_type< bounded::Pointer_Holder< Mutation > > > Base;
 public:
     // allow move only
     DEFAULT_DEF_CTOR(Mutation_Cont);
@@ -81,6 +81,7 @@ public:
 
     USING_INTRUSIVE_CONT(Base)
     using Base::check;
+    using Base::lower_bound;
     friend class Graph;
 
     // check it is empty before deallocating
@@ -96,7 +97,7 @@ public:
      * @param cigar Cigar object describing the match.
      * @param qr Query string.
      */
-    Mutation_Cont(const Cigar& cigar, const Seq_Proxy_Type& qr);
+    static Mutation_Cont make_from_cigar(const Cigar& cigar, Contig_Entry_CBPtr ce_cbptr, const Seq_Proxy_Type& qr);
 
     /// Insert Mutation in container.
     iterator insert(Mutation_BPtr mut_bptr) { return Base::insert(*mut_bptr); }
@@ -109,7 +110,7 @@ public:
      * look for equivalent Mutations as well.
      * @return An exact (if find_exact is true) or equivalent Mutation in this
      * container; or NULL if none exists.
-     */
+     *
     Mutation_CBPtr find(Mutation_CBPtr mut_cbptr, bool find_exact) const
     {
         const_iterator it;
@@ -123,6 +124,7 @@ public:
         }
         return nullptr;
     }
+    */
 
     /**
      * Get equivalent Mutation from container;
@@ -130,7 +132,7 @@ public:
      * if one doesn't exist, the given Mutation is added and returned.
      * Pre: Mutation is unlinked.
      * Pre: Mutation has no chunk pointers.
-     */
+     *
     Mutation_CBPtr find_equiv_or_add(Mutation_BPtr mut_bptr)
     {
         ASSERT(mut_bptr->chunk_ptr_cont().empty());
@@ -148,13 +150,15 @@ public:
             return mut_bptr;
         }
     }
+    */
 
     /**
      * Search for a Mutation that completely spans a given contig position.
      * @param c_pos Contig position, 0-based.
      * @return Pointer to Mutation, or NULL if none exists.
-     */
+     *
     Mutation_CBPtr find_span_pos(Size_Type c_pos) const;
+    */
 
     /**
      * Move second half mutations from given container to this one.
@@ -163,8 +167,8 @@ public:
      * @param c_brk Position of the cut.
      * @param mut_left_cbptr Insertion at c_brk to remain on the left of the cut, if any.
      */
-    void splice(Mutation_Cont& other_cont,
-                Size_Type c_brk, Mutation_CBPtr mut_left_cbptr);
+    void splice(Mutation_Cont& lhs_cont, const_iterator rhs_mut_cit)
+    { splice(begin(), lhs_cont, rhs_mut_cit, lhs_cont.end()); }
 
     /**
      * Shift all Mutations in this container.
@@ -172,51 +176,40 @@ public:
      */
     template < typename delta_type >
     void shift(delta_type delta)
-    {
-        for (auto mut_bptr : *this | referenced)
-        {
-            mut_bptr->shift(delta);
-        }
-        Base::implement_shift(delta);
-    }
+    { for (auto mut_bptr : *this | referenced) mut_bptr->shift(delta); }
 
     /// Drop unused Mutation objects.
-    void drop_unused();
+    //void drop_unused();
 
+    /// Dispose of Mutation object
+    static void dispose(Mutation_BPtr mut_bptr) { Mutation_Fact::del_elem(mut_bptr); }
     /// Clear the container and deallocate Mutation objects.
-    void clear_and_dispose()
-    {
-        Base::clear_and_dispose([] (Mutation_BPtr mut_bptr)
-        {
-            Mutation_Fact::del_elem(mut_bptr);
-        });
-    }
+    void clear_and_dispose() { Base::clear_and_dispose(&dispose); }
 
-    /**
-     * Reverse Mutations in this container (and their order).
-     * @param ce_len Length of the Contig_Entry.
-     */
-    void reverse_mutations(Size_Type ce_len)
+    /** Reverse Mutations in this container (and their order). */
+    void reverse_mutations()
     {
         Mutation_Cont new_mut_cont;
         Base::clear_and_dispose([&] (Mutation_BPtr mut_bptr)
         {
-            mut_bptr->reverse(ce_len);
+            mut_bptr->reverse();
             new_mut_cont.insert(mut_bptr);
         });
         *this = move(new_mut_cont);
     }
 
     /**
-     * Move all Mutations from given container into this one.
+     * Move Mutations from given container into this one.
      * @param other_cont Container to clear.
      */
-    void splice(Mutation_Cont& other_cont)
+    void splice(iterator pos, Mutation_Cont& other_cont, const_iterator it_start, const_iterator it_end)
     {
-        static_cast< Base& >(other_cont).clear_and_dispose([&] (Mutation_BPtr mut_bptr)
-        {
-            insert(mut_bptr);
-        });
+        static_cast< Base& >(other_cont).erase_and_dispose(
+            it_start, it_end,
+            [&] (Mutation_BPtr mut_bptr)
+            {
+                Base::insert(pos, *mut_bptr);
+            });
     }
 
     /**
@@ -224,7 +217,7 @@ public:
      * In contrast to splice(), this method looks for common Mutations. If such Mutations are found,
      * the existing copy is used, and the one in other_cont is deallocated. MCA-s are also adjusted.
      * @param other_cont Container to clear.
-     */
+     *
     void merge(Mutation_Cont& other_cont)
     {
         if (empty())
@@ -256,6 +249,7 @@ public:
             });
         }
     }
+    */
 };
 
 } // namespace MAC

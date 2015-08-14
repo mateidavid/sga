@@ -47,14 +47,14 @@ struct Allele_List_Value_Traits
 class Allele_Cont
     : private bi::list< Allele,
                         bi::value_traits< detail::Allele_List_Value_Traits >,
-                        bi::constant_time_size< false >,
+                        bi::constant_time_size< true >,
                         bi::header_holder_type< bounded::Pointer_Holder< Allele > >
                       >
 {
 private:
     typedef bi::list< Allele,
                       bi::value_traits< detail::Allele_List_Value_Traits >,
-                      bi::constant_time_size< false >,
+                      bi::constant_time_size< true >,
                       bi::header_holder_type< bounded::Pointer_Holder< Allele > >
                       > Base;
 public:
@@ -71,16 +71,29 @@ public:
     // check it is empty when deallocating
     ~Allele_Cont() { ASSERT(empty()); }
 
-    Base::size_type size() = delete;
-    Base::size_type nonconst_size() const { return Base::size(); }
-
-    /**
-     * Find allele in container.
-     */
+    /** Return allele at given index. */
+    const Allele& at(unsigned i) const { return *it_at(i); }
+    Allele& at(unsigned i) { return *it_at(i); }
+    /** Return iterator to allele at given index. */
+    const_iterator it_at(unsigned i) const
+    {
+        auto it = begin();
+        while (i > 0 and it != end()) { --i; ++it; }
+        if (it == end()) abort();
+        return it;
+    }
+    iterator it_at(unsigned i)
+    {
+        auto it = begin();
+        while (i > 0 and it != end()) { --i; ++it; }
+        if (it == end()) abort();
+        return it;
+    }
+    /** Find allele in container. */
     pair< const_iterator, unsigned > find(const Seq_Proxy_Type& seq) const
     {
         unsigned i = 0;
-        for (auto it = begin(); it != end(); ++it)
+        for (auto it = begin(); it != end(); ++it, ++i)
         {
             if (it->seq() == seq)
             {
@@ -89,18 +102,50 @@ public:
         }
         return make_pair(end(), 0);
     }
-
-    /**
-     * Insert new sequence in container.
-     */
-    void insert(Seq_Type&& seq)
+    /** Find allele or add it. */
+    unsigned find_or_add(const Seq_Proxy_Type& seq)
+    {
+        auto p = find(seq);
+        if (p.first != end())
+        {
+            return p.second;
+        }
+        else
+        {
+            push_back(Seq_Type(seq));
+            return size() - 1;
+        }
+    }
+    /** Insert allele in container. */
+    void push_back(Seq_Type&& seq)
     {
         Allele_BPtr allele_bptr = Allele_Fact::new_elem(move(seq));
-        Base::push_back(allele_bptr);
+        Base::push_back(*allele_bptr);
     }
-
+    /** Remove last allele. */
+    void pop_back()
+    {
+        ASSERT(begin() != end());
+        Base::erase_and_dispose(prev(end()), &dispose);
+    }
+    /** Swap alleles. */
+    void swap_alleles(unsigned i, unsigned j)
+    {
+        ASSERT(i < size());
+        ASSERT(j < size());
+        ASSERT(i != j);
+        std::swap(it_at(i)->seq(), it_at(j)->seq());
+    }
+    /** Dispose of Allele object. */
+    static void dispose(Allele_CBPtr al_cbptr) { Allele_Fact::del_elem(al_cbptr); }
+    /** Clear and dispose container. */
+    void clear_and_dispose() { Base::clear_and_dispose(&dispose); }
+    // Saving and loading
+    void save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const;
+    void init_strings();
+    void load_strings(istream& is, size_t& n_strings, size_t& n_bytes);
 }; // class Allele_Cont
 
-}
+} // namespace MAC
 
 #endif

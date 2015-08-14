@@ -74,8 +74,16 @@ public:
     Base::size_type size() = delete;
     Base::size_type nonconst_size() const { return Base::size(); }
 
+    /** Add index at the end */
+    void push_back(unsigned i) { Base::push_back(*Allele_Idx_Fact::new_elem(i)); }
+
+    /** Dispose of index. */
+    static void dispose(Allele_Idx_CBPtr al_idx_cbptr) { Allele_Idx_Fact::del_elem(al_idx_cbptr); }
+    /** Clear container and dispose of elements. */
+    void clear_and_dispose() { Base::clear_and_dispose(&dispose); }
+
 }; // class Allele_Idx_Cont
 
-}
+} // namespace MAC
 
 #endif

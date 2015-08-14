@@ -361,18 +361,12 @@ public:
     /**
      * Clear container and deallocate all Read_Chunk objects.
      * Pre: Read_Chunk objects must be unlinked from their RE containers.
-     * Post: MCAs are also deallocated, but not the Mutations themselves.
      */
-    void clear_and_dispose()
-    {
-        Base::clear_and_dispose([] (Read_Chunk_BPtr rc_bptr)
-        {
-            rc_bptr->mut_ptr_cont().clear_and_dispose();
-            Read_Chunk_Fact::del_elem(rc_bptr);
-        });
-    }
+    static void dispose(Read_Chunk_CBPtr rc_cbptr) { Read_Chunk_Fact::del_elem(rc_cbptr); }
+    void clear_and_dispose() { Base::clear_and_dispose(&dispose); }
 
     /// Reverse all chunks in this container.
+    /*
     void reverse()
     {
         Read_Chunk_CE_Cont new_cont;
@@ -384,6 +378,7 @@ public:
         });
         *this = std::move(new_cont);
     }
+    */
 
 }; // class Read_Chunk_CE_Cont
 

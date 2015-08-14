@@ -8,7 +8,7 @@
 #define __MUTATION_HPP
 
 #include "MAC_forward.hpp"
-#include "Read_Chunk_Ptr_Cont.hpp"
+#include "Allele_Cont.hpp"
 
 
 namespace MAC
@@ -39,18 +39,22 @@ private:
      * Constructor from sequence.
      * @param start Start of the mutation, i.e., length of base sequence prior to mutation.
      * @param len Length of the base sequence affected by the mutation.
-     * @param seq Alternate sequence.
+     * @param ce_cbptr Contig_Entry for this Mutation.
+     * @param seq Alternate allele.
      */
-    Mutation(Size_Type start, Size_Type len, Seq_Type&& seq)
-        : _start(start), _len(len)
+    Mutation(Size_Type start, Size_Type len, Contig_Entry_CBPtr ce_cbptr, Seq_Type&& seq)
+        : _start(start), _len(len), _ce_cbptr(ce_cbptr)
     {
-        _allele_cont.insert(move(seq));
+        _alt_cont.push_back(move(seq));
     }
+    Mutation(Size_Type start, Size_Type len, Contig_Entry_CBPtr ce_cbptr)
+        : _start(start), _len(len), _ce_cbptr(ce_cbptr)
+    {}
 
     ~Mutation()
     {
-        ASSERT(_allele_cont.empty());
         ASSERT(is_unlinked());
+        _alt_cont.clear_and_dispose();
     }
 
 public:
@@ -59,8 +63,26 @@ public:
     Size_Type rf_start() const { return _start; }
     Size_Type rf_len() const { return _len; }
     Size_Type rf_end() const { return _start + _len; }
+    GETTER(Contig_Entry_CBPtr, ce_cbptr, _ce_cbptr)
 
-    GETTER(Allele_Cont, allele_cont, _allele_cont)
+    unsigned n_alleles() const { return 1 + _alt_cont.size(); }
+
+    /** Find equivalent alt, or add this one. */
+    unsigned find_or_add_alt(const Seq_Proxy_Type& seq);
+    /**
+     * Remove an alternate allele.
+     * After removal, the last alternate allele is moved to index i.
+     * @return The index before this operation of the alt allele which is now moved at index i.
+     */
+    unsigned remove_alt(unsigned i);
+    Size_Type allele_len(unsigned i) const
+    {
+        return (i == 0
+                ? rf_len()
+                : _alt_cont.at(i - 1).seq().size());
+    }
+    Seq_Proxy_Type allele_seq(unsigned i) const;
+
     /// @}
 
     /// @name Basic queries
@@ -72,73 +94,32 @@ public:
     /// @}
 
     /**
-     * Extend Mutation given sequence.
-     * Pre: This Mutation is unlinked.
-     * Pre: Mutation contains its alternate sequence.
-     * @param start Reference position.
-     * @param extra_len Extra reference length.
-     * @param extra_seq Extra alternate sequence.
+     * Merge with adjacent Mutation.
+     * Pre: Both Mutations are unlinked.
+     * @param rhs_mut_bptr Mutation to the right.
+     * @param alt_map Map; keys are pairs of alt alleles to keep;
+     * values are overwritten with their new alt index.
      */
-    void extend(Size_Type start, Size_Type extra_len, const Seq_Proxy_Type& extra_seq)
-    {
-        ASSERT(is_unlinked());
-        ASSERT(have_seq());
-        if (is_empty())
-        {
-            _start = start;
-        }
-        ASSERT(rf_end() == start);
-        _len += extra_len;
-        _seq += extra_seq;
-        _seq_len += extra_seq.size();
-    }
-
-    /**
-     * Extend Mutation; if empty, copy the given Mutation.
-     * Pre: This Mutation is unlinked.
-     * Pre: Both Mutations contain alternate sequences.
-     * @param extra_mut_cbptr Extra mutation.
-     */
-    void extend(Mutation_CBPtr extra_mut_cbptr)
-    {
-        ASSERT(is_unlinked());
-        ASSERT(have_seq() and extra_mut_cbptr->have_seq());
-        if (is_empty())
-        {
-            _start = extra_mut_cbptr->rf_start();
-        }
-        ASSERT(rf_end() == extra_mut_cbptr->rf_start());
-        _len += extra_mut_cbptr->rf_len();
-        _seq += extra_mut_cbptr->seq();
-        _seq_len += extra_mut_cbptr->seq_len();
-    }
+    void merge_right(Mutation_BPtr rhs_mut_bptr, map< pair< unsigned, unsigned >, unsigned >& allele_map);
 
     /**
      * Cut mutation at given offsets, allocate new Mutation to keep leftover.
-     * @param base_offset Base offset, 0-based.
-     * @param alt_offset Alternate sequence offset, 0-based.
-     * @return The second part of the Mutation that was cut.
+     * @param offset Offset, 0-based.
+     * @return The second part of the Mutation that was cut;
+     * and map where key = old alt index, value = new alt indexes.
      */
-    Mutation_CBPtr cut(Size_Type base_offset, Size_Type alt_offset);
+    pair< Mutation_BPtr, map< unsigned, pair< unsigned, unsigned > > >
+    cut(Size_Type offset);
 
     /**
-     * Simplify Mutation by dropping the ends of rf and qr if they match.
-     * @param rf Reference sequence spanned by the mutation.
+     * Simplify Mutation by dropping the ends of rf and alt alleles if they match.
      */
-    void simplify(const Seq_Proxy_Type& rf);
+    void simplify();
 
     /**
      * Reverse the mutation.
-     * @param c_len The contig length.
      */
-    void reverse(Size_Type c_len)
-    {
-        _start = c_len - (_start + _len);
-        if (have_seq())
-        {
-            _seq = _seq.revcomp();
-        }
-    }
+    void reverse();
 
     /**
      * Shift Mutation.
@@ -151,6 +132,7 @@ public:
         _start = Size_Type(delta_type(_start) + delta);
     }
 
+    /*
     friend bool operator == (const Mutation& lhs, const Mutation& rhs)
     {
         return (lhs._start == rhs._start
@@ -159,7 +141,13 @@ public:
                 and lhs.have_seq() == rhs.have_seq()
                 and (not lhs.have_seq() or lhs._seq == rhs._seq));
     }
+    */
+    friend bool operator < (const Mutation& lhs, const Mutation& rhs)
+    {
+        return lhs._start < rhs._start;
+    }
 
+    /*
     boost::property_tree::ptree to_ptree() const
     {
         return ptree().put("addr", static_cast< const void* >(this))
@@ -169,6 +157,7 @@ public:
             .put("seq", seq());
     }
     static void to_stream(ostream& os, Mutation_CBPtr mut_cbptr, Contig_Entry_CBPtr ce_cbptr);
+    */
 
     void save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const;
     void init_strings();
@@ -176,18 +165,26 @@ public:
 
 private:
     // Hooks for storage in intrusive interval trees inside Contig_Entry objects.
-    friend struct detail::Mutation_ITree_Node_Traits;
+    friend struct detail::Mutation_Set_Node_Traits;
     bool is_unlinked() const { return not(_parent or _l_child or _r_child); }
 
     Size_Type _start;
     Size_Type _len;
-    Read_Entry_BPtr _re_bptr;
-    Allele_Cont _allele_cont;
+    Allele_Cont _alt_cont;
+    Contig_Entry_CBPtr _ce_cbptr;
     Mutation_BPtr _parent;
     Mutation_BPtr _l_child;
     Mutation_BPtr _r_child;
     bool _color;
 }; // class Mutation
+
+struct Mutation_Comparator
+{
+    bool operator () (const Mutation& lhs, const Mutation& rhs) const { return lhs < rhs; }
+    bool operator () (const Mutation& lhs, Size_Type rhs_rf_start) const { return lhs.rf_start() < rhs_rf_start; }
+    bool operator () (Size_Type lhs_rf_start, const Mutation& rhs) const { return lhs_rf_start < rhs.rf_start(); }
+    bool operator () (Size_Type lhs_rf_start, Size_Type rhs_rf_start) const { return lhs_rf_start < rhs_rf_start; }
+}; // struct Mutation_Comparator
 
 } // namespace MAC
 

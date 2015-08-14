@@ -2548,6 +2548,8 @@ void Graph::save(ostream& os) const
     ASSERT(_re_cont.header_ptr().to_int() == 0);
     ASSERT(_ce_cont.get_root_node().to_int() == 0);
     // dump the 5 factories
+    _allele_fact.save(os);
+    _allele_idx_fact.save(os);
     _mut_fact.save(os);
     _mca_fact.save(os);
     _rc_fact.save(os);

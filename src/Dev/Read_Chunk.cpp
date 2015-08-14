@@ -20,7 +20,6 @@ Read_Chunk::Read_Chunk(Read_Entry_BPtr re_bptr, Contig_Entry_BPtr ce_bptr)
       _c_len(ce_bptr->len()),
       _re_bptr(re_bptr),
       _ce_bptr(ce_bptr),
-      _mut_ptr_cont(),
       _bits(0)
 {
     ASSERT(_r_len == _c_len);
@@ -35,15 +34,16 @@ Size_Type Read_Chunk::get_read_len() const
 Mutation_Cont::const_iterator Read_Chunk::mut_it_begin() const
 {
     ASSERT(ce_bptr());
-    return ce_bptr()->mut_cont().lower_bound(_c_start);
+    return ce_bptr()->mut_cont().lower_bound(get_c_start(), Mutation_Comparator());
 }
 
 Mutation_Cont::const_iterator Read_Chunk::mut_it_end() const
 {
     ASSERT(ce_bptr());
-    return ce_bptr()->mut_cont().lower_bound(_c_end);
+    return ce_bptr()->mut_cont().lower_bound(get_c_end(), Mutation_Comparator());
 }
 
+/*
 Read_Chunk_BPtr
 Read_Chunk::make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf, const Seq_Proxy_Type& qr)
 {
@@ -116,6 +116,17 @@ Read_Chunk::make_relative_chunk(Read_Chunk_CBPtr rc1_cbptr, Read_Chunk_CBPtr rc2
     // fix Read_Entry pointer
     new_rc_bptr->re_bptr() = rc2_cbptr->re_bptr();
     return new_rc_bptr;
+}
+*/
+
+/*
+pair< Read_Chunk_BPtr, Read_Chunk_BPtr >
+Read_Chunk::split(Read_Chunk_BPtr rc_bptr, const Read_Sub_Chunk& rsc, bool strict)
+{
+    LOG("Read_Chunk", debug1) << ptree("split")
+        .put("rc", rc_bptr->to_ptree())
+        .put("rsc", rsc)
+        .put("strict", strict);
 }
 
 pair< Read_Chunk_BPtr, Read_Chunk_BPtr >
@@ -213,7 +224,9 @@ Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_l
     }
     return make_pair(left_rc_bptr, right_rc_bptr);
 }
+*/
 
+/*
 Read_Chunk_BPtr
 Read_Chunk::collapse_mapping(Read_Chunk_BPtr c1rc1_cbptr, Read_Chunk_BPtr rc1rc2_cbptr,
                              Mutation_Cont& mut_cont)
@@ -480,12 +493,6 @@ Read_Chunk_BPtr Read_Chunk::invert_mapping(Read_Chunk_CBPtr rc_cbptr)
         ASSERT(pos_next.mut_offset == 0);
         ASSERT(pos_next.mca_cit == next(pos.mca_cit));
         // create reversed Mutation
-        /*
-        Mutation rev_mut((not _rc? pos.r_pos : pos_next.r_pos),
-                         (not _rc? pos_next.r_pos - pos.r_pos : pos.r_pos - pos_next.r_pos),
-                         (not _rc? _ce_ptr->substr(pos.c_pos, pos_next.c_pos - pos.c_pos)
-                          : reverseComplement(_ce_ptr->substr(pos.c_pos, pos_next.c_pos - pos.c_pos))));
-        */
         Seq_Proxy_Type mut_c_seq = rc_cbptr->ce_bptr()->substr(pos.c_pos, pos_next.c_pos - pos.c_pos);
         Mutation_BPtr new_mut_bptr = (
             not rc_cbptr->get_rc()?
@@ -505,7 +512,9 @@ Read_Chunk_BPtr Read_Chunk::invert_mapping(Read_Chunk_CBPtr rc_cbptr)
     new_ce_bptr->chunk_cont().insert(new_rc_bptr);
     return new_rc_bptr;
 }
+*/
 
+/*
 void Read_Chunk::reverse()
 {
     _set_rc(not get_rc());
@@ -680,40 +689,26 @@ void Read_Chunk::make_unmappable(Read_Chunk_BPtr rc_bptr)
     ce_new_bptr->chunk_cont().insert(rc_bptr);
     ce_new_bptr->set_unmappable();
 }
+*/
 
 Seq_Type Read_Chunk::get_seq() const
 {
     Seq_Type res;
-    // start with start_pos iff not rc
-    Pos pos = (not get_rc()? get_start_pos() : get_end_pos());
-    while (pos != (not get_rc()? get_end_pos() : get_start_pos()))
+    Read_Sub_Chunk rsc = (not get_rc()? get_first_sub_chunk() : get_last_sub_chunk());
+    while (rsc != (not get_rc()? get_last_sub_chunk() : get_first_sub_chunk()))
     {
-        Pos next_pos = pos;
-        next_pos.advance(not get_rc());
-        ASSERT(next_pos.r_pos >= pos.r_pos);
-        ASSERT(next_pos.mut_offset == 0);
-        Size_Type match_len = pos.get_match_len(not get_rc());
-        if (match_len > 0)
+        if (not rsc.in_mut)
         {
-            // match stretch follows
-            res += _ce_bptr->substr(
-                (not get_rc()? pos.c_pos : next_pos.c_pos) - _ce_bptr->seq_offset(), match_len)
-                .revcomp(get_rc());
+            res += ce_bptr()->substr(rsc.c_start, rsc.c_len).revcomp(rsc.rc);
         }
-        else if (pos.r_pos != next_pos.r_pos)
+        else
         {
-            // mutation follows
-            if (not get_rc())
-            {
-                ASSERT(not pos.past_last_mut());
-                res += pos.mut().seq().substr(0, next_pos.r_pos - pos.r_pos);
-            }
-            else
-            {
-                res += next_pos.mut().seq().substr(0, next_pos.r_pos - pos.r_pos).revcomp();
-            }
+            res += rsc.mut_cit->allele_seq(rsc.al_idx)
+                .substr(min(rsc.mut_start, rsc.mut_al_len),
+                        min(rsc.mut_start + rsc.mut_len, rsc.mut_al_len) - min(rsc.mut_start, rsc.mut_al_len))
+                .revcomp(rsc.rc);
         }
-        pos = next_pos;
+        rsc.advance(not rsc.rc);
     }
     return res;
 }
@@ -722,7 +717,7 @@ void Read_Chunk::check() const
 {
 #ifndef DISABLE_ASSERTS
     // check integrity of mutation pointer container
-    mut_ptr_cont().check();
+    _allele_idx_cont.check();
     // no empty chunks
     //ASSERT(get_r_len() > 0); // TODO: re-enable?
     // contigs coordinates
@@ -732,23 +727,21 @@ void Read_Chunk::check() const
     // mapped length
     Size_Type c_len = get_c_end() - get_c_start();
     Size_Type r_len = get_r_end() - get_r_start();
-    long long delta = 0;
-    Mutation_CBPtr last_mut_cbptr = nullptr;
-    for (auto mca_cbptr : mut_ptr_cont() | referenced)
+    long delta = 0;
+    auto al_idx_it = _allele_idx_cont.begin();
+    for (auto mut_cit = mut_it_begin(); mut_cit != mut_it_end(); ++mut_cit, ++al_idx_it)
     {
-        Mutation_CBPtr mut_cbptr = mca_cbptr->mut_cbptr();
-        // no empty mutations
-        ASSERT(not mut_cbptr->is_empty());
-        // mutations must be in contig order
-        ASSERT(not last_mut_cbptr or last_mut_cbptr->rf_end() <= mut_cbptr->rf_start());
-#ifndef ALLOW_CONSECUTIVE_MUTATIONS
-        ASSERT(not last_mut_cbptr or last_mut_cbptr->rf_end() < mut_cbptr->rf_start());
-#endif
-        delta += (long long)mut_cbptr->seq_len() - (long long)mut_cbptr->rf_len();
-        last_mut_cbptr = mut_cbptr;
+        // chunk may not end during Mutation
+        ASSERT(mut_cit->rf_end() <= get_c_end());
+        // must have an allele index for this Mutation
+        ASSERT(al_idx_it != _allele_idx_cont.end());
+        unsigned al_idx = al_idx_it->idx();
+        ASSERT(al_idx < mut_cit->n_alleles());
+        if (al_idx == 0) continue;
+        delta += long(mut_cit->allele_len(al_idx)) - long(mut_cit->allele_len(0));
     }
-    ASSERT((long long)c_len + delta == (long long)r_len);
-#ifndef ALLOW_PART_MAPPED_INNER_CHUNKS
+    ASSERT(al_idx_it == _allele_idx_cont.end());
+    ASSERT((long)c_len + delta == (long)r_len);
     // chunks must end on contig breaks except for first and last
     ASSERT(get_r_start() == re_bptr()->start()
            or (not get_rc()?
@@ -758,25 +751,16 @@ void Read_Chunk::check() const
            or (not get_rc()?
                get_c_end() == ce_bptr()->seq_offset() + ce_bptr()->len()
                : get_c_start() == 0));
-#endif
     // unmappable contigs have no mutations and a single chunk
     if (is_unbreakable())
     {
         ASSERT(ce_bptr()->is_unmappable() or ce_bptr()->is_lowcomplex());
-        ASSERT(mut_ptr_cont().empty());
+        ASSERT(_allele_idx_cont.empty());
         ASSERT(size_one(ce_bptr()->chunk_cont()));
         ASSERT((&*(ce_bptr()->chunk_cont().begin())).raw() == this);
         ASSERT(ce_bptr()->mut_cont().empty());
     }
 #endif
-}
-
-boost::property_tree::ptree Read_Chunk_Pos::to_ptree() const
-{
-    return ptree().put("c_pos", c_pos)
-                  .put("r_pos", r_pos)
-                  .put("mut_offset", mut_offset)
-                  .put("mut", mut().to_ptree());
 }
 
 boost::property_tree::ptree Read_Chunk::to_ptree() const
@@ -789,7 +773,7 @@ boost::property_tree::ptree Read_Chunk::to_ptree() const
                   .put("c_start", get_c_start())
                   .put("c_len", get_c_len())
                   .put("rc", get_rc())
-                  .put("mut_ptr_cont", cont_to_ptree(mut_ptr_cont()))
+                  .put("allele_idx_cont", cont_to_ptree(_allele_idx_cont))
                   .put("re_parent", _re_parent.to_ptree())
                   .put("re_l_child", _re_l_child.to_ptree())
                   .put("re_r_child", _re_r_child.to_ptree())
@@ -798,6 +782,7 @@ boost::property_tree::ptree Read_Chunk::to_ptree() const
                   .put("ce_r_child", _ce_r_child.to_ptree());
 }
 
+/*
 string Read_Chunk::to_string(Read_Chunk_CBPtr rc_cbptr, bool r_dir, bool forward)
 {
     bool r_forward;
@@ -861,6 +846,7 @@ string Read_Chunk::to_string(Read_Chunk_CBPtr rc_cbptr, bool r_dir, bool forward
     print_subinterval(oss, rc_cbptr->get_c_start(), rc_cbptr->get_c_end(), 0, ce_len, c_forward);
     return oss.str();
 }
+*/
 
 
 } // namespace MAC

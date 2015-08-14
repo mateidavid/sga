@@ -21,15 +21,16 @@ private:
     /// Constructor from seq.
     explicit Allele_Idx(unsigned idx) : _idx(idx) {}
     /// Destructor: check if unlinked
-    ~Allele() { ASSERT(is_unlinked()); }
+    ~Allele_Idx() { ASSERT(is_unlinked()); }
 public:
-    GETTER(Seq_Type, idx, _idx)
+    GETTER(unsigned, idx, _idx)
+    boost::property_tree::ptree to_ptree() const { return ptree().put("idx", idx()); }
 private:
-    Seq_Type _idx;
+    unsigned _idx;
     /// Hooks for storage in Allele_Idx_Cont
     friend struct detail::Allele_Idx_List_Node_Traits;
-    Allele_BPtr _previous;
-    Allele_BPtr _next;
+    Allele_Idx_BPtr _previous;
+    Allele_Idx_BPtr _next;
     bool is_unlinked() const { return not(_previous or _next); }
 }; // class Allele_Idx
 

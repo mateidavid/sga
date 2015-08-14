@@ -4,6 +4,7 @@
 // Released under the GPL license
 //-----------------------------------------------
 
+#include <boost/range/adaptor/map.hpp>
 #include "Mutation.hpp"
 #include "Contig_Entry.hpp"
 
@@ -11,63 +12,156 @@
 namespace MAC
 {
 
-Mutation_CBPtr Mutation::cut(Size_Type rf_offset, Size_Type qr_offset)
+unsigned Mutation::find_or_add_alt(const Seq_Proxy_Type& seq)
 {
-    Mutation_BPtr res;
-    ASSERT(rf_offset <= _len);
-    ASSERT(qr_offset <= _seq_len);
-    if (have_seq())
+    return 1 + _alt_cont.find_or_add(seq);
+}
+
+unsigned Mutation::remove_alt(unsigned i)
+{
+    ASSERT(i > 0);
+    --i;
+    if (i < _alt_cont.size() - 1)
     {
-        res = Mutation_Fact::new_elem(_start + rf_offset, _len - rf_offset,
-                                      Seq_Type(_seq.substr(qr_offset)));
-        _len = rf_offset;
-        _seq_len = qr_offset;
-        _seq.resize(qr_offset);
+        _alt_cont.swap_alleles(i, _alt_cont.size() - 1);
+    }
+    _alt_cont.pop_back();
+    return n_alleles();
+}
+
+Seq_Proxy_Type Mutation::allele_seq(unsigned i) const
+{
+    if (i == 0)
+    {
+        return ce_cbptr()->substr(rf_start(), rf_len());
     }
     else
     {
-        res = Mutation_Fact::new_elem(_start + rf_offset, _len - rf_offset,
-                                      _seq_len - qr_offset);
-        _len = rf_offset;
-        _seq_len = qr_offset;
+        return _alt_cont.at(i - 1).seq();
     }
-    return res;
 }
 
-void Mutation::simplify(const Seq_Proxy_Type& rf_seq)
+void Mutation::merge_right(Mutation_BPtr rhs_mut_bptr, map< pair< unsigned, unsigned >, unsigned >& allele_map)
 {
-    ASSERT(rf_seq.size() == _len);
-    if (not have_seq())
+    ASSERT(is_unlinked());
+    ASSERT(rhs_mut_bptr->is_unlinked());
+    ASSERT(ce_cbptr() == rhs_mut_bptr->ce_cbptr());
+    if (rf_end() != rhs_mut_bptr->rf_start())
     {
-        return;
+        abort();
     }
-    Seq_Proxy_Type qr_seq = seq();
-    while (_len > 0 and _seq_len > 0 and rf_seq[_len - 1] == qr_seq[_seq_len - 1])
+    Allele_Cont new_cont;
+    for (const auto& p : allele_map | ba::map_keys)
     {
-        --_len;
-        --_seq_len;
-        //_seq.resize(_seq.size() - 1);
-        qr_seq = qr_seq.substr(0, _seq_len);
+        if (p.first == 0 and p.second == 0)
+        {
+            allele_map[p] = 0;
+        }
+        else
+        {
+            new_cont.push_back(Seq_Type(allele_seq(p.first)) + Seq_Type(rhs_mut_bptr->allele_seq(p.second)));
+            allele_map[p] = new_cont.size();
+        }
     }
-    size_t i = 0;
-    while (i < _len and i < _seq_len and rf_seq[i] == _seq[i])
+    _len += rhs_mut_bptr->rf_len();
+    _alt_cont = move(new_cont);
+}
+
+pair< Mutation_BPtr, map< unsigned, pair< unsigned, unsigned > > >
+Mutation::cut(Size_Type offset)
+{
+    ASSERT(is_unlinked());
+    Size_Type rf_offset = min(offset, rf_len());
+    Mutation_BPtr rhs_mut_bptr = Mutation_Fact::new_elem(rf_start() + rf_offset, rf_len() - rf_offset, ce_cbptr());
+    Allele_Cont new_cont;
+    map< Seq_Type, unsigned > lhs_alleles;
+    map< Seq_Type, unsigned > rhs_alleles;
+    map< unsigned, pair< unsigned, unsigned > > allele_map;
+    lhs_alleles[ce_cbptr()->substr(rf_start(), rf_offset)] = 0;
+    rhs_alleles[ce_cbptr()->substr(rf_start() + rf_offset, rf_len() - rf_offset)] = 0;
+    allele_map[0] = make_pair(0, 0);
+    unsigned i = 1;
+    for (const auto a_cbptr : _alt_cont | referenced)
     {
+        Size_Type al_offset = min(offset, a_cbptr->seq().size());
+        Seq_Type lhs_seq = a_cbptr->seq().substr(0, al_offset);
+        Seq_Type rhs_seq = a_cbptr->seq().substr(al_offset);
+        if (lhs_alleles.count(lhs_seq) == 0)
+        {
+            new_cont.push_back(Seq_Type(lhs_seq));
+            lhs_alleles[lhs_seq] = new_cont.size();
+        }
+        if (rhs_alleles.count(rhs_seq) == 0)
+        {
+            rhs_mut_bptr->_alt_cont.push_back(Seq_Type(rhs_seq));
+            rhs_alleles[rhs_seq] = rhs_mut_bptr->_alt_cont.size();
+        }
+        allele_map[i] = make_pair(lhs_alleles[lhs_seq], rhs_alleles[rhs_seq]);
         ++i;
     }
-    if (i > 0)
+    _len = rf_offset;
+    _alt_cont = move(new_cont);
+    return make_pair(rhs_mut_bptr, allele_map);
+}
+
+void Mutation::simplify()
+{
+    ASSERT(is_unlinked());
+    // compute common suffix len
     {
-        _start += i;
-        _len -= i;
-        _seq_len -= i;
-        //_seq = _seq.substr(i);
-        qr_seq = qr_seq.substr(i);
+        Seq_Proxy_Type rf_seq = allele_seq(0);
+        Size_Type common_suffix_len = rf_seq.size();
+        for (auto al_bptr : _alt_cont | referenced)
+        {
+            if (common_suffix_len == 0) break;
+            unsigned i = 0;
+            while (i < min(common_suffix_len, al_bptr->seq().size())
+                   and al_bptr->seq()[al_bptr->seq().size() - 1 - i] == rf_seq[rf_seq.size() - 1 - i]) ++i;
+            if (i < common_suffix_len) common_suffix_len = i;
+        }
+        if (common_suffix_len > 0)
+        {
+            _len -= common_suffix_len;
+            for (auto al_bptr : _alt_cont | referenced)
+            {
+                al_bptr->seq().resize(al_bptr->seq().size() - common_suffix_len);
+            }
+        }
     }
-    if (qr_seq.size() != _seq.size())
+    // compute common prefix len
     {
-        _seq = qr_seq;
+        Seq_Proxy_Type rf_seq = allele_seq(0);
+        Size_Type common_prefix_len = rf_seq.size();
+        for (auto al_bptr : _alt_cont | referenced)
+        {
+            if (common_prefix_len == 0) break;
+            unsigned i = 0;
+            while (i < min(common_prefix_len, al_bptr->seq().size())
+                   and al_bptr->seq()[i] == rf_seq[i]) ++i;
+            if (i < common_prefix_len) common_prefix_len = i;
+        }
+        if (common_prefix_len > 0)
+        {
+            _start += common_prefix_len;
+            _len -= common_prefix_len;
+            for (auto al_bptr : _alt_cont | referenced)
+            {
+                al_bptr->seq() = al_bptr->seq().substr(common_prefix_len);
+            }
+        }
     }
 }
 
+void Mutation::reverse()
+{
+    _start = ce_cbptr()->len() - rf_end();
+    for (auto al_bptr : _alt_cont | referenced)
+    {
+        al_bptr->seq() = al_bptr->seq().revcomp();
+    }
+}
+
+/*
 void Mutation::to_stream(ostream& os, Mutation_CBPtr mut_cbptr, Contig_Entry_CBPtr ce_cbptr)
 {
     ASSERT(mut_cbptr);
@@ -82,24 +176,21 @@ void Mutation::to_stream(ostream& os, Mutation_CBPtr mut_cbptr, Contig_Entry_CBP
        << setw(5) << right << full_rf_set.size()
        << setw(5) << right << qr_set.size();
 }
+*/
 
 void Mutation::save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const
 {
-    os.write(_seq.c_str(), _seq.size() + 1);
-    ++n_strings;
-    n_bytes += _seq.size() + 1;
+    _alt_cont.save_strings(os, n_strings, n_bytes);
 }
 
 void Mutation::init_strings()
 {
-    new (&_seq) string();
+    _alt_cont.init_strings();
 }
 
 void Mutation::load_strings(istream& is, size_t& n_strings, size_t& n_bytes)
 {
-    getline(is, _seq, '\0');
-    ++n_strings;
-    n_bytes += _seq.size() + 1;
+    _alt_cont.load_strings(is, n_strings, n_bytes);
 }
 
 } // namespace MAC

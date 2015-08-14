@@ -10,18 +10,23 @@
 namespace MAC
 {
 
-Mutation_Cont::Mutation_Cont(const Cigar& cigar, const Seq_Proxy_Type& qr)
+Mutation_Cont
+Mutation_Cont::make_from_cigar(const Cigar& cigar, Contig_Entry_CBPtr ce_cbptr, const Seq_Proxy_Type& qr)
 {
-    Mutation_BPtr accum_mut_bptr;
+    // accept either the matched part of the query (length = cigar.qr_len)
+    // or entire query (length > cigar.qr_len)
+    ASSERT(qr.size() >= cigar.qr_len());
+    Mutation_Cont res;
+    Mutation_BPtr mut_bptr;
     for (size_t i = 0; i <= cigar.n_ops(); ++i)
     {
         if (i == cigar.n_ops() or cigar.op_type(i) == '=')
         {
             // if we're keeping track of a mutation, add it to container
-            if (accum_mut_bptr)
+            if (mut_bptr)
             {
-                insert(accum_mut_bptr);
-                accum_mut_bptr = nullptr;
+                res.insert(mut_bptr);
+                mut_bptr = nullptr;
             }
         }
         else
@@ -29,45 +34,36 @@ Mutation_Cont::Mutation_Cont(const Cigar& cigar, const Seq_Proxy_Type& qr)
             // disallow ambigous 'M' operation
             ASSERT(cigar.op_type(i) != 'M');
             // accumulator is either empty, or it extends to the start of this mutation
-            ASSERT(not accum_mut_bptr or accum_mut_bptr->rf_end() == cigar.op_rf_pos(i));
-            if (not accum_mut_bptr)
+            ASSERT(not mut_bptr or mut_bptr->rf_end() == cigar.op_rf_pos(i));
+            Size_Type qr_offset = (not cigar.reversed()?
+                                   cigar.op_qr_pos(i)
+                                   : cigar.op_qr_pos(i) - cigar.op_qr_len(i));
+            if (qr.size() == cigar.qr_len())
             {
-                accum_mut_bptr = Mutation_Fact::new_elem();
+                // assume the query sequence before qr_start is missing
+                qr_offset -= cigar.qr_start();
             }
-            if (qr.size() > 0)
+            Mutation_BPtr new_mut_bptr = Mutation_Fact::new_elem(
+                cigar.op_rf_pos(i),
+                cigar.op_rf_len(i),
+                ce_cbptr, 
+                qr.substr(qr_offset, cigar.op_qr_len(i)).revcomp(cigar.reversed()));
+            if (mut_bptr)
             {
-                // accept either the matched part of the query (length = cigar.qr_len)
-                // or entire query (length > cigar.qr_len)
-                ASSERT(qr.size() >= cigar.qr_len());
-                Size_Type qr_offset = (not cigar.reversed()?
-                                       cigar.op_qr_pos(i)
-                                       : cigar.op_qr_pos(i) - cigar.op_qr_len(i));
-                if (qr.size() == cigar.qr_len())
-                {
-                    // assume the query sequence before qr_start is missing
-                    qr_offset -= cigar.qr_start();
-                }
-                accum_mut_bptr->extend(
-                    cigar.op_rf_pos(i),
-                    cigar.op_rf_len(i),
-                    /*
-                    (not cigar.reversed()?
-                     qr.substr(qr_offset, cigar.op_qr_len(i))
-                     : reverseComplement(qr.substr(qr_offset, cigar.op_qr_len(i)))));
-                    */
-                    qr.substr(qr_offset, cigar.op_qr_len(i)).revcomp(cigar.reversed()));
+                ASSERT(mut_bptr->rf_end() == new_mut_bptr->rf_start());
+                map< pair< unsigned, unsigned >, unsigned > alt_map = { { { 1, 1 }, 0 } };
+                mut_bptr->merge_right(new_mut_bptr, alt_map);
             }
             else
             {
-                accum_mut_bptr->extend(
-                    cigar.op_rf_pos(i),
-                    cigar.op_rf_len(i),
-                    cigar.op_qr_len(i));
+                mut_bptr = new_mut_bptr;
             }
         }
     }
+    return res;
 }
 
+/*
 Mutation_CBPtr Mutation_Cont::find_span_pos(Size_Type c_pos) const
 {
     auto it_range = Base::iintersect(c_pos, c_pos);
@@ -116,5 +112,6 @@ void Mutation_Cont::drop_unused()
         mut_it = mut_next_it;
     }
 }
+*/
 
 } // namespace MAC

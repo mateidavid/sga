@@ -8,9 +8,9 @@
 #define __READ_CHUNK_HPP
 
 #include "MAC_forward.hpp"
+#include "Mutation_Cont.hpp"
+#include "Allele_Idx_Cont.hpp"
 #include "Read_Sub_Chunk.hpp"
-#include "Mutation.hpp"
-#include "Mutation_Ptr_Cont.hpp"
 
 
 namespace MAC
@@ -34,8 +34,6 @@ private:
           _r_len(0),
           _c_start(0),
           _c_len(0),
-          _re_bptr(nullptr),
-          _ce_bptr(nullptr),
           _bits(0)
     {}
 
@@ -61,8 +59,6 @@ private:
           _r_len(r_len),
           _c_start(c_start),
           _c_len(c_len),
-          _re_bptr(nullptr),
-          _ce_bptr(nullptr),
           _bits(0)
     {
         _set_rc(rc);
@@ -70,9 +66,8 @@ private:
 
     ~Read_Chunk()
     {
-        // when deallocating, mut_ptr_cont must have been cleared
-        ASSERT(mut_ptr_cont().empty());
         ASSERT(is_unlinked());
+        _allele_idx_cont.clear_and_dispose();
     }
 
 public:
@@ -100,10 +95,10 @@ public:
     /// Get first subchunk
     Read_Sub_Chunk get_first_sub_chunk() const
     {
-        Read_Sub_Chunk res{c_start(), 0, r_start(), 0, 0, 0, c_start(), c_len(),
+        Read_Sub_Chunk res{get_c_start(), 0, get_r_start(), 0, 0, 0, get_c_start(), get_c_len(),
                 mut_it_begin(), mut_it_begin(), mut_it_end(), _allele_idx_cont.begin(),
                 0, 0, 0, 0,
-                get_rc()};
+                get_rc(), false};
         res.set_convenience_fields();
         return res;
     }
@@ -111,10 +106,10 @@ public:
     /// Get last subchunk
     Read_Sub_Chunk get_last_sub_chunk() const
     {
-        Read_Sub_Chunk res{c_end(), 0, r_end(), 0, 0, 0, c_start(), c_len(),
+        Read_Sub_Chunk res{get_c_end(), 0, get_r_end(), 0, 0, 0, get_c_start(), get_c_len(),
                 mut_it_end(), mut_it_begin(), mut_it_end(), _allele_idx_cont.end(),
                 0, 0, 0, 0,
-                get_rc()};
+                get_rc(), false};
         res.set_convenience_fields();
         return res;
     }
@@ -132,9 +127,10 @@ public:
      * @param strict If true, every non-terminal Read_Chunk that spans the break gets split
      * into exactly 2 pieces (even if one is empty).
      * @return Tuple of Read_Chunk pointers that go on left&right of the cut.
-     */
+     *
     static pair< Read_Chunk_BPtr, Read_Chunk_BPtr >
     split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict = false);
+    */
 
     /**
      * Construct Read_Chunk object from a Cigar object.
@@ -142,9 +138,10 @@ public:
      * @param cigar Cigar string.
      * @param rf_ptr Reference string (either whole, or just mapped portion); Contig_Entry object takes ownership.
      * @param qr Query string (either whole, or just mapped portion).
-     */
+     *
     static Read_Chunk_BPtr
     make_chunk_from_cigar(const Cigar& cigar, Seq_Type&& rf_ptr, const Seq_Proxy_Type& qr);
+    */
 
     /**
      * Construct Read_Chunk object from a Cigar object, given existing Contig_Entry.
@@ -152,9 +149,10 @@ public:
      * @param cigar Cigar string.
      * @param qr Query string (either whole, or just mapped portion).
      * @param ce_bptr Contig_Entry object holding the cigar rf sequence.
-     */
+     *
     static Read_Chunk_BPtr
     make_chunk_from_cigar(const Cigar& cigar, const Seq_Proxy_Type& qr, Contig_Entry_BPtr ce_bptr);
+    */
 
     /**
      * Create Read_Chunk and Contig_Entry objects from a cigar string and 2 existing Read_Chunk objects.
@@ -162,10 +160,11 @@ public:
      * @param rc2_cbptr Read_Chunk corresponding to qr.
      * @param cigar Cigar string.
      * @return A read chunk corresponding to the query in the cigar object, and a Contig_Entry corresponding to the rf.
-     */
+     *
     static Read_Chunk_BPtr
     make_relative_chunk(Read_Chunk_CBPtr rc1_cbptr, Read_Chunk_CBPtr rc2_cbptr,
                         const Cigar& cigar);
+    */
 
     /**
      * Collapse mappings: from c1<-rc1 and rc1<-rc2, compute c1<-rc2.
@@ -178,23 +177,14 @@ public:
      * @param rc1rc2_cbptr Mapping of rc2 on rc1.
      * @param mut_cont Container of c1 mutations.
      * @return New Read_Chunk corresponding to mapping of rc2 on c1.
-     */
+     *
     static Read_Chunk_BPtr
     collapse_mapping(Read_Chunk_BPtr c1rc1_cbptr, Read_Chunk_BPtr rc1rc2_cbptr,
                      Mutation_Cont& mut_cont);
-
-    /**
-     * Invert mapping; from contig<-chunk, compute chunk<-contig.
-     * Post: New Read_Chunk and Contig_Entry objects are allocated.
-     * Post: Contig_Entry only has the sequence in the original chunk;
-     * several methods are unavailable in this case.
-     * @param rc_bptr Chunk to invert.
-     */
-    static Read_Chunk_BPtr
-    invert_mapping(Read_Chunk_CBPtr rc_cbptr);
+    */
 
     /// Reverse the contig mapping; Mutations and their container must be reversed externally.
-    void reverse();
+    //void reverse();
 
     /**
      * Merge read chunk with the next chunk of the same read along the contig.
@@ -209,7 +199,7 @@ public:
      * @param rc_next_bptr Next chunk in read direction.
      * @param mut_cont Mutation continer to alter.
      */
-    static void cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bptr, Mutation_Cont& mut_cont);
+    //static void cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bptr, Mutation_Cont& mut_cont);
 
     /**
      * Shift contig coordinates of this Read_Chunk object.
@@ -240,8 +230,10 @@ public:
      * @param rg_start_maximal True: use maximal mapping for start endpoint of original range.
      * @param rg_end_maximal True: use maximal mapping for end endpoint of original range.
      */
+    /*
     Range_Type mapped_range(Range_Type rg, bool on_contig,
                             bool rg_start_maximal, bool rg_end_maximal) const;
+    */
 
     /**
      * Make chunk unmappable.
@@ -250,7 +242,7 @@ public:
      * NOTE: New contig entry is not inserted in the graph.
      * @param rc_bptr Chunk to make unmappable.
      */
-    static void make_unmappable(Read_Chunk_BPtr rc_bptr);
+    //static void make_unmappable(Read_Chunk_BPtr rc_bptr);
 
     /// Integrity check.
     void check() const;

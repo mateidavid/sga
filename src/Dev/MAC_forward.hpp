@@ -36,7 +36,6 @@
 #include "Range.hpp"
 #include "Range_Cont.hpp"
 
-
 #include <boost/intrusive/itree.hpp>
 
 
@@ -81,7 +80,7 @@ namespace detail
 {
     struct Allele_List_Node_Traits;
     struct Allele_Idx_List_Node_Traits;
-    struct Mutation_ITree_Node_Traits;
+    struct Mutation_Set_Node_Traits;
     struct Mutation_Ptr_List_Node_Traits;
     struct Read_Chunk_Ptr_List_Node_Traits;
     struct Read_Chunk_ITree_Node_Traits;

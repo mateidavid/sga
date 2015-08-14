@@ -302,6 +302,8 @@ private:
     void unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start);
 
     /** Data members */
+    Allele_Fact _allele_fact;
+    Allele_Idx_Fact _allele_idx_fact;
     Mutation_Fact _mut_fact;
     Mutation_Chunk_Adapter_Fact _mca_fact;
     Read_Chunk_Fact _rc_fact;

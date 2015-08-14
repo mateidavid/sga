@@ -148,7 +148,7 @@ void load_asqg(std::istream& is, Graph& g)
 int real_main()
 {
     Graph g;
-    Hap_Map hm;
+    //Hap_Map hm;
     // option validation
     if (opts::input_file.get().empty() == opts::load_file.get().empty())
     {
@@ -199,6 +199,7 @@ int real_main()
         g.load(ifs);
     }
     LOG("mac", info) << ptree("factory_stats", g.factory_stats());
+    /*
     if (opts::cat_at_end)
     {
         LOG("mac", info) << ptree("cat_at_end_start");
@@ -305,7 +306,7 @@ int real_main()
         hm.dump_stats(tmp_fs, g);
     }
     LOG("mac", info) << ptree("done_output");
-
+    */
     if (not opts::save_file.get().empty())
     {
         LOG("mac", info) << ptree("saving").put("save_file", opts::save_file.get());
@@ -314,7 +315,7 @@ int real_main()
     }
     LOG("mac", info) << ptree("factory_stats", g.factory_stats());
     g.clear_and_dispose();
-    hm.clear_and_dispose();
+    //hm.clear_and_dispose();
     LOG("mac", info) << ptree("graph_cleared");
     return EXIT_SUCCESS;
 }
@@ -325,18 +326,16 @@ int main(int argc, char * argv[])
     global_assert::prog_name() = opts::cmd_parser.getProgramName();
     // set log levels
     Logger::set_levels_from_options(opts::log_level, &clog);
-    // set random seed
-    bool seed_is_random = false;
-    if (opts::seed < 0)
-    {
-        seed_is_random = true;
-        opts::seed.get() = time(nullptr);
-    }
-    srand48(opts::seed);
     // print options
     LOG("main", info) << "program: " << opts::cmd_parser.getProgramName() << endl
                       << "version: " << opts::cmd_parser.getVersion() << endl
                       << "args: " << opts::cmd_parser.getOrigArgv() << endl;
-    if (seed_is_random) LOG("main", info) << "seed: " << opts::seed << endl;
+    // set random seed
+    if (opts::seed < 0)
+    {
+        opts::seed.get() = time(nullptr);
+        LOG("main", info) << "seed: " << opts::seed << endl;
+    }
+    srand48(opts::seed);
     return real_main();
 }

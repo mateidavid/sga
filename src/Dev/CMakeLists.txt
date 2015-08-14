@@ -9,9 +9,7 @@ include_directories(BEFORE ${CMAKE_SOURCE_DIR}/boost-intrusive-augmented/include
 add_library(mac STATIC
     Mutation.cpp
     Mutation_Cont.cpp
-    Read_Chunk_Pos.cpp
     Read_Chunk.cpp
-    Read_Chunk_Ptr_Cont.cpp
     Read_Chunk_Cont.cpp
     Read_Entry.cpp
     Contig_Entry.cpp
