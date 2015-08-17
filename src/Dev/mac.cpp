@@ -68,6 +68,7 @@ namespace opts
     SwitchArg validate_variations("", "validate-variations", "Validate variations with auxiliary 2GS data.", cmd_parser, false);
     SwitchArg unmap_single_chunks("", "unmap-single-chunks", "Unmap single chunks.", cmd_parser, false);
     SwitchArg unmap_mut_clusters("", "unmap-mut-clusters", "Unmap mutation clusters.", cmd_parser, false);
+    ValueArg< int > unmap_short_contigs("", "unmap-short-contigs", "Unmap contigs smaller than a given size.", false, 0, "int", cmd_parser);
     SwitchArg build_hapmap("", "build-hapmap", "Build haplotype map.", cmd_parser, false);
     //
     // other
@@ -246,6 +247,13 @@ int real_main()
         g.unmap_single_chunks();
         g.check_all();
         LOG("mac", info) << ptree("unmap_single_chunks_end");
+    }
+    if (opts::unmap_short_contigs > 0)
+    {
+        LOG("mac", info) << ptree("unmap_short_contigs_start");
+        g.unmap_short_contigs(opts::unmap_short_contigs, 1);
+        g.check_all();
+        LOG("mac", info) << ptree("unmap_short_contigs_end");
     }
     if (opts::build_hapmap)
     {

@@ -2671,6 +2671,36 @@ void Graph::export_gfa(ostream& os) const
             }
         }
     }
-} // void Graph::export_gfa
+} // Graph::export_gfa
+
+void Graph::unmap_short_contigs(unsigned min_len, unsigned max_deg)
+{
+    for (bool done = false; not done; )
+    {
+        done = true;
+        for (auto ce_bptr : ce_cont() | referenced)
+        {
+            if (not ce_bptr->is_normal()) continue;
+            if (ce_bptr->len() >= min_len) continue;
+            auto oc_left = ce_bptr->out_chunks_dir(false, 3, 1);
+            auto oc_right = ce_bptr->out_chunks_dir(true, 3, 1);
+            if (oc_left.size() <= max_deg and oc_right.size() <= max_deg) continue;
+            // unmap contig entry
+            done = false;
+            vector< pair< Read_Entry_BPtr, Range_Type > > unmap_v;
+            for (auto rc_bptr : ce_bptr->chunk_cont() | referenced)
+            {
+                unmap_v.emplace_back(rc_bptr->re_bptr(), Range_Type(rc_bptr->get_r_start(), rc_bptr->get_r_end()));
+            }
+            for (const auto& p : unmap_v)
+            {
+                unmap_re_region(p.first, p.second);
+            }
+            // restart loop
+            break;
+        }
+    }
+
+} // Graph::unmap_short_contigs
 
 } // namespace MAC

@@ -102,7 +102,7 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::extend_endpoint_haps(cons
     } // for (p : anchor_support)
     ASSERT(res.size() == anchor_support.size());
     return res;
-} // Hap_Map::extend_haps_at_endpoint
+} // Hap_Map::extend_endpoint_haps
 
 void Hap_Map::build(const Graph& g)
 {

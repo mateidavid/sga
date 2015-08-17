@@ -111,6 +111,9 @@ public:
     /** Unmap read chunks not mapped to lone contigs. */
     void unmap_single_chunks();
 
+    /** Repeatedly unmap short contigs with length < min_len and out-degree > max_deg */
+    void unmap_short_contigs(unsigned min_len, unsigned max_deg);
+
     /** Unmap read ends not mapped to anything else. */
     void unmap_read_ends();
 
