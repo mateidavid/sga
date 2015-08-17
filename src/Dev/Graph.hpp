@@ -172,6 +172,7 @@ public:
 
     void save(ostream&) const;
     void load(istream&);
+    void export_gfa(ostream&) const;
 
 private:
     friend class Unmap_Mut_Clusters;

@@ -2648,4 +2648,29 @@ void Graph::get_terminal_reads(ostream& os) const
     }
 }
 
+void Graph::export_gfa(ostream& os) const
+{
+    os << "H\tVN:Z:1.0" << endl;
+    for (const auto ce_cbptr : ce_cont() | referenced)
+    {
+        if (not ce_cbptr->is_normal()) continue;
+        os << "S\t" << ce_cbptr.to_int() << "\t" << ce_cbptr->seq() << endl;
+    }
+    for (const auto ce_cbptr : ce_cont() | referenced)
+    {
+        if (not ce_cbptr->is_normal()) continue;
+        for (int c_right = 0; c_right < 2; ++c_right)
+        {
+            auto oc = ce_cbptr->out_chunks_dir(c_right, 3, 1);
+            for (const auto& p : oc | ba::map_keys)
+            {
+                if (p.first.to_int() < ce_cbptr.to_int()) continue;
+                os << "L\t"
+                   << ce_cbptr.to_int() << "\t" << (c_right? "+" : "-") << "\t"
+                   << p.first.to_int() << "\t" << (p.second == c_right? "+" : "-") << "\t0M" << endl;
+            }
+        }
+    }
+} // void Graph::export_gfa
+
 } // namespace MAC

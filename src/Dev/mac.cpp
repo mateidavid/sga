@@ -43,6 +43,7 @@ namespace opts
     ValueArg< string > input_file("i", "input-file", "Load ASQG input file.", false, "", "file", cmd_parser);
     ValueArg< string > load_file("L", "load-file", "Load MAC graph from file.", false, "", "file", cmd_parser);
     ValueArg< string > save_file("S", "save-file", "Save MAC graph to file.", false, "", "file", cmd_parser);
+    ValueArg< string > gfa_file("", "export-gfa", "Export graph to GFA file.", false, "", "file", cmd_parser);
     ValueArg< string > aux_bwt_file("", "aux-bwt-file", "BWT index of 2GS reads used to validate variations.", false, "", "file", cmd_parser);
     ValueArg< string > stats_file("", "stats-file", "Stats file.", false, "", "file", cmd_parser);
     ValueArg< string > supercontigs_stats_file("", "supercontigs-stats-file", "Supercontigs stats file.", false, "", "file", cmd_parser);
@@ -312,6 +313,13 @@ int real_main()
         strict_fstream::fstream tmp_fs(opts::save_file, ios_base::out | ios_base::binary);
         g.save(tmp_fs);
     }
+    if (not opts::gfa_file.get().empty())
+    {
+        LOG("mac", info) << ptree("exporting_gfa").put("gfa_file", opts::gfa_file.get());
+        strict_fstream::fstream tmp_fs(opts::gfa_file, ios_base::out);
+        g.export_gfa(tmp_fs);
+    }
+
     LOG("mac", info) << ptree("factory_stats", g.factory_stats());
     g.clear_and_dispose();
     hm.clear_and_dispose();
