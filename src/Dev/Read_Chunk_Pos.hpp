@@ -1,156 +1,217 @@
-//-----------------------------------------------
-// Copyright 2013 Ontario Institute for Cancer Research
-// Written by Matei David (mdavid@oicr.on.ca)
-// Released under the GPL license
-//-----------------------------------------------
-
 #ifndef __READ_CHUNK_POS_HPP
 #define __READ_CHUNK_POS_HPP
 
-#include "MAC_forward.hpp"
-#include "Mutation.hpp"
-#include "Mutation_Ptr_Cont.hpp"
-
+#include "Read_Chunk.hpp"
 
 namespace MAC
 {
 
-/** Struct that represents a Read_Chunk position. */
-struct Read_Chunk_Pos
+class Read_Chunk_Pos
 {
 public:
-    /** Contig position. */
-    Size_Type c_pos;
-    /** Read position. */
-    Size_Type r_pos;
-    /** Iterator with next mutation pointer. */
-    Mutation_Cont::const_iterator mut_cit;
-    /** Allele index for next mutation. */
-    Allele_Idx_Cont::const_iterator allele_idx_cit;
-    /** If non-zero, offset into current mutation. */
-    Size_Type mut_offset;
-private:
-    /** Read_Chunk parent object. */
-    const Read_Chunk* rc_cptr;
-    Mutation_Cont::const_iterator mut_it_begin;
-    Mutation_Cont::const_iterator mut_it_end;
+    Read_Chunk_Pos(Read_Chunk_CBPtr rc_cbptr, bool on_contig, bool start);
+
+    Size_Type c_pos() const { return _c_pos_base; }
+    Size_Type r_pos() const { return advance_r_pos(_r_pos_base, _mut_offset, true); }
+    Size_Type match_len(bool i) const { return _match_len[i]; }
+    bool in_mutation() const { return _mut_offset > 0; }
+    Mutation_Cont::const_iterator mut_cit() const { return _mut_cit; }
+    Allele_Idx_Cont::const_iterator al_idx_cit() const { return _al_idx_cit; }
 
 private:
-    // Constructed only by Read_Chunk objects
-    friend class Read_Chunk;
-    /** Constructor. */
-    Read_Chunk_Pos(Size_Type _c_pos,
-                   Size_Type _r_pos,
-                   Mutation_Cont::const_iterator _mut_cit,
-                   Allele_Idx_Cont::const_iterator _allele_idx_cit,
-                   Size_Type _mut_offset,
-                   const Read_Chunk* _rc_cptr)
-        : c_pos(_c_pos),
-          r_pos(_r_pos),
-          mut_cit(_mut_cit),
-          allele_idx_cit(_allele_idx_cit),
-          mut_offset(_mut_offset),
-          rc_cptr(_rc_cptr)
+    Size_Type _c_pos_base;
+    Size_Type _r_pos_base;
+    Size_Type _mut_offset;
+
+    Size_Type _match_len[2];
+    Size_Type _mut_leftover;
+
+    Size_Type _rc_c_start;
+    Size_Type _rc_c_len;
+    Mutation_Cont::const_iterator _mut_cit;
+    Mutation_Cont::const_iterator _mut_cit_begin;
+    Mutation_Cont::const_iterator _mut_cit_end;
+    Allele_Idx_Cont::const_iterator _al_idx_cit;
+
+    bool rc;
+
+    static Size_Type advance_r_pos(Size_Type orig_pos, Size_Type len, bool c_forward)
     {
-        mut_it_begin = rc_cptr->mut_it_begin();
-        mut_it_end = rc_cptr->mut_it_end();
+        return not rc == c_forward? orig_pos + len : orig_pos - len;
     }
 
-public:
-    // allow copy and move
-    DEFAULT_COPY_CTOR(Read_Chunk_Pos);
-    DEFAULT_MOVE_CTOR(Read_Chunk_Pos);
-    DEFAULT_COPY_ASOP(Read_Chunk_Pos);
-    DEFAULT_MOVE_ASOP(Read_Chunk_Pos);
-
-public:
-    /** Check if position is past the last mutation in the read chunk. */
-    bool past_last_mut() const;
-
-    /** Check if position is past first mutation in the read chunk. */
-    bool past_first_mut() const;
-
-    /** Get current or next mutation. */
-    const Mutation& mut() const
+    void set_convenience_fields()
     {
-        ASSERT(rc_cptr);
-        ASSERT(not past_last_mut());
-        return *mut_cit;
+        if (mut_offset == 0)
+        {
+            _match_len[0] = c_pos - (_mut_cit != _mut_cit_begin? prev(_mut_cit)->rf_end() : _rc_c_start);
+            _match_len[1] = (_mut_cit != _mut_cit_end? _mut_cit->rf_start() : _rc_c_end) - _c_pos;
+            _mut_leftover = 0;
+        }
+        else // mut_offset > 0
+        {
+            _match_len[0] = 0;
+            _match_len[1] = 0;
+            _mut_leftover = mut_cit->allele_len(al_idx_cit->idx()) - _mut_offset;
+        }
     }
 
-    /** Get previous mutation. */
-    const Mutation& prev_mut() const
+    void increment(Size_Type r_brk)
     {
-        ASSERT(rc_cptr);
-        ASSERT(past_first_mut());
-        auto tmp_cit = mut_cit;
-        return *(--tmp_cit);
+        check();
+        ASSERT(not rc? r_pos() < r_brk : r_brk < r_pos());
+        if (in_mutation() or match_len(1) == 0)
+        {
+            if (not rc? r_pos() + mut_leftover < r_brk : r_pos() - mut_leftover > r_brk)
+            {
+                // advance past variation
+                _c_pos_base = mut_cit->rf_end();
+                _r_pos_base = advance_r_pos(_r_pos_base, _mut_offset + mut_leftover, true);
+                _mut_offset = 0;
+                ++_mut_cit;
+                ++_al_idx_cit;
+            }
+            else // r_brk <= _r_pos_base + mut_al_len (if not rc)
+            {
+                // stop inside (or at end of) variation
+                _mut_offset = not rc? r_brk - _r_pos_base : _r_pos_base - r_brk;
+            }
+        }
+        else // not in_mutation and match_len(1) > 0
+        {
+            if (not rc? r_pos() + match_len(1) <= r_brk : r_pos() - match_len(1) >= r_brk)
+            {
+                // advance past match
+                _c_pos_base += match_len(1);
+                _r_pos_base = advance_r_pos(_r_pos_base, match_len(1), true);
+            }
+            else // r_brk < r_pos() + match_len(1) (if not rc)
+            {
+                // stop inside match stretch
+                _c_pos_base += (not rc? r_brk - r_pos() : r_pos() - r_brk);
+                _r_pos_base = r_brk;
+            }
+        }
+        set_convenience_fields();
+        check();
     }
 
-    /** Get length of unmutated mapped stretch starting at given position.
-     * @param forward Bool; true if looking for match stretch forward, false if backward.
-     * @return The length of the next stretch of unmutated bases; 0 if on the breakpoint of a mutation.
-     */
-    Size_Type get_match_len(bool forward = true) const;
-
-    /** Increment position object past the next mapping stretch, stopping at the given breakpoint.
-     * @param brk Breakpoint position.
-     * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
-     */
-    void increment(Size_Type brk = 0, bool on_contig = true);
-
-    /** Decrement position object past the next mapping stretch, stopping at the given breakpoint.
-     * @param brk Breakpoint position.
-     * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
-     */
-    void decrement(Size_Type brk = 0, bool on_contig = true);
-
-    /** Advance position object: wrapper for increment and decrement.
-     * @param forward Direction; true: increment; false: decrement.
-     * @param brk Breakpoint position.
-     * @param on_contig Bool; true if breakpoint is on contig, false if breakpoint on read.
-     */
-    void advance(bool forward, Size_Type brk = 0, bool on_contig = true)
-    { if (forward) { increment(brk, on_contig); } else { decrement(brk, on_contig); } }
-
-    /** Get position corresponding to given breakpoint.
-     * @param brk Breakpoint location.
-     * @param on_contig True: contig position; False: read position.
-     */
-    Read_Chunk_Pos& jump_to_brk(Size_Type brk, bool on_contig);
-
-    /** Advance position, but using a read Mutation breakpoint.
-     * Repeated calls to this function will produce mapping stretches prior to the read Mutation,
-     * including sliced contig mutations, followed by the stretch corresponding to the read Mutation.
-     * @param mut Read Mutation to use as breakpoint.
-     * @param forward Direction; true: increment; false: decrement.
-     * @return Bool; true if breakpoint reached (i.e., mapping stretch corresponds to read Mutation), false ow.
-     */
-    bool advance_til_mut(const Mutation& mut, bool forward = true);
-
-    /** Advance position past any deletions.
-     * @param forward Direction.
-     */
-    void advance_past_del(bool forward = true);
-
-    /** Asserts that Pos object is valid. */
-    void check() const;
-
-    /** To stream. */
-    //friend std::ostream& operator << (std::ostream&, const Read_Chunk_Pos&);
-    boost::property_tree::ptree to_ptree() const;
-
-    friend bool operator == (const Read_Chunk_Pos& lhs, const Read_Chunk_Pos& rhs)
+    void decrement(Size_Type r_brk)
     {
-        return (lhs.c_pos == rhs.c_pos
-                and lhs.r_pos == rhs.r_pos
-                and lhs.mut_cit == rhs.mut_cit
-                and lhs.mut_offset == rhs.mut_offset);
+        check();
+        ASSERT(not rc? r_brk < r_pos() : r_pos() < r_brk);
+        if (in_mutation() or match_len(0) == 0)
+        {
+            if (not rc? r_brk < _r_pos_base : _r_pos_base < r_brk)
+            {
+                // advance past variation
+
+            }
+        }
+        check();
     }
-    friend bool operator != (const Read_Chunk_Pos& lhs, const Read_Chunk_Pos& rhs) { return !(lhs == rhs); }
-}; // struct Read_Chunk_Pos
+
+
+    void prev()
+    {
+        check();
+        if (in_mut)
+        {
+            // crt chunk is mutation
+            if (mut_start == 0)
+            {
+                // next chunk is non-mutation
+                in_mut = false;
+                ASSERT(c_start == mut_rf_start);
+                mut_len = 0;
+                c_len = c_start - (mut_cit != mut_cit_begin? std::prev(mut_cit)->rf_end() : rc_c_start);
+                r_len = c_len;
+            }
+            else
+            {
+                // next chunk is same mutation
+                mut_len = mut_start;
+                mut_start = 0;
+                c_len = min(mut_len, mut_rf_len);
+                r_len = min(mut_len, mut_al_len);
+            }
+        }
+        else // mut_start == 0 and mut_len == 0
+        {
+            // crt chunk is non-mutation
+            Size_Type leftover = c_start - (mut_cit != mut_cit_begin? std::prev(mut_cit)->rf_end() : rc_c_start);
+            if (mut_cit != mut_cit_begin and leftover == 0)
+            {
+                // next chunk is mutation
+                prev_mutation();
+                mut_start = 0;
+                mut_len = max(mut_rf_len, mut_al_len);
+                in_mut = true;
+                c_len = mut_rf_len;
+                r_len = mut_al_len;
+            }
+            else // leftover > 0 or (leftover == 0 and mut_cit == mut_cit_begin)
+            {
+                // next chunk is non-mutation
+                c_len = leftover;
+                r_len = c_len;
+            }
+        }
+        c_start -= c_len;
+        r_start = (not rc? r_start - r_len : r_start + r_len);
+        check();
+    }
+
+    void advance(bool forward) { if (forward) next(); else prev(); }
+
+    friend bool operator == (const Read_Sub_Chunk& lhs, const Read_Sub_Chunk& rhs)
+    {
+        return lhs.c_start == rhs.c_start
+            and lhs.c_len == rhs.c_len
+            and lhs.r_start == rhs.r_start
+            and lhs.r_len == rhs.r_len
+            and lhs.mut_start == rhs.mut_start
+            and lhs.mut_len == rhs.mut_len;
+    }
+    friend bool operator != (const Read_Sub_Chunk& lhs, const Read_Sub_Chunk& rhs) { return not(lhs == rhs); }
+
+    void check() const
+    {
+#ifndef DISABLE_ASSERTS
+        ASSERT(in_mut == (mut_start > 0 or mut_len > 0));
+        ASSERT(rc_c_start <= c_start);
+        ASSERT(c_end() <= rc_c_end());
+        if (mut_cit == mut_cit_end
+            or c_start < mut_cit->rf_start())
+        {
+            ASSERT(mut_start == 0);
+            ASSERT(mut_len == 0);
+            ASSERT(c_len == r_len);
+        }
+        else // mut_cit->rf_start() <= c_start
+        {
+            ASSERT(al_idx == al_idx_cit->idx());
+            ASSERT(mut_rf_start == mut_cit->rf_start());
+            ASSERT(mut_rf_len == mut_cit->rf_len());
+            ASSERT(mut_al_len == mut_cit->allele_len(al_idx));
+            ASSERT(c_end() <= mut_cit->rf_end());
+            ASSERT(mut_start <= max(mut_rf_len, mut_al_len));
+            ASSERT(c_start == mut_rf_start + min(mut_rf_len, mut_start));
+            if (mut_rf_len <= mut_al_len)
+            {
+                ASSERT(r_len == mut_len);
+                ASSERT(c_len == min(mut_start + mut_len, mut_rf_len) - min(mut_start, mut_rf_len));
+            }
+            else
+            {
+                ASSERT(c_len == mut_len);
+                ASSERT(r_len == min(mut_start + mut_len, mut_al_len) - min(mut_start, mut_al_len));
+            }
+        }
+#endif
+    }
+}; // class Read_Chunk_Pos
 
 } // namespace MAC
-
 
 #endif
