@@ -2648,26 +2648,76 @@ void Graph::get_terminal_reads(ostream& os) const
     }
 }
 
-void Graph::export_gfa(ostream& os) const
+void Graph::export_gfa(ostream& os, bool show_mutations) const
 {
     os << "H\tVN:Z:1.0" << endl;
     for (const auto ce_cbptr : ce_cont() | referenced)
     {
         if (not ce_cbptr->is_normal()) continue;
-        os << "S\t" << ce_cbptr.to_int() << "\t" << ce_cbptr->seq() << endl;
-    }
-    for (const auto ce_cbptr : ce_cont() | referenced)
-    {
-        if (not ce_cbptr->is_normal()) continue;
+        if (not show_mutations)
+        {
+            os << "S\t" << ce_cbptr.to_int() << "\t" << ce_cbptr->seq() << endl;
+        }
+        else // split contigs at mutations
+        {
+            unsigned i = 0;
+            auto mut_it = ce_cbptr->mut_cont().begin();
+            auto prev_mut_it = mut_it;
+            while (true)
+            {
+                // first print base sequence before mutation with index i
+                Size_Type base_start = (i > 0? prev_mut_it->rf_end() : 0);
+                Size_Type base_end = (mut_it != ce_cbptr->mut_cont().end()? mut_it->rf_start() : ce_cbptr->len());
+                ASSERT(base_end > base_start);
+                os << "S\t" << ce_cbptr.to_int() << ":B:" << i
+                   << "\t" << ce_cbptr->substr(base_start, base_end - base_start) << endl;
+                // if there was a previous mutation, links base to both alleles
+                if (i > 0)
+                {
+                    os << "L\t"
+                       << ce_cbptr.to_int() << ":M:" << i - 1 << ":0\t+\t"
+                       << ce_cbptr.to_int() << ":B:" << i << "\t+\t0M" << endl;
+                    os << "L\t"
+                       << ce_cbptr.to_int() << ":M:" << i - 1 << ":1\t+\t"
+                       << ce_cbptr.to_int() << ":B:" << i << "\t+\t0M" << endl;
+                }
+                if (mut_it == ce_cbptr->mut_cont().end()) break;
+                // print mutation base sequence
+                os << "S\t" << ce_cbptr.to_int() << ":M:" << i << ":0"
+                   << "\t" << ce_cbptr->substr(mut_it->rf_start(), mut_it->rf_len()) << endl;
+                os << "L\t"
+                       << ce_cbptr.to_int() << ":B:" << i << "\t+\t"
+                       << ce_cbptr.to_int() << ":M:" << i << ":0\t+\t0M" << endl;
+                // print mutation alt sequence
+                os << "S\t" << ce_cbptr.to_int() << ":M:" << i << ":1"
+                   << "\t" << mut_it->seq() << endl;
+                os << "L\t"
+                       << ce_cbptr.to_int() << ":B:" << i << "\t+\t"
+                       << ce_cbptr.to_int() << ":M:" << i << ":1\t+\t0M" << endl;
+                ++i;
+                prev_mut_it = mut_it;
+                ++mut_it;
+            }
+        }
         for (int c_right = 0; c_right < 2; ++c_right)
         {
             auto oc = ce_cbptr->out_chunks_dir(c_right, 3, 1);
             for (const auto& p : oc | ba::map_keys)
             {
                 if (p.first.to_int() < ce_cbptr.to_int()) continue;
-                os << "L\t"
-                   << ce_cbptr.to_int() << "\t" << (c_right? "+" : "-") << "\t"
-                   << p.first.to_int() << "\t" << (p.second == c_right? "+" : "-") << "\t0M" << endl;
+                auto get_enpoint_tag = [&show_mutations] (Contig_Entry_CBPtr ce_cbptr, bool c_right, bool edge_end)
+                {
+                    ostringstream tmp;
+                    tmp << ce_cbptr.to_int();
+                    if (show_mutations)
+                    {
+                        tmp << ":B:" << (c_right == edge_end? 0 : ce_cbptr->mut_cont().nonconst_size());
+                    }
+                    tmp << "\t" << (c_right? "+" : "-");
+                    return tmp.str();
+                };
+                os << "L\t" << get_enpoint_tag(ce_cbptr, c_right, false) << "\t"
+                   << get_enpoint_tag(p.first, p.second == c_right, true) << "\t0M" << endl;
             }
         }
     }

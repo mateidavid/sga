@@ -70,6 +70,7 @@ namespace opts
     SwitchArg unmap_mut_clusters("", "unmap-mut-clusters", "Unmap mutation clusters.", cmd_parser, false);
     ValueArg< int > unmap_short_contigs("", "unmap-short-contigs", "Unmap contigs smaller than a given size.", false, 0, "int", cmd_parser);
     SwitchArg build_hapmap("", "build-hapmap", "Build haplotype map.", cmd_parser, false);
+    SwitchArg gfa_show_mutations("", "gfa-show-mutations", "Show mutations in GFA output.", cmd_parser, false);
     //
     // other
     //
@@ -325,7 +326,7 @@ int real_main()
     {
         LOG("mac", info) << ptree("exporting_gfa").put("gfa_file", opts::gfa_file.get());
         strict_fstream::fstream tmp_fs(opts::gfa_file, ios_base::out);
-        g.export_gfa(tmp_fs);
+        g.export_gfa(tmp_fs, opts::gfa_show_mutations);
     }
 
     LOG("mac", info) << ptree("factory_stats", g.factory_stats());
