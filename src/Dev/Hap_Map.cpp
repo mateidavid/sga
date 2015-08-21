@@ -4,8 +4,8 @@
 namespace MAC
 {
 
-Hap_Hop_BPtr Hap_Map::make_single_allele_hop(const Allele_Anchor& anchor, const Allele_Specifier& allele,
-                                             bool direction)
+Hap_Hop_BPtr Hap_Map::make_single_hop_hap(const Allele_Anchor& anchor, const Allele_Specifier& allele,
+                                          bool direction)
 {
     Hap_Entry_BPtr he_bptr = Hap_Entry_Fact::new_elem();
     he_cont().insert(he_bptr);
@@ -14,7 +14,7 @@ Hap_Hop_BPtr Hap_Map::make_single_allele_hop(const Allele_Anchor& anchor, const 
     hh_set().insert(hh_bptr);
     check_he(he_bptr);
     return hh_bptr;
-} // Hap_Map::make_single_allele_hop
+} // Hap_Map::make_single_hop_hap
 
 map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::make_mutation_haps(Mutation_CBPtr mut_cbptr)
 {
@@ -25,7 +25,7 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::make_mutation_haps(Mutati
     for (auto p : anchor_support)
     {
         Allele_Specifier allele = p.first;
-        Hap_Hop_BPtr hh_bptr = make_single_allele_hop(anchor, allele);
+        Hap_Hop_BPtr hh_bptr = make_single_hop_hap(anchor, allele, false);
         res[allele].insert(hh_bptr);
     }
     return res;
@@ -63,7 +63,7 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::extend_endpoint_haps(cons
         {
             // mirror allele not visited yet
             // construct new haplotype containing single hop
-            Hap_Hop_BPtr hh_bptr = make_single_allele_hop(anchor, allele);
+            Hap_Hop_BPtr hh_bptr = make_single_hop_hap(anchor, allele, false);
             res[allele].insert(hh_bptr);
         }
         else

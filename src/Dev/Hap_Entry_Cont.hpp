@@ -68,13 +68,11 @@ public:
     using Base::clear_and_dispose;
 
     /// Insert Hap_Entry into container.
-    /// @param ce_bptr Pointer to Contig_Entry object.
     void insert(Hap_Entry_BPtr he_bptr)
     {
         Base::push_back(*he_bptr);
     }
-
-    // Erase Hap_Entry
+    /// Erase Hap_Entry
     void erase(Hap_Entry_CBPtr he_cbptr)
     {
         Base::erase(iterator_to(*he_cbptr));

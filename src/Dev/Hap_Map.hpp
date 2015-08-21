@@ -46,8 +46,8 @@ public:
     void dump_stats(ostream& os, const Graph& g) const;
 
 private:
-    Hap_Hop_BPtr make_single_allele_hop(const Allele_Anchor& anchor, const Allele_Specifier& allele,
-                                        bool direction = false);
+    Hap_Hop_BPtr make_single_hop_hap(const Allele_Anchor& anchor, const Allele_Specifier& allele,
+                                     bool direction);
     map< Allele_Specifier, set< Hap_Hop_CBPtr > > make_mutation_haps(Mutation_CBPtr mut_cbptr);
     map< Allele_Specifier, set< Hap_Hop_CBPtr > > extend_endpoint_haps(const Allele_Anchor& anchor);
     void connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
