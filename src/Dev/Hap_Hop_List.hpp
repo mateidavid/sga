@@ -108,6 +108,24 @@ public:
         }
         Base::splice(end(), static_cast< Base& >(other_cont));
     }
+
+    /**
+     * Get sibling hop in the given haplotype direction.
+     */
+    Hap_Hop_CBPtr get_sibling(Hap_Hop_CBPtr hh_cbptr, bool h_direction) const
+    {
+        auto it = iterator_to(*hh_cbptr);
+        ASSERT(it != end());
+        if (not h_direction)
+        {
+            return (next(it) != end()? &*next(it) : nullptr);
+        }
+        else
+        {
+            return (it != begin()? &*prev(it) : nullptr);
+        }
+    }
+
 }; // class Hap_Hop_List
 
 } // namespace MAC

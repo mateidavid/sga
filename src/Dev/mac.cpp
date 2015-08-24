@@ -342,18 +342,16 @@ int main(int argc, char * argv[])
     global_assert::prog_name() = opts::cmd_parser.getProgramName();
     // set log levels
     Logger::set_levels_from_options(opts::log_level, &clog);
-    // set random seed
-    bool seed_is_random = false;
-    if (opts::seed < 0)
-    {
-        seed_is_random = true;
-        opts::seed.get() = time(nullptr);
-    }
-    srand48(opts::seed);
     // print options
     LOG("main", info) << "program: " << opts::cmd_parser.getProgramName() << endl
                       << "version: " << opts::cmd_parser.getVersion() << endl
                       << "args: " << opts::cmd_parser.getOrigArgv() << endl;
-    if (seed_is_random) LOG("main", info) << "seed: " << opts::seed << endl;
+    // set random seed
+    if (opts::seed < 0)
+    {
+        opts::seed.get() = time(nullptr);
+        LOG("main", info) << "seed: " << opts::seed << endl;
+    }
+    srand48(opts::seed);
     return real_main();
 }

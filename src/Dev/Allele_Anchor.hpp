@@ -121,15 +121,15 @@ public:
 
     /** Get sibling anchor.
      * PRE: Sibling anchor must exist in the given direction.
-     * @param forward Bool; if true: get anchor to the right, else to the left
+     * @param c_direction Bool; if false: get anchor to the right, else to the left
      * @return Sibling anchor.
      */
-    Allele_Anchor get_sibling(bool forward) const
+    Allele_Anchor get_sibling(bool c_direction) const
     {
         if (is_endpoint())
         {
             // cannot go past left or right endpoints
-            ASSERT(c_right() != forward);
+            ASSERT(c_right() == c_direction);
             if (not c_right())
             {
                 // anchor is left endpoint; next is first mutation (if one exists)
@@ -158,7 +158,7 @@ public:
         else // current anchor is a mutation
         {
             auto it = ce_cbptr()->mut_cont().iterator_to(*mut_cbptr());
-            if (not forward)
+            if (c_direction)
             {
                 // find previous mutation if one exists
                 if (it != ce_cbptr()->mut_cont().begin())

@@ -113,6 +113,27 @@ public:
         return Base::equal_range(anchor, Base::value_comp());
     }
 
+    // Get hops at anchor, grouped by allele
+    typedef map< Allele_Specifier, set< pair< Hap_Hop_CBPtr, bool > > > find_anchor_type;
+    find_anchor_type find_anchor(const Allele_Anchor& anchor, bool c_direction) const
+    {
+        find_anchor_type res;
+        auto p = equal_range(anchor);
+        for (auto it = p.first; it != p.second; ++it)
+        {
+            auto hh_bptr = &*it;
+            ASSERT(hh_bptr->allele_anchor() == anchor);
+            res[hh_bptr->allele_specifier()].insert(make_pair(hh_bptr, hh_bptr->c_direction() != c_direction));
+        }
+        return res;
+    }
+    // Get hops at allele
+    typedef find_anchor_type::mapped_type find_allele_type;
+    find_allele_type find_allele(const Allele_Anchor& anchor, const Allele_Specifier& allele, bool c_direction) const
+    {
+        return move(find_anchor(anchor, c_direction).at(allele));
+    }
+
 }; // class Hap_Hop_Set
 
 } // namespace MAC
