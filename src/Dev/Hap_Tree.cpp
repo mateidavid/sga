@@ -1,8 +1,10 @@
 #include "Hap_Tree.hpp"
 
+namespace MAC
+{
+
 Hap_Tree_Node *
-make_hap_tree(const Allele_Anchor& anchor, bool c_direction,
-              const Hap_Hop_Set::find_anchor_type& haps)
+make_hap_tree(const Hap_Hop_Set::find_anchor_type& haps)
 {
     ASSERT(not haps.empty());
     Hap_Tree_Node * node = new Hap_Tree_Node;
@@ -10,36 +12,41 @@ make_hap_tree(const Allele_Anchor& anchor, bool c_direction,
     if (haps.size() == 1 and haps.begin()->second.size() == 1)
     {
         // single hap left
-        node->he_bptr = haps.begin()->second.begin()->he_cbptr().unconst();
+        node->he_bptr = haps.begin()->second.begin()->first->he_cbptr().unconst();
+        node->h_direction = haps.begin()->second.begin()->second;
     }
     else
     {
-        for (const auto& p : haps)
+        node->anchor = haps.begin()->second.begin()->first->allele_anchor();
+        for (const auto& v : haps)
         {
-            Allele_Specifier allele = p.first;
-            ASSERT(not p.second.empty());
-            if (p.second.size() == 1)
+            Allele_Specifier allele = v.first;
+            ASSERT(not v.second.empty());
+            Hap_Tree_Node * child = nullptr;
+            if (v.second.size() == 1)
             {
                 // no more branching past this allele
-                Hap_Tree_Node * child = new Hap_Tree_Node;
-                child->parent = node;
-                child->he_bptr = p.second.begin()->he_cbptr().unconst();
-                node->edge_m[allele] = child;
+                child = new Hap_Tree_Node;
+                child->he_bptr = v.second.begin()->first->he_cbptr().unconst();
+                child->h_direction = v.second.begin()->second;
             }
             else
             {
                 // compute next hops
                 Hap_Hop_Set::find_anchor_type next_haps;
-                for (auto hh_cbptr : p.second)
+                for (const auto& p : v.second)
                 {
-                    Hap_Hop_CBPtr next_hh_cbptr = hh_cbptr->he_cbptr()->hh_cont().get_sibling(
-                        hh_cbptr, hh_cbptr->c_direction() != c_direction);
+                    Hap_Hop_CBPtr next_hh_cbptr = p.first->he_cbptr()->hh_cont().get_sibling(p.first, p.second);
                     ASSERT(next_hh_cbptr);
-                    
+                    next_haps[next_hh_cbptr->allele_specifier()].insert(make_pair(next_hh_cbptr, p.second));
                 }
-
+                child = make_hap_tree(next_haps);
             }
+            child->parent = node;
+            node->edge_m[allele] = child;
         }
     }
-    return res;
+    return node;
 }
+
+} // namespace MAC

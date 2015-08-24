@@ -19,6 +19,7 @@ add_library(mac STATIC
     Unmap_Mut_Clusters.cpp
     Validate_Variations.cpp
     Hap_Map.cpp
+    Hap_Tree.cpp
     CLI.cpp
     )
 

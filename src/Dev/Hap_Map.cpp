@@ -1,4 +1,5 @@
 #include "Hap_Map.hpp"
+#include "Hap_Tree.hpp"
 
 
 namespace MAC
@@ -143,8 +144,8 @@ void Hap_Map::connect_consecutive_anchors(const Allele_Anchor& a1)
     };
     ASSERT(check_hops_terminal(a1_hops));
     ASSERT(check_hops_terminal(a2_hops));
-    //Hap_Tree a1_tree(a1, a1_hops);
-    //Hap_Tree a2_tree(a2, a2_hops);
+    Hap_Tree_Node * a1_node = make_hap_tree(a1_hops);
+    Hap_Tree_Node * a2_node = make_hap_tree(a2_hops);
 }
 
 /*
