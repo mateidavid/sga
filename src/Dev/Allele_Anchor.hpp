@@ -35,25 +35,18 @@ public:
     GETTER(Mutation_CBPtr, mut_cbptr, _mut_cbptr)
     GETTER(bool, c_right, _c_right)
 
-    /** Group read chunks supporting various alleles for this anchor.
-     */
-    typedef map< Allele_Specifier, set< Read_Chunk_CBPtr > > allele_support_type;
-    allele_support_type support() const
+    // Get read chunks supporting various alleles for this anchor.
+    typedef map< Allele_Specifier, set< Read_Chunk_CBPtr > > chunk_support_type;
+    chunk_support_type chunk_support() const
     {
-        allele_support_type res;
+        chunk_support_type res;
         if (is_mutation())
         {
             set< Read_Chunk_CBPtr > qr_set;
             set< Read_Chunk_CBPtr > full_rf_set;
             tie(qr_set, full_rf_set, ignore) = ce_cbptr()->mut_support(mut_cbptr());
-            if (full_rf_set.size() > 1)
-            {
-                res[Allele_Specifier(false)] = move(full_rf_set);
-            }
-            if (qr_set.size() > 1)
-            {
-                res[Allele_Specifier(true)] = move(qr_set);
-            }
+            res[Allele_Specifier(false)] = move(full_rf_set);
+            res[Allele_Specifier(true)] = move(qr_set);
         }
         else // is_endpoint
         {
@@ -64,6 +57,66 @@ public:
             }
         }
         return res;
+    }
+
+    // Get Read_Entries supporting various allleles for this anchor.
+    typedef map< Allele_Specifier, array< set< Read_Entry_CBPtr >, 2 > > read_support_type;
+    read_support_type read_support(bool c_direction) const
+    {
+        read_support_type res;
+        auto cs = chunk_support();
+        for (const auto& p : cs)
+        {
+            for (const auto rc_cbptr : p.second)
+            {
+                res[p.first][rc_cbptr->get_rc() != c_direction].insert(rc_cbptr->re_bptr());
+            }
+        }
+        return res;
+    }
+
+    // collapse read support
+    typedef array< set< Read_Entry_CBPtr >, 2 > collapsed_read_support_type;
+    static collapsed_read_support_type collapsed_support(const read_support_type& read_support)
+    {
+        collapsed_read_support_type res;
+        for (const auto& v : read_support | ba::map_values)
+        {
+            for (int dir = 0; dir < 2; ++dir)
+            {
+                res[dir].insert(v[dir].begin(), v[dir].end());
+            }
+        }
+        return res;
+    }
+
+    // keep only reads which appear in the collapsed set
+    static void subset_support(read_support_type& s, const collapsed_read_support_type& common_s, bool direction)
+    {
+        for (auto& v : s | ba::map_values)
+        {
+            for (int dir = 0; dir < 2; ++dir)
+            {
+                for_each_advance(
+                    v[dir].begin(),
+                    v[dir].end(),
+                    [&] (Read_Entry_CBPtr re_cbptr) {
+                        if (common_s[(dir + int(direction)) % 2].count(re_cbptr) == 0)
+                        {
+                            v[dir].erase(re_cbptr);
+                        }
+                    });
+            }
+        }
+        for_each_advance(
+            s.begin(),
+            s.end(),
+            [&] (const Allele_Anchor::read_support_type::value_type& p) {
+                if (p.second.empty())
+                {
+                    s.erase(p.first);
+                }
+            });
     }
 
     /** Find Read_Entry objects supporting each pairs of alleles at the given anchors.
@@ -78,12 +131,12 @@ public:
      */
     typedef map< pair< Allele_Specifier, Allele_Specifier >, set< Read_Entry_CBPtr > > anchor_connect_type;
     static anchor_connect_type
-    connect(const allele_support_type& a1_support_m, const allele_support_type& a2_support_m, bool same_st = true)
+    connect(const chunk_support_type& a1_support_m, const chunk_support_type& a2_support_m, bool same_st = true)
     {
         anchor_connect_type res;
         // for each anchor, construct a map of the form
         //   [ Allele_Specifier ] -> set< [ Read_Entry, strand ] >
-        auto make_allele_spec_re_set_map = [] (const allele_support_type& m) {
+        auto make_allele_spec_re_set_map = [] (const chunk_support_type& m) {
             map< Allele_Specifier, set< pair< Read_Entry_CBPtr, bool > > > r;
             for (const auto& p : m)
             {
@@ -190,7 +243,7 @@ public:
     /// Distance between consecutive allele anchors.
     static Size_Type dist(const Allele_Anchor& lhs, const Allele_Anchor& rhs)
     {
-        ASSERT(lhs.get_sibling(true) == rhs);
+        ASSERT(lhs.get_sibling(false) == rhs);
         return (rhs.is_endpoint()? rhs.ce_cbptr()->len() : rhs.mut_cbptr()->rf_start())
             - (lhs.is_endpoint()? 0 : lhs.mut_cbptr()->rf_end());
     }

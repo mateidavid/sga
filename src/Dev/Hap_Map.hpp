@@ -33,23 +33,29 @@ public:
     void dispose(Hap_Entry_BPtr he_bptr);
     void clear_and_dispose();
 
-    static bool is_end_hop(Hap_Hop_CBPtr hh_cbptr, bool right_end)
+    static bool is_terminal_hop(Hap_Hop_CBPtr hh_cbptr, bool h_direction)
     {
         ASSERT(hh_cbptr);
         ASSERT(hh_cbptr->he_cbptr());
         ASSERT(not hh_cbptr->he_cbptr()->hh_cont().empty());
-        return hh_cbptr == (right_end? hh_cbptr->he_cbptr()->hh_cont().back()
+        return hh_cbptr == (not h_direction
+                            ? hh_cbptr->he_cbptr()->hh_cont().back()
                             : hh_cbptr->he_cbptr()->hh_cont().front());
     }
+
+    typedef array< set< Read_Entry_CBPtr >, 2 > read_support_type;
+    // Get Read_Entry objects supporting a haplotype in the given direction
+    static read_support_type read_support(Hap_Entry_CBPtr he_cbptr, bool h_direction);
+    // Get Read_Entry objects supporting a haplotype in the given direction, and reaching its terminal hop
+    static read_support_type read_support_terminal(Hap_Entry_CBPtr he_cbptr, bool h_direction);
 
     void dump_stats(ostream& os, const Graph& g) const;
 
 private:
     Hap_Hop_BPtr make_single_hop_hap(const Allele_Anchor& anchor, const Allele_Specifier& allele, bool c_direction);
-    map< Allele_Specifier, set< Hap_Hop_CBPtr > > make_mutation_haps(Mutation_CBPtr mut_cbptr);
-    map< Allele_Specifier, set< Hap_Hop_CBPtr > > make_endpoint_haps(Contig_Entry_CBPtr ce_cbptr, bool c_right);
-    void initialize_haps(const Graph& g);
-    void connect_endpoint_haps(const Graph& g);
+    map< Allele_Specifier, set< Hap_Hop_CBPtr > > make_anchor_haps(const Allele_Anchor& anchor);
+    void initialize_haps(Contig_Entry_CBPtr ce_cbptr);
+    void connect_endpoint_haps(Contig_Entry_CBPtr ce_cbptr);
 
     /**
      * Merge haplotypes.

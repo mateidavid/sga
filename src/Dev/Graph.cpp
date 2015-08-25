@@ -2419,8 +2419,8 @@ void Graph::print_detailed_counts(ostream& os) const
             print_neighbours_cont_stats(os, ce_cbptr, false, true, ce_cbptr->out_chunks_dir(false, 3, 1));
             os << '\t';
             print_neighbours_cont_stats(os, ce_cbptr, true, true, ce_cbptr->out_chunks_dir(true, 3, 1));
-            auto ac = Allele_Anchor::connect(Allele_Anchor(ce_cbptr, false).support(),
-                                             Allele_Anchor(ce_cbptr, true).support());
+            auto ac = Allele_Anchor::connect(Allele_Anchor(ce_cbptr, false).chunk_support(),
+                                             Allele_Anchor(ce_cbptr, true).chunk_support());
             os << '\t';
             bool first = true;
             for (const auto& p : ac)

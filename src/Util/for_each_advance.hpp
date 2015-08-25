@@ -7,7 +7,7 @@
  * With this, it is safe to apply a function which might indirectly remove
  * the pointed element from a list.
  * @param first Start of range.
- * @param last Enf of range.
+ * @param last End of range.
  * @param f Unary function taking an element as argument.
  * @return f
  */
@@ -24,7 +24,7 @@ Unary_Function for_each_advance(Input_Iterator first, Input_Iterator last, Unary
 /**
  * Apply function to iterators in range.
  * @param first Start of range.
- * @param last Enf of range.
+ * @param last End of range.
  * @param f Unary function taking an iterator as argument.
  * @return f
  */
@@ -43,7 +43,7 @@ Unary_Function for_each_it(Input_Iterator first, Input_Iterator last, Unary_Func
  * Apply function to iterators in range, but advance iterator first.
  * With this, it is safe to remove elements from a list on the go.
  * @param first Start of range.
- * @param last Enf of range.
+ * @param last End of range.
  * @param f Unary function taking an element as argument.
  * @return f
  */

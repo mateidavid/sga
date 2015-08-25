@@ -18,7 +18,7 @@ struct Hap_Tree_Node
 }; // class Hap_Tree_Node
 
 Hap_Tree_Node *
-make_hap_tree(const Hap_Hop_Set::find_anchor_type& haps);
+make_hap_tree(const Hap_Hop_Set::find_anchor_type& haps, const Allele_Anchor::read_support_type& anchor_support);
 
 } // namespace MAC
 

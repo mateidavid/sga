@@ -37,6 +37,14 @@ public:
     GETTER(bool, c_direction, _c_direction)
     Contig_Entry_CBPtr ce_cbptr() const { return _allele_anchor.ce_cbptr(); }
 
+    typedef array< set< Read_Entry_CBPtr >, 2 > read_support_type;
+    read_support_type read_support(bool h_direction) const
+    {
+        read_support_type res;
+        auto anchor_support = allele_anchor().read_support(h_direction != c_direction());
+        return move(anchor_support[allele_specifier()]);
+    }
+
     boost::property_tree::ptree to_ptree() const
     {
         return ptree().put("he_cbptr", he_cbptr().to_int())
