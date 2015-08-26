@@ -43,11 +43,20 @@ public:
                             : hh_cbptr->he_cbptr()->hh_cont().front());
     }
 
-    typedef array< set< Read_Entry_CBPtr >, 2 > read_support_type;
     // Get Read_Entry objects supporting a haplotype in the given direction
-    static read_support_type read_support(Hap_Entry_CBPtr he_cbptr, bool h_direction);
+    static Allele_Read_Support read_support(Hap_Entry_CBPtr he_cbptr, bool h_direction);
     // Get Read_Entry objects supporting a haplotype in the given direction, and reaching its terminal hop
-    static read_support_type read_support_terminal(Hap_Entry_CBPtr he_cbptr, bool h_direction);
+    static Allele_Read_Support read_support_terminal(Hap_Entry_CBPtr he_cbptr, bool h_direction);
+
+    // Duplicate given haplotype starting at given hop, in the given direction
+    Hap_Hop_CBPtr duplicate_haplotype(Hap_Hop_CBPtr hh_cbptr, bool h_direction);
+    /**
+     * Merge haplotypes.
+     * Rotate haps so that hh1 has contig direction c1_dir, hh2 has contig direction c2_dir,
+     * then extend he1 by he2.
+     */
+    void merge_haps(Hap_Hop_BPtr hh1_bptr, Hap_Hop_BPtr hh2_bptr, bool c1_dir, bool c2_dir);
+
 
     void dump_stats(ostream& os, const Graph& g) const;
 
@@ -56,13 +65,6 @@ private:
     map< Allele_Specifier, set< Hap_Hop_CBPtr > > make_anchor_haps(const Allele_Anchor& anchor);
     void initialize_haps(Contig_Entry_CBPtr ce_cbptr);
     void connect_endpoint_haps(Contig_Entry_CBPtr ce_cbptr);
-
-    /**
-     * Merge haplotypes.
-     * Rotate haps so that hh1 has contig direction c1_dir, hh2 has contig direction c2_dir,
-     * then extend he1 by he2.
-     */
-    void merge_haps(Hap_Hop_BPtr hh1_bptr, Hap_Hop_BPtr hh2_bptr, bool c1_dir, bool c2_dir);
 
     void connect_consecutive_anchors(const Allele_Anchor& a1);
 

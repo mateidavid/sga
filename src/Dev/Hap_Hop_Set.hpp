@@ -133,7 +133,6 @@ public:
     {
         return move(find_anchor(anchor, c_direction).at(allele));
     }
-
 }; // class Hap_Hop_Set
 
 } // namespace MAC
