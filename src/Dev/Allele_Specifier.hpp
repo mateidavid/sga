@@ -11,6 +11,8 @@ namespace MAC
  * rf=false; qr=true.
  * When the anchor is an endpoint, an allele is specified by the
  * destination of the edge: (ce_next, same_orientation)
+ * Special case: the special allele (nullptr, true) is used to denote that
+ * the contig has out degree 0.
  */
 class Allele_Specifier
 {
@@ -24,10 +26,10 @@ public:
         : _ce_next_cbptr(p.first), _same_orientation(p.second), _strand(false) {}
 
     explicit Allele_Specifier(bool strand)
-        : _ce_next_cbptr(), _same_orientation(true), _strand(strand) {}
+        : _ce_next_cbptr(), _same_orientation(false), _strand(strand) {}
 
     bool is_mutation() const { return not is_endpoint(); }
-    bool is_endpoint() const { return _ce_next_cbptr; }
+    bool is_endpoint() const { return _ce_next_cbptr or _same_orientation; }
 
     GETTER(Contig_Entry_CBPtr, ce_next_cbptr, _ce_next_cbptr)
     GETTER(bool, same_orientation, _same_orientation)

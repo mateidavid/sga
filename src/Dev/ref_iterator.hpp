@@ -32,5 +32,10 @@ private:
     typename Iterator::pointer dereference() const { return &*(this->base()); }
 }; // class ref_iterator
 
+template < typename Iterator >
+ref_iterator< Iterator > make_ref_iterator(Iterator& it)
+{
+    return ref_iterator< Iterator >(it);
+}
 
 #endif

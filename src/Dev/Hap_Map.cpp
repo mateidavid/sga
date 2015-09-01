@@ -61,6 +61,12 @@ void Hap_Map::connect_endpoint_haps(Contig_Entry_CBPtr ce_cbptr)
             // fetch mirror hap
             auto ce_next_cbptr = hh_bptr->allele_specifier().ce_next_cbptr();
             bool same_orientation = hh_bptr->allele_specifier().same_orientation();
+            if (not ce_next_cbptr)
+            {
+                // out-degree 0
+                ASSERT(same_orientation);
+                continue;
+            }
             Allele_Anchor mirror_anchor(ce_next_cbptr, c_right != same_orientation);
             Allele_Specifier mirror_allele(ce_cbptr, same_orientation);
             auto mirror_hh_m = hh_set().find_allele(mirror_anchor, mirror_allele, false);

@@ -18,9 +18,21 @@ Anchor_Chunk_Support get_anchor_chunk_support(const Allele_Anchor& anchor)
     else // is_endpoint
     {
         auto m = anchor.ce_cbptr()->out_chunks_dir(anchor.c_right(), 3, 1);
-        for (auto p : m)
+        if (not m.empty())
         {
-            res[Allele_Specifier(p.first)] = move(p.second);
+            for (auto p : m)
+            {
+                res[Allele_Specifier(p.first)] = move(p.second);
+            }
+        }
+        else
+        {
+            // out-degree 0
+            auto pos = anchor.c_right()? anchor.ce_cbptr()->len() : 0;
+            auto it_r = anchor.ce_cbptr()->chunk_cont().iintersect(pos, pos);
+            auto it_rr = make_ref_range(it_r);
+            res[Allele_Specifier(nullptr, true)].insert(it_rr.begin(), it_rr.end());
+            ASSERT(not res.at(Allele_Specifier(nullptr, true)).empty());
         }
     }
     return res;
