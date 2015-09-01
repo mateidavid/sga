@@ -78,6 +78,8 @@ public:
     bool is_empty() const { return _len == 0 and _seq_len == 0; }
     /// @}
 
+    void set_uniqueness(int allele, bool unique);
+
     /**
      * Extend Mutation given sequence.
      * Pre: This Mutation is unlinked.

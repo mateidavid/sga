@@ -7,6 +7,7 @@
 
 #include "overlapper.h"
 #include "Anchor_Support.hpp"
+#include "zstr.hpp"
 
 
 namespace MAC
@@ -2754,5 +2755,134 @@ void Graph::unmap_short_contigs(unsigned min_len, unsigned max_deg)
     }
 
 } // Graph::unmap_short_contigs
+
+void Graph::load_bwt(const string& bwt_prefix)
+{
+    // load BWT and SSA of the reads
+    LOG("graph", info) << ptree("start_loading_bwt").put("file", bwt_prefix + ".bwt");
+    _index_set.pBWT = new BWT(bwt_prefix + ".bwt");
+    LOG("graph", info) << ptree("end_loading_bwt");
+    LOG("graph", info) << ptree("start_loading_ssa").put("file", bwt_prefix + ".ssa");
+    _index_set.pSSA = new SampledSuffixArray(bwt_prefix + ".ssa");
+    LOG("graph", info) << ptree("end_loading_ssa");
+    LOG("graph", info) << ptree("start_loading_read_list").put("file", bwt_prefix + ".id.gz");
+    {
+        zstr::ifstream ifs(bwt_prefix + ".id.gz");
+        string sid;
+        while (getline(ifs, sid))
+        {
+            unsigned iid = _iid_to_sid_m.size();
+            _sid_to_iid_m[sid] = iid;
+            _iid_to_sid_m[iid] = sid;
+        }
+    }
+    LOG("graph", info) << ptree("end_loading_read_list");
+} // Graph::load_bwt
+
+Graph::find_reads_with_seq_type Graph::find_reads_with_seq(const Seq_Proxy_Type& seq, unsigned max_count) const
+{
+    find_reads_with_seq_type res;
+    auto find_seq_strand = [&] (const Seq_Proxy_Type& s, bool strand) {
+        auto interval = BWTAlgorithms::findInterval(_index_set, s);
+        if (not interval.isValid()
+            or (max_count > 0 and interval.size() > max_count))
+        {
+            return;
+        }
+        for (auto i = interval.lower; i <= interval.upper; ++i)
+        {
+            auto elem = _index_set.pSSA->calcSA(i, _index_set.pBWT);
+            auto iid = elem.getID();
+            res[strand].emplace_back(_iid_to_sid_m.at(iid), elem.getPos());
+        }
+    };
+    find_seq_strand(seq, false);
+    find_seq_strand(seq.revcomp(), true);
+    return res;
+} // Graph::find_reads_with_seq
+
+Graph::find_read_entries_with_seq_type
+Graph::find_read_entries_with_seq(const Seq_Proxy_Type& seq, unsigned max_count) const
+{
+    find_read_entries_with_seq_type res;
+    res.second = false;
+    auto r = find_reads_with_seq(seq, max_count);
+    for (int st = 0; st < 2; ++st)
+    {
+        for (const auto& p : r[st])
+        {
+            auto re_cbptr = re_cont().find(p.first);
+            if (not re_cbptr)
+            {
+                res.second = true;
+                continue;
+            }
+            res.first[st].emplace_back(re_cbptr, p.second);
+        }
+    }
+    return res;
+} // Graph::find_read_entries_with_seq
+
+void Graph::compute_mutation_uniqueness(Size_Type flank_len)
+{
+    if (not (_index_set.pBWT and _index_set.pSSA))
+    {
+        LOG("graph", error) << "compute_mutation_copy_numbers: BWT index is required" << endl;
+        exit(EXIT_FAILURE);
+    }
+    for (auto ce_bptr : ce_cont() | referenced)
+    {
+        if (not ce_bptr->is_normal()) continue;
+        if (not ce_bptr->separated_mutations(flank_len, true))
+        {
+            static bool warned = false;
+            if (not warned)
+            {
+                warned = true;
+                LOG("graph", warning) << ptree("compute_mutation_copy_numbers")
+                    .put("msg", "separated_mutations: failed")
+                    .put("flank_len", flank_len)
+                    .put("ce_ptr", ce_bptr.to_int());
+            }
+            continue;
+        }
+        for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
+        {
+            Seq_Type flank_left = ce_bptr->substr(mut_bptr->rf_start() - flank_len, flank_len);
+            Seq_Type flank_right = ce_bptr->substr(mut_bptr->rf_end(), flank_len);
+            for (int al = 0; al < 2; ++al)
+            {
+                Seq_Type s = flank_left;
+                s += (al == 0
+                      ? Seq_Type(ce_bptr->substr(mut_bptr->rf_start(), mut_bptr->rf_len()))
+                      : mut_bptr->seq());
+                s += flank_right;
+                auto r = find_read_entries_with_seq(s, 1000);
+                if (r.second or r.first.empty())
+                {
+                    mut_bptr->set_uniqueness(al, false);
+                }
+                bool unique = true;
+                for (int st = 0; st < 2; ++st)
+                {
+                    for (const auto& p : r.first[st])
+                    {
+                        auto rc_cbptr = p.first->chunk_cont().get_chunk_with_pos(p.second + flank_len);
+                        if (not rc_cbptr
+                            or rc_cbptr->ce_bptr() != ce_bptr
+                            or rc_cbptr->get_c_start() >= mut_bptr->rf_end() + flank_len
+                            or rc_cbptr->get_c_end() + flank_len <= mut_bptr->rf_start())
+                        {
+                            unique = false;
+                            break;
+                        }
+                    }
+                    if (not unique) break;
+                }
+                mut_bptr->set_uniqueness(al, unique);
+            } // for al
+        } // for mut_bptr
+    } // for ce_bptr
+} // Graph::compute_mutation_copy_numbers
 
 } // namespace MAC

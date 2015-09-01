@@ -65,11 +65,11 @@ struct Read_Entry_Comparator
     {
         return lhs.name() < rhs.name();
     }
-    bool operator () (const Read_Entry& lhs, const std::string& rhs_name) const
+    bool operator () (const Read_Entry& lhs, const string& rhs_name) const
     {
         return lhs.name() < rhs_name;
     }
-    bool operator () (const std::string& lhs_name, const Read_Entry& rhs) const
+    bool operator () (const string& lhs_name, const Read_Entry& rhs) const
     {
         return lhs_name < rhs.name();
     }
@@ -115,7 +115,7 @@ public:
      * @param name Name of read to look for.
      * @return Read_Entry pointer, or nullptr if not found.
      */
-    Read_Entry_CBPtr find(const std::string& name) const
+    Read_Entry_CBPtr find(const string& name) const
     {
         auto cit = Base::find(name, Base::value_compare());
         return cit != end()? &*cit : nullptr;

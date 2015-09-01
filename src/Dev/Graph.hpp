@@ -20,6 +20,9 @@
 #include "Contig_Entry_Cont.hpp"
 #include "Allele_Anchor.hpp"
 
+#include "BWT.h"
+#include "BWTAlgorithms.h"
+
 namespace MAC
 {
 
@@ -39,6 +42,8 @@ public:
     {
         ASSERT(ce_cont().empty());
         ASSERT(re_cont().empty());
+        if (_index_set.pBWT) delete _index_set.pBWT;
+        if (_index_set.pSSA) delete _index_set.pSSA;
     }
 
     const Read_Entry_Cont& re_cont() const { return _re_cont; }
@@ -168,6 +173,24 @@ public:
         map< tuple< string, bool >, tuple< size_t, string > >& seq_bseq_map);
 
     void test_mutation_allele_swapping();
+
+    /// Load BWT, SSA and read id list.
+    void load_bwt(const string& bwt_prefix);
+
+    typedef array< vector< pair< string, unsigned > >, 2 > find_reads_with_seq_type;
+    /// Find reads containing a given sequence
+    find_reads_with_seq_type find_reads_with_seq(const Seq_Proxy_Type& seq, unsigned max_count = 0) const;
+
+    typedef pair< array< vector< pair< Read_Entry_CBPtr, unsigned > >, 2 >, bool > find_read_entries_with_seq_type;
+    /**
+     * Find REs containing a given sequence.
+     * @return A pair (vector< re, pos >[2], flag). flag is true iff
+     * there are reads containing seq in the BWT but not in the graph.
+     */
+    find_read_entries_with_seq_type
+    find_read_entries_with_seq(const Seq_Proxy_Type& seq, unsigned max_count = 0) const;
+
+    void compute_mutation_uniqueness(Size_Type flank_len);
 
     //friend ostream& operator << (ostream&, const Graph&);
     boost::property_tree::ptree to_ptree() const;
@@ -317,6 +340,10 @@ private:
 
     Size_Type _unmap_trigger_len;
     bool _cat_at_step;
+
+    BWTIndexSet _index_set;
+    map< unsigned, string > _iid_to_sid_m;
+    map< string, unsigned > _sid_to_iid_m;
 
 }; // class Graph
 

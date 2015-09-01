@@ -44,6 +44,7 @@ namespace opts
     ValueArg< string > load_file("L", "load-file", "Load MAC graph from file.", false, "", "file", cmd_parser);
     ValueArg< string > save_file("S", "save-file", "Save MAC graph to file.", false, "", "file", cmd_parser);
     ValueArg< string > gfa_file("", "export-gfa", "Export graph to GFA file.", false, "", "file", cmd_parser);
+    ValueArg< string > bwt_prefix("", "bwt-prefix", "Prefix of {.bwt,.ssa,.id.gz} files representing BWT index, sampled suffix array, and id list of the reads.", false, "", "file", cmd_parser);
     ValueArg< string > aux_bwt_file("", "aux-bwt-file", "BWT index of 2GS reads used to validate variations.", false, "", "file", cmd_parser);
     ValueArg< string > stats_file("", "stats-file", "Stats file.", false, "", "file", cmd_parser);
     ValueArg< string > supercontigs_stats_file("", "supercontigs-stats-file", "Supercontigs stats file.", false, "", "file", cmd_parser);
@@ -255,6 +256,10 @@ int real_main()
         g.unmap_short_contigs(opts::unmap_short_contigs, 1);
         g.check_all();
         LOG("mac", info) << ptree("unmap_short_contigs_end");
+    }
+    if (not opts::bwt_prefix.get().empty())
+    {
+        g.load_bwt(opts::bwt_prefix);
     }
     if (opts::build_hapmap)
     {
