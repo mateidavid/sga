@@ -2951,7 +2951,7 @@ void Graph::compute_mutation_copy_num(Size_Type flank_len)
                 s += flank_right;
 
                 auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set());
-                int cn = (double)cnt / get_aux_coverage();
+                int cn = round((double)cnt / get_aux_coverage());
                 if (0 <= cn and cn <= 2)
                 {
                     mut_bptr->set_copy_num(al, cn);
