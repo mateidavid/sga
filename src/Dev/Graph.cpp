@@ -2974,8 +2974,7 @@ void Graph::compute_aux_coverage(Size_Type flank_len)
         LOG("graph", error) << "compute_aux_coverage: auxiliary BWT index is required" << endl;
         exit(EXIT_FAILURE);
     }
-    size_t cov_sum = 0;
-    size_t cov_cnt = 0;
+    multiset< size_t > cov_s;
     for (auto ce_bptr : ce_cont() | referenced)
     {
         if (not ce_bptr->is_normal()) continue;
@@ -3011,13 +3010,30 @@ void Graph::compute_aux_coverage(Size_Type flank_len)
                       ? Seq_Type(ce_bptr->substr(mut_bptr->rf_start(), mut_bptr->rf_len()))
                       : mut_bptr->seq());
                 s += flank_right;
-
                 auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set());
-                cov_sum += cnt;
-                ++cov_cnt;
+                LOG("graph", debug) << ptree("compute_aux_coverage")
+                    .put("msg", "allele coverage")
+                    .put("mut_bptr", mut_bptr.to_int())
+                    .put("mut_ptr", mut_bptr.raw())
+                    .put("al", al)
+                    .put("cnt", cnt);
+                cov_s.insert(cnt);
             } // for al
         } // for mut_bptr
     } // for ce_bptr
+    // ignore 10% lowest and highest values
+    size_t cov_cnt = 0;
+    size_t cov_sum = 0;
+    size_t i = 0;
+    for (auto v : cov_s)
+    {
+        if (i >= cov_s.size() / 10 and i < cov_s.size() * 9 / 10)
+        {
+            cov_sum += v;
+            ++cov_cnt;
+        }
+        ++i;
+    }
     _aux_coverage = cov_cnt > 0? cov_sum / cov_cnt : 0;
     LOG("graph", info) << ptree("compute_aux_coverage")
         .put("msg", "end")
