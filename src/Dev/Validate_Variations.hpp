@@ -23,7 +23,7 @@ public:
           _check_both_strands(check_both_strands)
     {}
 
-    void operator () (Graph& g, const BWTIndexSet& index_set) const;
+    void operator () (Graph& g) const;
 
 private:
     bool validate_allele(Mutation_CBPtr mut_cbptr,

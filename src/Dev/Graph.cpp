@@ -2779,6 +2779,17 @@ void Graph::load_bwt(const string& bwt_prefix)
     LOG("graph", info) << ptree("end_loading_read_list");
 } // Graph::load_bwt
 
+void Graph::load_aux_bwt(const string& aux_bwt_file)
+{
+    // load BWT of Illumina reads
+    LOG("graph", info) << ptree("load_aux_bwt")
+        .put("msg", "start")
+        .put("file", aux_bwt_file);
+    _aux_index_set.pBWT = new BWT(aux_bwt_file);
+    LOG("graph", info) << ptree("load_aux_bwt")
+        .put("msg", "end");
+} // Graph::load_aux_bwt
+
 Graph::find_reads_with_seq_type Graph::find_reads_with_seq(const Seq_Proxy_Type& seq, unsigned max_count) const
 {
     find_reads_with_seq_type res;
@@ -2891,13 +2902,17 @@ void Graph::compute_mutation_uniqueness(Size_Type flank_len)
     } // for ce_bptr
 } // Graph::compute_mutation_uniqueness
 
-void Graph::compute_mutation_copy_num(const BWTIndexSet& aux_index_set, int haploid_coverage, Size_Type flank_len)
+void Graph::compute_mutation_copy_num(Size_Type flank_len)
 {
     LOG("graph", info) << ptree("compute_mutation_copy_num").put("msg", "start");
-    if (not aux_index_set.pBWT)
+    if (not aux_index_set().pBWT)
     {
         LOG("graph", error) << "compute_mutation_copy_num: auxiliary BWT index is required" << endl;
         exit(EXIT_FAILURE);
+    }
+    if (get_aux_coverage() < 0)
+    {
+        compute_aux_coverage(flank_len);
     }
     for (auto ce_bptr : ce_cont() | referenced)
     {
@@ -2935,8 +2950,8 @@ void Graph::compute_mutation_copy_num(const BWTIndexSet& aux_index_set, int hapl
                       : mut_bptr->seq());
                 s += flank_right;
 
-                auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set);
-                int cn = (double)cnt / haploid_coverage;
+                auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set());
+                int cn = (double)cnt / get_aux_coverage();
                 if (0 <= cn and cn <= 2)
                 {
                     mut_bptr->set_copy_num(al, cn);
@@ -2951,12 +2966,12 @@ void Graph::compute_mutation_copy_num(const BWTIndexSet& aux_index_set, int hapl
     LOG("graph", info) << ptree("compute_mutation_copy_num").put("msg", "end");
 } // Graph::compute_mutation_copy_num
 
-int Graph::compute_coverage(const BWTIndexSet& aux_index_set, Size_Type flank_len)
+void Graph::compute_aux_coverage(Size_Type flank_len)
 {
-    LOG("graph", info) << ptree("compute_coverage").put("msg", "start");
-    if (not aux_index_set.pBWT)
+    LOG("graph", info) << ptree("compute_aux_coverage").put("msg", "start");
+    if (not aux_index_set().pBWT)
     {
-        LOG("graph", error) << "compute_coverage: auxiliary BWT index is required" << endl;
+        LOG("graph", error) << "compute_aux_coverage: auxiliary BWT index is required" << endl;
         exit(EXIT_FAILURE);
     }
     size_t cov_sum = 0;
@@ -2970,7 +2985,7 @@ int Graph::compute_coverage(const BWTIndexSet& aux_index_set, Size_Type flank_le
             if (not warned)
             {
                 warned = true;
-                LOG("graph", warning) << ptree("compute_coverage")
+                LOG("graph", warning) << ptree("compute_aux_coverage")
                     .put("msg", "separated_mutations: failed")
                     .put("flank_len", flank_len)
                     .put("ce_ptr", ce_bptr.to_int());
@@ -2981,7 +2996,7 @@ int Graph::compute_coverage(const BWTIndexSet& aux_index_set, Size_Type flank_le
         {
             if (mut_bptr->get_uniqueness(0) != 0 or mut_bptr->get_uniqueness(1) != 0)
             {
-                LOG("graph", debug) << ptree("compute_coverage")
+                LOG("graph", debug) << ptree("compute_aux_coverage")
                     .put("msg", "skipping non-unique mutation")
                     .put("mut_bptr", mut_bptr.to_int())
                     .put("mut_ptr", mut_bptr.raw());
@@ -2997,18 +3012,17 @@ int Graph::compute_coverage(const BWTIndexSet& aux_index_set, Size_Type flank_le
                       : mut_bptr->seq());
                 s += flank_right;
 
-                auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set);
+                auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set());
                 cov_sum += cnt;
                 ++cov_cnt;
             } // for al
         } // for mut_bptr
     } // for ce_bptr
-    int res = cov_cnt > 0? cov_sum / cov_cnt : 0;
-    LOG("graph", info) << ptree("compute_coverage")
+    _aux_coverage = cov_cnt > 0? cov_sum / cov_cnt : 0;
+    LOG("graph", info) << ptree("compute_aux_coverage")
         .put("msg", "end")
-        .put("res", res);
-    return res;
-} // Graph::compute_coverage
+        .put("res", _aux_coverage);
+} // Graph::compute_aux_coverage
 
 
 } // namespace MAC

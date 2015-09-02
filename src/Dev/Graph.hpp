@@ -30,7 +30,7 @@ class Graph
 {
 public:
     /** Default constructor. */
-    Graph() : _unmap_trigger_len(9), _cat_at_step(false) {}
+    Graph() : _unmap_trigger_len(9), _aux_coverage(-1), _cat_at_step(false) {}
 
     // disallow copy or move
     DELETE_COPY_CTOR(Graph);
@@ -44,6 +44,7 @@ public:
         ASSERT(re_cont().empty());
         if (_index_set.pBWT) delete _index_set.pBWT;
         if (_index_set.pSSA) delete _index_set.pSSA;
+        if (_aux_index_set.pBWT) delete _aux_index_set.pBWT;
     }
 
     const Read_Entry_Cont& re_cont() const { return _re_cont; }
@@ -53,6 +54,9 @@ public:
     const Size_Type& unmap_trigger_len() const { return _unmap_trigger_len; }
     Size_Type& unmap_trigger_len() { return _unmap_trigger_len; }
     GETTER(bool, cat_at_step, _cat_at_step)
+    GETTER(BWTIndexSet, index_set, _index_set)
+    GETTER(BWTIndexSet, aux_index_set, _aux_index_set)
+    int get_aux_coverage() const { return _aux_coverage; }
 
     /** Add a read.
      * Create basic Read_Entry, Read_Chunk, and Contig_Entry objects,
@@ -177,6 +181,9 @@ public:
     /// Load BWT, SSA and read id list.
     void load_bwt(const string& bwt_prefix);
 
+    /// Load BWT of Illumina data.
+    void load_aux_bwt(const string& aux_bwt_file);
+
     typedef array< vector< pair< string, unsigned > >, 2 > find_reads_with_seq_type;
     /// Find reads containing a given sequence
     find_reads_with_seq_type find_reads_with_seq(const Seq_Proxy_Type& seq, unsigned max_count = 0) const;
@@ -191,8 +198,8 @@ public:
     find_read_entries_with_seq(const Seq_Proxy_Type& seq, unsigned max_count = 0) const;
 
     void compute_mutation_uniqueness(Size_Type flank_len);
-    void compute_mutation_copy_num(const BWTIndexSet& aux_index_set, int haploid_coverage, Size_Type flank_len);
-    int compute_coverage(const BWTIndexSet& aux_index_set, Size_Type flank_len);
+    void compute_mutation_copy_num(Size_Type flank_len);
+    void compute_aux_coverage(Size_Type flank_len);
 
     //friend ostream& operator << (ostream&, const Graph&);
     boost::property_tree::ptree to_ptree() const;
@@ -341,9 +348,11 @@ private:
     Contig_Entry_Cont _ce_cont;
 
     Size_Type _unmap_trigger_len;
+    int _aux_coverage;
     bool _cat_at_step;
 
     BWTIndexSet _index_set;
+    BWTIndexSet _aux_index_set;
     map< unsigned, string > _iid_to_sid_m;
     map< string, unsigned > _sid_to_iid_m;
 

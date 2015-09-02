@@ -4,9 +4,15 @@
 namespace MAC
 {
 
-void Validate_Variations::operator () (Graph& g, const BWTIndexSet& index_set) const
+void Validate_Variations::operator () (Graph& g) const
 {
-    LOG("Validate_Variations", info) << ptree("Validate_Variations__start");
+    if (not g.aux_index_set().pBWT)
+    {
+        LOG("Validate_Variations", error) << ptree("operator()")
+            .put("msg", "auxiliary BWT index is required");
+        exit(EXIT_FAILURE);
+    }
+    LOG("Validate_Variations", info) << ptree("operator()").put("msg", "start");
     // search for well-separated mutations with low support
     for (auto ce_bptr : g.ce_cont() | referenced)
     {
@@ -47,9 +53,9 @@ void Validate_Variations::operator () (Graph& g, const BWTIndexSet& index_set) c
             auto validate_allele_pair = [&] () {
                 tie(qr_set, full_rf_set, part_rf_set) = ce_bptr->mut_support(mut_cbptr);
                 validated_qr = ((qr_set.size() >= _min_graph_support_to_skip)
-                                or validate_allele(mut_cbptr, qr_set, index_set));
+                                or validate_allele(mut_cbptr, qr_set, g.aux_index_set()));
                 validated_rf = ((full_rf_set.size() >= _min_graph_support_to_skip)
-                                or validate_allele(mut_cbptr, full_rf_set, index_set));
+                                or validate_allele(mut_cbptr, full_rf_set, g.aux_index_set()));
             };
             validate_allele_pair();
 
@@ -113,7 +119,7 @@ void Validate_Variations::operator () (Graph& g, const BWTIndexSet& index_set) c
         g.check(set< Contig_Entry_CBPtr >({ ce_bptr }));
     }
     g.check_all();
-    LOG("Validate_Variations", info) << ptree("Validate_Variations__end");
+    LOG("Validate_Variations", info) << ptree("operator()").put("msg", "end");
 } // Validate_Variations::operator ()
 
 bool Validate_Variations::validate_allele(Mutation_CBPtr mut_cbptr,

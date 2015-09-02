@@ -153,7 +153,6 @@ int real_main()
 {
     Graph g;
     Hap_Map hm;
-    BWTIndexSet aux_index_set;
     // option validation
     if (opts::input_file.get().empty() == opts::load_file.get().empty())
     {
@@ -211,13 +210,18 @@ int real_main()
         g.check_all();
         LOG("mac", info) << ptree("cat_at_end_end");
     }
+    if (not opts::bwt_prefix.get().empty())
+    {
+        g.load_bwt(opts::bwt_prefix);
+    }
+    if (not opts::aux_bwt_file.get().empty())
+    {
+        g.load_aux_bwt(opts::aux_bwt_file);
+    }
 
     if (opts::validate_variations)
     {
-        LOG("mac", info) << ptree("validate_variations__load_index__start").put("aux_bwt_file", opts::aux_bwt_file.get());
-        aux_index_set.pBWT = new BWT(opts::aux_bwt_file);
-        LOG("mac", info) << ptree("validate_variations__load_index__end");
-        Validate_Variations()(g, aux_index_set);
+        Validate_Variations()(g);
     }
     if (opts::unmap_read_ends)
     {
@@ -254,10 +258,6 @@ int real_main()
         g.check_all();
         LOG("mac", info) << ptree("unmap_short_contigs_end");
     }
-    if (not opts::bwt_prefix.get().empty())
-    {
-        g.load_bwt(opts::bwt_prefix);
-    }
     if (opts::build_hapmap)
     {
         LOG("mac", info) << ptree("build_hapmap_start");
@@ -271,8 +271,7 @@ int real_main()
     if (opts::test_2)
     {
         g.compute_mutation_uniqueness(10);
-        auto cov = g.compute_coverage(aux_index_set, 10);
-        g.compute_mutation_copy_num(aux_index_set, cov, 10);
+        g.compute_mutation_copy_num(10);
     }
     if (opts::interactive)
     {
