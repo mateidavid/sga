@@ -16,6 +16,7 @@ add_library(mac STATIC
     Read_Entry.cpp
     Contig_Entry.cpp
     Graph.cpp
+    Unmapper.cpp
     Unmap_Mut_Clusters.cpp
     Validate_Variations.cpp
     Hap_Map.cpp

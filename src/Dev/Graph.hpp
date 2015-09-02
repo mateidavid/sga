@@ -266,6 +266,12 @@ private:
     vector< tuple< Size_Type, Size_Type, Cigar > >
     chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar);
 
+    /**
+     * Trim contig entry to the extent of the given chunk.
+     * Return the chunk, now spanning the entire contig.
+     */
+    Read_Chunk_BPtr trim_contig_to_chunk(Read_Chunk_BPtr rc_bptr);
+
     /** Make chunk unmappable.
      * The contig containing the chunk is first trimmed to the extent of the chunk.
      * After potential contig trimming, all other chunks in the contig now fully spanned

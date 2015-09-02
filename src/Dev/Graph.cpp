@@ -685,7 +685,7 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
         cat_read_contigs(re1_bptr);
         check(set< Read_Entry_CBPtr >({ re1_bptr, re2_bptr }));
     }
-}
+} // Graph::add_overlap
 
 bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
 {
@@ -819,7 +819,7 @@ void Graph::cat_all_read_contigs()
     }
 }
 
-void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
+Read_Chunk_BPtr Graph::trim_contig_to_chunk(Read_Chunk_BPtr rc_bptr)
 {
     // we save read entry and offset, and recompute chunk after graph modifications
     Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
@@ -827,13 +827,14 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
     Size_Type rc_end = rc_bptr->get_r_end();
     Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
 
-    LOG("graph", debug2) << ptree("unmap_chunk")
+    LOG("graph", debug2) << ptree("trim_contig_to_chunk")
         .put("re_name", re_bptr->name())
         .put("re_ptr", re_bptr.to_int())
         .put("start", rc_start)
         .put("end", rc_end);
 
-    // trim contig entry to the extent of the read chunk
+    // trim contig entry at the start of the read chunk
+    if (rc_bptr->get_c_start() != 0)
     {
         auto ce_mid_bptr = ce_bptr->cut(rc_bptr->get_c_start(), nullptr, false);
         if (ce_mid_bptr)
@@ -841,34 +842,46 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
             ce_cont().insert(ce_mid_bptr);
             ce_bptr = ce_mid_bptr;
         }
+        rc_bptr = search_read_chunk_exact(ce_bptr, re_bptr, rc_start, rc_end, false).unconst();
+        // chunk should survive the cut
+        ASSERT(rc_bptr);
+        ASSERT(rc_bptr->get_r_start() == rc_start);
+        ASSERT(rc_bptr->get_r_end() == rc_end);
     }
-    rc_bptr = search_read_chunk_exact(ce_bptr, re_bptr, rc_start, rc_end, false).unconst();
-    // chunk should survive the cut
-    ASSERT(rc_bptr);
-    ASSERT(rc_bptr->get_r_start() == rc_start);
-    ASSERT(rc_bptr->get_r_end() == rc_end);
-    Mutation_CBPtr last_ins_cbptr = nullptr;
-    if (not rc_bptr->mut_ptr_cont().empty()
-        and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->is_ins()
-        and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->rf_start() == rc_bptr->get_c_end())
+
+    // trim contig entry at the end of the chunk
+    if (rc_bptr->get_c_end() != ce_bptr->len())
     {
-        last_ins_cbptr = rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr();
-    }
-    {
+        Mutation_CBPtr last_ins_cbptr = nullptr;
+        if (not rc_bptr->mut_ptr_cont().empty()
+            and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->is_ins()
+            and rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr()->rf_start() == rc_bptr->get_c_end())
+        {
+            last_ins_cbptr = rc_bptr->mut_ptr_cont().rbegin()->mut_cbptr();
+        }
         auto ce_rhs_bptr = ce_bptr->cut(rc_bptr->get_c_end(), last_ins_cbptr, false);
         if (ce_rhs_bptr)
         {
             ce_cont().insert(ce_rhs_bptr);
         }
+        rc_bptr = search_read_chunk_exact(ce_bptr, re_bptr, rc_start, rc_end, false).unconst();
+        // chunk should survive the cut
+        ASSERT(rc_bptr);
+        ASSERT(rc_bptr->get_r_start() == rc_start);
+        ASSERT(rc_bptr->get_r_end() == rc_end);
     }
-    rc_bptr = search_read_chunk_exact(ce_bptr, re_bptr, rc_start, rc_end, false).unconst();
-    // chunk should survive the cut
-    ASSERT(rc_bptr);
-    ASSERT(rc_bptr->get_r_start() == rc_start);
-    ASSERT(rc_bptr->get_r_end() == rc_end);
     // at this point, the chunk should span the entire contig
     ASSERT(rc_bptr->get_c_start() == 0 and rc_bptr->get_c_end() == ce_bptr->len());
+    return rc_bptr;
+}
 
+void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
+{
+    rc_bptr = trim_contig_to_chunk(rc_bptr);
+    Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
+    Size_Type rc_start = rc_bptr->get_r_start();
+    Size_Type rc_end = rc_bptr->get_r_end();
+    Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
     // chunks mapping to this contig are remapped to individual contigs, with unmappable flag set
     // we also save them in a list using Read_Entry and offsets
     vector< tuple< Read_Entry_BPtr, Size_Type, Size_Type > > l;
