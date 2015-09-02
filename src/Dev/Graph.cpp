@@ -1031,6 +1031,30 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
             } // else (global::unmap_trigger_len < leftover_bp)
         } // else (next_rc_bptr not unmappable)
     } // while (leftover_bp > 0)
+
+    // if the last chunk is unmappable, trim read
+    Read_Chunk_BPtr last_rc_bptr = (not r_right? &*re_bptr->chunk_cont().begin() : &*re_bptr->chunk_cont().rbegin());
+    if (last_rc_bptr and last_rc_bptr->ce_bptr()->is_unmappable())
+    {
+        Contig_Entry_BPtr last_ce_bptr = last_rc_bptr->ce_bptr();
+        // trim read
+        re_bptr->chunk_cont().erase(last_rc_bptr);
+        if (not r_right)
+        {
+            re_bptr->start() += last_rc_bptr->get_r_len();
+        }
+        else
+        {
+            re_bptr->len() -= last_rc_bptr->get_r_len();
+        }
+        // destroy RC & CE
+        ASSERT(last_ce_bptr->mut_cont().empty());
+        ASSERT(last_rc_bptr->mut_ptr_cont().empty());
+        last_ce_bptr->chunk_cont().erase(last_rc_bptr);
+        Read_Chunk_Fact::del_elem(last_rc_bptr);
+        Contig_Entry_Fact::del_elem(last_ce_bptr);
+    }
+
     check(set< Read_Entry_CBPtr >( { re_bptr }));
 } // extend_unmapped_chunk_dir
 
