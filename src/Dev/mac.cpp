@@ -337,7 +337,6 @@ int real_main()
     }
 
     LOG("mac", info) << ptree("factory_stats", g.factory_stats());
-    if (aux_index_set.pBWT) delete aux_index_set.pBWT;
     g.clear_and_dispose();
     hm.clear_and_dispose();
     LOG("mac", info) << ptree("graph_cleared");
