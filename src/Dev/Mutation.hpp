@@ -78,7 +78,29 @@ public:
     bool is_empty() const { return _len == 0 and _seq_len == 0; }
     /// @}
 
-    void set_uniqueness(int allele, int unique);
+    /**
+     * Set allele uniqueness.
+     * @param allele Integer: 0 = base, 1 = alt
+     * @param value Uniqueness value as follows:
+     *  -1 : unknown (default)
+     *   0 : all BWT hits are in graph, and mapped to the same contig region
+     *   1 : all BWT hits are in graph, but not all mapped to the same contig region
+     *   2 : some BWT hits not in graph
+     *   3 : too many BWT hits
+     */
+    void set_uniqueness(int allele, int value);
+    int get_uniqueness(int allele) const;
+
+    /**
+     * Set allele copy number.
+     * @param allele Integer: 0 = base, 1 = alt
+     * @param value Copy number value as follows:
+     *  -2 : CN higher than 2
+     *  -1 : unknown (default)
+     *   0/1/2 : CN 0/1/2
+     */
+    void set_copy_num(int allele, int value);
+    int get_copy_num(int allele) const;
 
     /**
      * Extend Mutation given sequence.

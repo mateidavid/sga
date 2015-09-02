@@ -2827,7 +2827,7 @@ void Graph::compute_mutation_uniqueness(Size_Type flank_len)
 {
     if (not (_index_set.pBWT and _index_set.pSSA))
     {
-        LOG("graph", error) << "compute_mutation_copy_numbers: BWT index is required" << endl;
+        LOG("graph", error) << "compute_mutation_uniqueness: BWT index is required" << endl;
         exit(EXIT_FAILURE);
     }
     for (auto ce_bptr : ce_cont() | referenced)
@@ -2839,7 +2839,7 @@ void Graph::compute_mutation_uniqueness(Size_Type flank_len)
             if (not warned)
             {
                 warned = true;
-                LOG("graph", warning) << ptree("compute_mutation_copy_numbers")
+                LOG("graph", warning) << ptree("compute_mutation_uniqueness")
                     .put("msg", "separated_mutations: failed")
                     .put("flank_len", flank_len)
                     .put("ce_ptr", ce_bptr.to_int());
@@ -2889,6 +2889,126 @@ void Graph::compute_mutation_uniqueness(Size_Type flank_len)
             } // for al
         } // for mut_bptr
     } // for ce_bptr
-} // Graph::compute_mutation_copy_numbers
+} // Graph::compute_mutation_uniqueness
+
+void Graph::compute_mutation_copy_num(const BWTIndexSet& aux_index_set, int haploid_coverage, Size_Type flank_len)
+{
+    LOG("graph", info) << ptree("compute_mutation_copy_num").put("msg", "start");
+    if (not aux_index_set.pBWT)
+    {
+        LOG("graph", error) << "compute_mutation_copy_num: auxiliary BWT index is required" << endl;
+        exit(EXIT_FAILURE);
+    }
+    for (auto ce_bptr : ce_cont() | referenced)
+    {
+        if (not ce_bptr->is_normal()) continue;
+        if (not ce_bptr->separated_mutations(flank_len, true))
+        {
+            static bool warned = false;
+            if (not warned)
+            {
+                warned = true;
+                LOG("graph", warning) << ptree("compute_mutation_copy_num")
+                    .put("msg", "separated_mutations: failed")
+                    .put("flank_len", flank_len)
+                    .put("ce_ptr", ce_bptr.to_int());
+            }
+            continue;
+        }
+        for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
+        {
+            if (mut_bptr->get_uniqueness(0) != 0 or mut_bptr->get_uniqueness(1) != 0)
+            {
+                LOG("graph", debug) << ptree("compute_mutation_copy_num")
+                    .put("msg", "skipping non-unique mutation")
+                    .put("mut_bptr", mut_bptr.to_int())
+                    .put("mut_ptr", mut_bptr.raw());
+                continue;
+            }
+            Seq_Type flank_left = ce_bptr->substr(mut_bptr->rf_start() - flank_len, flank_len);
+            Seq_Type flank_right = ce_bptr->substr(mut_bptr->rf_end(), flank_len);
+            for (int al = 0; al < 2; ++al)
+            {
+                Seq_Type s = flank_left;
+                s += (al == 0
+                      ? Seq_Type(ce_bptr->substr(mut_bptr->rf_start(), mut_bptr->rf_len()))
+                      : mut_bptr->seq());
+                s += flank_right;
+
+                auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set);
+                int cn = (double)cnt / haploid_coverage;
+                if (0 <= cn and cn <= 2)
+                {
+                    mut_bptr->set_copy_num(al, cn);
+                }
+                else if (cn > 2)
+                {
+                    mut_bptr->set_copy_num(al, -2);
+                }
+            } // for al
+        } // for mut_bptr
+    } // for ce_bptr
+    LOG("graph", info) << ptree("compute_mutation_copy_num").put("msg", "end");
+} // Graph::compute_mutation_copy_num
+
+int Graph::compute_coverage(const BWTIndexSet& aux_index_set, Size_Type flank_len)
+{
+    LOG("graph", info) << ptree("compute_coverage").put("msg", "start");
+    if (not aux_index_set.pBWT)
+    {
+        LOG("graph", error) << "compute_coverage: auxiliary BWT index is required" << endl;
+        exit(EXIT_FAILURE);
+    }
+    size_t cov_sum = 0;
+    size_t cov_cnt = 0;
+    for (auto ce_bptr : ce_cont() | referenced)
+    {
+        if (not ce_bptr->is_normal()) continue;
+        if (not ce_bptr->separated_mutations(flank_len, true))
+        {
+            static bool warned = false;
+            if (not warned)
+            {
+                warned = true;
+                LOG("graph", warning) << ptree("compute_coverage")
+                    .put("msg", "separated_mutations: failed")
+                    .put("flank_len", flank_len)
+                    .put("ce_ptr", ce_bptr.to_int());
+            }
+            continue;
+        }
+        for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
+        {
+            if (mut_bptr->get_uniqueness(0) != 0 or mut_bptr->get_uniqueness(1) != 0)
+            {
+                LOG("graph", debug) << ptree("compute_coverage")
+                    .put("msg", "skipping non-unique mutation")
+                    .put("mut_bptr", mut_bptr.to_int())
+                    .put("mut_ptr", mut_bptr.raw());
+                continue;
+            }
+            Seq_Type flank_left = ce_bptr->substr(mut_bptr->rf_start() - flank_len, flank_len);
+            Seq_Type flank_right = ce_bptr->substr(mut_bptr->rf_end(), flank_len);
+            for (int al = 0; al < 2; ++al)
+            {
+                Seq_Type s = flank_left;
+                s += (al == 0
+                      ? Seq_Type(ce_bptr->substr(mut_bptr->rf_start(), mut_bptr->rf_len()))
+                      : mut_bptr->seq());
+                s += flank_right;
+
+                auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set);
+                cov_sum += cnt;
+                ++cov_cnt;
+            } // for al
+        } // for mut_bptr
+    } // for ce_bptr
+    int res = cov_cnt > 0? cov_sum / cov_cnt : 0;
+    LOG("graph", info) << ptree("compute_coverage")
+        .put("msg", "end")
+        .put("res", res);
+    return res;
+} // Graph::compute_coverage
+
 
 } // namespace MAC

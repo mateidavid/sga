@@ -153,6 +153,7 @@ int real_main()
 {
     Graph g;
     Hap_Map hm;
+    BWTIndexSet aux_index_set;
     // option validation
     if (opts::input_file.get().empty() == opts::load_file.get().empty())
     {
@@ -213,14 +214,10 @@ int real_main()
 
     if (opts::validate_variations)
     {
-        BWTIndexSet index_set;
         LOG("mac", info) << ptree("validate_variations__load_index__start").put("aux_bwt_file", opts::aux_bwt_file.get());
-        index_set.pBWT = new BWT(opts::aux_bwt_file);
+        aux_index_set.pBWT = new BWT(opts::aux_bwt_file);
         LOG("mac", info) << ptree("validate_variations__load_index__end");
-        Validate_Variations()(g, index_set);
-        LOG("mac", info) << ptree("validate_variations__delete_index__start");
-        delete index_set.pBWT;
-        LOG("mac", info) << ptree("validate_variations__delete_index__end");
+        Validate_Variations()(g, aux_index_set);
     }
     if (opts::unmap_read_ends)
     {
@@ -274,6 +271,8 @@ int real_main()
     if (opts::test_2)
     {
         g.compute_mutation_uniqueness(10);
+        auto cov = g.compute_coverage(aux_index_set, 10);
+        g.compute_mutation_copy_num(aux_index_set, cov, 10);
     }
     if (opts::interactive)
     {
@@ -339,6 +338,7 @@ int real_main()
     }
 
     LOG("mac", info) << ptree("factory_stats", g.factory_stats());
+    if (aux_index_set.pBWT) delete aux_index_set.pBWT;
     g.clear_and_dispose();
     hm.clear_and_dispose();
     LOG("mac", info) << ptree("graph_cleared");

@@ -102,14 +102,46 @@ void Mutation::load_strings(istream& is, size_t& n_strings, size_t& n_bytes)
     n_bytes += _seq.size() + 1;
 }
 
-void Mutation::set_uniqueness(int allele, int unique)
+map< pair< const Mutation*, int >, int >& uniq_m()
 {
     static map< pair< const Mutation*, int >, int > _uniq_m;
+    return _uniq_m;
+}
+
+void Mutation::set_uniqueness(int allele, int value)
+{
     LOG("Mutation", debug) << ptree("set_uniqueness")
         .put("this", (void*)this)
         .put("allele", allele)
-        .put("unique", unique);
-    _uniq_m[make_pair(this, allele)] = unique;
+        .put("value", value);
+    uniq_m()[make_pair(this, allele)] = value;
+}
+
+int Mutation::get_uniqueness(int allele) const
+{
+    auto p = make_pair(this, allele);
+    return (uniq_m().count(p)? uniq_m().at(p) : -1);
+}
+
+map< pair< const Mutation*, int >, int >& copy_num_m()
+{
+    static map< pair< const Mutation*, int >, int > _copy_num_m;
+    return _copy_num_m;
+}
+
+void Mutation::set_copy_num(int allele, int value)
+{
+    LOG("Mutation", debug) << ptree("set_copy_num")
+        .put("this", (void*)this)
+        .put("allele", allele)
+        .put("value", value);
+    copy_num_m()[make_pair(this, allele)] = value;
+}
+
+int Mutation::get_copy_num(int allele) const
+{
+    auto p = make_pair(this, allele);
+    return (copy_num_m().count(p)? copy_num_m().at(p) : -1);
 }
 
 } // namespace MAC

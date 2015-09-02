@@ -191,6 +191,8 @@ public:
     find_read_entries_with_seq(const Seq_Proxy_Type& seq, unsigned max_count = 0) const;
 
     void compute_mutation_uniqueness(Size_Type flank_len);
+    void compute_mutation_copy_num(const BWTIndexSet& aux_index_set, int haploid_coverage, Size_Type flank_len);
+    int compute_coverage(const BWTIndexSet& aux_index_set, Size_Type flank_len);
 
     //friend ostream& operator << (ostream&, const Graph&);
     boost::property_tree::ptree to_ptree() const;
