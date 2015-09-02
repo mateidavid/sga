@@ -2858,9 +2858,15 @@ void Graph::compute_mutation_uniqueness(Size_Type flank_len)
                       : mut_bptr->seq());
                 s += flank_right;
                 auto r = find_read_entries_with_seq(s, 1000);
-                if (r.second or r.first.empty())
+                if (r.second)
                 {
-                    mut_bptr->set_uniqueness(al, false);
+                    mut_bptr->set_uniqueness(al, 2);
+                    continue;
+                }
+                if (r.first.empty())
+                {
+                    mut_bptr->set_uniqueness(al, 3);
+                    continue;
                 }
                 bool unique = true;
                 for (int st = 0; st < 2; ++st)
@@ -2879,7 +2885,7 @@ void Graph::compute_mutation_uniqueness(Size_Type flank_len)
                     }
                     if (not unique) break;
                 }
-                mut_bptr->set_uniqueness(al, unique);
+                mut_bptr->set_uniqueness(al, not unique);
             } // for al
         } // for mut_bptr
     } // for ce_bptr

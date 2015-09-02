@@ -102,9 +102,9 @@ void Mutation::load_strings(istream& is, size_t& n_strings, size_t& n_bytes)
     n_bytes += _seq.size() + 1;
 }
 
-void Mutation::set_uniqueness(int allele, bool unique)
+void Mutation::set_uniqueness(int allele, int unique)
 {
-    static map< pair< const Mutation*, int >, bool > _uniq_m;
+    static map< pair< const Mutation*, int >, int > _uniq_m;
     LOG("Mutation", debug) << ptree("set_uniqueness")
         .put("this", (void*)this)
         .put("allele", allele)
