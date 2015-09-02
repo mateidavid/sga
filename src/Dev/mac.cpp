@@ -271,6 +271,10 @@ int real_main()
     {
         g.test_mutation_allele_swapping();
     }
+    if (opts::test_2)
+    {
+        g.compute_mutation_uniqueness(10);
+    }
     if (opts::interactive)
     {
         cli(std::cin, std::cout, g, hm);

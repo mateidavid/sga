@@ -104,12 +104,12 @@ void Mutation::load_strings(istream& is, size_t& n_strings, size_t& n_bytes)
 
 void Mutation::set_uniqueness(int allele, bool unique)
 {
-    static map< pair< const Mutation*, int >, bool > _uniq_map;
+    static map< pair< const Mutation*, int >, bool > _uniq_m;
     LOG("Mutation", debug) << ptree("set_uniqueness")
         .put("this", (void*)this)
         .put("allele", allele)
         .put("unique", unique);
-    _uniq_map[make_pair(this, allele)] = unique;
+    _uniq_m[make_pair(this, allele)] = unique;
 }
 
 } // namespace MAC
