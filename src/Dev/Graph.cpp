@@ -1052,6 +1052,7 @@ void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bo
         ASSERT(last_rc_bptr->mut_ptr_cont().empty());
         last_ce_bptr->chunk_cont().erase(last_rc_bptr);
         Read_Chunk_Fact::del_elem(last_rc_bptr);
+        ce_cont().erase(last_ce_bptr);
         Contig_Entry_Fact::del_elem(last_ce_bptr);
     }
 
