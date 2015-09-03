@@ -213,7 +213,7 @@ message(STATUS "CMAKE_EXE_LINKER_FLAGS='${CMAKE_EXE_LINKER_FLAGS}'")
 
 ### Add target that updates version
 #
-add_custom_target(version ALL
+add_custom_target(version
     ${CMAKE_COMMAND} -DSRC_ROOT=${PROJECT_SOURCE_DIR} -DBIN_ROOT=${PROJECT_BINARY_DIR} -P ${PROJECT_SOURCE_DIR}/version.cmake)
 
 ### Enable testing targets
