@@ -896,7 +896,7 @@ void Graph::trim_terminal_unmappable_chunk(Read_Chunk_BPtr rc_bptr)
     {
         re_bptr->start() = rc_bptr->get_r_end();
     }
-    re_bptr->start() -= rc_bptr->get_r_len();
+    re_bptr->len() -= rc_bptr->get_r_len();
     // erase rc
     re_bptr->chunk_cont().erase(rc_bptr);
     ce_bptr->chunk_cont().erase(rc_bptr);
