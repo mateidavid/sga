@@ -93,18 +93,8 @@ public:
     Size_Type qr_end() const { return _qr_start + _qr_len; }
 
     /** Get operation. */
-    const cigar_op_type& op(size_t i) const
-    {
-#ifndef NDEBUG
-        return _op_vect.at(i);
-#else
-        return _op_vect[i];
-#endif
-    }
-    cigar_op_type& op(size_t i)
-    {
-        return const_cast< cigar_op_type& >(const_cast< const Cigar* >(this)->op(i));
-    }
+    const cigar_op_type& op(size_t i) const { return _op_vect.at(i); }
+    cigar_op_type& op(size_t i) { return _op_vect.at(i); }
     /** Get operation type. */
     char op_type(size_t i) const { return op(i).op_type(); }
     /** Get operation length. */
@@ -167,18 +157,16 @@ public:
     {
         Cigar res;
         for (size_t i = 0; i < _op_vect.size(); ++i)
-        //for (const auto& op : (same_st()? _op_vect : _op_vect | ba::reversed))
         {
             size_t j = (same_st()? i : _op_vect.size() - 1 - i);
             res._op_vect.emplace_back(_op_vect[j].complement());
-            //res._op_vect.emplace_back(op.complement());
         }
         res._reversed = _reversed;
         res._rf_start = _qr_start;
         res._qr_start = _rf_start;
         res.recompute_offsets();
         return res;
-    }
+    } // Cigar::complement
 
     /**
      * Compute sub-cigar.
@@ -195,11 +183,9 @@ public:
         res.qr_start() = same_st()? op_qr_pos(i) : op_qr_pos(i + cnt);
         res.recompute_offsets();
         return res;
-    }
+    } // Cigar::subcigar
 
-    /**
-     * Drop terminal indels.
-     */
+    /** Drop terminal indels. */
     void drop_terminal_indels()
     {
         size_t start_idx = 0;
@@ -211,7 +197,7 @@ public:
         qr_start() = same_st()? op_qr_pos(start_idx) : op_qr_pos(end_idx);
         _op_vect = decltype(_op_vect)(_op_vect.begin() + start_idx, _op_vect.begin() + end_idx);
         recompute_offsets();
-    }
+    } // Cigar::drop_terminal_indels
 
     /**
      * Cut op.
@@ -237,7 +223,7 @@ public:
                               : old_op.qr_offset());
         old_op.len() = len;
         _op_vect.insert(_op_vect.begin() + i + 1, new_op);
-    }
+    } // Cigar::cut_op
 
     /** Disambiguate M operations. */
     void disambiguate(const sequence_proxy_type& rf_seq, const sequence_proxy_type& qr_seq)
@@ -251,14 +237,6 @@ public:
             //.put("qr_seq", (same_st()? qr_seq : reverseComplement(qr_seq)));
             .put("qr_seq", qr_seq.revcomp(diff_st()));
 
-        /*
-        auto get_qr_pos = [&] (Size_Type pos) -> char {
-            ASSERT(not same_st() or pos < qr_len());
-            ASSERT(not diff_st() or (0 < pos and pos <= qr_len()));
-            //return (same_st()? qr_seq[pos] : ::complement(char(qr_seq[pos - 1])));
-            return same_st()? qr_seq[pos] : dnasequence::complement::base(qr_seq[pos - 1]);
-        };
-        */
         for (size_t i = 0; i < n_ops(); ++i)
         {
             if (op_type(i) == 'M')
@@ -298,8 +276,9 @@ public:
         }
         LOG("cigar", debug) << ptree("disambiguate_end")
             .put("cigar", this->to_ptree());
-    }
+    } // Cigar::disambiguate
 
+    /** Trim cigar to the given limits of the two sequences. */
     void trim(Size_Type rf_start, Size_Type rf_end, Size_Type qr_start, Size_Type qr_end)
     {
         trim_end(true, false, rf_start);
@@ -403,7 +382,7 @@ public:
         _qr_len = new_qr_end - new_qr_start;
         _op_vect = move(new_op_vect);
         recompute_offsets();
-    }
+    } // Cigar::trim_end
 
     /** Check Cigar. */
     void check(const sequence_proxy_type& rf_seq_arg, const sequence_proxy_type& qr_seq_arg) const
@@ -442,7 +421,7 @@ public:
         ASSERT(check_rf_len == rf_len());
         ASSERT(check_qr_len == qr_len());
 #endif
-    }
+    } // Cigar::check
 
     /** Comparison operators. */
     friend bool operator == (const Cigar& lhs, const Cigar& rhs)
@@ -512,7 +491,7 @@ private:
                       (same_st()? qr_pos + op.len() : qr_pos - op.len())
                       : qr_pos);
         }
-    }
+    } // Cigar::recompute_offsets
 
     vector< cigar_op_type > _op_vect;
     Size_Type _rf_start;

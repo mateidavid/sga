@@ -185,7 +185,6 @@ set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} ${EXTRA_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS='${CMAKE_CXX_FLAGS}'")
 
 ### build-specific flags
-#
 # compile flags for Debug build
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3 -ggdb -fno-inline -fno-eliminate-unused-debug-types")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
