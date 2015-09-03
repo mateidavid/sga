@@ -9,12 +9,12 @@ namespace MAC
 class Unmapper
 {
 public:
-    Unmapper(Graph& g) : _g(g);
+    Unmapper(Graph& g) : _g(g) {}
 
     void unmap_chunk(Read_Chunk_BPtr rc_bptr)
     {
-        rc_bptr = g.trim_contig_to_chunk(rc_bptr);
-        set< Contig_Entry_BPtr > unmap_ce_set({rc_bptr->ce_bptr});
+        rc_bptr = _g.trim_contig_to_chunk(rc_bptr);
+        set< Contig_Entry_BPtr > unmap_ce_set({rc_bptr->ce_bptr()});
         set< pair< Read_Entry_BPtr, Range_Type > > unmap_re_set;
         _unmap_loop(unmap_ce_set, unmap_re_set);
     }
@@ -59,7 +59,7 @@ private:
      * that chunk is added to the unmap_ce_set.
      */
     void _extend_unmappable_re_region(const pair< Read_Entry_BPtr, Range_Type >& p,
-                                      set< Contig_Entry_BPtr >& unmap_ce_set);
+                                      set< pair< Read_Entry_BPtr, Range_Type > > unmap_re_set);
 
 }; // class Unmapper
 

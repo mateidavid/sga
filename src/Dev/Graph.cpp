@@ -875,6 +875,28 @@ Read_Chunk_BPtr Graph::trim_contig_to_chunk(Read_Chunk_BPtr rc_bptr)
     return rc_bptr;
 }
 
+void Graph::trim_terminal_unmappable_chunk(Read_Chunk_BPtr rc_bptr)
+{
+    ASSERT(rc_bptr);
+    Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
+    Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
+    ASSERT(ce_bptr->is_unmappable());
+    ASSERT(rc_bptr->get_r_start() == re_bptr->start() or rc_bptr->get_r_end() == re_bptr->end());
+    // adjust re
+    if (rc_bptr->get_r_start() == re_bptr->start())
+    {
+        re_bptr->start() = rc_bptr->get_r_end();
+    }
+    re_bptr->start() -= rc_bptr->get_r_len();
+    // erase rc
+    re_bptr->chunk_cont().erase(rc_bptr);
+    ce_bptr->chunk_cont().erase(rc_bptr);
+    Read_Chunk_Fact::del_elem(rc_bptr);
+    // erase ce
+    ce_cont().erase(ce_bptr);
+    Contig_Entry_Fact::del_elem(ce_bptr);
+}
+
 void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
 {
     rc_bptr = trim_contig_to_chunk(rc_bptr);

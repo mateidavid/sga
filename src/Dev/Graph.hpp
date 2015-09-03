@@ -211,6 +211,7 @@ public:
 
 private:
     friend class Unmap_Mut_Clusters;
+    friend class Unmapper;
 
     /**
      * Search for a Read_Chunk of the given Read_Entry, by position.
@@ -271,6 +272,11 @@ private:
      * Return the chunk, now spanning the entire contig.
      */
     Read_Chunk_BPtr trim_contig_to_chunk(Read_Chunk_BPtr rc_bptr);
+
+    /**
+     * Trim read by removing unmappable terminal chunk.
+     */
+    void trim_terminal_unmappable_chunk(Read_Chunk_BPtr rc_bptr);
 
     /** Make chunk unmappable.
      * The contig containing the chunk is first trimmed to the extent of the chunk.
