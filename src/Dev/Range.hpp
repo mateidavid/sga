@@ -31,7 +31,7 @@ public:
     }
     friend bool operator <  (const Range& lhs, const Range& rhs)
     {
-        return lhs._start < rhs._start or (lhs._start == rhs._start and lhs._end == rhs._end);
+        return lhs._start < rhs._start or (lhs._start == rhs._start and lhs._end < rhs._end);
     }
     friend bool operator != (const Range& lhs, const Range& rhs) { return !(lhs == rhs); }
     friend bool operator <= (const Range& lhs, const Range& rhs) { return lhs == rhs or lhs < rhs; }
