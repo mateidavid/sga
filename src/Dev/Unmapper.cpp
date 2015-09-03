@@ -25,8 +25,11 @@ Unmapper::_unmap_loop(ce_set_type&& unmap_ce_set, re_set_type&& unmap_re_set)
             Read_Entry_BPtr re_bptr = p.first;
             ASSERT(not unmap_re_set.at(re_bptr).empty());
             Range_Type rg = *unmap_re_set.at(re_bptr).begin();
+            auto sz_before = unmap_re_set.at(re_bptr).size();
             unmap_re_set.at(re_bptr).erase(rg);
-            if (unmap_re_set.at(re_bptr).size() == 0)
+            auto sz_after = unmap_re_set.at(re_bptr).size();
+            ASSERT(sz_after + 1 == sz_before);
+            if (unmap_re_set.at(re_bptr).empty())
             {
                 unmap_re_set.erase(re_bptr);
             }
@@ -40,7 +43,7 @@ Unmapper::_unmap_loop(ce_set_type&& unmap_ce_set, re_set_type&& unmap_re_set)
             ASSERT(not extend_re_set.at(re_bptr).empty());
             Range_Type rg = *extend_re_set.at(re_bptr).begin();
             extend_re_set.at(re_bptr).erase(rg);
-            if (extend_re_set.at(re_bptr).size() == 0)
+            if (extend_re_set.at(re_bptr).empty())
             {
                 extend_re_set.erase(re_bptr);
             }
