@@ -680,7 +680,10 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
         unmap_re_region(re1_bptr, rg);
     }
     */
-    unmap_re_regions(re1_bptr, move(region_cont));
+    if (not region_cont.empty())
+    {
+        unmap_re_regions(re1_bptr, move(region_cont));
+    }
     // check read entries
     check(set< Read_Entry_CBPtr >({ re1_bptr, re2_bptr }));
     // catenate at the end of each step
