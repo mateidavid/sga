@@ -119,14 +119,14 @@ Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type
     {
         return;
     }
-    ASSERT(rc_bptr->get_r_start() <= rg.start() and rg.end() <= rc_bptr->get_r_end());
+    //ASSERT(rc_bptr->get_r_start() <= rg.start()); // and rg.end() <= rc_bptr->get_r_end());
     ASSERT(rc_bptr->ce_bptr()->is_unmappable());
     for (int dir = 0; dir < 2; ++dir)
     {
         Read_Chunk_BPtr next_rc_bptr;
         while (true)
         {
-            next_rc_bptr = re_bptr->chunk_cont().get_sibling(rc_bptr, true, dir).unconst();
+            next_rc_bptr = re_bptr->chunk_cont().get_sibling(rc_bptr, true, not dir).unconst();
             if (not next_rc_bptr or not next_rc_bptr->ce_bptr()->is_unmappable())
             {
                 break;
@@ -140,7 +140,7 @@ Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type
             // recompute rc
             rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg.start()).unconst();
             ASSERT(rc_bptr);
-            ASSERT(rc_bptr->get_r_start() <= rg.start() and rg.end() <= rc_bptr->get_r_end());
+            //ASSERT(rc_bptr->get_r_start() <= rg.start() and rg.end() <= rc_bptr->get_r_end());
             ASSERT(rc_bptr->ce_bptr()->is_unmappable());
         }
         if (next_rc_bptr)
@@ -149,7 +149,7 @@ Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type
             Size_Type separation_len = next_rc_bptr->get_r_len();
             while (separation_len <= _g.unmap_trigger_len())
             {
-                next_rc_bptr = re_bptr->chunk_cont().get_sibling(next_rc_bptr, true, dir).unconst();
+                next_rc_bptr = re_bptr->chunk_cont().get_sibling(next_rc_bptr, true, not dir).unconst();
                 if (not next_rc_bptr or next_rc_bptr->ce_bptr()->is_unmappable())
                 {
                     break;
