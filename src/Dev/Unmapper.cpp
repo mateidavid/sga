@@ -73,7 +73,7 @@ Unmapper::_unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg,
     LOG("Unmapper", debug) << ptree("_unmap_re_region")
         .put("re_bptr", re_bptr.to_int())
         .put("rg_start", rg.start())
-        .put("rg_start", rg.end());
+        .put("rg_end", rg.end());
     Size_Type r_start = max(rg.start(), re_bptr->start());
     Size_Type r_end = min(rg.end(), re_bptr->end());
     if (r_end <= r_start) return;
@@ -107,7 +107,7 @@ Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type
     LOG("Unmapper", debug) << ptree("_extend_unmappable_re_region")
         .put("re_bptr", re_bptr.to_int())
         .put("rg_start", rg.start())
-        .put("rg_start", rg.end());
+        .put("rg_end", rg.end());
     Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg.start()).unconst();
     ASSERT(rc_bptr or rg.end() <= re_bptr->start() or re_bptr->end() <= rg.start());
     if (not rc_bptr)
