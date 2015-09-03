@@ -313,31 +313,46 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
 {
     vector< tuple< Size_Type, Size_Type, Cigar > > rc_mapping;
 
-    /// match start in re1
-    Size_Type r1_start = cigar.rf_start();
-    /// match length in re1
-    Size_Type r1_len = cigar.rf_len();
-    static_cast< void >(r1_len);
-    /// match start in re2
-    Size_Type r2_start = cigar.qr_start();
-    /// match length in re2
-    Size_Type r2_len = cigar.qr_len();
-    /// is the match between re1 and re2 reverse-complemented
-    bool r2_rc = cigar.reversed();
+    auto r1_start = re1_bptr->start();
+    auto r1_end = re1_bptr->end();
+    auto r2_start = re2_bptr->start();
+    auto r2_end = re2_bptr->end();
+
     // we repeatedly cut the read entries of either read
     // until their chunks match in the way described by the cigar string
     // keep track of read chunk mapping, and cigar transformation between them
     bool done;
     while (true)
     {
+        if (r1_start != re1_bptr->start()
+            or r1_end != re1_bptr->end()
+            or r2_start != re2_bptr->start()
+            or r2_end != re2_bptr->end())
+        {
+            // apply trim if any occurred during unmapping operations
+            r1_start = re1_bptr->start();
+            r1_end = re1_bptr->end();
+            r2_start = re2_bptr->start();
+            r2_end = re2_bptr->end();
+            cigar.trim(r1_start, r1_end, r2_start, r2_end);
+            cigar.drop_terminal_indels();
+        }
+
+        Size_Type r1_match_start = cigar.rf_start();
+        Size_Type r1_match_len = cigar.rf_len();
+        static_cast< void >(r1_match_len);
+        Size_Type r2_match_start = cigar.qr_start();
+        Size_Type r2_match_len = cigar.qr_len();
+        bool r2_rc = cigar.reversed();
+
         // after every graph modification, restart at the beginning
         done = true;
         rc_mapping.clear();
 
-        /// re1 part matched so far: [r1_start, r1_pos)
-        Size_Type r1_pos = r1_start;
-        /// re2 part matched so far: [r2_start, r2_pos) or [r2_pos, r2_end) if rc
-        Size_Type r2_pos = (not r2_rc? r2_start : r2_start + r2_len);
+        /// re1 part matched so far: [r1_match_start, r1_pos)
+        Size_Type r1_pos = r1_match_start;
+        /// re2 part matched so far: [r2_match_start, r2_pos) or [r2_pos, r2_end) if rc
+        Size_Type r2_pos = (not r2_rc? r2_match_start : r2_match_start + r2_match_len);
         /// cigar ops matched so far: [0, op_start)
         size_t op_start = 0;
         while (op_start < cigar.n_ops())
@@ -349,12 +364,10 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
             /// re1 length left in rc1 after partial match
             Size_Type rc1_remaining_len = rc1_bptr->get_r_len() - rc1_offset;
             /// next chunk in re2
-            Read_Chunk_BPtr rc2_bptr = (not r2_rc?
-                                        re2_bptr->chunk_cont().get_chunk_with_pos(r2_pos).unconst()
-                                        : re2_bptr->chunk_cont().get_chunk_with_pos(r2_pos - 1).unconst());
+            Read_Chunk_BPtr rc2_bptr = re2_bptr->chunk_cont().get_chunk_with_pos(not r2_rc? r2_pos : r2_pos - 1).unconst();
             /// re2 position relative to rc2_r_start or rc2_r_end if rc
-            Size_Type rc2_offset = (not r2_rc?
-                                    r2_pos - rc2_bptr->get_r_start()
+            Size_Type rc2_offset = (not r2_rc
+                                    ? r2_pos - rc2_bptr->get_r_start()
                                     : rc2_bptr->get_r_end() - r2_pos);
             /// re2 length left in rc2 after partial match
             Size_Type rc2_remaining_len = rc2_bptr->get_r_len() - rc2_offset;
@@ -362,9 +375,9 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
             // invariant: we matched read 1 chunks before rc1
             // to read 2 chunks before/after rc2
             // using cigar ops before op_start
-            ASSERT(r1_pos < r1_start + r1_len);
-            ASSERT(r2_rc or r2_pos < r2_start + r2_len);
-            ASSERT(not r2_rc or r2_pos > r2_start);
+            ASSERT(r1_pos < r1_match_start + r1_match_len);
+            ASSERT(r2_rc or r2_pos < r2_match_start + r2_match_len);
+            ASSERT(not r2_rc or r2_pos > r2_match_start);
             ASSERT(rc1_offset == 0 or rc1_bptr->is_unbreakable());
             ASSERT(rc2_offset == 0 or rc2_bptr->is_unbreakable());
             ASSERT(rc1_bptr);
@@ -632,19 +645,27 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     Cigar cigar(cigar_string, r2_rc, r1_start, r2_start);
     ASSERT(r1_len == cigar.rf_len());
     ASSERT(r2_len == cigar.qr_len());
+    // fix cigar if read entries are trimmed
+    cigar.trim(re1_bptr->start(), re1_bptr->end(), re2_bptr->start(), re2_bptr->end());
+    r1_start = cigar.rf_start();
+    r1_len = cigar.rf_len();
+    r2_start = cigar.qr_start();
+    r2_len = cigar.qr_len();
+    auto r1_start_offset = r1_start - re1_bptr->start();
+    auto r2_start_offset = r2_start - re2_bptr->start();
     // disambiguate cigar
     Seq_Type r1_seq = re1_bptr->get_seq();
     Seq_Type r2_seq = re2_bptr->get_seq();
     LOG("graph", debug1) << ptree("add_overlap_before_disambiguate")
-        .put("re1", r1_seq.substr(r1_start, r1_len))
-        .put("re2", r2_seq.substr(r2_start, r2_len).revcomp(cigar.reversed()))
+        .put("re1", r1_seq.substr(r1_start_offset, r1_len))
+        .put("re2", r2_seq.substr(r2_start_offset, r2_len).revcomp(cigar.reversed()))
         .put("cigar", cigar.to_ptree());
-    cigar.disambiguate(r1_seq.substr(r1_start, r1_len), r2_seq.substr(r2_start, r2_len));
+    cigar.disambiguate(r1_seq.substr(r1_start_offset, r1_len),
+                       r2_seq.substr(r2_start_offset, r2_len));
     LOG("graph", debug1) << ptree("add_overlap_after_disambiguate").put("cigar", cigar.to_ptree());
-    // fix cigar if read entries are trimmed
-    cigar.trim(re1_bptr->start(), re1_bptr->end(), re2_bptr->start(), re2_bptr->end());
-    cigar.check(r1_seq.substr(cigar.rf_start(), cigar.rf_end() - cigar.rf_start()),
-                r2_seq.substr(cigar.qr_start(), cigar.qr_end() - cigar.qr_start()));
+    // check cigar
+    cigar.check(r1_seq.substr(r1_start_offset, r1_len),
+                r2_seq.substr(r2_start_offset, r2_len));
     // discard indels at either end of the cigar string
     cigar.drop_terminal_indels();
     if (cigar.rf_len() == 0)
