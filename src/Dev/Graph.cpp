@@ -5,6 +5,7 @@
 #include <cmath>
 #include <boost/range/adaptor/filtered.hpp>
 
+#include "Unmapper.hpp"
 #include "overlapper.h"
 #include "Anchor_Support.hpp"
 #include "zstr.hpp"
@@ -673,10 +674,13 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     }
     // find unmappable regions in the contigs recently merged
     auto region_cont = find_unmappable_regions(re1_bptr, cigar.rf_start(), cigar.rf_end());
+    /*
     for (const auto& rg : region_cont)
     {
         unmap_re_region(re1_bptr, rg);
     }
+    */
+    unmap_re_regions(re1_bptr, move(region_cont));
     // check read entries
     check(set< Read_Entry_CBPtr >({ re1_bptr, re2_bptr }));
     // catenate at the end of each step
@@ -819,6 +823,7 @@ void Graph::cat_all_read_contigs()
     }
 }
 
+/*
 Read_Chunk_BPtr Graph::trim_contig_to_chunk(Read_Chunk_BPtr rc_bptr)
 {
     // we save read entry and offset, and recompute chunk after graph modifications
@@ -874,6 +879,7 @@ Read_Chunk_BPtr Graph::trim_contig_to_chunk(Read_Chunk_BPtr rc_bptr)
     ASSERT(rc_bptr->get_c_start() == 0 and rc_bptr->get_c_end() == ce_bptr->len());
     return rc_bptr;
 }
+*/
 
 void Graph::trim_terminal_unmappable_chunk(Read_Chunk_BPtr rc_bptr)
 {
@@ -897,6 +903,14 @@ void Graph::trim_terminal_unmappable_chunk(Read_Chunk_BPtr rc_bptr)
     Contig_Entry_Fact::del_elem(ce_bptr);
 }
 
+void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
+{ Unmapper(*this).unmap_chunk(rc_bptr); }
+void Graph::unmap_re_regions(Unmapper::re_set_type&& unmap_re_set)
+{ Unmapper(*this).unmap_re_regions(move(unmap_re_set)); }
+void Graph::unmap_re_regions(Read_Entry_BPtr re_bptr, Range_Cont&& rg_cont)
+{ Unmapper(*this).unmap_re_regions(re_bptr, move(rg_cont)); }
+
+/*
 void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
 {
     rc_bptr = trim_contig_to_chunk(rc_bptr);
@@ -935,7 +949,9 @@ void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
     }
     check(re_set);
 } // unmap_chunk
+*/
 
+/*
 void Graph::unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& re_rg)
 {
     // region should be non-empty
@@ -979,7 +995,9 @@ void Graph::unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& re_rg)
         }
     }
 } // unmap_region
+*/
 
+/*
 void Graph::extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bool r_right)
 {
     LOG("graph", debug2) << ptree("extend_unmap_chunk_dir")
@@ -1099,6 +1117,7 @@ void Graph::extend_unmapped_chunk(Read_Entry_BPtr re_bptr, Size_Type rc_start, S
     extend_unmapped_chunk_dir(re_bptr, rc_start, false);
     extend_unmapped_chunk_dir(re_bptr, rc_end, true);
 }
+*/
 
 Range_Cont
 Graph::find_unmappable_regions(Read_Entry_CBPtr re_cbptr, Size_Type r_start, Size_Type r_end) const
@@ -2800,6 +2819,7 @@ void Graph::unmap_short_contigs(unsigned min_len, unsigned max_deg)
             if (oc_left.size() <= max_deg and oc_right.size() <= max_deg) continue;
             // unmap contig entry
             done = false;
+            /*
             vector< pair< Read_Entry_BPtr, Range_Type > > unmap_v;
             for (auto rc_bptr : ce_bptr->chunk_cont() | referenced)
             {
@@ -2809,6 +2829,13 @@ void Graph::unmap_short_contigs(unsigned min_len, unsigned max_deg)
             {
                 unmap_re_region(p.first, p.second);
             }
+            */
+            Unmapper::re_set_type unmap_re_set;
+            for (auto rc_bptr : ce_bptr->chunk_cont() | referenced)
+            {
+                unmap_re_set[rc_bptr->re_bptr()].insert(Range_Type(rc_bptr->get_r_start(), rc_bptr->get_r_end()));
+            }
+            unmap_re_regions(move(unmap_re_set));
             // restart loop
             break;
         }

@@ -271,7 +271,7 @@ private:
      * Trim contig entry to the extent of the given chunk.
      * Return the chunk, now spanning the entire contig.
      */
-    Read_Chunk_BPtr trim_contig_to_chunk(Read_Chunk_BPtr rc_bptr);
+    //Read_Chunk_BPtr trim_contig_to_chunk(Read_Chunk_BPtr rc_bptr);
 
     /**
      * Trim read by removing unmappable terminal chunk.
@@ -284,26 +284,28 @@ private:
      * by this chunk are also made unmappable.
      */
     void unmap_chunk(Read_Chunk_BPtr rc_bptr);
+    void unmap_re_regions(map< Read_Entry_BPtr, Range_Cont >&& unmap_re_set);
+    void unmap_re_regions(Read_Entry_BPtr re_bptr, Range_Cont&& rg_cont);
 
     /** Unmap read region.
      * The read is cut at region endpoints, and all chunks spanning the given regions
      * are made unmappable.
      */
-    void unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg);
+    //void unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg);
 
     /** Try to extend an unmappable read region in both directions.
      * @param re_bptr Read_Entry object.
      * @param rc_start Extend left of this position on read.
      * @param rc_end Extend right of this position on read.
      */
-    void extend_unmapped_chunk(Read_Entry_BPtr re_bptr, Size_Type rc_start, Size_Type rc_end);
+    //void extend_unmapped_chunk(Read_Entry_BPtr re_bptr, Size_Type rc_start, Size_Type rc_end);
 
     /** Extend an unmappable read region in the given direction.
      * @param re_bptr Read_Entry object.
      * @param pos Read position where to extend from.
      * @param r_right Bool; true: extend right on read; false: extend left on read.
      */
-    void extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bool r_right);
+    //void extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bool r_right);
 
     /** Attempt to catenate contig with neighbour in given direction.
      * @param ce_bptr Contig_Entry to consider.

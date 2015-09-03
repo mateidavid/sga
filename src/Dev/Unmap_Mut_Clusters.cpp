@@ -38,7 +38,8 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
                 .put("start", mut_cluster->start())
                 .put("end", mut_cluster->end());
             // save read entry positions to unmap in a vector
-            vector< tuple< Read_Entry_CBPtr, Range_Type > > unmap_re_pos_v;
+            //vector< tuple< Read_Entry_CBPtr, Range_Type > > unmap_re_pos_v;
+            map< Read_Entry_BPtr, Range_Cont > unmap_re_set;
             for (auto unmap_rc_cbptr : ce_bptr->chunk_cont().iintersect(mut_cluster->start(), mut_cluster->end()) | referenced)
             {
                 // skip 0-length endpoint intersections
@@ -61,12 +62,16 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
                     .put("re_ptr", unmap_rc_cbptr->re_bptr().to_int())
                     .put("start", r_rg.start())
                     .put("end", r_rg.end());
-                unmap_re_pos_v.emplace_back(unmap_rc_cbptr->re_bptr(), move(r_rg));
+                //unmap_re_pos_v.emplace_back(unmap_rc_cbptr->re_bptr(), move(r_rg));
+                unmap_re_set[unmap_rc_cbptr->re_bptr()].insert(r_rg);
             }
+            /*
             for (const auto& re_pos : unmap_re_pos_v)
             {
                 g.unmap_re_region(get<0>(re_pos).unconst(), get<1>(re_pos));
             }
+            */
+            g.unmap_re_regions(move(unmap_re_set));
         }
     }
     LOG("Unmap_Mut_Clusters", info) << ptree("unmap_mut_clusters__end");

@@ -34,6 +34,7 @@ public:
     DEFAULT_MOVE_ASOP(Range_Cont);
 
     USING_STD_CONT(Base)
+    using Base::erase;
 
     /** If the range overlaps or touches and existing range,
      * extend that range; else insert this one.
