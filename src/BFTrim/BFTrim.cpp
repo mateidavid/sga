@@ -12,7 +12,7 @@
 #include <time.h>
 #include <atomic>
 
-#include "version.h"
+#include "package_version.h"
 #include <tclap/CmdLine.h>
 
 #include "logger.hpp"

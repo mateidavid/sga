@@ -1,0 +1,100 @@
+#!/bin/bash
+trap 'echo "exit code $?: LINENO=$LINENO BASH_LINENO=\"${BASH_LINENO[@]}\" FUNCNAME=\"${FUNCNAME[@]}\"" >&2' ERR
+set -eEu -o pipefail
+prog_name=$(basename "$0")
+
+usage() {
+    cat <<EOF
+usage: $prog_name [-d <directory>] [-c <version_command>] [-f <version_file>] [-o <output_file>] [-t <define_tag>] [-q]
+
+Change directory to <directory>, and run <version_command> to describe its version.
+Failing that, if <version_file> exists, read version from that file. Failing that, the
+version will be "unknown". Write the version as a single CPP define rule, defining the
+symbol <define_tag>. Send the output to <output_file>. If <output_file> exists and
+already contains the correct definition, do not update it.
+
+The defaults are:
+<directory>: .
+<version_command>: git describe --always --dirty
+<version_file>: VERSION
+<output_file>: stdout
+<define_tag>: VERSION
+
+Other options:
+ -v : verbose messages
+ -h : this help
+EOF
+
+}
+
+dir=
+version_command="git describe --always --dirty"
+version_file="VERSION"
+output_file=
+define_tag="VERSION"
+verbose=
+
+OPTIND=1
+while getopts "d:c:f:o:t:vh" OPT "$@"; do
+    case $OPT in
+        d)
+            dir=$OPTARG
+            ;;
+        c)
+            version_command=$OPTARG
+            ;;
+        f)
+            version_file=$OPTARG
+            ;;
+        o)
+            output_file=$OPTARG
+            ;;
+        t)
+            define_tag=$OPTARG
+            ;;
+        v)
+            verbose=1
+            ;;
+        h)
+            usage
+            exit 0
+            ;;
+        *)
+            usage >&2
+            exit 1
+            ;;
+    esac
+done
+shift $(($OPTIND - 1))
+
+if [ "$verbose" ]; then
+    exec {fd}>&2
+else
+    exec {fd}>/dev/null
+fi
+
+! [ "$dir" ] || cd "$dir"
+version=$(
+    (eval "$version_command" 2>/dev/null && echo "got version from: $version_command" >&$fd) ||
+    (cat "$version_file" 2>/dev/null && echo "got version from file: $version_file" >&$fd) ||
+    (echo "unknown" && echo "did not find version" >&$fd))
+echo "found version=$version" >&$fd
+
+if [ -r "$output_file" ]; then
+    existing_version=$(awk -v tag="$define_tag" '$1=="#define"&&$2==tag {print $3}' <"$output_file" |
+        sed 's/^"//;s/"$//')
+    if [ "$existing_version" ]; then
+        echo "found existing_version=$existing_version" >&$fd
+        if [ "$version" = "$existing_version" ]; then
+            echo "version up to date" >&$fd
+            exit 0
+        fi
+    fi
+fi
+
+echo "#define ${define_tag} \"$version\"" |
+if [ "$output_file" ]; then
+    cat >"$output_file"
+else
+    cat
+fi

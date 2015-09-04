@@ -6,7 +6,7 @@
 #include <list>
 #include <tclap/CmdLine.h>
 
-#include "version.h"
+#include "package_version.h"
 #include "zstr.hpp"
 #include "Graph.hpp"
 #include "Hap_Map.hpp"
