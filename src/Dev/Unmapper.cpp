@@ -73,7 +73,7 @@ Unmapper::_unmap_ce(Contig_Entry_BPtr ce_bptr, re_set_type& extend_re_set)
 
 void
 Unmapper::_unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg,
-                           ce_set_type& unmap_ce_set, re_set_type& unmap_re_set)
+                           ce_set_type& unmap_ce_set, re_set_type&)
 {
     LOG("Unmapper", debug) << ptree("_unmap_re_region")
         .put("re_bptr", re_bptr.to_int())
@@ -93,13 +93,6 @@ Unmapper::_unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg,
         if (not rc_bptr->ce_bptr()->is_unmappable())
         {
             unmap_ce_set.insert(rc_bptr->ce_bptr());
-            if (rc_bptr->get_r_end() < r_end)
-            {
-                // there is a leftover range to unmap beyond this chunk
-                Range_Type rg(rc_bptr->get_r_end(), r_end);
-                unmap_re_set[re_bptr].insert(rg);
-            }
-            return;
         }
         r_start = rc_bptr->get_r_end();
     }
