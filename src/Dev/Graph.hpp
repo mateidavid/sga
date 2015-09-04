@@ -30,7 +30,7 @@ class Graph
 {
 public:
     /** Default constructor. */
-    Graph() : _unmap_trigger_len(9), _aux_coverage(-1), _cat_at_step(false) {}
+    Graph() : _unmap_trigger_len(9), _aux_coverage(-1), _cat_at_step(false), _trim_during_unmapping(false) {}
 
     // disallow copy or move
     DELETE_COPY_CTOR(Graph);
@@ -54,6 +54,7 @@ public:
     const Size_Type& unmap_trigger_len() const { return _unmap_trigger_len; }
     Size_Type& unmap_trigger_len() { return _unmap_trigger_len; }
     GETTER(bool, cat_at_step, _cat_at_step)
+    GETTER(bool, trim_during_unmapping, _trim_during_unmapping)
     GETTER(BWTIndexSet, index_set, _index_set)
     GETTER(BWTIndexSet, aux_index_set, _aux_index_set)
     int get_aux_coverage() const { return _aux_coverage; }
@@ -364,6 +365,7 @@ private:
     Size_Type _unmap_trigger_len;
     int _aux_coverage;
     bool _cat_at_step;
+    bool _trim_during_unmapping;
 
     BWTIndexSet _index_set;
     BWTIndexSet _aux_index_set;

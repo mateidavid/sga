@@ -112,7 +112,6 @@ Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type
     {
         return;
     }
-    //ASSERT(rc_bptr->get_r_start() <= rg.start()); // and rg.end() <= rc_bptr->get_r_end());
     ASSERT(rc_bptr->ce_bptr()->is_unmappable());
     for (int dir = 0; dir < 2; ++dir)
     {
@@ -133,7 +132,6 @@ Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type
             // recompute rc
             rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg.start()).unconst();
             ASSERT(rc_bptr);
-            //ASSERT(rc_bptr->get_r_start() <= rg.start() and rg.end() <= rc_bptr->get_r_end());
             ASSERT(rc_bptr->ce_bptr()->is_unmappable());
         }
         if (next_rc_bptr)
@@ -161,15 +159,16 @@ Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type
 
     // check if run of unmappable regions extended to the end of the read
     // in this case, trim the read
-    /*
-    ASSERT(rc_bptr);
-    ASSERT(rc_bptr->ce_bptr()->is_unmappable());
-    if (rc_bptr->get_r_end() == re_bptr->end()
-        or rc_bptr->get_r_start() == re_bptr->start())
+    if (_g.trim_during_unmapping())
     {
-        _g.trim_terminal_unmappable_chunk(rc_bptr);
+        ASSERT(rc_bptr);
+        ASSERT(rc_bptr->ce_bptr()->is_unmappable());
+        if (rc_bptr->get_r_end() == re_bptr->end()
+            or rc_bptr->get_r_start() == re_bptr->start())
+        {
+            _g.trim_terminal_unmappable_chunk(rc_bptr);
+        }
     }
-    */
     _g.check({re_bptr});
 } // Unmapper::_extend_unmappable_re_region
 
