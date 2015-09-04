@@ -6,7 +6,7 @@
 #include <list>
 #include <tclap/CmdLine.h>
 
-#include "package_version.h"
+#include "version.hpp"
 #include "zstr.hpp"
 #include "Graph.hpp"
 #include "Hap_Map.hpp"
@@ -30,7 +30,7 @@ namespace opts
     using namespace TCLAP;
     string prog_desc =
         "Multi-Allelic Contig assembler";
-    CmdLine cmd_parser(prog_desc, ' ', PACKAGE_VERSION);
+    CmdLine cmd_parser(prog_desc, ' ', package_version);
     //
     // generic
     //

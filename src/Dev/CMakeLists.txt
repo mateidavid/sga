@@ -28,12 +28,12 @@ add_library(mac STATIC
 # workaround library&executable having the same name
 add_executable(mac-bin mac.cpp)
 set_target_properties(mac-bin PROPERTIES OUTPUT_NAME mac)
-add_dependencies(mac-bin version)
 target_link_libraries(mac-bin
     mac
     suffixtools
     util
     thirdparty
+    version
     ${ZLIB_LIBRARIES}
     )
 

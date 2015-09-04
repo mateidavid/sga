@@ -12,7 +12,7 @@
 #include <time.h>
 #include <atomic>
 
-#include "package_version.h"
+#include "version.hpp"
 #include <tclap/CmdLine.h>
 
 #include "logger.hpp"
@@ -43,7 +43,7 @@ namespace global
         "Either -q or -s must be used. "
         "-l and -s cannot be used together.";
 
-    TCLAP::CmdLine cmd_parser(description, ' ', PACKAGE_VERSION);
+    TCLAP::CmdLine cmd_parser(description, ' ', package_version);
     //
     // general parameters
     //
