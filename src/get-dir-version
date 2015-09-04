@@ -5,26 +5,25 @@ prog_name=$(basename "$0")
 
 usage() {
     cat <<EOF
-usage: $prog_name [-d <directory>] [-c <version_command>] [-f <version_file>] [-o <output_file>] [-t <define_tag>] [-q]
+usage: $prog_name [-hv] [-d <dir>] [-c <ver_cmd>] [-f <ver_file>] [-o <out_file>] [-t <tag>]
 
-Change directory to <directory>, and run <version_command> to describe its version.
-Failing that, if <version_file> exists, read version from that file. Failing that, the
-version will be "unknown". Write the version as a single CPP define rule, defining the
-symbol <define_tag>. Send the output to <output_file>. If <output_file> exists and
+Change directory to <dir>, and run <ver_cmd> to describe its version. Failing
+that, if <ver_file> exists, read version from that file. Failing that, set
+version to "unknown". Write the version as a single CPP define rule, defining
+the symbol <tag>. Send the output to <out_file>. If <out_file> exists and
 already contains the correct definition, do not update it.
 
 The defaults are:
-<directory>: .
-<version_command>: git describe --always --dirty
-<version_file>: VERSION
-<output_file>: stdout
-<define_tag>: VERSION
+<dir>: .
+<ver_cmd>: git describe --always --dirty
+<ver_file>: VERSION
+<out_file>: stdout
+<tag>: VERSION
 
 Other options:
  -v : verbose messages
  -h : this help
 EOF
-
 }
 
 dir=
