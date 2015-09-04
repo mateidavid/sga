@@ -161,6 +161,7 @@ Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type
 
     // check if run of unmappable regions extended to the end of the read
     // in this case, trim the read
+    /*
     ASSERT(rc_bptr);
     ASSERT(rc_bptr->ce_bptr()->is_unmappable());
     if (rc_bptr->get_r_end() == re_bptr->end()
@@ -168,6 +169,7 @@ Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type
     {
         _g.trim_terminal_unmappable_chunk(rc_bptr);
     }
+    */
     _g.check({re_bptr});
 } // Unmapper::_extend_unmappable_re_region
 

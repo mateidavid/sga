@@ -313,10 +313,12 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
 {
     vector< tuple< Size_Type, Size_Type, Cigar > > rc_mapping;
 
+    /*
     auto r1_start = re1_bptr->start();
     auto r1_end = re1_bptr->end();
     auto r2_start = re2_bptr->start();
     auto r2_end = re2_bptr->end();
+    */
 
     // we repeatedly cut the read entries of either read
     // until their chunks match in the way described by the cigar string
@@ -324,6 +326,7 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
     bool done;
     while (true)
     {
+        /*
         if (r1_start != re1_bptr->start()
             or r1_end != re1_bptr->end()
             or r2_start != re2_bptr->start()
@@ -337,6 +340,7 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
             cigar.trim(r1_start, r1_end, r2_start, r2_end);
             cigar.drop_terminal_indels();
         }
+        */
 
         Size_Type r1_match_start = cigar.rf_start();
         Size_Type r1_match_len = cigar.rf_len();
