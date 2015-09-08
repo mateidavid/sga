@@ -59,11 +59,12 @@ namespace opts
     SwitchArg cat_at_step("s", "cat-at-step", "Catenate contigs after each operation.", cmd_parser, false);
     SwitchArg print_at_step("", "print-at-step", "Print graph after each operation.", cmd_parser, false);
     SwitchArg check_at_step("", "check-at-step", "Check graph after each operation.", cmd_parser, false);
-    SwitchArg trim_during_unmapping("", "trim-during-unmapping", "Trim during unmapping.", cmd_parser, false);
+    SwitchArg trim_tuc_step("", "trim-tuc-step", "Trim terminal unmappable chunks during unmapping.", cmd_parser, false);
     //
     // post-loading
     //
     SwitchArg cat_at_end("", "cat-at-end", "Catenate contigs after loading graph.", cmd_parser, false);
+    SwitchArg trim_tuc_end("", "trim-tuc-end", "Trim terminal unmappable chunks at the end.", cmd_parser, false);
     SwitchArg print_at_end("", "print-at-end", "Print graph after loading graph.", cmd_parser, false);
     SwitchArg unmap_read_ends("", "unmap-read-ends", "Unmap read ends.", cmd_parser, false);
     SwitchArg resolve_unmappable_regions("", "resolve-unmappable-regions", "Resolve unmappable regions.", cmd_parser, false);
@@ -194,7 +195,7 @@ int real_main()
         zstr::ifstream tmp_fs(opts::input_file);
         g.unmap_trigger_len() = opts::unmap_trigger_len;
         g.cat_at_step() = opts::cat_at_step;
-        g.trim_during_unmapping() = opts::trim_during_unmapping;
+        g.trim_tuc_step() = opts::trim_tuc_step;
         load_asqg(tmp_fs, g);
     }
     else
@@ -211,6 +212,11 @@ int real_main()
         g.cat_all_read_contigs();
         g.check_all();
         LOG("mac", info) << ptree("cat_at_end_end");
+    }
+    if (opts::trim_tuc_end)
+    {
+        g.trim_tucs();
+        g.check_all();
     }
     if (not opts::bwt_prefix.get().empty())
     {

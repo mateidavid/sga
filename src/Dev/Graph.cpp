@@ -324,7 +324,7 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
     bool done;
     while (true)
     {
-        if (trim_during_unmapping()
+        if (trim_tuc_step()
             and (r1_start != re1_bptr->start()
                  or r1_end != re1_bptr->end()
                  or r2_start != re2_bptr->start()
@@ -360,12 +360,14 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
         {
             /// next chunk in re1
             Read_Chunk_BPtr rc1_bptr = re1_bptr->chunk_cont().get_chunk_with_pos(r1_pos).unconst();
+            ASSERT(rc1_bptr);
             /// re1 position relative to rc1_r_start
             Size_Type rc1_offset = r1_pos - rc1_bptr->get_r_start();
             /// re1 length left in rc1 after partial match
             Size_Type rc1_remaining_len = rc1_bptr->get_r_len() - rc1_offset;
             /// next chunk in re2
             Read_Chunk_BPtr rc2_bptr = re2_bptr->chunk_cont().get_chunk_with_pos(not r2_rc? r2_pos : r2_pos - 1).unconst();
+            ASSERT(rc2_bptr);
             /// re2 position relative to rc2_r_start or rc2_r_end if rc
             Size_Type rc2_offset = (not r2_rc
                                     ? r2_pos - rc2_bptr->get_r_start()
@@ -906,7 +908,7 @@ Read_Chunk_BPtr Graph::trim_contig_to_chunk(Read_Chunk_BPtr rc_bptr)
 }
 */
 
-void Graph::trim_terminal_unmappable_chunk(Read_Chunk_BPtr rc_bptr)
+void Graph::trim_tuc(Read_Chunk_BPtr rc_bptr)
 {
     ASSERT(rc_bptr);
     Read_Entry_BPtr re_bptr = rc_bptr->re_bptr();
@@ -926,6 +928,27 @@ void Graph::trim_terminal_unmappable_chunk(Read_Chunk_BPtr rc_bptr)
     // erase ce
     ce_cont().erase(ce_bptr);
     Contig_Entry_Fact::del_elem(ce_bptr);
+}
+
+void Graph::trim_tucs()
+{
+    LOG("Graph", info) << ptree("trim_tucs").put("msg", "begin");
+    for (auto re_bptr : re_cont() | referenced)
+    {
+        if (re_bptr->len() == 0) continue;
+        ASSERT(not re_bptr->chunk_cont().empty());
+        for (int dir = 0; dir < 2; ++dir)
+        {
+            auto rc_bptr = (dir == 0
+                            ? &*re_bptr->chunk_cont().begin()
+                            : &*re_bptr->chunk_cont().rbegin());
+            if (rc_bptr->ce_bptr()->is_unmappable())
+            {
+                trim_tuc(rc_bptr);
+            }
+        }
+    }
+    LOG("Graph", info) << ptree("trim_tucs").put("msg", "end");
 }
 
 void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)

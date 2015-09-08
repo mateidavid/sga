@@ -30,7 +30,7 @@ class Graph
 {
 public:
     /** Default constructor. */
-    Graph() : _unmap_trigger_len(9), _aux_coverage(-1), _cat_at_step(false), _trim_during_unmapping(false) {}
+    Graph() : _unmap_trigger_len(9), _aux_coverage(-1), _cat_at_step(false), _trim_tuc_step(false) {}
 
     // disallow copy or move
     DELETE_COPY_CTOR(Graph);
@@ -54,7 +54,7 @@ public:
     const Size_Type& unmap_trigger_len() const { return _unmap_trigger_len; }
     Size_Type& unmap_trigger_len() { return _unmap_trigger_len; }
     GETTER(bool, cat_at_step, _cat_at_step)
-    GETTER(bool, trim_during_unmapping, _trim_during_unmapping)
+    GETTER(bool, trim_tuc_step, _trim_tuc_step)
     GETTER(BWTIndexSet, index_set, _index_set)
     GETTER(BWTIndexSet, aux_index_set, _aux_index_set)
     int get_aux_coverage() const { return _aux_coverage; }
@@ -87,6 +87,9 @@ public:
 
     /** Merge all contigs. */
     void cat_all_read_contigs();
+
+    /** Trim terminal unmappable chunks. */
+    void trim_tucs();
 
     /** Get reads beyond which coverage drops (that is, supercontigs end with out-degree zero).
      * For each such read, we print the strand with which the coverage ends.
@@ -275,9 +278,9 @@ private:
     //Read_Chunk_BPtr trim_contig_to_chunk(Read_Chunk_BPtr rc_bptr);
 
     /**
-     * Trim read by removing unmappable terminal chunk.
+     * Trim terminal unmappable chunk.
      */
-    void trim_terminal_unmappable_chunk(Read_Chunk_BPtr rc_bptr);
+    void trim_tuc(Read_Chunk_BPtr rc_bptr);
 
     /** Make chunk unmappable.
      * The contig containing the chunk is first trimmed to the extent of the chunk.
@@ -365,7 +368,7 @@ private:
     Size_Type _unmap_trigger_len;
     int _aux_coverage;
     bool _cat_at_step;
-    bool _trim_during_unmapping;
+    bool _trim_tuc_step;
 
     BWTIndexSet _index_set;
     BWTIndexSet _aux_index_set;
