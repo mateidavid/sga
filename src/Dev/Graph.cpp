@@ -650,6 +650,10 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     ASSERT(r2_len == cigar.qr_len());
     // fix cigar if read entries are trimmed
     cigar.trim(re1_bptr->start(), re1_bptr->end(), re2_bptr->start(), re2_bptr->end());
+    if (cigar.rf_len() == 0 or cigar.qr_len()== 0)
+    {
+        return;
+    }
     r1_start = cigar.rf_start();
     r1_len = cigar.rf_len();
     r2_start = cigar.qr_start();
