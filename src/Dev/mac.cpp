@@ -59,6 +59,7 @@ namespace opts
     SwitchArg cat_at_step("s", "cat-at-step", "Catenate contigs after each operation.", cmd_parser, false);
     SwitchArg print_at_step("", "print-at-step", "Print graph after each operation.", cmd_parser, false);
     SwitchArg check_at_step("", "check-at-step", "Check graph after each operation.", cmd_parser, false);
+    SwitchArg trim_during_unmapping("", "trim-during-unmapping", "Trim during unmapping.", cmd_parser, false);
     //
     // post-loading
     //
@@ -193,6 +194,7 @@ int real_main()
         zstr::ifstream tmp_fs(opts::input_file);
         g.unmap_trigger_len() = opts::unmap_trigger_len;
         g.cat_at_step() = opts::cat_at_step;
+        g.trim_during_unmapping() = opts::trim_during_unmapping;
         load_asqg(tmp_fs, g);
     }
     else
