@@ -132,16 +132,23 @@ public:
     {
         ASSERT(not empty());
         ASSERT(begin()->re_bptr());
-        if (r_pos >= begin()->get_read_len())
-        {
-            return nullptr;
-        }
         auto cit = Base::lower_bound(r_pos, Base::value_compare());
         if (cit == end() or cit->get_r_start() != r_pos)
         {
-            ASSERT(cit != begin());
+            ASSERT(cit == end() or r_pos < cit->get_r_start());
+            if (cit == begin())
+            {
+                return nullptr;
+            }
             --cit;
+            if (cit->get_r_len() > 0 and cit->get_r_end() <= r_pos)
+            {
+                return nullptr;
+            }
         }
+        ASSERT(cit->get_r_start() <= r_pos);
+        ASSERT(cit->get_r_len() == 0 or r_pos < cit->get_r_end());
+        ASSERT(cit->get_r_len() > 0 or r_pos == cit->get_r_end());
         return &*cit;
     }
 
