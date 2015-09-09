@@ -231,7 +231,7 @@ public:
         ASSERT(rf_seq.size() == rf_len());
         ASSERT(qr_seq.size() == qr_len());
 
-        LOG("cigar", debug) << ptree("disambiguate_start")
+        LOG("cigar", debug) << ptree("begin")
             .put("cigar", this->to_ptree())
             .put("rf_seq", rf_seq)
             //.put("qr_seq", (same_st()? qr_seq : reverseComplement(qr_seq)));
@@ -274,7 +274,7 @@ public:
                 i += v.size() - 1;
             }
         }
-        LOG("cigar", debug) << ptree("disambiguate_end")
+        LOG("cigar", debug) << ptree("end")
             .put("cigar", this->to_ptree());
     } // Cigar::disambiguate
 

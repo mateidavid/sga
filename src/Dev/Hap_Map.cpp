@@ -20,7 +20,7 @@ Hap_Hop_BPtr Hap_Map::make_single_hop_hap(const Allele_Anchor& anchor, const All
 map< Allele_Specifier, set< Hap_Hop_CBPtr > >
 Hap_Map::make_anchor_haps(const Allele_Anchor& anchor)
 {
-    LOG("hap_map", debug) << ptree("make_anchor_haps").put("anchor", anchor);
+    LOG("hap_map", debug) << ptree("begin").put("anchor", anchor);
     map< Allele_Specifier, set< Hap_Hop_CBPtr > > res;
     auto anchor_support = get_anchor_chunk_support(anchor);
     for (const auto& allele : anchor_support | ba::map_keys)
@@ -306,7 +306,7 @@ map< Allele_Specifier, set< Hap_Hop_CBPtr > > Hap_Map::extend_endpoint_haps(cons
 
 void Hap_Map::build(const Graph& g)
 {
-    LOG("hap_map", info) << ptree("build_start");
+    LOG("hap_map", info) << ptree("begin");
     for (auto ce_cbptr : g.ce_cont() | referenced)
     {
         if (not ce_cbptr->is_normal()) continue;
@@ -358,7 +358,7 @@ void Hap_Map::build(const Graph& g)
         hh_set().check();
     }
 */
-    LOG("hap_map", info) << ptree("build_end");
+    LOG("hap_map", info) << ptree("end");
 } // Hap_Map::build
 
 /*

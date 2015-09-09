@@ -80,7 +80,7 @@ Read_Chunk_CBPtr Graph::search_read_chunk_exact(
 
 void Graph::add_read(string&& name, Seq_Type&& seq)
 {
-    LOG("graph", debug) << ptree("add_read").put("name", name);
+    LOG("graph", debug) << ptree("begin").put("name", name);
     // create RE & CE
     Read_Entry_BPtr re_bptr = Read_Entry_Fact::new_elem(move(name), seq.size());
     Contig_Entry_BPtr ce_bptr = Contig_Entry_Fact::new_elem(move(seq));
@@ -108,7 +108,7 @@ bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutatio
 
 bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
 {
-    LOG("graph", debug1) << ptree("cut_read_chunk")
+    LOG("graph", debug1) << ptree("begin")
         .put("rc_ptr", rc_bptr.to_ptree())
         .put("r_brk", r_brk);
 
@@ -199,7 +199,7 @@ bool Graph::cut_read_chunk(Read_Chunk_BPtr rc_bptr, Size_Type r_brk)
 
 bool Graph::cut_read_entry(Read_Entry_BPtr re_bptr, Size_Type r_brk)
 {
-    LOG("graph", debug1) << ptree("cut_read_entry")
+    LOG("graph", debug1) << ptree("begin")
         .put("re_ptr", re_bptr.to_ptree())
         .put("r_brk", r_brk);
 
@@ -235,7 +235,7 @@ void Graph::merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPt
         return;
     }
 
-    LOG("graph", debug1) << ptree("merge_chunk_contigs")
+    LOG("graph", debug1) << ptree("begin")
         .put("c1rc1_chunk_ptr", c1rc1_chunk_bptr.to_int())
         .put("c1", (*c1_ce_bptr).to_ptree())
         .put("c2rc2_chunk_ptr", c2rc2_chunk_bptr.to_int())
@@ -619,7 +619,7 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
                         Size_Type r2_start, Size_Type r2_len, bool r2_rc,
                         const string& cigar_string)
 {
-    LOG("graph", debug) << ptree("add_overlap_start")
+    LOG("graph", debug) << ptree("begin")
         .put("r1_name", r1_name)
         .put("r2_name", r2_name)
         .put("r1_start", r1_start)
@@ -663,13 +663,13 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
     // disambiguate cigar
     Seq_Type r1_seq = re1_bptr->get_seq();
     Seq_Type r2_seq = re2_bptr->get_seq();
-    LOG("graph", debug1) << ptree("add_overlap_before_disambiguate")
+    LOG("graph", debug1) << ptree("before_disambiguate")
         .put("re1", r1_seq.substr(r1_start_offset, r1_len))
         .put("re2", r2_seq.substr(r2_start_offset, r2_len).revcomp(cigar.reversed()))
         .put("cigar", cigar.to_ptree());
     cigar.disambiguate(r1_seq.substr(r1_start_offset, r1_len),
                        r2_seq.substr(r2_start_offset, r2_len));
-    LOG("graph", debug1) << ptree("add_overlap_after_disambiguate").put("cigar", cigar.to_ptree());
+    LOG("graph", debug1) << ptree("after_disambiguate").put("cigar", cigar.to_ptree());
     // check cigar
     cigar.check(r1_seq.substr(r1_start_offset, r1_len),
                 r2_seq.substr(r2_start_offset, r2_len));
@@ -724,7 +724,7 @@ void Graph::add_overlap(const string& r1_name, const string& r2_name,
 
 bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
 {
-    LOG("graph", debug1) << ptree("cat_contigs")
+    LOG("graph", debug1) << ptree("begin")
         .put("ce_ptr", ce_bptr.to_int())
         .put("c_right", c_right)
         .put("ce_ptr->category", ce_bptr->category());
@@ -766,7 +766,7 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
     {
         return false;
     }
-    LOG("graph", debug1) << ptree("cat_contigs")
+    LOG("graph", debug1) << ptree("mid")
         .put("ce_next_ptr", ce_next_bptr.to_int())
         .put("same_orientation", same_orientation)
         .put("ce_next_ptr->category", ce_next_bptr->category());
@@ -798,7 +798,7 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
     // - ce_bptr is the start of the merge and ce_next_bptr is the tail
     // - rc_cbptr_cont contains chunks from ce_bptr that go into ce_next_bptr
 
-    LOG("graph", debug1) << ptree("cat_contigs_merge")
+    LOG("graph", debug1) << ptree("merge")
         .put("ce_ptr", ce_bptr.to_int())
         .put("ce_next_ptr", ce_next_bptr.to_int());
 
@@ -811,7 +811,7 @@ bool Graph::cat_contigs(Contig_Entry_BPtr ce_bptr, bool c_right)
 
 void Graph::cat_read_contigs(Read_Entry_BPtr re_bptr)
 {
-    LOG("graph", debug1) << ptree("cat_read_contigs").put("re", re_bptr.to_int());
+    LOG("graph", debug1) << ptree("begin").put("re", re_bptr.to_int());
 
     bool done = false;
     while (not done)
@@ -847,11 +847,12 @@ void Graph::cat_read_contigs(Read_Entry_BPtr re_bptr)
 
 void Graph::cat_all_read_contigs()
 {
-    LOG("graph", info) << ptree("cat_all_read_contigs");
+    LOG("graph", info) << ptree("begin");
     for (auto re_bptr : re_cont() | referenced)
     {
         cat_read_contigs(re_bptr);
     }
+    LOG("graph", info) << ptree("end");
 }
 
 /*
@@ -936,7 +937,7 @@ void Graph::trim_tuc(Read_Chunk_BPtr rc_bptr)
 
 void Graph::trim_tucs()
 {
-    LOG("Graph", info) << ptree("trim_tucs").put("msg", "begin");
+    LOG("Graph", info) << ptree("begin");
     for (auto re_bptr : re_cont() | referenced)
     {
         if (re_bptr->len() == 0) continue;
@@ -952,7 +953,7 @@ void Graph::trim_tucs()
             }
         }
     }
-    LOG("Graph", info) << ptree("trim_tucs").put("msg", "end");
+    LOG("Graph", info) << ptree("end");
 }
 
 void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
@@ -1270,7 +1271,7 @@ Graph::find_unmappable_regions(Read_Chunk_CBPtr orig_rc_cbptr, Range_Cont& regio
 
 void Graph::unmap_single_chunks()
 {
-    LOG("graph", info) << ptree("unmap_single_chunks");
+    LOG("graph", info) << ptree("begin");
     for (auto re_bptr : _re_cont | referenced)
     {
         bool done = false;
@@ -1295,16 +1296,18 @@ void Graph::unmap_single_chunks()
             }
         }
     }
+    LOG("graph", info) << ptree("end");
 }
 
 void Graph::unmap_read_ends()
 {
-    LOG("graph", info) << ptree("unmap_read_ends");
+    LOG("graph", info) << ptree("begin");
     for (auto re_bptr : re_cont() | referenced)
     {
         unmap_single_terminal_chunk(&*re_bptr->chunk_cont().begin(), true);
         unmap_single_terminal_chunk(&*re_bptr->chunk_cont().rbegin(), false);
     }
+    LOG("graph", info) << ptree("end");
 }
 
 void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
@@ -1544,7 +1547,7 @@ void Graph::resolve_unmappable_fully_mapped(
     vector< Seq_Type > seq_v;
     for (const auto& t : seq_cnt_map)
     {
-        LOG("graph", debug1) << ptree("resolve_unmappable_fully_mapped")
+        LOG("graph", debug1) << ptree("begin")
             .put("rseq", t.first);
         seq_v.emplace_back(t.first);
     }
@@ -1683,7 +1686,7 @@ void Graph::resolve_unmappable_inner_region(
     Contig_Entry_CBPtr ce_cbptr, bool c_right,
     Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation)
 {
-    LOG("graph", debug) << ptree("resolve_unmappable_inner_region")
+    LOG("graph", debug) << ptree("begin")
         .put("ce_ptr", ce_cbptr.to_int())
         .put("c_right", c_right)
         .put("ce_next_ptr", ce_next_cbptr.to_int())
@@ -1819,7 +1822,7 @@ void Graph::resolve_unmappable_partially_mapped(
 
 void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool c_right)
 {
-    LOG("graph", debug) << ptree("resolve_unmappable_terminal_region")
+    LOG("graph", debug) << ptree("begin")
         .put("ce_ptr", ce_cbptr.to_int())
         .put("c_right", c_right);
 
@@ -1843,7 +1846,7 @@ void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool
         ce_next_v.push_back(t.first);
         //ce_next_seq_v.push_back(same_orientation? ce_next_cbptr->seq() : reverseComplement(ce_next_cbptr->seq()));
         ce_next_seq_v.push_back(string(ce_next_cbptr->seq().revcomp(not same_orientation)));
-        LOG("graph", debug1) << ptree("resolve_unmappable_terminal_region")
+        LOG("graph", debug1) << ptree("bseq")
             .put("bseq", ce_next_seq_v.back());
     }
     if (ce_next_v.empty())
@@ -1865,7 +1868,7 @@ void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool
                 rc_unmap_bptr->get_seq().revcomp(rc_last_cbptr->get_rc()),
                 not c_right));
         rc_unmap_v.push_back(make_tuple(rc_unmap_bptr, rc_last_cbptr->get_rc(), t.first));
-        LOG("graph", debug1) << ptree("resolve_unmappable_terminal_region")
+        LOG("graph", debug1) << ptree("rseq")
             .put("rseq", get<0>(*get<2>(rc_unmap_v.back())));
     }
     map< tuple< string, bool >, tuple< size_t, string > > seq_bseq_map;
@@ -1879,7 +1882,7 @@ void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool
         const auto& t = *set_cit;
         if (seq_bseq_map.count(t) == 0)
         {
-            LOG("graph", debug) << ptree("resolve_unmappable_terminal_region")
+            LOG("graph", debug) << ptree("drop")
                 .put("dropping_rseq", get<0>(t));
             //Read_Chunk_BPtr rc_bptr = rc_cbptr.unconst();
             //rc_bptr->ce_bptr()->set_ignored(); //TODO
@@ -1898,7 +1901,7 @@ void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool
         {
             cigar.rf_start() += (ce_cbptr->len() - cigar.rf_len());
         }
-        LOG("graph", debug1) << ptree("resolve_unmappable_terminal_region_new_mapping")
+        LOG("graph", debug1) << ptree("new_mapping")
             .put("rseq", get<0>(t))
             .put("bseq", ce_next_seq_v[bseq_idx])
             .put("cigar", cigar_string);
@@ -1923,8 +1926,7 @@ void Graph::resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool
 
 void Graph::resolve_unmappable_regions()
 {
-    LOG("graph", info) << ptree("resolve_unmappable_regions");
-
+    LOG("graph", info) << ptree("begin");
     // step 1: find reads with unmappable contigs in between mappable ones
     for (auto re_bptr : re_cont() | referenced)
     {
@@ -1985,6 +1987,7 @@ void Graph::resolve_unmappable_regions()
     // step 3: cat all read contigs
     cat_all_read_contigs();
     check_all();
+    LOG("graph", info) << ptree("end");
 }
 
 void Graph::clear_and_dispose()
@@ -1996,7 +1999,7 @@ void Graph::clear_and_dispose()
 void Graph::check_all() const
 {
 #ifndef DISABLE_ASSERTS
-    LOG("graph", info) << ptree("check_all");
+    LOG("graph", info) << ptree("begin");
     size_t chunks_count_1 = 0;
     size_t chunks_count_2 = 0;
     // check read entry objects
@@ -2012,6 +2015,7 @@ void Graph::check_all() const
         chunks_count_2 += ce_cbptr->chunk_cont().size();
     }
     ASSERT(chunks_count_1 == chunks_count_2);
+    LOG("graph", info) << ptree("end");
 #endif
 }
 
@@ -2208,7 +2212,7 @@ Graph::supercontig_list Graph::get_supercontigs(int unmappable_policy, size_t ig
                 if (next_ce_cbptr == ce_cbptr)
                 {
                     // supercontig is a cycle!
-                    LOG("graph", info) << ptree("mark_supercontigs_cycle").put("ce_ptr", ce_cbptr.to_int());
+                    LOG("graph", info) << ptree("cycle").put("ce_ptr", ce_cbptr.to_int());
                     // must be detected during the first call, with c_right == true
                     ASSERT(c_right);
                     //bitmask::set(ce_bptr->tag(), Contig_Entry::supercontig_endpoint_mask(not c_right));
@@ -2354,7 +2358,7 @@ Size_Type Graph::skip_supercontig_bulges(supercontig_list & l) const
 
 void Graph::print_basic_stats(ostream& os) const
 {
-    LOG("graph", info) << ptree("print_basic_stats");
+    LOG("graph", info) << ptree("begin");
     unsigned long num_re = 0;
     unsigned long bp_re = 0;
     unsigned long num_ce = 0;
@@ -2401,7 +2405,7 @@ void Graph::print_basic_stats(ostream& os) const
 void Graph::print_detailed_counts(ostream& os) const
 {
     print_basic_stats(os);
-    LOG("graph", info) << ptree("print_detailed_counts");
+    LOG("graph", info) << ptree("begin");
     // First read stats
     os << "RE\tname\tlen\tnum.chunks\tchunk.lens\tcontigs\n";
     for (const auto re_cbptr : re_cont() | referenced)
@@ -2578,7 +2582,7 @@ void Graph::print_detailed_counts(ostream& os) const
 
 void Graph::print_supercontig_stats(ostream& os) const
 {
-    LOG("graph", info) << ptree("print_supercontig_stats");
+    LOG("graph", info) << ptree("begin");
     auto sc_list = get_supercontigs(3, 1);
     auto print_list = [&os] (const supercontig_list & l, const string & tag)
     {
@@ -2678,6 +2682,7 @@ boost::property_tree::ptree Graph::factory_stats() const
 
 void Graph::save(ostream& os) const
 {
+    LOG("io", info) << ptree("begin");
     ASSERT(_re_cont.header_ptr().to_int() == 0);
     ASSERT(_ce_cont.get_root_node().to_int() == 0);
     // dump the 5 factories
@@ -2713,11 +2718,12 @@ void Graph::save(ostream& os) const
             mut_cbptr->save_strings(os, n_strings, n_bytes);
         }
     }
-    LOG("io", info) << "saving graph: n_strings=" << n_strings << ", n_bytes=" << n_bytes << "\n";
+    LOG("io", info) << ptree("end").put("n_strings", n_strings).put("n_bytes", n_bytes);
 }
 
 void Graph::load(istream& is)
 {
+    LOG("io", info) << ptree("begin");
     ASSERT(_re_cont.header_ptr().to_int() == 0);
     ASSERT(_ce_cont.get_root_node().to_int() == 0);
     ASSERT(_re_cont.empty());
@@ -2754,13 +2760,13 @@ void Graph::load(istream& is)
             mut_bptr->load_strings(is, n_strings, n_bytes);
         }
     }
-    LOG("io", info) << "loading graph: n_strings=" << n_strings << ", n_bytes=" << n_bytes << "\n";
+    LOG("io", info) << ptree("end").put("n_strings", n_strings).put("n_bytes", n_bytes);
     check_all();
 }
 
 void Graph::get_terminal_reads(ostream& os) const
 {
-    LOG("graph", info) << ptree("get_terminal_reads");
+    LOG("graph", info) << ptree("begin");
     for (auto ce_cbptr : ce_cont() | referenced)
     {
         for (int dir = 0; dir < 2; ++dir)
@@ -2780,6 +2786,7 @@ void Graph::get_terminal_reads(ostream& os) const
             }
         }
     }
+    LOG("graph", info) << ptree("end");
 }
 
 void Graph::export_gfa(ostream& os, bool show_mutations) const
@@ -2859,6 +2866,7 @@ void Graph::export_gfa(ostream& os, bool show_mutations) const
 
 void Graph::unmap_short_contigs(unsigned min_len, unsigned max_deg)
 {
+    LOG("Graph", info) << ptree("begin");
     for (bool done = false; not done; )
     {
         done = true;
@@ -2892,19 +2900,17 @@ void Graph::unmap_short_contigs(unsigned min_len, unsigned max_deg)
             break;
         }
     }
-
+    LOG("Graph", info) << ptree("end");
 } // Graph::unmap_short_contigs
 
 void Graph::load_bwt(const string& bwt_prefix)
 {
     // load BWT and SSA of the reads
-    LOG("graph", info) << ptree("start_loading_bwt").put("file", bwt_prefix + ".bwt");
+    LOG("graph", info) << ptree("bwt").put("file", bwt_prefix + ".bwt");
     _index_set.pBWT = new BWT(bwt_prefix + ".bwt");
-    LOG("graph", info) << ptree("end_loading_bwt");
-    LOG("graph", info) << ptree("start_loading_ssa").put("file", bwt_prefix + ".ssa");
+    LOG("graph", info) << ptree("ssa").put("file", bwt_prefix + ".ssa");
     _index_set.pSSA = new SampledSuffixArray(bwt_prefix + ".ssa");
-    LOG("graph", info) << ptree("end_loading_ssa");
-    LOG("graph", info) << ptree("start_loading_read_list").put("file", bwt_prefix + ".id.gz");
+    LOG("graph", info) << ptree("read_list").put("file", bwt_prefix + ".id.gz");
     {
         zstr::ifstream ifs(bwt_prefix + ".id.gz");
         string sid;
@@ -2915,18 +2921,15 @@ void Graph::load_bwt(const string& bwt_prefix)
             _iid_to_sid_m[iid] = sid;
         }
     }
-    LOG("graph", info) << ptree("end_loading_read_list");
+    LOG("graph", info) << ptree("end");
 } // Graph::load_bwt
 
 void Graph::load_aux_bwt(const string& aux_bwt_file)
 {
     // load BWT of Illumina reads
-    LOG("graph", info) << ptree("load_aux_bwt")
-        .put("msg", "start")
-        .put("file", aux_bwt_file);
+    LOG("graph", info) << ptree("bwt").put("file", aux_bwt_file);
     _aux_index_set.pBWT = new BWT(aux_bwt_file);
-    LOG("graph", info) << ptree("load_aux_bwt")
-        .put("msg", "end");
+    LOG("graph", info) << ptree("end");
 } // Graph::load_aux_bwt
 
 Graph::find_reads_with_seq_type Graph::find_reads_with_seq(const Seq_Proxy_Type& seq, unsigned max_count) const
@@ -2989,8 +2992,7 @@ void Graph::compute_mutation_uniqueness(Size_Type flank_len)
             if (not warned)
             {
                 warned = true;
-                LOG("graph", warning) << ptree("compute_mutation_uniqueness")
-                    .put("msg", "separated_mutations: failed")
+                LOG("graph", warning) << ptree("non_separated_mutations")
                     .put("flank_len", flank_len)
                     .put("ce_ptr", ce_bptr.to_int());
             }
@@ -3043,7 +3045,7 @@ void Graph::compute_mutation_uniqueness(Size_Type flank_len)
 
 void Graph::compute_mutation_copy_num(Size_Type flank_len)
 {
-    LOG("graph", info) << ptree("compute_mutation_copy_num").put("msg", "start");
+    LOG("graph", info) << ptree("begin");
     if (not aux_index_set().pBWT)
     {
         LOG("graph", error) << "compute_mutation_copy_num: auxiliary BWT index is required" << endl;
@@ -3062,8 +3064,7 @@ void Graph::compute_mutation_copy_num(Size_Type flank_len)
             if (not warned)
             {
                 warned = true;
-                LOG("graph", warning) << ptree("compute_mutation_copy_num")
-                    .put("msg", "separated_mutations: failed")
+                LOG("graph", warning) << ptree("non_separated_mutations")
                     .put("flank_len", flank_len)
                     .put("ce_ptr", ce_bptr.to_int());
             }
@@ -3073,8 +3074,7 @@ void Graph::compute_mutation_copy_num(Size_Type flank_len)
         {
             if (mut_bptr->get_uniqueness(0) != 0 or mut_bptr->get_uniqueness(1) != 0)
             {
-                LOG("graph", debug) << ptree("compute_mutation_copy_num")
-                    .put("msg", "skipping non-unique mutation")
+                LOG("graph", debug) << ptree("non_unique_mutation")
                     .put("mut_bptr", mut_bptr.to_int())
                     .put("mut_ptr", mut_bptr.raw());
                 continue;
@@ -3102,12 +3102,12 @@ void Graph::compute_mutation_copy_num(Size_Type flank_len)
             } // for al
         } // for mut_bptr
     } // for ce_bptr
-    LOG("graph", info) << ptree("compute_mutation_copy_num").put("msg", "end");
+    LOG("graph", info) << ptree("end");
 } // Graph::compute_mutation_copy_num
 
 void Graph::compute_aux_coverage(Size_Type flank_len)
 {
-    LOG("graph", info) << ptree("compute_aux_coverage").put("msg", "start");
+    LOG("graph", info) << ptree("begin");
     if (not aux_index_set().pBWT)
     {
         LOG("graph", error) << "compute_aux_coverage: auxiliary BWT index is required" << endl;
@@ -3123,8 +3123,7 @@ void Graph::compute_aux_coverage(Size_Type flank_len)
             if (not warned)
             {
                 warned = true;
-                LOG("graph", warning) << ptree("compute_aux_coverage")
-                    .put("msg", "separated_mutations: failed")
+                LOG("graph", warning) << ptree("non_separated_mutations")
                     .put("flank_len", flank_len)
                     .put("ce_ptr", ce_bptr.to_int());
             }
@@ -3134,8 +3133,7 @@ void Graph::compute_aux_coverage(Size_Type flank_len)
         {
             if (mut_bptr->get_uniqueness(0) != 0 or mut_bptr->get_uniqueness(1) != 0)
             {
-                LOG("graph", debug) << ptree("compute_aux_coverage")
-                    .put("msg", "skipping non-unique mutation")
+                LOG("graph", debug) << ptree("non_unique_mutation")
                     .put("mut_bptr", mut_bptr.to_int())
                     .put("mut_ptr", mut_bptr.raw());
                 continue;
@@ -3150,8 +3148,7 @@ void Graph::compute_aux_coverage(Size_Type flank_len)
                       : mut_bptr->seq());
                 s += flank_right;
                 auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set());
-                LOG("graph", debug) << ptree("compute_aux_coverage")
-                    .put("msg", "allele coverage")
+                LOG("graph", debug) << ptree("allele_coverage")
                     .put("mut_bptr", mut_bptr.to_int())
                     .put("mut_ptr", mut_bptr.raw())
                     .put("al", al)
@@ -3174,10 +3171,21 @@ void Graph::compute_aux_coverage(Size_Type flank_len)
         ++i;
     }
     _aux_coverage = cov_cnt > 0? cov_sum / cov_cnt : 0;
-    LOG("graph", info) << ptree("compute_aux_coverage")
-        .put("msg", "end")
-        .put("res", _aux_coverage);
+    LOG("graph", info) << ptree("end").put("res", _aux_coverage);
 } // Graph::compute_aux_coverage
 
+void Graph::collapse_reads()
+{
+    LOG("graph", info) << ptree("begin");
+    for (auto ce_bptr : ce_cont() | referenced)
+    {
+        if (not ce_bptr->is_normal()) continue;
+        for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
+        {
+            //TODO
+        }
+    }
+    LOG("graph", info) << ptree("end");
+} // Graph::collapse_reads
 
 } // namespace MAC

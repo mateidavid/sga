@@ -56,7 +56,7 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
     ASSERT(not mut_left_cbptr
            or (mut_left_cbptr->rf_start() == c_brk and mut_left_cbptr->is_ins()));
 
-    LOG("Contig_Entry", debug1) << ptree("cut")
+    LOG("Contig_Entry", debug1) << ptree("begin")
         .put("c_brk", c_brk)
         .put("mut_left_ptr", mut_left_cbptr.to_ptree())
         .put("strict", strict);
@@ -400,12 +400,12 @@ Contig_Entry::can_cat_dir(bool c_right) const
     Contig_Entry_CBPtr ce_cbptr = chunk_cont().begin()->ce_bptr();
     ASSERT(ce_cbptr.raw() == this);
 
-    LOG("Contig_Entry", debug1) << ptree("can_cat_dir")
+    LOG("Contig_Entry", debug1) << ptree("begin")
         .put("ce_ptr", ce_cbptr.to_int())
         .put("c_right", c_right);
 
     auto res = out_chunks_dir(c_right, 1);
-    LOG("Contig_Entry", debug1) << ptree("can_cat_dir")
+    LOG("Contig_Entry", debug1) << ptree("oc_dir")
         .put("res_size", res.size());
     if (res.size() != 1)
     {
@@ -416,7 +416,7 @@ Contig_Entry::can_cat_dir(bool c_right) const
     tie(ce_next_cbptr, same_orientation) = res.begin()->first;
     set< Read_Chunk_CBPtr > rc_cbptr_cont = move(res.begin()->second);
     ASSERT(not rc_cbptr_cont.empty());
-    LOG("Contig_Entry", debug1) << ptree("can_cat_dir")
+    LOG("Contig_Entry", debug1) << ptree("mid")
         .put("ce_next_ptr", ce_next_cbptr.to_int())
         .put("same_orientation", same_orientation)
         .put("chunk_cont_size", rc_cbptr_cont.size());
@@ -428,7 +428,7 @@ Contig_Entry::can_cat_dir(bool c_right) const
     }
     */
     auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, 1);
-    LOG("Contig_Entry", debug1) << ptree("can_cat_dir")
+    LOG("Contig_Entry", debug1) << ptree("tmp")
         .put("tmp_size", tmp.size());
     if (tmp.size() != 1)
     {
@@ -442,7 +442,7 @@ Contig_Entry::can_cat_dir(bool c_right) const
 void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_next_bptr,
                                set< Read_Chunk_CBPtr >& rc_cbptr_cont)
 {
-    LOG("Contig_Entry", debug1) << ptree("cat_c_right")
+    LOG("Contig_Entry", debug1) << ptree("begin")
         .put("ce_ptr", ce_bptr.to_int())
         .put("ce_next_ptr", ce_next_bptr.to_int());
 
@@ -485,7 +485,7 @@ void Contig_Entry::cat_c_right(Contig_Entry_BPtr ce_bptr, Contig_Entry_BPtr ce_n
 
 Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mutation_CBPtr mut_cbptr)
 {
-    LOG("Contig_Entry", debug) << ptree("swap_mutation_alleles")
+    LOG("Contig_Entry", debug) << ptree("begin")
         .put("ce_ptr", ce_bptr.to_int())
         .put("mut_ptr", mut_cbptr.to_int());
 

@@ -8,16 +8,15 @@ void Validate_Variations::operator () (Graph& g) const
 {
     if (not g.aux_index_set().pBWT)
     {
-        LOG("Validate_Variations", error) << ptree("operator()")
-            .put("msg", "auxiliary BWT index is required");
+        LOG("Validate_Variations", error) << "auxiliary BWT index is required" << endl;
         exit(EXIT_FAILURE);
     }
-    LOG("Validate_Variations", info) << ptree("operator()").put("msg", "start");
+    LOG("Validate_Variations", info) << ptree("begin");
     // search for well-separated mutations with low support
     for (auto ce_bptr : g.ce_cont() | referenced)
     {
         size_t min_mut_start = 0;
-        LOG("Validate_Variations", debug1) << ptree().put("ce_bptr", ce_bptr.to_int());
+        LOG("Validate_Variations", debug1) << ptree("loop").put("ce_bptr", ce_bptr.to_int());
         auto mut_cit = ce_bptr->mut_cont().cbegin();
         while (mut_cit != ce_bptr->mut_cont().cend())
         {
@@ -119,7 +118,7 @@ void Validate_Variations::operator () (Graph& g) const
         g.check(set< Contig_Entry_CBPtr >({ ce_bptr }));
     }
     g.check_all();
-    LOG("Validate_Variations", info) << ptree("operator()").put("msg", "end");
+    LOG("Validate_Variations", info) << ptree("end");
 } // Validate_Variations::operator ()
 
 bool Validate_Variations::validate_allele(Mutation_CBPtr mut_cbptr,
@@ -128,7 +127,7 @@ bool Validate_Variations::validate_allele(Mutation_CBPtr mut_cbptr,
 {
     if (rc_set.size() == 0)
     {
-        LOG("Validate_Variations", debug) << ptree("validate_allele__empty_support");
+        LOG("Validate_Variations", debug) << ptree("empty_support");
         return false;
     }
     // find a read supporting the allele with a large enough flank
@@ -141,7 +140,7 @@ bool Validate_Variations::validate_allele(Mutation_CBPtr mut_cbptr,
         });
     if (rc_cbptr_it == rc_set.end())
     {
-        LOG("Validate_Variations", debug) << ptree("validate_allele__no_flank_support");
+        LOG("Validate_Variations", debug) << ptree("no_flank_support");
         return false;
     }
     Read_Chunk_CBPtr rc_cbptr = *rc_cbptr_it;

@@ -52,7 +52,6 @@
 #include <iostream>
 #include <mutex>
 
-
 namespace level_wrapper
 {
     // log levels
@@ -73,10 +72,14 @@ class Logger
 public:
     typedef level_wrapper::level level;
     // Constructor: initialize buffer.
-    Logger(const std::string& facility, level msg_level, std::ostream& os = std::clog)
+    Logger(const std::string& facility, level msg_level,
+           const std::string& file_name, unsigned line_num, const std::string& func_name,
+           std::ostream& os = std::clog)
         : _os_p(&os)
     {
-        *this << "= " << facility << "." << int(msg_level) << ": ";
+        *this << "= " << facility << "." << int(msg_level)
+              << " " << file_name << ":" << line_num
+              << " " << func_name << " ";
     }
     // Destructor: dump buffer to output.
     ~Logger()
@@ -206,6 +209,8 @@ private:
     }
 }; // class Logger
 
+#define __FILENAME__ (std::string(__FILE__).find('/') != std::string::npos? std::string(__FILE__).substr(std::string(__FILE__).rfind('/') + 1) : std::string(__FILE__))
+
 /**
  * LOG macro
  *
@@ -223,12 +228,12 @@ private:
 #define __LOG_3(facility, level_spec, sink)                                   \
     { using namespace level_wrapper; Logger::thread_local_last_level() = Logger::get_level(level_spec); } \
     if (Logger::thread_local_last_level() > Logger::get_facility_level(facility)) ; \
-    else Logger(facility, Logger::thread_local_last_level(), sink).l_value()
+    else Logger(facility, Logger::thread_local_last_level(), __FILENAME__, __LINE__, __func__, sink).l_value()
 
 #define __LOG_2(facility, level_spec)                                   \
     { using namespace level_wrapper; Logger::thread_local_last_level() = Logger::get_level(level_spec); } \
     if (Logger::thread_local_last_level() > Logger::get_facility_level(facility)) ; \
-    else Logger(facility, Logger::thread_local_last_level()).l_value()
+    else Logger(facility, Logger::thread_local_last_level(), __FILENAME__, __LINE__, __func__).l_value()
 
 #define __LOG_1(level_spec) \
     __LOG_2(LOG_FACILITY, level_spec)

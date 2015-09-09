@@ -52,7 +52,7 @@ Unmapper::_unmap_loop(ce_set_type&& unmap_ce_set, re_set_type&& unmap_re_set)
 void
 Unmapper::_unmap_ce(Contig_Entry_BPtr ce_bptr, re_set_type& extend_re_set)
 {
-    LOG("Unmapper", debug) << ptree("_unmap_ce")
+    LOG("Unmapper", debug) << ptree("begin")
         .put("ce_bptr", ce_bptr.to_int());
     // add all chunks to be unmapped to the extend set
     set< Read_Entry_CBPtr > re_to_check;
@@ -69,13 +69,14 @@ Unmapper::_unmap_ce(Contig_Entry_BPtr ce_bptr, re_set_type& extend_re_set)
     _g.ce_cont().erase(ce_bptr);
     Contig_Entry_Fact::del_elem(ce_bptr);
     _g.check(re_to_check);
+    LOG("Unmapper", debug) << ptree("end");
 } // Unmapper::_unmap_ce
 
 void
 Unmapper::_unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg,
                            ce_set_type& unmap_ce_set, re_set_type&)
 {
-    LOG("Unmapper", debug) << ptree("_unmap_re_region")
+    LOG("Unmapper", debug) << ptree("begin")
         .put("re_bptr", re_bptr.to_int())
         .put("rg_start", rg.start())
         .put("rg_end", rg.end());
@@ -96,13 +97,14 @@ Unmapper::_unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg,
         }
         r_start = rc_bptr->get_r_end();
     }
+    LOG("Unmapper", debug) << ptree("end");
 } // Unmapper::_unmap_re_region
 
 void
 Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg,
                                        re_set_type& unmap_re_set)
 {
-    LOG("Unmapper", debug) << ptree("_extend_unmappable_re_region")
+    LOG("Unmapper", debug) << ptree("begin")
         .put("re_bptr", re_bptr.to_int())
         .put("rg_start", rg.start())
         .put("rg_end", rg.end());
@@ -170,6 +172,7 @@ Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type
         }
     }
     _g.check({re_bptr});
+    LOG("Unmapper", debug) << ptree("end");
 } // Unmapper::_extend_unmappable_re_region
 
 } // namespace MAC

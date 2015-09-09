@@ -86,7 +86,7 @@ namespace opts
 
 void load_asqg(std::istream& is, Graph& g)
 {
-    LOG("io", info) << ptree("load_asqg_start");
+    LOG("io", info) << ptree("begin");
     string line;
     size_t line_count = 0;
     while (getline(is, line))
@@ -146,7 +146,7 @@ void load_asqg(std::istream& is, Graph& g)
             }
         }
     }
-    LOG("io", info) << ptree("load_asqg_end");
+    LOG("io", info) << ptree("end");
     g.check_all();
     g.check_leaks();
 }
@@ -159,7 +159,7 @@ int real_main()
     if (opts::input_file.get().empty() == opts::load_file.get().empty())
     {
         LOG("mac", error) << "exactly 1 of input-file or load-file options must be specified" << endl;
-        abort();
+        exit(EXIT_FAILURE);
     }
     if (not opts::load_file.get().empty())
     {
@@ -185,13 +185,13 @@ int real_main()
     if (opts::validate_variations and opts::aux_bwt_file.get().empty())
     {
         LOG("mac", error) << "--aux-bwt-file must be specifed with --validate-variations" << endl;
-        abort();
+        exit(EXIT_FAILURE);
     }
     // main work
     if (not opts::input_file.get().empty())
     {
         // load asqg graph
-        LOG("mac", info) << ptree("loading").put("input_file", opts::input_file.get());
+        LOG("mac", info) << ptree("load_asqg").put("file", opts::input_file.get());
         zstr::ifstream tmp_fs(opts::input_file);
         g.unmap_trigger_len() = opts::unmap_trigger_len;
         g.cat_at_step() = opts::cat_at_step;
@@ -201,17 +201,15 @@ int real_main()
     else
     {
         // load mac graph
-        LOG("mac", info) << ptree("loading").put("load-file", opts::load_file.get());
+        LOG("mac", info) << ptree("load_mac").put("file", opts::load_file.get());
         strict_fstream::fstream ifs(opts::load_file, ios_base::in | ios_base::binary);
         g.load(ifs);
     }
     LOG("mac", info) << ptree("factory_stats", g.factory_stats());
     if (opts::cat_at_end)
     {
-        LOG("mac", info) << ptree("cat_at_end_start");
         g.cat_all_read_contigs();
         g.check_all();
-        LOG("mac", info) << ptree("cat_at_end_end");
     }
     if (opts::trim_tuc_end)
     {
@@ -233,44 +231,32 @@ int real_main()
     }
     if (opts::unmap_read_ends)
     {
-        LOG("mac", info) << ptree("unmap_read_ends_start");
         g.unmap_read_ends();
         g.check_all();
-        LOG("mac", info) << ptree("unmap_read_ends_end");
     }
     if (opts::unmap_mut_clusters)
     {
-        LOG("mac", info) << ptree("unmap_mut_clusters_start");
         Unmap_Mut_Clusters()(g);
         g.check_all();
-        LOG("mac", info) << ptree("unmap_mut_clusters_end");
     }
     if (opts::resolve_unmappable_regions)
     {
-        LOG("mac", info) << ptree("resolve_unmappable_regions_start");
         g.resolve_unmappable_regions();
         g.check_all();
-        LOG("mac", info) << ptree("resolve_unmappable_regions_end");
     }
     if (opts::unmap_single_chunks)
     {
-        LOG("mac", info) << ptree("unmap_single_chunks_start");
         g.unmap_single_chunks();
         g.check_all();
-        LOG("mac", info) << ptree("unmap_single_chunks_end");
     }
     if (opts::unmap_short_contigs > 0)
     {
-        LOG("mac", info) << ptree("unmap_short_contigs_start");
         g.unmap_short_contigs(opts::unmap_short_contigs, 1);
         g.check_all();
-        LOG("mac", info) << ptree("unmap_short_contigs_end");
     }
     if (opts::build_hapmap)
     {
-        LOG("mac", info) << ptree("build_hapmap_start");
         hm.build(g);
-        LOG("mac", info) << ptree("build_hapmap_end");
     }
     if (opts::test_1)
     {
@@ -287,7 +273,7 @@ int real_main()
     }
     if (not opts::stats_file.get().empty())
     {
-        LOG("mac", info) << ptree("print_stats").put("stats_file", opts::stats_file.get());
+        LOG("mac", info) << ptree("print_stats").put("file", opts::stats_file.get());
         strict_fstream::fstream tmp_fs(opts::stats_file, ios_base::out);
         g.print_detailed_counts(tmp_fs);
     }
@@ -333,13 +319,13 @@ int real_main()
 
     if (not opts::save_file.get().empty())
     {
-        LOG("mac", info) << ptree("saving").put("save_file", opts::save_file.get());
+        LOG("mac", info) << ptree("save_mac").put("file", opts::save_file.get());
         strict_fstream::fstream tmp_fs(opts::save_file, ios_base::out | ios_base::binary);
         g.save(tmp_fs);
     }
     if (not opts::gfa_file.get().empty())
     {
-        LOG("mac", info) << ptree("exporting_gfa").put("gfa_file", opts::gfa_file.get());
+        LOG("mac", info) << ptree("export_gfa").put("file", opts::gfa_file.get());
         strict_fstream::fstream tmp_fs(opts::gfa_file, ios_base::out);
         g.export_gfa(tmp_fs, opts::gfa_show_mutations);
     }

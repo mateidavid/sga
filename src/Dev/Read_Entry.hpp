@@ -76,7 +76,7 @@ public:
      */
     void edit(Read_Chunk_BPtr rc_bptr, Size_Type start, const Seq_Proxy_Type& old_seq, const Seq_Proxy_Type& new_seq)
     {
-        LOG("Read_Entry", info) << ptree("edit")
+        LOG("Read_Entry", info) << ptree("begin")
             .put("re_name", name())
             .put("start", start)
             .put("old_seq", old_seq)

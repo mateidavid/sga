@@ -110,7 +110,7 @@ map< pair< const Mutation*, int >, int >& uniq_m()
 
 void Mutation::set_uniqueness(int allele, int value)
 {
-    LOG("Mutation", debug) << ptree("set_uniqueness")
+    LOG("Mutation", debug) << ptree("begin")
         .put("this", (void*)this)
         .put("allele", allele)
         .put("value", value);
@@ -131,7 +131,7 @@ map< pair< const Mutation*, int >, int >& copy_num_m()
 
 void Mutation::set_copy_num(int allele, int value)
 {
-    LOG("Mutation", debug) << ptree("set_copy_num")
+    LOG("Mutation", debug) << ptree("begin")
         .put("this", (void*)this)
         .put("allele", allele)
         .put("value", value);

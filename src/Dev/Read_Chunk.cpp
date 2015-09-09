@@ -109,7 +109,7 @@ Read_Chunk::make_relative_chunk(Read_Chunk_CBPtr rc1_cbptr, Read_Chunk_CBPtr rc2
 pair< Read_Chunk_BPtr, Read_Chunk_BPtr >
 Read_Chunk::split(Read_Chunk_BPtr rc_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr, bool strict)
 {
-    LOG("Read_Chunk", debug1) << ptree("split")
+    LOG("Read_Chunk", debug1) << ptree("begin")
         .put("rc", rc_bptr->to_ptree())
         .put("c_brk", c_brk)
         .put("mut_left_ptr", mut_left_cbptr.to_ptree())
@@ -503,7 +503,7 @@ void Read_Chunk::reverse()
 void Read_Chunk::cat_c_right(Read_Chunk_BPtr rc_bptr, Read_Chunk_BPtr rc_next_bptr,
                              Mutation_Cont& mut_cont)
 {
-    LOG("Read_Chunk", debug1) << ptree("cat_c_right")
+    LOG("Read_Chunk", debug1) << ptree("begin")
         .put("rc_ptr", rc_bptr.to_int())
         .put("rc_next_ptr", rc_next_bptr.to_int());
 
