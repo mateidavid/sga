@@ -8,7 +8,8 @@
 namespace MAC
 {
 
-typedef map< Allele_Specifier, set< Read_Chunk_CBPtr > > Anchor_Chunk_Support;
+typedef set< Read_Chunk_CBPtr > Allele_Chunk_Support;
+typedef map< Allele_Specifier, Allele_Chunk_Support > Anchor_Chunk_Support;
 typedef array< set< Read_Entry_CBPtr >, 2 > Allele_Read_Support;
 typedef map< Allele_Specifier, Allele_Read_Support > Anchor_Read_Support;
 

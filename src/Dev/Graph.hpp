@@ -205,9 +205,6 @@ public:
     void compute_mutation_copy_num(Size_Type flank_len);
     void compute_aux_coverage(Size_Type flank_len);
 
-    /** Collapse reads */
-    void collapse_reads();
-
     //friend ostream& operator << (ostream&, const Graph&);
     boost::property_tree::ptree to_ptree() const;
     boost::property_tree::ptree factory_stats() const;
@@ -219,6 +216,7 @@ public:
 private:
     friend class Unmap_Mut_Clusters;
     friend class Unmapper;
+    friend class Read_Merger;
 
     /**
      * Search for a Read_Chunk of the given Read_Entry, by position.

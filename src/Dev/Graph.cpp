@@ -3174,18 +3174,4 @@ void Graph::compute_aux_coverage(Size_Type flank_len)
     LOG("graph", info) << ptree("end").put("res", _aux_coverage);
 } // Graph::compute_aux_coverage
 
-void Graph::collapse_reads()
-{
-    LOG("graph", info) << ptree("begin");
-    for (auto ce_bptr : ce_cont() | referenced)
-    {
-        if (not ce_bptr->is_normal()) continue;
-        for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
-        {
-            //TODO
-        }
-    }
-    LOG("graph", info) << ptree("end");
-} // Graph::collapse_reads
-
 } // namespace MAC

@@ -256,7 +256,8 @@ int real_main()
     }
     if (opts::build_hapmap)
     {
-        hm.build(g);
+        //hm.build(g);
+        Read_Merger(g, 1)();
     }
     if (opts::test_1)
     {

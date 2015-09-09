@@ -84,6 +84,19 @@ public:
         }
     }
 
+    friend ostream& operator << (ostream& os, const Allele_Specifier& a)
+    {
+        if (a.is_endpoint())
+        {
+            os << "(ce_next=" << a.ce_next_cbptr().to_int() << ",same_orient=" << a.same_orientation() << ")";
+        }
+        else
+        {
+            os << "(strand=" << a.strand() << ")";
+        }
+        return os;
+    }
+
 private:
     Contig_Entry_CBPtr _ce_next_cbptr;
     bool _same_orientation;

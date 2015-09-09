@@ -66,6 +66,18 @@ Anchor_Read_Support get_hop_read_support(const pair< Hap_Hop_CBPtr, bool >& p)
     return get_hop_read_support(p.first, p.second);
 }
 
+Allele_Chunk_Support get_allele_chunk_support(const Anchor_Chunk_Support& anchor_chunk_support,
+                                              const Allele_Specifier& allele)
+{
+    return anchor_chunk_support.at(allele);
+}
+
+Allele_Chunk_Support get_allele_chunk_support(Anchor_Chunk_Support&& anchor_chunk_support,
+                                              const Allele_Specifier& allele)
+{
+    return move(anchor_chunk_support.at(allele));
+}
+
 Allele_Read_Support get_allele_read_support(const Anchor_Read_Support& anchor_read_support,
                                             const Allele_Specifier& allele)
 {
