@@ -39,7 +39,7 @@ private:
      * @param name String containing read name; (take ownership).
      * @param len Length of the read.
      */
-    Read_Entry(string&& name, Size_Type len) : _name(move(name)), _orig_len(len), _len(len), _start(0) {}
+    Read_Entry(string&& name, Size_Type len) : _name(move(name)), _len(len), _start(0) {}
 
     ~Read_Entry()
     {
@@ -90,6 +90,13 @@ public:
         _len = static_cast< ptrdiff_t >(_len) + delta;
     }
 
+    /**
+     * Split Read_Entry into 2 possibly overlapping reads.
+     * @return (Head, Tail) of old read.
+     */
+    static pair< Read_Entry_BPtr, Read_Entry_BPtr >
+    split(Read_Chunk_BPtr rc_bptr, Size_Type overlap_start, Size_Type overlap_end);
+
     /** Integrity check. */
     void check() const;
 
@@ -102,7 +109,6 @@ public:
 private:
     string _name;
     Read_Chunk_RE_Cont _chunk_cont;
-    Size_Type _orig_len;
     Size_Type _len;
     Size_Type _start;
 

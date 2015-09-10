@@ -197,6 +197,33 @@ public:
         }
     }
 
+    /**
+     * Copy chunks from other container into this one, starting at given position.
+     * Also, reset re_bptr pointer to given one for moved chunks.
+     */
+    void splice(Read_Chunk_RE_Cont& other, iterator it, Read_Entry_BPtr new_re_bptr)
+    {
+        while (it != other.end())
+        {
+            auto rc_bptr = &*(it++);
+            other.erase(rc_bptr);
+            rc_bptr->re_bptr() = new_re_bptr;
+            insert(rc_bptr);
+        }
+    }
+
+    /**
+     * Shift all chunks in container by given amount.
+     */
+    template < typename delta_type >
+    void shift(delta_type delta)
+    {
+        for (auto rc_bptr : *this | referenced)
+        {
+            ASSERT(delta_type(rc_bptr->r_start()) + delta >= 0);
+            rc_bptr->r_start() = Size_Type(delta_type(rc_bptr->r_start()) + delta);
+        }
+    }
 }; // class Read_Chunk_RE_Cont
 
 namespace detail
@@ -390,6 +417,19 @@ public:
             new_cont.insert(rc_bptr);
         });
         *this = std::move(new_cont);
+    }
+
+    /// Search chunk from given read.
+    Read_Chunk_CBPtr search_read(Read_Entry_CBPtr re_cbptr) const
+    {
+        for (auto it = begin(); it != end(); ++it)
+        {
+            if (it->re_bptr() == re_cbptr)
+            {
+                return &*it;
+            }
+        }
+        return nullptr;
     }
 
 }; // class Read_Chunk_CE_Cont

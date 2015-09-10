@@ -111,6 +111,9 @@ public:
         ASSERT(res.second);
     }
 
+    /** Erase RE from container */
+    void erase(Read_Entry_BPtr re_bptr) { Base::erase(iterator_to(*re_bptr)); }
+
     /** Search for Read_Entry.
      * @param name Name of read to look for.
      * @return Read_Entry pointer, or nullptr if not found.

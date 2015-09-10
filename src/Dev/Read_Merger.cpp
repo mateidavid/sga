@@ -147,8 +147,8 @@ void Read_Merger::extend_haploid_support(
                             not crt_c_direction? crt_anchor : next_anchor,
                             not crt_c_direction? next_anchor : crt_anchor);
                         // we keep the side of the read that spans crt_anchor
-                        allele_support[(dir + _c_direction) % 2]
-                            .insert(crt_c_direction == dir? rp.first : rp.second);
+                        ASSERT(get_allele_read_support(crt_anchor, crt_allele, crt_c_direction)[dir].count(rp.first) > 0);
+                        allele_support[(dir + _c_direction) % 2].insert(rp.first);
                     }
                     p.second[dir].clear();
                 }
@@ -172,7 +172,51 @@ void Read_Merger::merge_reads(const Allele_Read_Support& allele_support)
 pair< Read_Entry_CBPtr, Read_Entry_CBPtr >
 Read_Merger::split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor, const Allele_Anchor& r_anchor)
 {
-    return make_pair(nullptr, nullptr);
-}
+    LOG("Read_Merger", debug) << ptree("begin")
+        .put("re_bptr", re_cbptr.to_int())
+        .put("re_name", re_cbptr->name())
+        .put("l_anchor", l_anchor)
+        .put("r_anchor", r_anchor);
+    ASSERT(re_cbptr);
+    auto re_bptr = re_cbptr.unconst();
+    ASSERT(l_anchor.ce_cbptr() == r_anchor.ce_cbptr());
+    ASSERT(l_anchor.get_sibling(false) == r_anchor);
+    auto ce_bptr = l_anchor.ce_cbptr().unconst();
+    auto l_out_pos = l_anchor.is_endpoint()? 0 : l_anchor.mut_cbptr()->rf_start();
+    (void)l_out_pos;
+    auto l_in_pos = l_anchor.is_endpoint()? 0 : l_anchor.mut_cbptr()->rf_end();
+    auto r_in_pos = r_anchor.is_endpoint()? ce_bptr->len() : r_anchor.mut_cbptr()->rf_start();
+    auto r_out_pos = r_anchor.is_endpoint()? ce_bptr->len() : r_anchor.mut_cbptr()->rf_end();
+    (void)r_out_pos;
+    ASSERT(l_in_pos < r_in_pos);
+    //auto match_len = r_in_pos - l_in_pos;
+    auto rc_bptr = ce_bptr->chunk_cont().search_read(re_bptr).unconst();
+    auto dir = rc_bptr->get_rc();
+    ASSERT(rc_bptr);
+    ASSERT(rc_bptr->get_c_start() <= l_out_pos);
+    ASSERT(r_out_pos <= rc_bptr->get_c_end());
+    // create new Read_Entry object that will hold the tail
+    _g.re_cont().erase(re_bptr);
+    auto re_p = Read_Entry::split(rc_bptr, l_in_pos, r_in_pos);
+    _g.re_cont().insert(re_p.first);
+    _g.re_cont().insert(re_p.second);
+    _g.check(set< Read_Entry_CBPtr >{ re_p.first, re_p.second });
+    LOG("Read_Merger", debug) << ptree("end");
+    return (not dir ? re_p : make_pair(re_p.second, re_p.first));
+    /*
+    // cut chunk at the beginning of the right anchor
+    auto rc_p = Read_Chunk::split(rc_bptr, r_in_pos, nullptr, true);
+    ASSERT(rc_p.first->get_c_end() == r_in_pos);
+    ASSERT(rc_p.second->get_c_start() == r_in_pos);
+    ASSERT(not l_anchor.is_mutation()
+           or (not rc_p.first->mut_ptr_cont().empty()
+               and &*rc_p.first->mut_ptr_cont().rbegin() == l_anchor.mut_cbptr()));
+    ASSERT(not r_anchor.is_mutation()
+           or (not rc_p.second->mut_ptr_cont().empty()
+               and &*rc_p.second->mut_ptr_cont().begin() == r_anchor.mut_cbptr()));
+    // extend second chunk to cover the match length
+    ASSERT(rc_p.second->get_c_start() == l_in_pos);
+    */
+} // Read_Merger::split_read
 
 } // namespace MAC
