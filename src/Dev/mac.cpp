@@ -15,6 +15,7 @@
 
 #include "Unmap_Mut_Clusters.hpp"
 #include "Validate_Variations.hpp"
+#include "Read_Merger.hpp"
 
 #include "BWT.h"
 #include "BWTAlgorithms.h"

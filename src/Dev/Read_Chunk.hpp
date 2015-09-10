@@ -248,8 +248,8 @@ public:
     /// Integrity check.
     void check() const;
 
-    //friend ostream& operator << (ostream&, const Read_Chunk&);
-    boost::property_tree::ptree to_ptree() const;
+    ptree to_ptree() const;
+
     static string to_string(Read_Chunk_CBPtr rc_cbptr, bool r_dir = true, bool forward = true);
 
 private:

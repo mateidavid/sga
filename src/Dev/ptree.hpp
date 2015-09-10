@@ -21,7 +21,11 @@ class ptree
     : public boost::property_tree::ptree
 {
 public:
-    ptree(const std::string& root = std::string(), const boost::property_tree::ptree& t = boost::property_tree::ptree())
+    ptree(const boost::property_tree::ptree& t = boost::property_tree::ptree())
+        : ptree(std::string(), t)
+    {}
+
+    ptree(const std::string& root, const boost::property_tree::ptree& t = boost::property_tree::ptree())
       : prefix_(root.empty()? root : root + ".")
     {
         if (not root.empty())
@@ -45,16 +49,16 @@ public:
         boost::property_tree::ptree::put_child(prefix_ + key, pt);
         return *this;
     }
+
+    friend std::ostream& operator << (std::ostream& os, const ptree& rhs)
+    {
+        boost::property_tree::write_json(os, rhs, false);
+        return os;
+    }
+
+private:
     std::string prefix_;
-};
-
-
-template < bool = true >
-std::ostream& operator << (std::ostream& os, const boost::property_tree::ptree& rhs)
-{
-    boost::property_tree::write_json(os, rhs, false);
-    return os;
-}
+}; // class ptree
 
 namespace detail
 {
@@ -63,7 +67,7 @@ namespace detail
 template < typename T, bool has_to_ptree >
 struct elem_to_ptree_impl
 {
-    boost::property_tree::ptree operator() (const T& e)
+    ptree operator() (const T& e)
     {
         return e.to_ptree();
     }
@@ -73,9 +77,9 @@ struct elem_to_ptree_impl
 template < typename T >
 struct elem_to_ptree_impl< T, false >
 {
-    boost::property_tree::ptree operator() (const T& e)
+    ptree operator() (const T& e)
     {
-        return boost::property_tree::ptree(e);
+        return ptree(e);
     }
 };
 
@@ -83,15 +87,15 @@ BOOST_TTI_HAS_MEMBER_FUNCTION(to_ptree)
 
 // functor that converts an object of type T to boost::property_tree::ptree
 template < typename T >
-struct elem_to_ptree : elem_to_ptree_impl< T, has_member_function_to_ptree< const T, boost::property_tree::ptree >::value >
+struct elem_to_ptree : elem_to_ptree_impl< T, has_member_function_to_ptree< const T, ptree >::value >
 {};
 
 } // namespace detail
 
 template < typename Cont, typename Elem_Type = typename Cont::value_type >
-boost::property_tree::ptree cont_to_ptree(const Cont& cont, std::function<boost::property_tree::ptree(const Elem_Type&)> to_ptree)
+ptree cont_to_ptree(const Cont& cont, std::function< ptree(const Elem_Type&) > to_ptree)
 {
-    boost::property_tree::ptree pt;
+    ptree pt;
     auto& array = pt.get_child("");
     for (const typename Cont::value_type& e : cont)
     {
@@ -101,7 +105,7 @@ boost::property_tree::ptree cont_to_ptree(const Cont& cont, std::function<boost:
 }
 
 template < typename Cont >
-boost::property_tree::ptree cont_to_ptree(const Cont& cont)
+ptree cont_to_ptree(const Cont& cont)
 {
     typedef typename Cont::const_iterator::value_type elem_type;
     return cont_to_ptree< Cont, elem_type >(cont, detail::elem_to_ptree< elem_type >());

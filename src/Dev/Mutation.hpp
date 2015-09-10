@@ -215,7 +215,7 @@ public:
                 and (not lhs.have_seq() or lhs._seq == rhs._seq));
     }
 
-    boost::property_tree::ptree to_ptree() const
+    ptree to_ptree() const
     {
         return ptree().put("addr", static_cast< const void* >(this))
             .put("rf_start", rf_start())

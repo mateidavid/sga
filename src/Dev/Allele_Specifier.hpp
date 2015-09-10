@@ -71,7 +71,7 @@ public:
     friend bool operator >  (const Allele_Specifier& lhs, const Allele_Specifier& rhs) { return !(lhs <= rhs); }
     friend bool operator >= (const Allele_Specifier& lhs, const Allele_Specifier& rhs) { return !(lhs < rhs); }
 
-    boost::property_tree::ptree to_ptree() const
+    ptree to_ptree() const
     {
         if (is_endpoint())
         {

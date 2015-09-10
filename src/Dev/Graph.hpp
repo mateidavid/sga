@@ -205,9 +205,8 @@ public:
     void compute_mutation_copy_num(Size_Type flank_len);
     void compute_aux_coverage(Size_Type flank_len);
 
-    //friend ostream& operator << (ostream&, const Graph&);
-    boost::property_tree::ptree to_ptree() const;
-    boost::property_tree::ptree factory_stats() const;
+    ptree to_ptree() const;
+    ptree factory_stats() const;
 
     void save(ostream&) const;
     void load(istream&);

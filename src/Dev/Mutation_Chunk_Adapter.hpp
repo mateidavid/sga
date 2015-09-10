@@ -41,7 +41,7 @@ public:
     GETTER(Read_Chunk_CBPtr, chunk_cbptr, _chunk_cbptr)
 
     //friend std::ostream& operator << (std::ostream& os, const Mutation_Chunk_Adapter&);
-    boost::property_tree::ptree to_ptree() const
+    ptree to_ptree() const
     {
         return ptree().put("mut_ptr", mut_cbptr().to_ptree())
                       .put("chunk_ptr", chunk_cbptr().to_ptree());

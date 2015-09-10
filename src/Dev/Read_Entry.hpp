@@ -93,8 +93,7 @@ public:
     /** Integrity check. */
     void check() const;
 
-    //friend std::ostream& operator << (std::ostream& os, const Read_Entry& rhs);
-    boost::property_tree::ptree to_ptree() const;
+    ptree to_ptree() const;
 
     void save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const;
     void init_strings();

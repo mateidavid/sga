@@ -759,15 +759,7 @@ void Read_Chunk::check() const
 #endif
 }
 
-boost::property_tree::ptree Read_Chunk_Pos::to_ptree() const
-{
-    return ptree().put("c_pos", c_pos)
-                  .put("r_pos", r_pos)
-                  .put("mut_offset", mut_offset)
-                  .put("mut", mut().to_ptree());
-}
-
-boost::property_tree::ptree Read_Chunk::to_ptree() const
+ptree Read_Chunk::to_ptree() const
 {
     return ptree().put("re_bptr", re_bptr().to_ptree())
                   .put("ce_bptr", ce_bptr().to_ptree())

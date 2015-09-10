@@ -258,4 +258,12 @@ void Read_Chunk_Pos::advance_past_del(bool forward)
     }
 }
 
+ptree Read_Chunk_Pos::to_ptree() const
+{
+    return ptree().put("c_pos", c_pos)
+                  .put("r_pos", r_pos)
+                  .put("mut_offset", mut_offset)
+                  .put("mut", mut().to_ptree());
+}
+
 } // namespace MAC

@@ -229,7 +229,7 @@ public:
     friend bool operator >  (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return !(lhs <= rhs); }
     friend bool operator >= (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return !(lhs < rhs); }
 
-    boost::property_tree::ptree to_ptree() const
+    ptree to_ptree() const
     {
         if (is_endpoint())
         {

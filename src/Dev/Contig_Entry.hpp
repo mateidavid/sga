@@ -289,9 +289,8 @@ public:
     /// Integrity check.
     void check() const;
 
-    //friend ostream& operator << (ostream& os, const Contig_Entry& rhs);
     /// Convert object to ptree.
-    boost::property_tree::ptree to_ptree() const;
+    ptree to_ptree() const;
 
     /// Bitmasks for marking supercontig endpoints.
     static uint64_t supercontig_endpoint_mask(int i)

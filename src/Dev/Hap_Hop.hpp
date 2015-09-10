@@ -37,7 +37,7 @@ public:
     GETTER(bool, c_direction, _c_direction)
     Contig_Entry_CBPtr ce_cbptr() const { return _allele_anchor.ce_cbptr(); }
 
-    boost::property_tree::ptree to_ptree() const
+    ptree to_ptree() const
     {
         return ptree().put("he_cbptr", he_cbptr().to_int())
             .put("anchor", allele_anchor().to_ptree())

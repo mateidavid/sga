@@ -694,7 +694,7 @@ void Contig_Entry::check() const
 #endif
 }
 
-boost::property_tree::ptree Contig_Entry::to_ptree() const
+ptree Contig_Entry::to_ptree() const
 {
     return ptree().put("addr", (void*)this)
                   .put("seq", seq())

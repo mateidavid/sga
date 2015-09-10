@@ -68,7 +68,7 @@ void Read_Entry::check() const
 #endif
 }
 
-boost::property_tree::ptree Read_Entry::to_ptree() const
+ptree Read_Entry::to_ptree() const
 {
     return ptree().put("name", name())
                   .put("len", len())

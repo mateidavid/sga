@@ -244,9 +244,9 @@ struct Identifier
 
     //friend std::ostream& operator << (std::ostream& os, const Identifier& rhs) { os << rhs._idx; return os; }
     index_type to_int() const { return _idx; }
-    boost::property_tree::ptree to_ptree() const
+    ptree to_ptree() const
     {
-        boost::property_tree::ptree pt;
+        ptree pt;
         if (*this)
         {
             pt.put_value(_idx);
@@ -326,7 +326,7 @@ public:
     friend bool operator >= (const Pointer& lhs, const Pointer& rhs) { return lhs._idn >= rhs._idn; }
 
     index_type to_int() const { return _idn.to_int(); }
-    boost::property_tree::ptree to_ptree() const { return _idn.to_ptree(); }
+    ptree to_ptree() const { return _idn.to_ptree(); }
 
 private:
     friend class Factory< unqual_val_type, index_type >;
@@ -341,17 +341,17 @@ namespace detail
 template < typename T, bool = false >
 struct to_ptree_caller_impl
 {
-    static void call(boost::property_tree::ptree&, const T&) {}
+    static void call(ptree&, const T&) {}
 };
 template < typename T >
 struct to_ptree_caller_impl< T, true >
 {
-    static void call(boost::property_tree::ptree& pt, const T& val) { pt.put_child("deref", val.to_ptree()); }
+    static void call(ptree& pt, const T& val) { pt.put_child("deref", val.to_ptree()); }
 };
 BOOST_TTI_HAS_MEMBER_FUNCTION(to_ptree)
 template < typename T >
 struct to_ptree_caller
-    : public to_ptree_caller_impl< T, has_member_function_to_ptree< const T, boost::property_tree::ptree >::value > {};
+    : public to_ptree_caller_impl< T, has_member_function_to_ptree< const T, ptree >::value > {};
 
 } // namespace detail
 
@@ -401,7 +401,7 @@ public:
     template < T_ENABLE_IF((not is_const_t::value)) >
     const Reference& operator = (const Reference& rhs) const { raw() = rhs.raw(); return *this; }
 
-    boost::property_tree::ptree to_ptree() const
+    ptree to_ptree() const
     {
         ptree pt;
         pt.put("baddr", _idn._idx);

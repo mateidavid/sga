@@ -96,7 +96,7 @@ public:
     }
 
     /** ptree output */
-    boost::property_tree::ptree to_ptree() const
+    ptree to_ptree() const
     {
         std::ostringstream tmp;
         tmp << *this;

@@ -2664,13 +2664,13 @@ void Graph::test_mutation_allele_swapping()
     check_all();
 }
 
-boost::property_tree::ptree Graph::to_ptree() const
+ptree Graph::to_ptree() const
 {
     return ptree().put("re_cont", cont_to_ptree(re_cont()))
                   .put("ce_cont", cont_to_ptree(ce_cont()));
 }
 
-boost::property_tree::ptree Graph::factory_stats() const
+ptree Graph::factory_stats() const
 {
     return ptree()
         .put("Factory<Read_Entry>", _re_fact.stats())

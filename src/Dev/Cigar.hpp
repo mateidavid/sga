@@ -454,7 +454,7 @@ public:
     }
 
     /** Get ptree representation. */
-    boost::property_tree::ptree to_ptree() const
+    ptree to_ptree() const
     {
         return ptree()
             .put("rf_start", rf_start())
