@@ -1,5 +1,6 @@
 #include "Anchor_Support.hpp"
 #include "Hap_Hop.hpp"
+#include "filter_cont.hpp"
 
 namespace MAC
 {
@@ -110,22 +111,28 @@ Allele_Read_Support collapsed_support(const Anchor_Read_Support& anchor_read_sup
     return res;
 }
 
-void subset_support(Anchor_Read_Support& anchor_read_support, const Allele_Read_Support& common_support, bool direction)
+void subset_support(Anchor_Read_Support& anchor_read_support,
+                    const Allele_Read_Support& common_support,
+                    bool direction, bool remove_empty)
 {
     for (auto& v : anchor_read_support | ba::map_values)
     {
         for (int dir = 0; dir < 2; ++dir)
         {
-            for_each_advance(
-                v[dir].begin(),
-                v[dir].end(),
+            filter_cont(
+                v[dir],
                 [&] (Read_Entry_CBPtr re_cbptr) {
-                    if (common_support[(dir + int(direction)) % 2].count(re_cbptr) == 0)
-                    {
-                        v[dir].erase(re_cbptr);
-                    }
+                    return common_support[(dir + int(direction)) % 2].count(re_cbptr) > 0;
                 });
         }
+    }
+    if (remove_empty)
+    {
+        filter_cont(
+            anchor_read_support,
+            [] (const Anchor_Read_Support::value_type& p) {
+                return not (p.second[0].empty() and p.second[1].empty());
+            });
     }
 }
 
@@ -141,6 +148,23 @@ Allele_Read_Support common_allele_support(const Allele_Read_Support& al1_read_su
             if (al2_read_support[(dir + int(direction)) % 2].count(re_cbptr))
             {
                 res[dir].insert(re_cbptr);
+            }
+        }
+    }
+    return res;
+}
+
+RC_OSet get_oriented_chunks(Contig_Entry_CBPtr ce_cbptr, const RE_OSet& re_oset)
+{
+    RC_OSet res;
+    for (int dir = 0; dir < 2; ++dir)
+    {
+        for (auto re_cbptr : re_oset[dir])
+        {
+            auto rc_cbptr = ce_cbptr->chunk_cont().search_read(re_cbptr);
+            if (rc_cbptr)
+            {
+                res[dir].insert(rc_cbptr);
             }
         }
     }

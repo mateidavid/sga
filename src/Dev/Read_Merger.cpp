@@ -1,5 +1,6 @@
 #include "Read_Merger.hpp"
 #include "filter_cont.hpp"
+#include "min_max_of.hpp"
 
 namespace MAC
 {
@@ -23,7 +24,7 @@ void Read_Merger::operator () ()
                 auto allele_support = get_allele_read_support(move(anchor_support), allele);
                 extend_haploid_support(anchor, allele, false, allele_support);
                 extend_haploid_support(anchor, allele, true, allele_support);
-                merge_reads(allele_support);
+                merge_reads(ce_bptr, allele_support);
             }
         }
     }
@@ -32,7 +33,7 @@ void Read_Merger::operator () ()
 
 void Read_Merger::extend_haploid_support(
     const Allele_Anchor& _anchor, const Allele_Specifier& _allele, bool _c_direction,
-    Allele_Read_Support& allele_support)
+    RE_OSet& allele_support)
 {
     auto crt_anchor = _anchor;
     auto crt_allele = _allele;
@@ -165,8 +166,123 @@ void Read_Merger::extend_haploid_support(
     }
 } // Read_Merger::extend_haploid_support
 
-void Read_Merger::merge_reads(const Allele_Read_Support& allele_support)
+void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
 {
+    if (re_oset[0].size() + re_oset[1].size() < 2) return;
+    LOG("Read_Merger", info) << ptree("begin")
+        .put("ce_bptr", ce_bptr.to_int())
+        .put("re_oset[0]", cont_to_ptree(re_oset[0]))
+        .put("re_oset[1]", cont_to_ptree(re_oset[1]));
+
+    // create new name, new re
+    static unsigned merge_id = 0;
+    ostringstream os;
+    os << "merge-" << setfill('0') << setw(9) << merge_id++;
+    auto m_re_bptr = Read_Entry_Fact::new_elem(string(os.str()), 0);
+    // merge chunks in start contig
+    deque< Read_Chunk_BPtr > m_chunk_cont;
+    Read_Chunk_BPtr m_rc_bptr;
+    for (int dir = 0; dir < 2; ++dir)
+    {
+        auto add_m_chunk = [&] () {
+            not dir? m_chunk_cont.push_back(m_rc_bptr) : m_chunk_cont.push_front(m_rc_bptr);
+        };
+        RC_OSet crt_chunks = get_oriented_chunks(ce_bptr, re_oset);
+        ASSERT(crt_chunks[0].size() == re_oset[0].size()
+               and crt_chunks[1].size() == re_oset[1].size());
+        if (dir == 0)
+        {
+            m_rc_bptr = merge_contig_chunks(crt_chunks, m_re_bptr);
+            add_m_chunk();
+        }
+        bool crt_dir = dir;
+        while (true)
+        {
+            // advance chunks but save unmappable chunks
+            RC_OSet unmappable_chunks;
+            tie(crt_chunks, unmappable_chunks) = advance_chunks(crt_chunks, crt_dir);
+            if (not (unmappable_chunks[0].empty() and unmappable_chunks[1].empty()))
+            {
+                // reads may not end with unmappable regions
+                ASSERT(not (crt_chunks[0].empty() and crt_chunks[1].empty()));
+                if (unmappable_chunks[0].size() + unmappable_chunks[1].size()
+                    != crt_chunks[0].size() + crt_chunks[1].size())
+                {
+                    // inconsistency:
+                    // from the set of reads being merged,
+                    // some contain an unmappable region but others do not
+                    // compute previous ce_bptr
+                    int prev_rc_dir = unmappable_chunks[0].empty();
+                    auto prev_rc_cbptr = *unmappable_chunks[prev_rc_dir].begin();
+                    prev_rc_cbptr = prev_rc_cbptr->re_bptr()->chunk_cont().get_sibling(
+                        prev_rc_cbptr, true, not ( (dir + prev_rc_dir + 1) % 2 ));
+                    auto prev_ce_cbptr = prev_rc_cbptr->ce_bptr();
+                    // compute next ce_bptr
+                    auto next_ce_cbptr = not crt_chunks[0].empty()
+                        ? (*crt_chunks[0].begin())->ce_bptr()
+                        : (*crt_chunks[1].begin())->ce_bptr();
+                    // compute reads which have unmappable region
+                    RE_OSet unmappable_oset;
+                    for (int d = 0; d < 2; ++d)
+                    {
+                        for (auto rc_bptr : unmappable_chunks[d])
+                        {
+                            unmappable_oset[d].insert(rc_bptr->re_bptr());
+                        }
+                    }
+                    // compute reads without unmappable region
+                    RE_OSet non_unmappable_oset;
+                    for (int d = 0; d < 2; ++d)
+                    {
+                        for (auto rc_bptr : crt_chunks[d])
+                        {
+                            if (unmappable_oset[d].count(rc_bptr->re_bptr()) == 0)
+                            {
+                                non_unmappable_oset[d].insert(rc_bptr->re_bptr());
+                            }
+                        }
+                    }
+                    LOG("Read_Merger", warning) << ptree("unmappable_inconsistency")
+                        .put("prev_ce_cbptr", prev_ce_cbptr.to_int())
+                        .put("next_ce_cbptr", next_ce_cbptr.to_int())
+                        .put("unmappable_oset[0]", cont_to_ptree(unmappable_oset[0]))
+                        .put("unmappable_oset[1]", cont_to_ptree(unmappable_oset[1]))
+                        .put("non_unmappable_oset[0]", cont_to_ptree(non_unmappable_oset[0]))
+                        .put("non_unmappable_oset[1]", cont_to_ptree(non_unmappable_oset[1]));
+                }
+                m_rc_bptr = merge_unmappable_chunks(unmappable_chunks, m_re_bptr);
+                add_m_chunk();
+            } // if not unmappable_chunks.empty
+            if (crt_chunks[0].empty() and crt_chunks[1].empty())
+            {
+                break;
+            }
+            m_rc_bptr = merge_contig_chunks(crt_chunks, m_re_bptr);
+            add_m_chunk();
+        } // while true
+    } // for dir
+
+    // now all the new chunks are in m_chunk_cont;
+    // compute the m_read offsets and add the chunks to m_re chunk_cont
+    Size_Type pos = 0;
+    for (auto rc_bptr : m_chunk_cont)
+    {
+        rc_bptr->r_start() = pos;
+        pos += rc_bptr->r_len();
+        m_re_bptr->chunk_cont().insert(rc_bptr);
+    }
+    m_re_bptr->check();
+
+    // finally, destroy the old reads
+    for (int d = 0; d < 2; ++d)
+    {
+        for (auto re_cbptr : re_oset[d])
+        {
+            _g.remove_read(re_cbptr.unconst());
+        }
+    }
+
+    LOG("Read_Merger", info) << ptree("end");
 }
 
 pair< Read_Entry_CBPtr, Read_Entry_CBPtr >
@@ -203,20 +319,165 @@ Read_Merger::split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor
     _g.check(set< Read_Entry_CBPtr >{ re_p.first, re_p.second });
     LOG("Read_Merger", debug) << ptree("end");
     return (not dir ? re_p : make_pair(re_p.second, re_p.first));
-    /*
-    // cut chunk at the beginning of the right anchor
-    auto rc_p = Read_Chunk::split(rc_bptr, r_in_pos, nullptr, true);
-    ASSERT(rc_p.first->get_c_end() == r_in_pos);
-    ASSERT(rc_p.second->get_c_start() == r_in_pos);
-    ASSERT(not l_anchor.is_mutation()
-           or (not rc_p.first->mut_ptr_cont().empty()
-               and &*rc_p.first->mut_ptr_cont().rbegin() == l_anchor.mut_cbptr()));
-    ASSERT(not r_anchor.is_mutation()
-           or (not rc_p.second->mut_ptr_cont().empty()
-               and &*rc_p.second->mut_ptr_cont().begin() == r_anchor.mut_cbptr()));
-    // extend second chunk to cover the match length
-    ASSERT(rc_p.second->get_c_start() == l_in_pos);
-    */
 } // Read_Merger::split_read
+
+Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_Entry_BPtr m_re_bptr)
+{
+    ASSERT(not (rc_oset[0].empty() and rc_oset[1].empty()));
+    auto ce_bptr = not rc_oset[0].empty()
+        ? (*rc_oset[0].begin())->ce_bptr()
+        : (*rc_oset[0].begin())->ce_bptr();
+    auto c_direction = not rc_oset[0].empty()
+        ? (*rc_oset[0].begin())->get_rc()
+        : (*rc_oset[1].begin())->get_rc();
+    ASSERT(all_of(
+               rc_oset[0].begin(),
+               rc_oset[0].end(),
+               [&] (Read_Chunk_CBPtr rc_cbptr) {
+                   return rc_cbptr->ce_bptr() == ce_bptr and rc_cbptr->get_rc() == (0 + c_direction) % 2;
+               })
+           and all_of(
+               rc_oset[1].begin(),
+               rc_oset[1].end(),
+               [&] (Read_Chunk_CBPtr rc_cbptr) {
+                   return rc_cbptr->ce_bptr() == ce_bptr and rc_cbptr->get_rc() == (1 + c_direction) % 2;
+               }));
+    // initialize position map
+    map< Read_Chunk_CBPtr, Read_Chunk_Pos > pos_map;
+    for (int d = 0; d < 2; ++d)
+    {
+        for (auto rc_cbptr : rc_oset[d])
+        {
+            pos_map[rc_cbptr] = not c_direction? rc_cbptr->get_start_pos() : rc_cbptr->get_end_pos();
+        }
+    }
+    // set read start to be 0; will be fixed once we have all chunks
+    Size_Type r_pos = 0;
+    // set contig start as minimum contig position
+    Size_Type c_pos = min_value_of(
+        pos_map,
+        [] (const decltype(pos_map)::value_type& p) { return p.second.c_pos; });
+    /*
+    [&] () {
+        auto rg0 = ba::values(pos_map);
+        auto rg1 = ba::transform(rg0, [] (const Read_Chunk_Pos& pos) { return pos.c_pos; });
+        return *br::min_element(rg1);
+    }();
+    */
+    // initialize merged chunk
+    auto m_rc_bptr = Read_Chunk_Fact::new_elem(r_pos, 0, c_pos, 0, c_direction);
+    m_rc_bptr->re_bptr() = m_re_bptr;
+    m_rc_bptr->ce_bptr() = ce_bptr;
+    while (not pos_map.empty())
+    {
+        // find active chunks: the ones whose position is at c_pos
+        RC_Set active_rc_set;
+        for (const auto& p : pos_map)
+        {
+            if (p.second.c_pos == c_pos)
+            {
+                active_rc_set.insert(p.first);
+            }
+        }
+        ASSERT(not active_rc_set.empty());
+        // check that either all or none of the reads in the active set have a mutation next
+        auto match_len = pos_map.at(*active_rc_set.begin()).get_match_len();
+        ASSERT(br::count_if(
+                   active_rc_set,
+                   [&] (Read_Chunk_CBPtr rc_cbptr) { return pos_map.at(rc_cbptr).get_match_len() == match_len; })
+               == active_rc_set.size());
+        // advance active set
+        if (match_len > 0)
+        {
+            // match stretch follows
+            br::for_each(
+                active_rc_set,
+                [&] (Read_Chunk_CBPtr rc_cbptr) { pos_map.at(rc_cbptr).increment(); });
+            Size_Type next_c_pos = br::min_element(
+                ba::transform(ba::values(pos_map), [] (const Read_Chunk_Pos& pos) { return pos.c_pos; }));
+            ASSERT(c_pos < next_c_pos);
+            r_pos += next_c_pos - c_pos;
+            c_pos = next_c_pos;
+        }
+        else
+        {
+            // mutation follows
+            auto mut_bptr = pos_map.at(*active_rc_set.begin()).mca_cit->mut_cbptr().unconst();
+            // it must be the same in all active chunks
+            ASSERT(br::count_if(
+                       active_rc_set,
+                       [&] (Read_Chunk_CBPtr rc_cbptr) {
+                           return pos_map.at(rc_cbptr).mca_cit->mut_cbptr() == mut_bptr;
+                       })
+                   == active_rc_set.size());
+            // none of the inactive chunks may be at a position inside the mutation
+            ASSERT(br::count_if(
+                       pos_map,
+                       [&] (const decltype(pos_map)::value_type& p) {
+                           return active_rc_set.count(p.first) or p.second.c_pos >= mut_bptr->rf_end();
+                       })
+                   == pos_map.size());
+            // increment position for active chunks
+            br::for_each(
+                active_rc_set,
+                [&] (Read_Chunk_CBPtr rc_cbptr) { pos_map.at(rc_cbptr).increment(); });
+            // they now must all be at position right after mutation
+            ASSERT(br::count_if(
+                       active_rc_set,
+                       [&] (Read_Chunk_CBPtr rc_cbptr) {
+                           return pos_map.at(rc_cbptr).c_pos == mut_bptr->rf_end();
+                       })
+                   == active_rc_set.size());
+            // add mutation to merged chunk
+            auto mca_bptr = Mutation_Chunk_Adapter_Fact::new_elem(mut_bptr, m_rc_bptr);
+            mut_bptr->chunk_ptr_cont.insert(mca_bptr);
+            m_rc_bptr->mut_ptr_cont.push_back(mca_bptr);
+            r_pos += mut_bptr->seq_len();
+            c_pos += mut_bptr->rf_len();
+        }
+        // remove chunks that reached their end position
+        filter_cont(
+            pos_map,
+            [&] (const decltype(pos_map)::value_type& p) { return p.second != p.first->get_end_pos(); });
+    } // while pos_map non-empty
+    // fix r_len and c_len
+    m_rc_bptr->r_len() = r_pos - m_rc_bptr->r_start();
+    m_rc_bptr->c_len() = c_pos - m_rc_bptr->c_start();
+    // add new chunk to the contig chunk cont
+    ce_bptr->chunk_cont().insert(m_rc_bptr);
+    return m_rc_bptr;
+}
+
+Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_OSet& crt_chunks, Read_Entry_BPtr m_re_bptr)
+{
+    return nullptr;
+}
+
+pair< RC_OSet, RC_OSet >
+Read_Merger::advance_chunks(const RC_OSet& crt_rc_oset, bool direction)
+{
+    RC_OSet next_rc_oset;
+    RC_OSet unmappable_rc_oset;
+    for (int d = 0; d < 2; ++d)
+    {
+        for (auto rc_cbptr : crt_rc_oset[d])
+        {
+            ASSERT(rc_cbptr);
+            rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(
+                rc_cbptr, true, not ( (d + direction) % 2 ));
+            if (not rc_cbptr) continue;
+            if (rc_cbptr->ce_bptr()->is_unmappable())
+            {
+                // skip one unmappable chunk if necessary
+                unmappable_rc_oset[d].insert(rc_cbptr);
+                rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(
+                    rc_cbptr, true, not ( (d + direction) % 2 ));
+                ASSERT(rc_cbptr);
+            }
+            next_rc_oset[d].insert(rc_cbptr);
+        }
+    }
+    return make_pair(next_rc_oset, unmappable_rc_oset);
+}
 
 } // namespace MAC

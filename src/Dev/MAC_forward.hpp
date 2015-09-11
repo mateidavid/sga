@@ -19,6 +19,7 @@
 #include <iostream>
 #include <boost/intrusive/list.hpp>
 #include <boost/intrusive/set.hpp>
+#include <boost/range/algorithm.hpp>
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/join.hpp>
 #include <boost/optional.hpp>
@@ -47,6 +48,7 @@ namespace MAC
 using namespace std;
 namespace bi = boost::intrusive;
 namespace ba = boost::adaptors;
+namespace br = boost::range;
 using boost::range::join;
 using boost::optional;
 
@@ -131,11 +133,16 @@ typedef Hap_Entry_Fact::const_ptr_type Hap_Entry_CBPtr;
 typedef Hap_Entry_Fact::ref_type Hap_Entry_BRef;
 typedef Hap_Entry_Fact::const_ref_type Hap_Entry_CBRef;
 
+// sets
+typedef set< Read_Chunk_CBPtr > RC_Set;
+typedef array< RC_Set, 2 > RC_OSet;
+typedef set< Read_Entry_CBPtr > RE_Set;
+typedef array< RE_Set, 2 > RE_OSet;
+
 // algorithms
 class Unmap_Mut_Clusters;
 class Hap_Map;
 
 } // namespace MAC
-
 
 #endif

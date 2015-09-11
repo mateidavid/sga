@@ -96,6 +96,25 @@ void Graph::add_read(string&& name, Seq_Type&& seq)
     check(set< Read_Entry_CBPtr >({ re_bptr }));
 }
 
+void Graph::remove_read(Read_Entry_BPtr re_bptr)
+{
+    re_bptr->chunk_cont().clear_and_dispose(
+        [&] (Read_Chunk_BPtr rc_bptr) {
+            auto ce_bptr = rc_bptr->ce_bptr();
+            ce_bptr->chunk_cont().erase(rc_bptr);
+            Read_Chunk::dispose(rc_bptr);
+            ce_bptr->mut_cont().drop_unused();
+            if (ce_bptr->chunk_cont().empty())
+            {
+                ASSERT(ce_bptr->mut_cont().empty());
+                ce_cont().erase(ce_bptr);
+                Contig_Entry_Fact::del_elem(ce_bptr);
+            }
+        });
+    re_cont().erase(re_bptr);
+    Read_Entry_Fact::del_elem(re_bptr);
+}
+
 bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
     auto ce_new_bptr = ce_bptr->cut(c_brk, mut_left_cbptr);

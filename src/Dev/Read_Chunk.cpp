@@ -706,6 +706,12 @@ Seq_Type Read_Chunk::get_seq() const
     return res;
 }
 
+void Read_Chunk::dispose(Read_Chunk_BPtr rc_bptr)
+{
+    rc_bptr->mut_ptr_cont().clear_and_dispose();
+    Read_Chunk_Fact::del_elem(rc_bptr);
+}
+
 void Read_Chunk::check() const
 {
 #ifndef DISABLE_ASSERTS

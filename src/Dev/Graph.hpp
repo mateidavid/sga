@@ -67,6 +67,9 @@ public:
      */
     void add_read(string&& name, Seq_Type&& seq);
 
+    /** Remove a read */
+    void remove_read(Read_Entry_BPtr re_bptr);
+
     /** Add an overlap between 2 reads.
      * The contigs holding overlapping chunks of each read are collapsed into one.
      * In the process, reads and contigs are first fragmented into matching chunks.

@@ -8,9 +8,9 @@
 namespace MAC
 {
 
-typedef set< Read_Chunk_CBPtr > Allele_Chunk_Support;
+typedef RC_Set Allele_Chunk_Support;
 typedef map< Allele_Specifier, Allele_Chunk_Support > Anchor_Chunk_Support;
-typedef array< set< Read_Entry_CBPtr >, 2 > Allele_Read_Support;
+typedef RE_OSet Allele_Read_Support;
 typedef map< Allele_Specifier, Allele_Read_Support > Anchor_Read_Support;
 
 /** An allele anchor is either a Mutation or a Contig_Entry edge */

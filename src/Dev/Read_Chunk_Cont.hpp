@@ -100,6 +100,7 @@ public:
     ~Read_Chunk_RE_Cont() { ASSERT(empty()); }
 
     USING_INTRUSIVE_CONT(Base)
+    using Base::clear_and_dispose;
     using Base::check;
 
     /// Disallow direct access to the potentially non-constant size() base member function.
@@ -397,14 +398,7 @@ public:
      * Pre: Read_Chunk objects must be unlinked from their RE containers.
      * Post: MCAs are also deallocated, but not the Mutations themselves.
      */
-    void clear_and_dispose()
-    {
-        Base::clear_and_dispose([] (Read_Chunk_BPtr rc_bptr)
-        {
-            rc_bptr->mut_ptr_cont().clear_and_dispose();
-            Read_Chunk_Fact::del_elem(rc_bptr);
-        });
-    }
+    void clear_and_dispose() { Base::clear_and_dispose(Read_Chunk::dispose); }
 
     /// Reverse all chunks in this container.
     void reverse()

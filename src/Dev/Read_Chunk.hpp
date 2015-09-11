@@ -246,6 +246,9 @@ public:
      */
     static void make_unmappable(Read_Chunk_BPtr rc_bptr);
 
+    /** Deallocate chunk */
+    static void dispose(Read_Chunk_BPtr rc_bptr);
+
     /// Integrity check.
     void check() const;
 
