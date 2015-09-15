@@ -36,7 +36,7 @@
 #include "RC_Sequence.hpp"
 #include "Range.hpp"
 #include "Range_Cont.hpp"
-#include "for_each_advance.hpp"
+#include "algorithm_extra.hpp"
 
 #include <boost/intrusive/itree.hpp>
 

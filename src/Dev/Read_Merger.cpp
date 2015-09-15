@@ -1,6 +1,5 @@
 #include "Read_Merger.hpp"
 #include "filter_cont.hpp"
-#include "min_max_of.hpp"
 
 namespace MAC
 {
@@ -331,14 +330,12 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
         ? (*rc_oset[0].begin())->get_rc()
         : (*rc_oset[1].begin())->get_rc();
     ASSERT(all_of(
-               rc_oset[0].begin(),
-               rc_oset[0].end(),
+               rc_oset[0],
                [&] (Read_Chunk_CBPtr rc_cbptr) {
                    return rc_cbptr->ce_bptr() == ce_bptr and rc_cbptr->get_rc() == (0 + c_direction) % 2;
                })
            and all_of(
-               rc_oset[1].begin(),
-               rc_oset[1].end(),
+               rc_oset[1],
                [&] (Read_Chunk_CBPtr rc_cbptr) {
                    return rc_cbptr->ce_bptr() == ce_bptr and rc_cbptr->get_rc() == (1 + c_direction) % 2;
                }));
@@ -348,7 +345,7 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
     {
         for (auto rc_cbptr : rc_oset[d])
         {
-            pos_map[rc_cbptr] = not c_direction? rc_cbptr->get_start_pos() : rc_cbptr->get_end_pos();
+            pos_map.insert(make_pair(rc_cbptr, not c_direction? rc_cbptr->get_start_pos() : rc_cbptr->get_end_pos()));
         }
     }
     // set read start to be 0; will be fixed once we have all chunks
@@ -382,10 +379,9 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
         ASSERT(not active_rc_set.empty());
         // check that either all or none of the reads in the active set have a mutation next
         auto match_len = pos_map.at(*active_rc_set.begin()).get_match_len();
-        ASSERT(br::count_if(
+        ASSERT(all_of(
                    active_rc_set,
-                   [&] (Read_Chunk_CBPtr rc_cbptr) { return pos_map.at(rc_cbptr).get_match_len() == match_len; })
-               == active_rc_set.size());
+                   [&] (Read_Chunk_CBPtr rc_cbptr) { return pos_map.at(rc_cbptr).get_match_len() == match_len; }));
         // advance active set
         if (match_len > 0)
         {
@@ -393,8 +389,9 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
             br::for_each(
                 active_rc_set,
                 [&] (Read_Chunk_CBPtr rc_cbptr) { pos_map.at(rc_cbptr).increment(); });
-            Size_Type next_c_pos = br::min_element(
-                ba::transform(ba::values(pos_map), [] (const Read_Chunk_Pos& pos) { return pos.c_pos; }));
+            Size_Type next_c_pos = min_value_of(
+                ba::values(pos_map),
+                [] (const Read_Chunk_Pos& pos) { return pos.c_pos; });
             ASSERT(c_pos < next_c_pos);
             r_pos += next_c_pos - c_pos;
             c_pos = next_c_pos;
@@ -404,34 +401,31 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
             // mutation follows
             auto mut_bptr = pos_map.at(*active_rc_set.begin()).mca_cit->mut_cbptr().unconst();
             // it must be the same in all active chunks
-            ASSERT(br::count_if(
+            ASSERT(all_of(
                        active_rc_set,
                        [&] (Read_Chunk_CBPtr rc_cbptr) {
                            return pos_map.at(rc_cbptr).mca_cit->mut_cbptr() == mut_bptr;
-                       })
-                   == active_rc_set.size());
+                       }));
             // none of the inactive chunks may be at a position inside the mutation
-            ASSERT(br::count_if(
+            ASSERT(all_of(
                        pos_map,
                        [&] (const decltype(pos_map)::value_type& p) {
                            return active_rc_set.count(p.first) or p.second.c_pos >= mut_bptr->rf_end();
-                       })
-                   == pos_map.size());
+                       }));
             // increment position for active chunks
             br::for_each(
                 active_rc_set,
                 [&] (Read_Chunk_CBPtr rc_cbptr) { pos_map.at(rc_cbptr).increment(); });
             // they now must all be at position right after mutation
-            ASSERT(br::count_if(
+            ASSERT(all_of(
                        active_rc_set,
                        [&] (Read_Chunk_CBPtr rc_cbptr) {
                            return pos_map.at(rc_cbptr).c_pos == mut_bptr->rf_end();
-                       })
-                   == active_rc_set.size());
+                       }));
             // add mutation to merged chunk
             auto mca_bptr = Mutation_Chunk_Adapter_Fact::new_elem(mut_bptr, m_rc_bptr);
-            mut_bptr->chunk_ptr_cont.insert(mca_bptr);
-            m_rc_bptr->mut_ptr_cont.push_back(mca_bptr);
+            mut_bptr->chunk_ptr_cont().insert(mca_bptr);
+            m_rc_bptr->mut_ptr_cont().push_back(mca_bptr);
             r_pos += mut_bptr->seq_len();
             c_pos += mut_bptr->rf_len();
         }
