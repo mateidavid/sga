@@ -321,7 +321,7 @@ void Hap_Map::build(const Graph& g)
     {
         if (not ce_cbptr->is_normal()) continue;
         for (Allele_Anchor anchor = Allele_Anchor(ce_cbptr, false);
-             anchor != Allele_Anchor(ce_cbptr, right);
+             anchor != Allele_Anchor(ce_cbptr, true);
              anchor = anchor.get_sibling(false))
         {
             connect_consecutive_anchors(anchor);
