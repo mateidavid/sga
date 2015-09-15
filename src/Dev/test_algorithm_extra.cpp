@@ -20,10 +20,10 @@ struct int_identity_functor
 };
 
 // containers
-std::vector< int > cont_lval = { 45, 12, 6, 19, 133, 42 };
-const std::vector< int > cont_const_lval = cont_lval;
-std::vector< int >& cont_lval_ref = cont_lval;
-const std::vector< int >& cont_const_lval_ref = cont_lval;
+int_vector cont_lval = { 45, 12, 6, 19, 133, 42 };
+const int_vector cont_const_lval = cont_lval;
+int_vector& cont_lval_ref = cont_lval;
+const int_vector& cont_const_lval_ref = cont_lval;
 
 // element getter
 auto getter_fcn_ptr = &int_identity_function;
@@ -37,7 +37,7 @@ std::function< int(const int&) > getter_stdfcn = int_identity_function;
 #define CONTAINER_1 cont_const_lval
 #define CONTAINER_2 cont_lval_ref
 #define CONTAINER_3 cont_const_lval_ref
-#define CONTAINER_4 std::vector< int >(cont_lval)
+#define CONTAINER_4 int_vector(cont_lval)
 #define CONTAINER_5 std::move(cont_lval)
 #define CONTAINER_NUM_LVAL_ONLY 4
 #define CONTAINER_NUM_RVAL 6
@@ -208,7 +208,7 @@ TEST_CASE("equal_of")
 {
     SECTION("empty container")
     {
-        std::vector< int > v;
+        int_vector v;
         CHECK( equal_of(v.begin(), v.end(), getter_fcn_ptr) == true );
         CHECK( equal_of(v.begin(), v.end()) == true );
         CHECK( equal_of(v, getter_fcn_ptr) == true );
@@ -216,7 +216,7 @@ TEST_CASE("equal_of")
     }
     SECTION("singleton container")
     {
-        std::vector< int > v = { 42 };
+        int_vector v = { 42 };
         CHECK( equal_of(v.begin(), v.end(), getter_fcn_ptr) == true );
         CHECK( equal_of(v.begin(), v.end()) == true );
         CHECK( equal_of(v, getter_fcn_ptr) == true );
@@ -224,7 +224,7 @@ TEST_CASE("equal_of")
     }
     SECTION("container with 2 equal elements")
     {
-        std::vector< int > v = { 23, 23 };
+        int_vector v = { 23, 23 };
         CHECK( equal_of(v.begin(), v.end(), getter_fcn_ptr) == true );
         CHECK( equal_of(v.begin(), v.end()) == true );
         CHECK( equal_of(v, getter_fcn_ptr) == true );
@@ -232,7 +232,7 @@ TEST_CASE("equal_of")
     }
     SECTION("container with 2 different elements")
     {
-        std::vector< int > v = { 15, 16 };
+        int_vector v = { 15, 16 };
         CHECK( equal_of(v.begin(), v.end(), getter_fcn_ptr) == false );
         CHECK( equal_of(v.begin(), v.end()) == false );
         CHECK( equal_of(v, getter_fcn_ptr) == false );
@@ -242,7 +242,7 @@ TEST_CASE("equal_of")
 
 TEST_CASE("for_each_advance")
 {
-    std::list< int > l = { 1, 2, 3, 4, 5 };
+    int_list l = { 1, 2, 3, 4, 5 };
     SECTION("non-mutating function")
     {
         int s = 0;
@@ -263,10 +263,10 @@ TEST_CASE("for_each_advance")
             l.erase(it);
         };
         for_each_advance(l.begin(), l.end(), lbd);
-        CHECK( l == std::list< int >({ 1, 2, 4, 5 }) );
+        CHECK( l == int_list({ 1, 2, 4, 5 }) );
         x = 5;
         for_each_advance(l, lbd);
-        CHECK( l == std::list< int >({ 1, 2, 4 }) );
+        CHECK( l == int_list({ 1, 2, 4 }) );
     }
 }
 
@@ -292,10 +292,10 @@ TEST_CASE("for_each_it")
             l.erase(it);
         };
         for_each_it(l.begin(), l.end(), lbd);
-        CHECK( l == std::list< int >({ 1, 3, 4, 5 }) );
+        CHECK( l == int_list({ 1, 3, 4, 5 }) );
         x = 5;
         for_each_it(l, lbd);
-        CHECK( l == std::list< int >({ 1, 3, 5 }) );
+        CHECK( l == int_list({ 1, 3, 5 }) );
     }
 }
 
@@ -319,9 +319,9 @@ TEST_CASE("for_each_it_advance")
             l.erase(it);
         };
         for_each_it_advance(l.begin(), l.end(), lbd);
-        CHECK( l == std::list< int >({ 1, 2, 4, 5 }) );
+        CHECK( l == int_list({ 1, 2, 4, 5 }) );
         x = 5;
         for_each_it_advance(l, lbd);
-        CHECK( l == std::list< int >({ 1, 2, 4 }) );
+        CHECK( l == int_list({ 1, 2, 4 }) );
     }
 }

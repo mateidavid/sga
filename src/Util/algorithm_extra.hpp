@@ -167,6 +167,8 @@ min_of(Forward_Range&& rg,
        Unary_Function&& f = Unary_Function())
     -> decltype(rg.end())
 {
+    static_assert(not std::is_rvalue_reference< Forward_Range >::value,
+                  "rvalue reference to range not allowed: returned iterator might not exist");
     return min_of(rg.begin(), rg.end(), f);
 }
 
@@ -240,6 +242,8 @@ max_of(Forward_Range&& rg,
        Unary_Function&& f = Unary_Function())
     -> decltype(rg.end())
 {
+    static_assert(not std::is_rvalue_reference< Forward_Range >::value,
+                  "rvalue reference to range not allowed: returned iterator might not exist");
     return max_of(rg.begin(), rg.end(), f);
 }
 
@@ -318,6 +322,8 @@ minmax_of(Forward_Range&& rg,
           Unary_Function&& f = Unary_Function())
     -> std::pair< decltype(rg.end()), decltype(rg.end()) >
 {
+    static_assert(not std::is_rvalue_reference< Forward_Range >::value,
+                  "rvalue reference to range not allowed: returned iterator might not exist");
     return minmax_of(rg.begin(), rg.end(), f);
 }
 
