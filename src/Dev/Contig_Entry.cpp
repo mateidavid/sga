@@ -501,7 +501,7 @@ Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mu
     ASSERT((r_rg.len() == 0) == mut_cbptr->is_del());
 
     // check there are no other mutations touching the endpoints of the contig range
-    ASSERT_MSG(all_of(ce_bptr->mut_cont().begin(), ce_bptr->mut_cont().end(),
+    ASSERT_MSG(all_of(ce_bptr->mut_cont(),
                       [&] (Mutation_CBRef mut_other_cbref) {
                           Mutation_CBPtr mut_other_cbptr = &mut_other_cbref;
                           return (mut_other_cbptr == mut_cbptr

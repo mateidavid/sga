@@ -114,12 +114,10 @@ void Hap_Map::connect_consecutive_anchors(const Allele_Anchor& a1)
     // check that all haps end at a1&a2
     auto check_hops_terminal = [] (const Hap_Hop_Set::find_anchor_type& hops) {
         return all_of(
-            ba::values(hops).begin(),
-            ba::values(hops).end(),
+            ba::values(hops),
             [] (const Hap_Hop_Set::find_anchor_type::mapped_type& v) {
                 return all_of(
-                    v.begin(),
-                    v.end(),
+                    v,
                     [] (const pair< Hap_Hop_CBPtr, bool >& p) {
                         return Hap_Map::is_terminal_hop(p.first, not p.second);
                     });
@@ -368,11 +366,11 @@ void Hap_Map::connect_unique(const Allele_Anchor& a1, const Allele_Anchor& a2,
 {
     ASSERT(a1.get_sibling(true) == a2);
     // check there is 1 hop per allele, and all hops are terminal
-    ASSERT(all_of(a1_hops.begin(), a1_hops.end(),
+    ASSERT(all_of(a1_hops,
                   [] (const pair< Allele_Specifier, set< Hap_Hop_CBPtr > >& p) {
                       return p.second.size() == 1 and Hap_Map::is_end_hop(*p.second.begin(), not (*p.second.begin())->c_direction());
                   }));
-    ASSERT(all_of(a2_hops.begin(), a2_hops.end(),
+    ASSERT(all_of(a2_hops,
                   [] (const pair< Allele_Specifier, set< Hap_Hop_CBPtr > >& p) {
                       return p.second.size() == 1 and Hap_Map::is_end_hop(*p.second.begin(), (*p.second.begin())->c_direction());
                   }));

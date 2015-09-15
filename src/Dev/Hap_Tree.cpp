@@ -36,12 +36,10 @@ make_hap_tree(const Hap_Hop_Set::find_anchor_type& haps, const Anchor_Read_Suppo
             }
             Allele_Anchor next_anchor = ba::values(next_haps).begin()->begin()->first->allele_anchor();
             ASSERT(all_of(
-                       ba::values(next_haps).begin(),
-                       ba::values(next_haps).end(),
+                       ba::values(next_haps),
                        [&] (const Hap_Hop_Set::find_anchor_type::mapped_type& s) {
                            return all_of(
-                               s.begin(),
-                               s.end(),
+                               s,
                                [&] (const pair< Hap_Hop_CBPtr, bool >& p) {
                                    return p.first->allele_anchor() == next_anchor;
                                });
