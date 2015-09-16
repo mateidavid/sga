@@ -246,10 +246,17 @@ TEST_CASE("for_each_advance")
     SECTION("non-mutating function")
     {
         int s = 0;
-        for_each_advance(l.begin(), l.end(), [&] (const int& v) { s += v; });
+        auto fn = [&] (const int& v) { s += v; };
+        for_each_advance(int_vector(), fn);
+        CHECK( s == 0 );
+        for_each_advance(int_vector({ 4 }), fn);
+        CHECK( s == 4 );
+        s = 0;
+        for_each_advance(l.begin(), l.end(), fn);
         CHECK( s == 15 );
-        for_each_advance(l, [&] (const int& v) { s += v; });
-        CHECK( s == 30 );
+        s = 0;
+        for_each_advance(l, fn);
+        CHECK( s == 15 );
     }
     SECTION("mutating function")
     {
@@ -276,10 +283,17 @@ TEST_CASE("for_each_it")
     SECTION("non-mutating function")
     {
         int s = 0;
-        for_each_it(l.begin(), l.end(), [&] (int_list_iterator it) { s += *it; });
+        auto fn = [&] (int_list_iterator it) { s += *it; };
+        for_each_it(int_list(), fn);
+        CHECK( s == 0 );
+        for_each_it(int_list({ 4 }), fn);
+        CHECK( s == 4 );
+        s = 0;
+        for_each_it(l.begin(), l.end(), fn);
         CHECK( s == 15 );
-        for_each_it(l, [&] (int_list_iterator it) { s += *it; });
-        CHECK( s == 30 );
+        s = 0;
+        for_each_it(l, fn);
+        CHECK( s == 15 );
     }
     SECTION("mutating function")
     {
@@ -305,10 +319,17 @@ TEST_CASE("for_each_it_advance")
     SECTION("non-mutating function")
     {
         int s = 0;
-        for_each_it_advance(l.begin(), l.end(), [&] (int_list_iterator it) { s += *it; });
+        auto fn = [&] (int_list_iterator it) { s += *it; };
+        for_each_it_advance(int_list(), fn);
+        CHECK( s == 0 );
+        for_each_it_advance(int_list({ 4 }), fn);
+        CHECK( s == 4 );
+        s = 0;
+        for_each_it_advance(l.begin(), l.end(), fn);
         CHECK( s == 15 );
-        for_each_it_advance(l, [&] (int_list_iterator it) { s += *it; });
-        CHECK( s == 30 );
+        s = 0;
+        for_each_it_advance(l, fn);
+        CHECK( s == 15 );
     }
     SECTION("mutating function")
     {
