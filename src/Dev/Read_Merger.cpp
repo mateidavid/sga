@@ -184,6 +184,7 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
     auto m_re_bptr = Read_Entry_Fact::new_elem(string(os.str()), 0);
     deque< Read_Chunk_BPtr > m_chunk_cont;
     Read_Chunk_BPtr m_rc_bptr;
+    set< Contig_Entry_BPtr > m_ce_set;
     for (int dir = 0; dir < 2; ++dir)
     {
         auto m_chunk_inserter = [&] (Read_Chunk_BPtr rc_bptr) {
@@ -197,6 +198,7 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
             // merge chunks in start contig
             m_rc_bptr = merge_contig_chunks(crt_chunks, m_re_bptr);
             m_chunk_inserter(m_rc_bptr);
+            m_ce_set.insert(m_rc_bptr->ce_bptr());
         }
         bool crt_dir = dir;
         while (true)
@@ -245,14 +247,13 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
                             }
                         }
                     }
-                    LOG("Read_Merger", error) << ptree("unmappable_inconsistency")
+                    LOG("Read_Merger", warning) << ptree("unmappable_inconsistency")
                         .put("prev_ce_cbptr", prev_ce_cbptr.to_int())
                         .put("next_ce_cbptr", next_ce_cbptr.to_int())
                         .put("unmappable_oset[0]", cont_to_ptree(unmappable_oset[0]))
                         .put("unmappable_oset[1]", cont_to_ptree(unmappable_oset[1]))
                         .put("non_unmappable_oset[0]", cont_to_ptree(non_unmappable_oset[0]))
                         .put("non_unmappable_oset[1]", cont_to_ptree(non_unmappable_oset[1]));
-                    abort();
                 }
                 m_rc_bptr = merge_unmappable_chunks(unmappable_chunks, m_re_bptr);
                 m_chunk_inserter(m_rc_bptr);
@@ -263,6 +264,12 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
             }
             m_rc_bptr = merge_contig_chunks(crt_chunks, m_re_bptr);
             m_chunk_inserter(m_rc_bptr);
+            auto p = m_ce_set.insert(m_rc_bptr->ce_bptr());
+            if (not p.second)
+            {
+                LOG("Read_Merger", warning) << ptree("contig_entry_duplication")
+                    .put("ce_bptr", m_rc_bptr->ce_bptr().to_int());
+            }
         } // while true
     } // for dir
 
