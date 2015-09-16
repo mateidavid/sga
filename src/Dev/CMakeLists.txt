@@ -36,6 +36,7 @@ target_link_libraries(mac-bin
     thirdparty
     version
     ${ZLIB_LIBRARIES}
+    rt
     )
 
 add_executable(test-itree-and-factory test-itree-and-factory.cpp)
