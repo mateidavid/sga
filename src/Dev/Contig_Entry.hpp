@@ -39,7 +39,7 @@ private:
 
     /// Constructor from sequence.
     /// @param seq RVR to read sequence (assume ownership).
-    Contig_Entry(Seq_Type&& seq, Size_Type seq_offset = 0)
+    explicit Contig_Entry(Seq_Type&& seq, Size_Type seq_offset = 0)
         : _seq(move(seq)), _seq_offset(seq_offset), _tag(0) {}
 
     ~Contig_Entry()
