@@ -225,7 +225,7 @@ set(CMAKE_C_FLAGS_GPROFREL "${CMAKE_CXX_FLAGS_GPROF}")
 
 # link flags
 #set(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath=$ENV{LD_RUN_PATH} -Wl,--as-needed -static-libgcc -static-libstdc++")
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed")
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed -lrt")
 message(STATUS "CMAKE_EXE_LINKER_FLAGS='${CMAKE_EXE_LINKER_FLAGS}'")
 
 ### Add target that updates version
