@@ -2997,6 +2997,7 @@ Graph::find_read_entries_with_seq(const Seq_Proxy_Type& seq, unsigned max_count)
 
 void Graph::compute_mutation_uniqueness(Size_Type flank_len)
 {
+    LOG("graph", info) << ptree("begin");
     if (not (_index_set.pBWT and _index_set.pSSA))
     {
         LOG("graph", error) << "compute_mutation_uniqueness: BWT index is required" << endl;
@@ -3060,6 +3061,7 @@ void Graph::compute_mutation_uniqueness(Size_Type flank_len)
             } // for al
         } // for mut_bptr
     } // for ce_bptr
+    LOG("graph", info) << ptree("begin");
 } // Graph::compute_mutation_uniqueness
 
 void Graph::compute_mutation_copy_num(Size_Type flank_len)
