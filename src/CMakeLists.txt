@@ -57,6 +57,21 @@ endif()
 # => ZLIB_INCLUDE_DIRS, ZLIB_LIBRARIES
 find_package(ZLIB REQUIRED)
 
+# check for Boost 1.57
+# => Boost_INCLUDE_DIRS, Boost_<COMPONENT>_LIBRARY
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${Boost_COMPILER}" STREQUAL "")
+    message(WARNING
+        "The cmake FindBoost package does not properly detect the compiler name when using CLang. Boost libraries built with 'versioned' layout (compiler name in library name, e.g. 'libboost_program_options-clang35-mt-1_57.so') might be incorrectly detected. To find such libraries, give the compiler name on the cmake command line, e.g. 'cmake -DBoost_COMPILER=\"-clang35\" [...]'. To check which libraries have been detected, use: 'grep libboost_program_options CMakeCache.txt'")
+endif()
+set(BOOST_ROOT "$ENV{BOOST_ROOT}" CACHE PATH "Path to Boost")
+# Use static libraries to avoid LD_RUN_PATH issues
+#set(Boost_USE_STATIC_LIBS true)
+#find_package(Boost 1.57.0 EXACT REQUIRED COMPONENTS iostreams program_options)
+find_package(Boost 1.57.0 EXACT REQUIRED)
+if(NOT Boost_FOUND)
+    message(FATAL_ERROR "Boost 1.57.0 not found")
+endif()
+
 # check for BamTools
 # => BamTools_INCLUDE_DIR, BamTools_LIBRARY
 if(BUILD_BAMTOOLS)
@@ -90,19 +105,21 @@ else()
     find_package(SparseHash REQUIRED)
 endif()
 
-# check for Boost 1.57
-# => Boost_INCLUDE_DIRS, Boost_<COMPONENT>_LIBRARY
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${Boost_COMPILER}" STREQUAL "")
-    message(WARNING
-        "The cmake FindBoost package does not properly detect the compiler name when using CLang. Boost libraries built with 'versioned' layout (compiler name in library name, e.g. 'libboost_program_options-clang35-mt-1_57.so') might be incorrectly detected. To find such libraries, give the compiler name on the cmake command line, e.g. 'cmake -DBoost_COMPILER=\"-clang35\" [...]'. To check which libraries have been detected, use: 'grep libboost_program_options CMakeCache.txt'")
-endif()
-set(BOOST_ROOT "$ENV{BOOST_ROOT}" CACHE PATH "Path to Boost")
-# Use static libraries to avoid LD_RUN_PATH issues
-#set(Boost_USE_STATIC_LIBS true)
-#find_package(Boost 1.57.0 EXACT REQUIRED COMPONENTS iostreams program_options)
-find_package(Boost 1.57.0 EXACT REQUIRED)
-if(NOT Boost_FOUND)
-    message(FATAL_ERROR "Boost 1.57.0 not found")
+# check for seqan
+# => SparseHash_INCLUDE_DIR
+if (BUILD_SEQAN)
+    message(STATUS "Building SeqAn in: ${OPTIONAL_SUBMODULE_PREFIX}")
+    ExternalProject_Add(seqan
+        URL https://github.com/seqan/seqan/releases/download/seqan-v2.0.0/seqan-library-2.0.0.tar.bz2
+        PREFIX ${OPTIONAL_SUBMODULE_PREFIX}
+        CONFIGURE_COMMAND ""
+        BUILD_IN_SOURCE 1
+        BUILD_COMMAND ""
+        INSTALL_COMMAND cp -r include/seqan ${OPTIONAL_SUBMODULE_PREFIX}/include
+        )
+    set(SeqAn_INCLUDE_DIR ${OPTIONAL_SUBMODULE_PREFIX}/include)
+else()
+    find_package(SeqAnLib REQUIRED)
 endif()
 
 # check for Hoard
@@ -156,7 +173,8 @@ include_directories(SYSTEM
     ${ZLIB_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${BamTools_INCLUDE_DIR}
-    ${SparseHash_INCLUDE_DIR})
+    ${SparseHash_INCLUDE_DIR}
+    ${SeqAn_INCLUDE_DIR})
 include_directories(
     ${PROJECT_BINARY_DIR}
     ${HEADER_SUBDIRS})
