@@ -24,6 +24,9 @@ void Read_Merger::operator () ()
                 // found a mutation allele with copy number 1
                 // greb all reads supporting it
                 Allele_Specifier allele(al);
+                LOG("Read_Merger", debug) << ptree("haploid_mutation")
+                    .put("anchor", anchor)
+                    .put("allele", allele);
                 auto allele_support = get_allele_read_support(move(anchor_support), allele);
                 extend_haploid_support(anchor, allele, false, allele_support);
                 extend_haploid_support(anchor, allele, true, allele_support);
@@ -67,7 +70,7 @@ void Read_Merger::extend_haploid_support(
         next_anchor = crt_anchor.get_sibling(crt_c_direction);
         // compute support at next anchor
         auto next_anchor_support = get_anchor_read_support(next_anchor, crt_c_direction);
-        // remove all reads not currently begin tracked
+        // remove all reads not currently being tracked
         for (auto& p : next_anchor_support)
         {
             for (int dir = 0; dir < 2; ++dir)
@@ -151,7 +154,10 @@ void Read_Merger::extend_haploid_support(
                             not crt_c_direction? crt_anchor : next_anchor,
                             not crt_c_direction? next_anchor : crt_anchor);
                         // we keep the side of the read that spans crt_anchor
-                        ASSERT(get_allele_read_support(crt_anchor, crt_allele, crt_c_direction)[dir].count(rp.first) > 0);
+                        auto tmp = get_allele_read_support(crt_anchor, crt_allele, crt_c_direction);
+                        (void)tmp;
+                        //TODO: remove
+                        ASSERT(tmp[dir].count(rp.first) > 0);
                         allele_support[(dir + _c_direction) % 2].insert(rp.first);
                     }
                     p.second[dir].clear();
@@ -328,7 +334,9 @@ Read_Merger::split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor
     _g.re_cont().insert(re_p.first);
     _g.re_cont().insert(re_p.second);
     _g.check(set< Read_Entry_CBPtr >{ re_p.first, re_p.second });
-    LOG("Read_Merger", debug) << ptree("end");
+    LOG("Read_Merger", debug) << ptree("end")
+        .put("head_re", re_p.first.to_int())
+        .put("tail_re", re_p.second.to_int());
     return (not dir ? re_p : make_pair(re_p.second, re_p.first));
 } // Read_Merger::split_read
 
