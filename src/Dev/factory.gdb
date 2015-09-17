@@ -66,7 +66,8 @@ def factory_raw_ptr(p, idx=None):
         str(boost.get_basic_type(p.type.template_argument(0))) + ', ' +
         str(p.type.template_argument(1)) + ' >'
         #+ '::active_ptr()->_cont.size()')
-        + '::size()')
+        + '::active_ptr()->ns_size()')
+        #+ '::size()')
     if idx >= int(sz):
         return boost.parse_and_eval('(' + str(p.type.template_argument(0)) + ' *)0')
     #res = boost.parse_and_eval(
