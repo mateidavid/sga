@@ -88,8 +88,8 @@ public:
      *   2 : some BWT hits not in graph
      *   3 : too many BWT hits
      */
-    void set_uniqueness(int allele, int value);
-    int get_uniqueness(int allele) const;
+    void set_uniqueness(int allele, int value) { _uniq.at(allele) = value; }
+    int get_uniqueness(int allele) const { return _uniq.at(allele); }
 
     /**
      * Set allele copy number.
@@ -99,8 +99,8 @@ public:
      *  -1 : unknown (default)
      *   0/1/2 : CN 0/1/2
      */
-    void set_copy_num(int allele, int value);
-    int get_copy_num(int allele) const;
+    void set_copy_num(int allele, int value) { _copy_num.at(allele) = value; }
+    int get_copy_num(int allele) const { return _copy_num.at(allele); }
 
     /**
      * Extend Mutation given sequence.
@@ -243,6 +243,8 @@ private:
     Mutation_BPtr _r_child;
     uint32_t _len;
     uint32_t _seq_len;
+    array< int8_t, 2 > _uniq;
+    array< int8_t, 2 > _copy_num;
 }; // class Mutation
 
 } // namespace MAC
