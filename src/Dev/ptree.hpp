@@ -15,7 +15,6 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/tti/has_member_function.hpp>
 
-
 /** Fix return value from put() and put_child() to allow chaining. */
 class ptree
     : public boost::property_tree::ptree
@@ -38,15 +37,14 @@ public:
         }
     }
 
+    using boost::property_tree::ptree::put_child;
+
     template < typename T >
-    ptree& put(std::string key, const T& val)
-    {
-        boost::property_tree::ptree::put(prefix_ + key, val);
-        return *this;
-    }
+    ptree& put(std::string key, const T& val);
+
     ptree& put(std::string key, const boost::property_tree::ptree& pt)
     {
-        boost::property_tree::ptree::put_child(prefix_ + key, pt);
+        put_child(prefix_ + key, pt);
         return *this;
     }
 
@@ -79,7 +77,9 @@ struct elem_to_ptree_impl< T, false >
 {
     ptree operator() (const T& e)
     {
-        return ptree(e);
+        boost::property_tree::ptree t;
+        t.put("", e);
+        return t;
     }
 };
 
@@ -91,6 +91,14 @@ struct elem_to_ptree : elem_to_ptree_impl< T, has_member_function_to_ptree< cons
 {};
 
 } // namespace detail
+
+template < typename T >
+ptree& ptree::put(std::string key, const T& val)
+{
+    ptree pt = detail::elem_to_ptree< T >()(val);
+    put_child(prefix_ + key, pt);
+    return *this;
+}
 
 template < typename Cont, typename Elem_Type = typename Cont::value_type >
 ptree cont_to_ptree(const Cont& cont, std::function< ptree(const Elem_Type&) > to_ptree)
