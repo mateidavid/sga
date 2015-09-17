@@ -73,6 +73,7 @@ namespace opts
     SwitchArg unmap_single_chunks("", "unmap-single-chunks", "Unmap single chunks.", cmd_parser, false);
     SwitchArg unmap_mut_clusters("", "unmap-mut-clusters", "Unmap mutation clusters.", cmd_parser, false);
     ValueArg< int > unmap_short_contigs("", "unmap-short-contigs", "Unmap contigs smaller than a given size.", false, 0, "int", cmd_parser);
+    SwitchArg copy_num("", "copy-num", "Compute copy numbers.", cmd_parser, false);
     SwitchArg build_hapmap("", "build-hapmap", "Build haplotype map.", cmd_parser, false);
     SwitchArg gfa_show_mutations("", "gfa-show-mutations", "Show mutations in GFA output.", cmd_parser, false);
     //
@@ -255,6 +256,11 @@ int real_main()
         g.unmap_short_contigs(opts::unmap_short_contigs, 1);
         g.check_all();
     }
+    if (opts::copy_num)
+    {
+        g.compute_mutation_uniqueness(10);
+        g.compute_mutation_copy_num(10);
+    }
     if (opts::build_hapmap)
     {
         //hm.build(g);
@@ -263,11 +269,6 @@ int real_main()
     if (opts::test_1)
     {
         g.test_mutation_allele_swapping();
-    }
-    if (opts::test_2)
-    {
-        g.compute_mutation_uniqueness(10);
-        g.compute_mutation_copy_num(10);
     }
     if (opts::interactive)
     {
