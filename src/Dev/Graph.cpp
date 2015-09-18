@@ -356,6 +356,10 @@ Graph::chunker(Read_Entry_BPtr re1_bptr, Read_Entry_BPtr re2_bptr, Cigar& cigar)
             r2_end = re2_bptr->end();
             cigar.trim(r1_start, r1_end, r2_start, r2_end);
             cigar.drop_terminal_indels();
+            cut_read_entry(re1_bptr, cigar.rf_start());
+            cut_read_entry(re1_bptr, cigar.rf_end());
+            cut_read_entry(re2_bptr, cigar.qr_start());
+            cut_read_entry(re2_bptr, cigar.qr_end());
         }
 
         Size_Type r1_match_start = cigar.rf_start();
