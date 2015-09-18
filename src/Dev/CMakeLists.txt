@@ -24,17 +24,26 @@ add_library(mac STATIC
     Hap_Tree.cpp
     Anchor_Support.cpp
     CLI.cpp
+    MAC_explicit_instantiations.cpp
     )
 
 # workaround library&executable having the same name
 add_executable(mac-bin mac.cpp)
 set_target_properties(mac-bin PROPERTIES OUTPUT_NAME mac)
+if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    target_link_libraries(mac-bin -Wl,--whole-archive)
+endif()
 target_link_libraries(mac-bin
     mac
     suffixtools
     util
     thirdparty
     version
+    )
+if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    target_link_libraries(mac-bin -Wl,--no-whole-archive)
+endif()
+target_link_libraries(mac-bin
     ${ZLIB_LIBRARIES}
     rt
     )
