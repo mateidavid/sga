@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo "python"
+nm -C "$1" | grep ::_active_ptr |
+while read -r line; do
+    addr=${line:0:16}
+    class_name=${line:19}
+    echo "boost.static_var_addr[\"${class_name}\"]=0x${addr}"
+done
+echo "end"

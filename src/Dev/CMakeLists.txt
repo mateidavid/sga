@@ -48,6 +48,14 @@ target_link_libraries(mac-bin
     rt
     )
 
+if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    # extract active_ptr addresses for reliable gdb operation
+    add_custom_command(TARGET mac-bin POST_BUILD
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/get_active_ptr_addresses mac >mac-addresses.gdb
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        )
+endif()
+
 add_executable(test-itree-and-factory test-itree-and-factory.cpp)
 
 add_executable(test-Read_Chunk-traversal test-Read_Chunk-traversal.cpp)

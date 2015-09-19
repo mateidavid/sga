@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 source itree.gdb
 source factory.gdb
+source mac-addresses.gdb
 python
 
 def get_first_subclass(v):
