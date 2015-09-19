@@ -39,15 +39,14 @@ public:
     /** If the range overlaps or touches and existing range,
      * extend that range; else insert this one.
      */
-    void insert(const range_type& range)
+    void insert(range_type range)
     {
         // ignore negative ranges
         if (range.end() <= range.start())
         {
             return;
         }
-        //std::cerr << "adding range: [" << std::get<0>(range) << "," << std::get<1>(range) << "]\n";
-        // find first range that could overlap this one
+        // find all ranges that could overlap this one, and merge them into it
         auto it = Base::lower_bound(range);
         if (it != begin())
         {
@@ -55,25 +54,37 @@ public:
         }
         while (it != end() and it->start() <= range.end())
         {
-            if (range.start() <= it->end())
+            auto it_copy = it++;
+            if (range.start() <= it_copy->end())
             {
                 // overlap:
-                // either get<0>(range) <  get<0>(*it)   [ <= get<1>(range) ]
-                // or     get<0>(*it)   <= get<0>(range) [ <= get<1>(*it)   ]
-                range_type new_range = std::make_tuple(std::min(it->start(), range.start()),
-                                                       std::max(it->end(), range.end()));
-                Base::erase(it);
-                Base::insert(new_range);
-                return;
+                // either range.start <  it->start   <= range.end
+                // or     it->start   <= range.start <= it->end
+                range = range_type(std::min(it_copy->start(), range.start()),
+                                   std::max(it_copy->end(), range.end()));
+                Base::erase(it_copy);
             }
-            ++it;
         }
-        // no overlaps were found; just insert new range
+        // done extending, insert new range
         Base::insert(range);
+        check();
+    }
+private:
+    void check()
+    {
+#ifndef DISABLE_ASSERTS
+        auto it_last = begin();
+        if (it_last == end()) return;
+        auto it = std::next(it_last);
+        while (it != end())
+        {
+            ASSERT(it_last->end() < it->start());
+            it_last = it++;
+        }
+#endif
     }
 };
 
 } // namespace Range
-
 
 #endif
