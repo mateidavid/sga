@@ -50,15 +50,14 @@ def Pointer_Printer(p):
 boost.add_trivial_printer('bounded::detail::Identifier', Identifier_Printer)
 boost.add_trivial_printer('bounded::Pointer', lambda p: str(p['_idn']))
 
-active_ptr_addr = dict()
-
 def get_active_ptr(p):
     t = boost.get_basic_type(p.type)
     unqual_val_type = t.template_argument(0).unqualified()
     idx_type = t.template_argument(1)
     storage_type = boost.lookup_type('bounded::detail::Storage<' + str(unqual_val_type) + ',' + str(idx_type) + '>')
-    if storage_type.tag in active_ptr_addr:
-        return boost.parse_and_eval('*(' + storage_type.tag + '**)' + str(active_ptr_addr[storage_type.tag]))
+    res_addr = boost.get_static_var_addr(storage_type.tag + '::active_ptr()::_active_ptr')
+    if res_addr:
+        return res_addr.cast(storage_type.pointer().pointer()).dereference()
     else:
         cmd_str = storage_type.tag + '::active_ptr()'
         try:
@@ -69,7 +68,7 @@ def get_active_ptr(p):
                 'get_active_ptr',
                 '\n\tto bypass call:\n' +
                 '\t- find static variable address with, e.g.: nm -C <executable> | grep ::_active_ptr\n' +
-                '\t- add it to gdb with, e.g.: py active_ptr_addr["bounded::detail::Storage<MAC::Read_Entry, unsigned int>"]=0x0000000000951dd0')
+                '\t- add it to gdb with, e.g.: py boost.static_var_addr["bounded::detail::Storage<MAC::Read_Entry, unsigned int>::active_ptr()::_active_ptr"]=0x0000000000951dd0')
             raise gdb.error
 
 def factory_raw_ptr(p, idx=None):
