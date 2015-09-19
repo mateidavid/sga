@@ -93,6 +93,22 @@ class Read_Chunk_Printer:
         return iter(self.l)
 
 @add_mac_printer
+class Read_Entry_Printer:
+    printer_name = 'MAC::Read_Entry'
+    template_name = 'MAC::Read_Entry'
+    def __init__(self, v):
+        self.v = v
+        self.l = list()
+        self.l.append(('name', v['_name']))
+        self.l.append(('start', v['_start']))
+        self.l.append(('len', v['_len']))
+        self.l.append(('chunk_cont', str(v['_chunk_cont'])))
+    def to_string(self):
+        return None
+    def children(self):
+        return iter(self.l)
+
+@add_mac_printer
 class Mutation_Chunk_Adapter_Printer:
     printer_name = 'MAC::Mutation_Chunk_Adapter'
     template_name = 'MAC::Mutation_Chunk_Adapter'
