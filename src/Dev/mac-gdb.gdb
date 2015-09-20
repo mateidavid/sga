@@ -110,6 +110,40 @@ class Read_Entry_Printer:
         return iter(self.l)
 
 @add_mac_printer
+class Contig_Entry_Printer:
+    printer_name = 'MAC::Contig_Entry'
+    template_name = 'MAC::Contig_Entry'
+    def __init__(self, v):
+        self.v = v
+        self.l = list()
+        self.l.append(('seq', v['_seq']))
+        self.l.append(('unmappable', int(bool(v['_tag'] & v['is_unmappable_mask']))))
+        self.l.append(('mut_cont', str(v['_mut_cont'])))
+        self.l.append(('chunk_cont', str(v['_chunk_cont'])))
+    def to_string(self):
+        return None
+    def children(self):
+        return iter(self.l)
+
+@add_mac_printer
+class Mutation_Printer:
+    printer_name = 'MAC::Mutation'
+    template_name = 'MAC::Mutation'
+    def __init__(self, v):
+        self.v = v
+        self.l = list()
+        self.l.append(('start', v['_start']))
+        self.l.append(('len', v['_len']))
+        self.l.append(('seq', v['_seq']))
+        self.l.append(('uniq', '(%d,%d)' % (int(v['_uniq']['_M_elems'][0]), int(v['_uniq']['_M_elems'][1]))))
+        self.l.append(('cn', '(%d,%d)' % (int(v['_copy_num']['_M_elems'][0]), int(v['_copy_num']['_M_elems'][1]))))
+        self.l.append(('chunk_ptr_cont', str(v['_chunk_ptr_cont'])))
+    def to_string(self):
+        return None
+    def children(self):
+        return iter(self.l)
+
+@add_mac_printer
 class Mutation_Chunk_Adapter_Printer:
     printer_name = 'MAC::Mutation_Chunk_Adapter'
     template_name = 'MAC::Mutation_Chunk_Adapter'
