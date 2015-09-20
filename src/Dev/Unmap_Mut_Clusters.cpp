@@ -35,33 +35,31 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
             }
             LOG("Unmap_Mut_Clusters", debug) << ptree("unmap_ce_region")
                 .put("ce_ptr", ce_bptr.to_int())
-                .put("start", mut_cluster->start())
-                .put("end", mut_cluster->end());
+                .put("rg", *mut_cluster);
             // save read entry positions to unmap in a vector
             //vector< tuple< Read_Entry_CBPtr, Range_Type > > unmap_re_pos_v;
             map< Read_Entry_BPtr, Range_Cont > unmap_re_set;
-            for (auto unmap_rc_cbptr : ce_bptr->chunk_cont().iintersect(mut_cluster->start(), mut_cluster->end()) | referenced)
+            for (auto unmap_rc_cbptr : ce_bptr->chunk_cont().iintersect(mut_cluster->begin(), mut_cluster->end()) | referenced)
             {
                 // skip 0-length endpoint intersections
                 // ONLY if cluster size is non-zero! otherwise, we might be trying to unmap an insertion
-                if (mut_cluster->start() < mut_cluster->end()
-                    and (unmap_rc_cbptr->get_c_end() == mut_cluster->start()
+                if (mut_cluster->begin() < mut_cluster->end()
+                    and (unmap_rc_cbptr->get_c_end() == mut_cluster->begin()
                          or unmap_rc_cbptr->get_c_start() == mut_cluster->end()))
                 {
                     continue;
                 }
                 // transform cluster contig range into read range
                 auto r_rg = unmap_rc_cbptr->mapped_range(mut_cluster.get(), true, true, true);
-                ASSERT(r_rg.start() <= r_rg.end());
-                if (r_rg.start() == r_rg.end())
+                ASSERT(r_rg.begin() <= r_rg.end());
+                if (r_rg.begin() == r_rg.end())
                 {
                     // the unmapped range is spanned by a deletion in this read
                     continue;
                 }
                 LOG("Unmap_Mut_Clusters", debug) << ptree("unmap_re_region")
                     .put("re_ptr", unmap_rc_cbptr->re_bptr().to_int())
-                    .put("start", r_rg.start())
-                    .put("end", r_rg.end());
+                    .put("rg", r_rg);
                 //unmap_re_pos_v.emplace_back(unmap_rc_cbptr->re_bptr(), move(r_rg));
                 unmap_re_set[unmap_rc_cbptr->re_bptr()].insert(r_rg);
             }

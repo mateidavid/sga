@@ -101,12 +101,12 @@ void Validate_Variations::operator () (Graph& g) const
                 auto r_rg = rc_bptr->mapped_range(c_rg, true, true, true);
                 LOG("Validate_Variations", info) << ptree("erasing_nonvalidated_allele")
                     .put("re_bptr", re_bptr.to_int())
-                    .put("r_rg_start", r_rg.start())
+                    .put("r_rg_start", r_rg.begin())
                     .put("r_rg_end", r_rg.end());
                 ASSERT(r_rg.len() == mut_cbptr->seq_len());
-                re_bptr->edit(rc_bptr, r_rg.start(),
+                re_bptr->edit(rc_bptr, r_rg.begin(),
                               mut_cbptr->seq().revcomp(rc_bptr->get_rc()),
-                              ce_bptr->substr(c_rg.start(), c_rg.len()));
+                              ce_bptr->substr(c_rg.begin(), c_rg.len()));
                 re_set.insert(re_bptr);
             }
             // remove the Mutation
@@ -135,7 +135,7 @@ bool Validate_Variations::validate_allele(Mutation_CBPtr mut_cbptr,
     Range_Type r_rg;
     auto rc_cbptr_it = find_if(rc_set.begin(), rc_set.end(), [&] (Read_Chunk_CBPtr rc_cbptr) {
             r_rg = rc_cbptr->mapped_range(c_rg, true, true, true); // TODO: CHECK
-            return (r_rg.start() >= rc_cbptr->re_bptr()->start() + _flank_size and
+            return (r_rg.begin() >= rc_cbptr->re_bptr()->start() + _flank_size and
                     r_rg.end() + _flank_size <= rc_cbptr->re_bptr()->end());
         });
     if (rc_cbptr_it == rc_set.end())
@@ -144,7 +144,7 @@ bool Validate_Variations::validate_allele(Mutation_CBPtr mut_cbptr,
         return false;
     }
     Read_Chunk_CBPtr rc_cbptr = *rc_cbptr_it;
-    Seq_Type s = rc_cbptr->re_bptr()->get_seq().substr(r_rg.start() - _flank_size,
+    Seq_Type s = rc_cbptr->re_bptr()->get_seq().substr(r_rg.begin() - _flank_size,
                                                        2 * _flank_size + r_rg.len());
     if (_check_both_strands)
     {

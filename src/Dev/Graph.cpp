@@ -1255,9 +1255,9 @@ Graph::find_unmappable_regions(Read_Chunk_CBPtr orig_rc_cbptr, Range_Cont& regio
                 Range_Type overlap_c_rg(max(rc1_cbptr->get_c_start(), rc2_cbptr->get_c_start()),
                                         min(rc1_cbptr->get_c_end(), rc2_cbptr->get_c_end()));
                 // restrict to original chunk coordinates
-                overlap_c_rg.start() = max(overlap_c_rg.start(), orig_rc_cbptr->get_c_start());
+                overlap_c_rg.begin() = max(overlap_c_rg.begin(), orig_rc_cbptr->get_c_start());
                 overlap_c_rg.end() = min(overlap_c_rg.end(), orig_rc_cbptr->get_c_end());
-                if (overlap_c_rg.end() < overlap_c_rg.start())
+                if (overlap_c_rg.end() < overlap_c_rg.begin())
                 {
                     // negative overlap region; ignore
                     continue;

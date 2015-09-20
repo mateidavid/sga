@@ -4,6 +4,7 @@
 #include <tuple>
 #include <utility>
 #include "shortcuts.hpp"
+#include "ptree.hpp"
 
 
 namespace range
@@ -12,35 +13,41 @@ namespace range
 /** A Range is a tuple of coordinates. */
 template < typename T >
 class Range
+    : public std::pair< T, T >
 {
 public:
-    DEFAULT_DEF_CTOR(Range);
+    typedef std::pair< T, T > Base;
+    using Base::Base;
 
-    Range(const T& start, const T& end) : _start(start), _end(end) {}
-    Range(const std::tuple< T, T >& t) : _start(std::get<0>(t)), _end(std::get<1>(t)) {}
+    const T& begin() const { return this->first; }
+    T& begin() { return this->first; }
+    const T& end() const { return this->second; }
+    T& end() { return this->second; }
+    T len() const { return end() - begin(); }
 
-    operator std::tuple< T, T >() const { return std::make_tuple(_start, _end); }
-
-    GETTER(T, start, _start)
-    GETTER(T, end, _end)
-    T len() const { return end() - start(); }
-
-    friend bool operator == (const Range& lhs, const Range& rhs)
+    bool empty() const { return end() <= begin(); }
+    bool touch(const Range& other) const
     {
-        return lhs._start == rhs._start and lhs._end == rhs._end;
+        return (begin() <= other.begin() and other.begin() <= end())
+            or (other.begin() <= begin() and begin() <= other.end());
     }
-    friend bool operator <  (const Range& lhs, const Range& rhs)
+    Range& contract(const Range& other)
     {
-        return lhs._start < rhs._start or (lhs._start == rhs._start and lhs._end < rhs._end);
+        begin() = std::max(begin(), other.begin());
+        end() = std::min(end(), other.end());
+        return *this;
     }
-    friend bool operator != (const Range& lhs, const Range& rhs) { return !(lhs == rhs); }
-    friend bool operator <= (const Range& lhs, const Range& rhs) { return lhs == rhs or lhs < rhs; }
-    friend bool operator >  (const Range& lhs, const Range& rhs) { return !(lhs <= rhs); }
-    friend bool operator >= (const Range& lhs, const Range& rhs) { return !(lhs < rhs); }
+    Range& extend(const Range& other)
+    {
+        begin() = std::min(begin(), other.begin());
+        end() = std::max(end(), other.end());
+        return *this;
+    }
 
-private:
-    T _start;
-    T _end;
+    ptree to_ptree() const
+    {
+        return ptree().put("begin", begin()).put("end", end());
+    }
 };
 
 } // namespace Range

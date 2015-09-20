@@ -208,7 +208,7 @@ Contig_Entry::mut_support(Mutation_CBPtr mut_cbptr) const
             // if the rf allele is empty, the read must not end on the mutation endpoint
             Range_Type c_rg(mut_cbptr->rf_start(), mut_cbptr->rf_start());
             auto r_rg = rc_cbptr->mapped_range(c_rg, true, true, true);
-            if (rc_cbptr->re_bptr()->start() < r_rg.start() and r_rg.end() < rc_cbptr->re_bptr()->end())
+            if (rc_cbptr->re_bptr()->start() < r_rg.begin() and r_rg.end() < rc_cbptr->re_bptr()->end())
             {
                 full_rf_set.insert(rc_cbptr);
             }
@@ -505,13 +505,13 @@ Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mu
                       [&] (Mutation_CBRef mut_other_cbref) {
                           Mutation_CBPtr mut_other_cbptr = &mut_other_cbref;
                           return (mut_other_cbptr == mut_cbptr
-                                  or mut_other_cbptr->rf_end() < c_rg.start()
+                                  or mut_other_cbptr->rf_end() < c_rg.begin()
                                   or mut_other_cbptr->rf_start() > c_rg.end());
                       }),
         "unmap_mutation_clusters must be run before swapping mutation alleles");
 
     // cut contig entry into 3 slices, so that mutation spans the full middle contig
-    auto ce_mid_bptr = ce_bptr->cut(c_rg.start(), nullptr, true);
+    auto ce_mid_bptr = ce_bptr->cut(c_rg.begin(), nullptr, true);
     ASSERT(ce_mid_bptr);
     //rc_cbptr = re_cbptr->chunk_cont().get_chunk_with_pos(r_rg.start());
     //if (rc_cbptr->get_rc() and r_rg.end() == rc_cbptr->get_r_start()) rc_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, false);
@@ -634,7 +634,7 @@ Mutation_CBPtr Contig_Entry::swap_mutation_alleles(Contig_Entry_BPtr ce_bptr, Mu
         ASSERT(get<1>(res));
         Contig_Entry::cat_c_right(ce_bptr, ce_new_bptr, get<2>(res));
     }
-    auto rg = ce_bptr->mut_cont().iintersect(c_rg.start(), c_rg.start());
+    auto rg = ce_bptr->mut_cont().iintersect(c_rg.begin(), c_rg.begin());
     ASSERT((rg.begin() == rg.end()) or (rg.begin() != rg.end() and ++rg.begin() == rg.end()));
 
     return rg.begin() != rg.end()? &*rg.begin() : nullptr;

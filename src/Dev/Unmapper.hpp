@@ -64,7 +64,7 @@ private:
      * its contig is added to the unmap_ce_set,
      * and the remaining read region is added back to the unmap_re_set.
      */
-    void _unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg,
+    void _unmap_re_region(Read_Entry_BPtr re_bptr, Range_Type rg,
                           ce_set_type& unmap_ce_set, re_set_type& unmap_re_set);
 
     /**
@@ -73,7 +73,7 @@ private:
      * If the unmappable region is ended by a mappable chunk smaller than unmap_trigger_len,
      * that chunk is added to the unmap_ce_set.
      */
-    void _extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg,
+    void _extend_unmappable_re_region(Read_Entry_BPtr re_bptr, Range_Type rg,
                                       re_set_type& unmap_re_set);
 
 }; // class Unmapper

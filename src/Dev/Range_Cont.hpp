@@ -42,7 +42,7 @@ public:
     void insert(range_type range)
     {
         // ignore negative ranges
-        if (range.end() <= range.start())
+        if (range.end() <= range.begin())
         {
             return;
         }
@@ -52,16 +52,16 @@ public:
         {
             --it;
         }
-        while (it != end() and it->start() <= range.end())
+        while (it != end() and it->begin() <= range.end())
         {
             auto it_copy = it++;
-            if (range.start() <= it_copy->end())
+            if (range.begin() <= it_copy->end())
             {
                 // overlap:
                 // either range.start <  it->start   <= range.end
                 // or     it->start   <= range.start <= it->end
-                range = range_type(std::min(it_copy->start(), range.start()),
-                                   std::max(it_copy->end(), range.end()));
+                ASSERT(range.touch(*it_copy));
+                range.extend(*it_copy);
                 Base::erase(it_copy);
             }
         }
@@ -78,7 +78,7 @@ private:
         auto it = std::next(it_last);
         while (it != end())
         {
-            ASSERT(it_last->end() < it->start());
+            ASSERT(it_last->end() < it->begin());
             it_last = it++;
         }
 #endif

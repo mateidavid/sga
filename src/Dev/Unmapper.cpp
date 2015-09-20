@@ -73,47 +73,42 @@ Unmapper::_unmap_ce(Contig_Entry_BPtr ce_bptr, re_set_type& extend_re_set)
 } // Unmapper::_unmap_ce
 
 void
-Unmapper::_unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg,
+Unmapper::_unmap_re_region(Read_Entry_BPtr re_bptr, Range_Type rg,
                            ce_set_type& unmap_ce_set, re_set_type&)
 {
     LOG("Unmapper", debug) << ptree("begin")
         .put("re_bptr", re_bptr.to_int())
-        .put("rg_start", rg.start())
-        .put("rg_end", rg.end());
-    Size_Type r_start = max(rg.start(), re_bptr->start());
-    Size_Type r_end = min(rg.end(), re_bptr->end());
-    if (r_end <= r_start) return;
-    _g.cut_read_entry(re_bptr, r_start);
-    _g.cut_read_entry(re_bptr, r_end);
-    while (r_start < r_end)
+        .put("rg", rg);
+    rg.contract(Range_Type(re_bptr->start(), re_bptr->end()));
+    if (rg.empty()) return;
+    _g.cut_read_entry(re_bptr, rg.begin());
+    _g.cut_read_entry(re_bptr, rg.end());
+    while (not rg.empty())
     {
-        Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(r_start).unconst();
+        Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg.begin()).unconst();
         ASSERT(rc_bptr);
         ASSERT(rc_bptr->get_c_start() == 0 and rc_bptr->get_c_end() == rc_bptr->ce_bptr()->len());
-        ASSERT(rc_bptr->get_r_end() <= r_end);
+        ASSERT(rc_bptr->get_r_end() <= rg.end());
         if (not rc_bptr->ce_bptr()->is_unmappable())
         {
             unmap_ce_set.insert(rc_bptr->ce_bptr());
         }
-        r_start = rc_bptr->get_r_end();
+        rg.begin() = rc_bptr->get_r_end();
     }
     LOG("Unmapper", debug) << ptree("end");
 } // Unmapper::_unmap_re_region
 
 void
-Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg,
+Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, Range_Type rg,
                                        re_set_type& unmap_re_set)
 {
     LOG("Unmapper", debug) << ptree("begin")
         .put("re_bptr", re_bptr.to_int())
-        .put("rg_start", rg.start())
-        .put("rg_end", rg.end());
-    Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg.start()).unconst();
-    ASSERT(rc_bptr or rg.end() <= re_bptr->start() or re_bptr->end() <= rg.start());
-    if (not rc_bptr)
-    {
-        return;
-    }
+        .put("rg", rg);
+    rg.contract(Range_Type(re_bptr->start(), re_bptr->end()));
+    if (rg.empty()) return;
+    Read_Chunk_BPtr rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg.begin()).unconst();
+    ASSERT(rc_bptr);
     ASSERT(rc_bptr->ce_bptr()->is_unmappable());
     for (int dir = 0; dir < 2; ++dir)
     {
@@ -132,7 +127,7 @@ Unmapper::_extend_unmappable_re_region(Read_Entry_BPtr re_bptr, const Range_Type
             static_cast< void >(success);
             ASSERT(success);
             // recompute rc
-            rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg.start()).unconst();
+            rc_bptr = re_bptr->chunk_cont().get_chunk_with_pos(rg.begin()).unconst();
             ASSERT(rc_bptr);
             ASSERT(rc_bptr->ce_bptr()->is_unmappable());
         }
