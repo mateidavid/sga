@@ -144,8 +144,9 @@ bool Validate_Variations::validate_allele(Mutation_CBPtr mut_cbptr,
         return false;
     }
     Read_Chunk_CBPtr rc_cbptr = *rc_cbptr_it;
-    Seq_Type s = rc_cbptr->re_bptr()->get_seq().substr(r_rg.begin() - _flank_size,
-                                                       2 * _flank_size + r_rg.len());
+    Seq_Type s = rc_cbptr->re_bptr()->get_seq().substr(
+        r_rg.begin() -rc_cbptr->re_bptr()->start() - _flank_size,
+        2 * _flank_size + r_rg.len());
     if (_check_both_strands)
     {
         auto cnt_0 = BWTAlgorithms::countSequenceOccurrencesSingleStrand(s, index_set);
