@@ -32,18 +32,16 @@ add_executable(mac-bin mac.cpp)
 set_target_properties(mac-bin PROPERTIES OUTPUT_NAME mac)
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
     target_link_libraries(mac-bin -Wl,--whole-archive)
+    target_link_libraries(mac-bin mac)
+    target_link_libraries(mac-bin -Wl,--no-whole-archive)
+else()
+    target_link_libraries(mac-bin mac)
 endif()
 target_link_libraries(mac-bin
-    mac
     suffixtools
     util
     thirdparty
     version
-    )
-if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
-    target_link_libraries(mac-bin -Wl,--no-whole-archive)
-endif()
-target_link_libraries(mac-bin
     ${ZLIB_LIBRARIES}
     rt
     )
