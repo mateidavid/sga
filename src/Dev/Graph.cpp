@@ -1406,7 +1406,9 @@ void Graph::unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start)
 
 void Graph::print_mutations(ostream& os, size_t min_support, Size_Type flank_len) const
 {
-    os << "MUT\tid.ce\tlen.ce\tpos.rf\tlen.rf\tlen.alt\tseq.rf\tseq.alt\tflank.left\tflank.right\tnum.cks.rf\tnum.cks.alt\n";
+    os << "MUT\tid.ce\tlen.ce\tpos.rf\tlen.rf\tlen.alt\tseq.rf\tseq.alt\t"
+        "flank.left\tflank.right\tnum.cks.rf\tnum.cks.alt\t"
+        "uniq.rf\tuniq.alt\tcn.rf\tcn.alt\n";
     for (auto ce_bptr : ce_cont() | referenced |
              ba::filtered([] (Contig_Entry_CBPtr ce_cbptr) { return ce_cbptr->is_normal(); }))
     {
@@ -1428,7 +1430,9 @@ void Graph::print_mutations(ostream& os, size_t min_support, Size_Type flank_len
                                         mut_bptr->rf_start() >= flank_len? flank_len : mut_bptr->rf_start()) << "\t"
                << ce_bptr->seq().substr(mut_bptr->rf_end(),
                                         min(ce_bptr->len() - mut_bptr->rf_end(), flank_len)) << "\t"
-               << num_cks_rf << "\t" << num_cks_qr << "\n";
+               << num_cks_rf << "\t" << num_cks_qr << "\t"
+               << mut_bptr->get_uniqueness(0) << "\t" << mut_bptr->get_uniqueness(1) << "\t"
+               << mut_bptr->get_copy_num(0) << "\t" << mut_bptr->get_copy_num(1) << endl;
         }
     }
 }
