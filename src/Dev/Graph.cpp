@@ -1431,8 +1431,8 @@ void Graph::print_mutations(ostream& os, size_t min_support, Size_Type flank_len
                << ce_bptr->seq().substr(mut_bptr->rf_end(),
                                         min(ce_bptr->len() - mut_bptr->rf_end(), flank_len)) << "\t"
                << num_cks_rf << "\t" << num_cks_qr << "\t"
-               << mut_bptr->get_uniqueness(0) << "\t" << mut_bptr->get_uniqueness(1) << "\t"
-               << mut_bptr->get_copy_num(0) << "\t" << mut_bptr->get_copy_num(1) << endl;
+               << (int)mut_bptr->uniq(0) << "\t" << (int)mut_bptr->uniq(1) << "\t"
+               << (int)mut_bptr->copy_num(0) << "\t" << (int)mut_bptr->copy_num(1) << endl;
         }
     }
 }
@@ -3040,12 +3040,14 @@ void Graph::compute_mutation_uniqueness(Size_Type flank_len)
                 auto r = find_read_entries_with_seq(s, 1000);
                 if (r.second)
                 {
-                    mut_bptr->set_uniqueness(al, 2);
+                    // hits not in graph
+                    mut_bptr->uniq(al) = 3;
                     continue;
                 }
                 if (r.first.empty())
                 {
-                    mut_bptr->set_uniqueness(al, 3);
+                    // too many hits
+                    mut_bptr->uniq(al) = 4;
                     continue;
                 }
                 bool unique = true;
@@ -3065,7 +3067,7 @@ void Graph::compute_mutation_uniqueness(Size_Type flank_len)
                     }
                     if (not unique) break;
                 }
-                mut_bptr->set_uniqueness(al, not unique);
+                mut_bptr->uniq(al) = (unique? 1 : 2);
             } // for al
         } // for mut_bptr
     } // for ce_bptr
@@ -3101,7 +3103,7 @@ void Graph::compute_mutation_copy_num(Size_Type flank_len)
         }
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
-            if (mut_bptr->get_uniqueness(0) != 0 or mut_bptr->get_uniqueness(1) != 0)
+            if (mut_bptr->uniq(0) != 1 or mut_bptr->uniq(1) != 1)
             {
                 LOG("graph", debug) << ptree("non_unique_mutation")
                     .put("mut_bptr", mut_bptr.to_int())
@@ -3122,11 +3124,11 @@ void Graph::compute_mutation_copy_num(Size_Type flank_len)
                 int cn = round((double)cnt / get_aux_coverage());
                 if (0 <= cn and cn <= 2)
                 {
-                    mut_bptr->set_copy_num(al, cn);
+                    mut_bptr->copy_num(al) = cn;
                 }
                 else if (cn > 2)
                 {
-                    mut_bptr->set_copy_num(al, -2);
+                    mut_bptr->copy_num(al) = -2;
                 }
             } // for al
         } // for mut_bptr
@@ -3160,7 +3162,7 @@ void Graph::compute_aux_coverage(Size_Type flank_len)
         }
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
-            if (mut_bptr->get_uniqueness(0) != 0 or mut_bptr->get_uniqueness(1) != 0)
+            if (mut_bptr->uniq(0) != 1 or mut_bptr->uniq(1) != 1)
             {
                 LOG("graph", debug) << ptree("non_unique_mutation")
                     .put("mut_bptr", mut_bptr.to_int())

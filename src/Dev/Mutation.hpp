@@ -27,7 +27,7 @@ private:
 
     /// Default constructor.
     Mutation()
-        : _start(0), _len(0), _seq_len(0) {}
+        : _start(0), _len(0), _seq_len(0), _uniq({}), _copy_num({{-1, -1}}) {}
 
     // disallow copy or move
     DELETE_COPY_CTOR(Mutation);
@@ -42,7 +42,7 @@ private:
      * @param seq Alternate sequence.
      */
     Mutation(Size_Type start, Size_Type len, Seq_Type&& seq)
-        : _seq(move(seq)), _start(start), _len(len), _seq_len(_seq.size()) {}
+        : _seq(move(seq)), _start(start), _len(len), _seq_len(_seq.size()), _uniq({}), _copy_num({{-1, -1}}) {}
 
     /**
      * Constructor from sequence length.
@@ -51,7 +51,7 @@ private:
      * @param seq_len Length of alternate sequence.
      */
     Mutation(Size_Type start, Size_Type len, Size_Type seq_len = 0)
-        : _start(start), _len(len), _seq_len(seq_len) {}
+        : _start(start), _len(len), _seq_len(seq_len), _uniq({}), _copy_num({{-1, -1}}) {}
 
     ~Mutation()
     {
@@ -82,14 +82,14 @@ public:
      * Set allele uniqueness.
      * @param allele Integer: 0 = base, 1 = alt
      * @param value Uniqueness value as follows:
-     *  -1 : unknown (default)
-     *   0 : all BWT hits are in graph, and mapped to the same contig region
-     *   1 : all BWT hits are in graph, but not all mapped to the same contig region
-     *   2 : some BWT hits not in graph
-     *   3 : too many BWT hits
+     *  0 : unknown (default)
+     *  1 : all BWT hits are in graph, and mapped to the same contig region
+     *  2 : all BWT hits are in graph, but not all mapped to the same contig region
+     *  3 : some BWT hits not in graph
+     *  4 : too many BWT hits
      */
-    void set_uniqueness(int allele, int value) { _uniq.at(allele) = value; }
-    int get_uniqueness(int allele) const { return _uniq.at(allele); }
+    const int8_t& uniq(int allele) const { return _uniq.at(allele); }
+    int8_t& uniq(int allele) { return _uniq.at(allele); }
 
     /**
      * Set allele copy number.
@@ -99,8 +99,9 @@ public:
      *  -1 : unknown (default)
      *   0/1/2 : CN 0/1/2
      */
-    void set_copy_num(int allele, int value) { _copy_num.at(allele) = value; }
-    int get_copy_num(int allele) const { return _copy_num.at(allele); }
+    const int8_t& copy_num(int allele) const { return _copy_num.at(allele); }
+    int8_t& copy_num(int allele) { return _copy_num.at(allele); }
+
 
     /**
      * Extend Mutation given sequence.

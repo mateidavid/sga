@@ -20,7 +20,7 @@ void Read_Merger::operator () ()
             auto anchor_support = get_anchor_read_support(anchor, false);
             for (int al = 0; al < 2; ++al)
             {
-                if (mut_bptr->get_copy_num(al) != 1) continue;
+                if (mut_bptr->copy_num(al) != 1) continue;
                 // found a mutation allele with copy number 1
                 // greb all reads supporting it
                 Allele_Specifier allele(al);
