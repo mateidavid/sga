@@ -26,8 +26,7 @@ private:
     friend class bounded::Factory< Mutation >;
 
     /// Default constructor.
-    Mutation()
-        : _start(0), _len(0), _seq_len(0), _uniq({}), _copy_num({{-1, -1}}) {}
+    Mutation() : Mutation(0, 0, 0) {}
 
     // disallow copy or move
     DELETE_COPY_CTOR(Mutation);
@@ -42,7 +41,7 @@ private:
      * @param seq Alternate sequence.
      */
     Mutation(Size_Type start, Size_Type len, Seq_Type&& seq)
-        : _seq(move(seq)), _start(start), _len(len), _seq_len(_seq.size()), _uniq({}), _copy_num({{-1, -1}}) {}
+        : Mutation(start, len, seq.size()) { _seq = move(seq); }
 
     /**
      * Constructor from sequence length.
@@ -51,7 +50,11 @@ private:
      * @param seq_len Length of alternate sequence.
      */
     Mutation(Size_Type start, Size_Type len, Size_Type seq_len = 0)
-        : _start(start), _len(len), _seq_len(seq_len), _uniq({}), _copy_num({{-1, -1}}) {}
+        : _start(start), _len(len), _seq_len(seq_len)
+    {
+        _uniq = {{0, 0}};
+        _copy_num = {{-1, -1}};
+    }
 
     ~Mutation()
     {
