@@ -11,42 +11,44 @@
 
 #include <string>
 #include <functional>
+#include <type_traits>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/tti/has_member_function.hpp>
+
+#include "type_traits_extra.hpp"
 
 /** Fix return value from put() and put_child() to allow chaining. */
 class ptree
     : public boost::property_tree::ptree
 {
 public:
-    ptree(const boost::property_tree::ptree& t = boost::property_tree::ptree())
+    typedef boost::property_tree::ptree base_ptree;
+    ptree(const base_ptree& t = base_ptree())
         : ptree(std::string(), t)
     {}
 
-    ptree(const std::string& root, const boost::property_tree::ptree& t = boost::property_tree::ptree())
+    ptree(const std::string& root, const base_ptree& t = base_ptree())
       : prefix_(root.empty()? root : root + ".")
     {
         if (not root.empty())
         {
-            put_child(root, t);
+            base_ptree::put_child(root, t);
         }
         else
         {
-            *static_cast< boost::property_tree::ptree* >(this) = t;
+            *static_cast< base_ptree* >(this) = t;
         }
     }
 
-    using boost::property_tree::ptree::put_child;
+    template < typename T >
+    ptree(const std::string& root, const T& t)
+      : prefix_(root.empty()? root : root + ".")
+    {
+        base_ptree::put(root, t);
+    }
 
     template < typename T >
     ptree& put(std::string key, const T& val);
-
-    ptree& put(std::string key, const boost::property_tree::ptree& pt)
-    {
-        put_child(prefix_ + key, pt);
-        return *this;
-    }
 
     friend std::ostream& operator << (std::ostream& os, const ptree& rhs)
     {
@@ -58,65 +60,104 @@ private:
     std::string prefix_;
 }; // class ptree
 
+template < typename Range, typename Printer_Type >
+ptree range_to_ptree(const Range& range, Printer_Type&& to_ptree);
+
+template < typename Range >
+ptree range_to_ptree(const Range& range);
+
 namespace detail
 {
+using namespace std_extra;
 
-// if T has member function to_ptree, call that
-template < typename T, bool has_to_ptree >
-struct elem_to_ptree_impl
+LOOSE_HAS_MEM_TYPE(const_iterator)
+LOOSE_HAS_MEM_FUN(to_ptree)
+LOOSE_HAS_MEM_FUN(begin)
+LOOSE_HAS_MEM_FUN(end)
+
+template < typename T >
+struct is_range_aux
+    : and_< has_mem_fun_begin< T, typename T::const_iterator >,
+            has_mem_fun_end< T, typename T::const_iterator > > {};
+
+template < typename T >
+struct is_range
+    : and_< not_< is_convertible< T, string > >,
+            has_mem_type_const_iterator< T >,
+            is_range_aux< T > > {};
+
+template < typename T >
+struct to_ptree_has_implicit_converter
 {
-    ptree operator() (const T& e)
-    {
-        return e.to_ptree();
-    }
+    ptree operator () (const T& t) const { return t; }
 };
 
-// if T doesn't have member function to_ptree, try to construct ptree from T
 template < typename T >
-struct elem_to_ptree_impl< T, false >
+struct to_ptree_has_explicit_converter
 {
-    ptree operator() (const T& e)
-    {
-        boost::property_tree::ptree t;
-        t.put("", e);
-        return t;
-    }
+    ptree operator() (const T& e) const { return e.to_ptree(); }
 };
 
-BOOST_TTI_HAS_MEMBER_FUNCTION(to_ptree)
-
-// functor that converts an object of type T to boost::property_tree::ptree
 template < typename T >
-struct elem_to_ptree : elem_to_ptree_impl< T, has_member_function_to_ptree< const T, ptree >::value >
-{};
+struct to_ptree_is_range
+{
+    ptree operator() (const T& rg) const { return range_to_ptree(rg); }
+};
+
+template < typename T >
+struct to_ptree_default
+{
+    ptree operator() (const T& e) const { return ptree("", e); }
+};
+
+template < typename T >
+struct to_ptree_aux :
+        conditional_list< conditional_option< is_convertible< T, boost::property_tree::ptree >,
+                                              to_ptree_has_implicit_converter< T > >,
+                          conditional_option< has_mem_fun_to_ptree< const T, ptree >,
+                                              to_ptree_has_explicit_converter< T > >,
+                          conditional_option< is_range< T >,
+                                              to_ptree_is_range< T > >,
+                          conditional_option< to_ptree_default< T > >
+                          >::type {};
+
+/**
+ * Functor that converts an object of type T to a ptree
+ * Resolution order:
+ * 1. If T is implicitly convertible to boost::property_tree::ptree, use this conversion.
+ * 2. If T has a to_ptree() method returning a ptree, call it.
+ * 3. If T has begin/end methods returning iterators, print it is a range.
+ * 4. Else, try a call to put_value with argument T.
+ */
+template < typename T >
+struct to_ptree : to_ptree_aux< typename remove_reference< T >::type > {};
 
 } // namespace detail
 
 template < typename T >
 ptree& ptree::put(std::string key, const T& val)
 {
-    ptree pt = detail::elem_to_ptree< T >()(val);
-    put_child(prefix_ + key, pt);
+    auto pt = detail::to_ptree< T >()(val);
+    base_ptree::put_child(prefix_ + key, pt);
     return *this;
 }
 
-template < typename Cont, typename Elem_Type = typename Cont::value_type >
-ptree cont_to_ptree(const Cont& cont, std::function< ptree(const Elem_Type&) > to_ptree)
+template < typename Range, typename Printer_Type >
+ptree range_to_ptree(const Range& range, Printer_Type&& to_ptree)
 {
     ptree pt;
     auto& array = pt.get_child("");
-    for (const typename Cont::value_type& e : cont)
+    for (const auto& e : range)
     {
         array.push_back(std::make_pair("", to_ptree(e)));
     }
     return pt;
 }
 
-template < typename Cont >
-ptree cont_to_ptree(const Cont& cont)
+template < typename Range >
+ptree range_to_ptree(const Range& range)
 {
-    typedef typename Cont::const_iterator::value_type elem_type;
-    return cont_to_ptree< Cont, elem_type >(cont, detail::elem_to_ptree< elem_type >());
+    return range_to_ptree(range, detail::to_ptree< typename Range::value_type >());
 }
 
 #endif

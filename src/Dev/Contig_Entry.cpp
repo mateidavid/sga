@@ -701,8 +701,8 @@ ptree Contig_Entry::to_ptree() const
                   .put("len", len())
                   .put("tag", tag())
                   .put("is_unmappable", is_unmappable())
-                  .put("mut_cont", cont_to_ptree(mut_cont()))
-                  .put("chunk_cont", cont_to_ptree(chunk_cont()));
+                  .put("mut_cont", mut_cont())
+                  .put("chunk_cont", chunk_cont());
 }
 
 void Contig_Entry::save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const

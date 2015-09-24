@@ -462,7 +462,7 @@ public:
             .put("qr_start", qr_start())
             .put("qr_len", qr_len())
             .put("rc", reversed())
-            .put("ops", cont_to_ptree(_op_vect));
+            .put("ops", _op_vect);
     }
 
 private:

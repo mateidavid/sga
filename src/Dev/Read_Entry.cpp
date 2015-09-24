@@ -150,7 +150,7 @@ ptree Read_Entry::to_ptree() const
 {
     return ptree().put("name", name())
                   .put("len", len())
-                  .put("chunk_cont", cont_to_ptree(chunk_cont()));
+                  .put("chunk_cont", chunk_cont());
 }
 
 void Read_Entry::save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const

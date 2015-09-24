@@ -2693,8 +2693,7 @@ void Graph::test_mutation_allele_swapping()
 
 ptree Graph::to_ptree() const
 {
-    return ptree().put("re_cont", cont_to_ptree(re_cont()))
-                  .put("ce_cont", cont_to_ptree(ce_cont()));
+    return ptree().put("re_cont", re_cont()).put("ce_cont", ce_cont());
 }
 
 ptree Graph::factory_stats() const

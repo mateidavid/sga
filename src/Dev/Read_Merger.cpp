@@ -180,8 +180,8 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
     if (re_oset[0].size() + re_oset[1].size() < 2) return;
     LOG("Read_Merger", info) << ptree("begin")
         .put("ce_bptr", ce_bptr.to_int())
-        .put("re_oset[0]", cont_to_ptree(re_oset[0]))
-        .put("re_oset[1]", cont_to_ptree(re_oset[1]));
+        .put("re_oset[0]", re_oset[0])
+        .put("re_oset[1]", re_oset[1]);
 
     // create new name, new re
     static unsigned merge_id = 0;
@@ -256,10 +256,10 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
                     LOG("Read_Merger", warning) << ptree("unmappable_inconsistency")
                         .put("prev_ce_cbptr", prev_ce_cbptr.to_int())
                         .put("next_ce_cbptr", next_ce_cbptr.to_int())
-                        .put("unmappable_oset[0]", cont_to_ptree(unmappable_oset[0]))
-                        .put("unmappable_oset[1]", cont_to_ptree(unmappable_oset[1]))
-                        .put("non_unmappable_oset[0]", cont_to_ptree(non_unmappable_oset[0]))
-                        .put("non_unmappable_oset[1]", cont_to_ptree(non_unmappable_oset[1]));
+                        .put("unmappable_oset[0]", unmappable_oset[0])
+                        .put("unmappable_oset[1]", unmappable_oset[1])
+                        .put("non_unmappable_oset[0]", non_unmappable_oset[0])
+                        .put("non_unmappable_oset[1]", non_unmappable_oset[1]);
                 }
                 m_rc_bptr = merge_unmappable_chunks(unmappable_chunks, m_re_bptr);
                 m_chunk_inserter(m_rc_bptr);
@@ -391,10 +391,29 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
         }
         ASSERT(not active_rc_set.empty());
         // check that either all or none of the reads in the active set have a mutation next
-        auto match_len = pos_map.at(*active_rc_set.begin()).get_match_len();
+        auto match_len = min_value_of(
+            active_rc_set,
+            [&] (Read_Chunk_CBPtr rc_cbptr) { return pos_map.at(rc_cbptr).get_match_len(); });
+
+        /*
+        map< Read_Chunk_CBPtr, pair< Size_Type, bool > > x;
+        for (auto rc_cbptr : active_rc_set)
+        {
+            x[rc_cbptr] = make_pair(pos_map.at(rc_cbptr).get_match_len(),
+                                    pos_map.at(rc_cbptr).past_last_mut());
+        }
+        {
+            auto pt = range_to_ptree(
+                ba::values(x),
+                [] (const pair< Size_Type, bool >& p) {
+                    return ptree().put("first", p.first).put("second", p.second);
+                });
+            LOG("Read_Merger", debug) << ptree("match_len").put("x", pt);
+        }
         ASSERT(all_of(
                    active_rc_set,
                    [&] (Read_Chunk_CBPtr rc_cbptr) { return pos_map.at(rc_cbptr).get_match_len() == match_len; }));
+        */
         // advance active set
         if (match_len > 0)
         {
@@ -483,7 +502,7 @@ Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_OSet& unmappable_c
     m_rc_bptr->ce_bptr() = m_ce_bptr;
     m_ce_bptr->chunk_cont().insert(m_rc_bptr);
     LOG("Read_Merger", debug) << ptree("end")
-        .put("unmappable_chunks", cont_to_ptree(seq_v))
+        .put("unmappable_chunks", seq_v)
         .put("result", m_ce_bptr->seq());
     return m_rc_bptr;
 }

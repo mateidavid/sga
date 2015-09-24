@@ -775,7 +775,7 @@ ptree Read_Chunk::to_ptree() const
                   .put("c_start", get_c_start())
                   .put("c_len", get_c_len())
                   .put("rc", get_rc())
-                  .put("mut_ptr_cont", cont_to_ptree(mut_ptr_cont()))
+                  .put("mut_ptr_cont", mut_ptr_cont())
                   .put("re_parent", _re_parent.to_ptree())
                   .put("re_l_child", _re_l_child.to_ptree())
                   .put("re_r_child", _re_r_child.to_ptree())
