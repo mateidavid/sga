@@ -10,7 +10,7 @@ namespace MAC
 
 void Read_Merger::operator () ()
 {
-    LOG("graph", info) << ptree("begin");
+    LOG("Read_Merger", info) << ptree("begin");
     for (auto ce_bptr : _g.ce_cont() | referenced)
     {
         if (not ce_bptr->is_normal()) continue;
@@ -34,18 +34,27 @@ void Read_Merger::operator () ()
             }
         }
     }
-    LOG("graph", info) << ptree("end");
+    LOG("Read_Merger", info) << ptree("end");
 }
 
 void Read_Merger::extend_haploid_support(
-    const Allele_Anchor& _anchor, const Allele_Specifier& _allele, bool _c_direction,
+    const Allele_Anchor& init_anchor, const Allele_Specifier& init_allele, bool init_c_direction,
     RE_OSet& allele_support)
 {
-    auto crt_anchor = _anchor;
-    auto crt_allele = _allele;
-    auto crt_c_direction = _c_direction;
+    LOG("Read_Merger", debug) << ptree("begin")
+        .put("anchor", init_anchor)
+        .put("allele", init_allele)
+        .put("c_direction", init_c_direction)
+        .put("allele_support", allele_support);
+    auto crt_anchor = init_anchor;
+    auto crt_allele = init_allele;
+    auto crt_c_direction = init_c_direction;
     while (true)
     {
+        LOG("Read_Merger", debug) << ptree("loop_start")
+            .put("crt_anchor", crt_anchor)
+            .put("crt_allele", crt_allele)
+            .put("crt_c_direction", crt_c_direction);
         // compute next anchor
         Allele_Anchor next_anchor;
         Allele_Specifier next_allele;
@@ -57,6 +66,7 @@ void Read_Merger::extend_haploid_support(
             {
                 // out-degree 0
                 ASSERT(crt_allele.same_orientation());
+                LOG("Read_Merger", debug) << ptree("loop_end__0_degree");
                 return;
             }
             bool next_c_direction = crt_c_direction == crt_allele.same_orientation();
@@ -65,9 +75,11 @@ void Read_Merger::extend_haploid_support(
             swap(crt_c_direction, next_c_direction);
             swap(crt_anchor, next_anchor);
             swap(crt_allele, next_allele);
+            LOG("Read_Merger", debug) << ptree("loop_next__contig_endpoint");
             continue;
         }
         next_anchor = crt_anchor.get_sibling(crt_c_direction);
+        LOG("Read_Merger", debug) << ptree("loop").put("next_anchor", next_anchor);
         // compute support at next anchor
         auto next_anchor_support = get_anchor_read_support(next_anchor, crt_c_direction);
         // remove all reads not currently being tracked
@@ -78,7 +90,7 @@ void Read_Merger::extend_haploid_support(
                 filter_cont(
                     p.second[dir],
                     [&] (Read_Entry_CBPtr re_cbptr) {
-                        return allele_support[(dir + _c_direction) % 2].count(re_cbptr) > 0;
+                        return allele_support[(dir + init_c_direction) % 2].count(re_cbptr) > 0;
                     });
             }
         }
@@ -87,12 +99,17 @@ void Read_Merger::extend_haploid_support(
             [] (Anchor_Read_Support::const_iterator cit) {
                 return not (cit->second[0].empty() and cit->second[1].empty());
             });
+        LOG("Read_Merger", debug) << ptree("loop")
+            .put("next_anchor_support", next_anchor_support);
         if (next_anchor_support.empty())
         {
+            LOG("Read_Merger", debug) << ptree("loop_end__support_end");
             break;
         }
         else if (next_anchor_support.size() > 1)
         {
+            LOG("Read_Merger", debug) << ptree("loop__multiple_next_allele_support")
+                .put("next_alleles", ba::keys(next_anchor_support));
             // check if there is a unique allele with support larger than the discordant threshold
             bool found_next_allele = false;
             for (const auto& p : next_anchor_support)
@@ -104,12 +121,7 @@ void Read_Merger::extend_haploid_support(
                     if (found_next_allele)
                     {
                         // this is a second allele with large support; we give up
-                        LOG("Read_Merger", info) << ptree("discordant_support")
-                            .put("anchor", _anchor)
-                            .put("allele", _allele)
-                            .put("crt_anchor", crt_anchor)
-                            .put("crt_allele", crt_allele)
-                            .put("next_anchor", next_anchor)
+                        LOG("Read_Merger", info) << ptree("loop_end__multiple_alleles_with_strong_support")
                             .put("next_allele_1", next_allele)
                             .put("next_allele_2", p.first);
                         allele_support[0].clear();
@@ -125,18 +137,15 @@ void Read_Merger::extend_haploid_support(
             }
             if (not found_next_allele)
             {
-                LOG("Read_Merger", info) << ptree("weak_ambiguous_support")
-                    .put("anchor", _anchor)
-                    .put("allele", _allele)
-                    .put("crt_anchor", crt_anchor)
-                    .put("crt_allele", crt_allele)
-                    .put("next_anchor", next_anchor);
+                LOG("Read_Merger", info) << ptree("loop_end__no_allele_with_strong_support");
                 allele_support[0].clear();
                 allele_support[1].clear();
                 return;
             }
             // support at next_anchor is ambiguous,
             // but a single allele has support greater than the discordant threshold
+            LOG("Read_Merger", info) << ptree("loop")
+                .put("next_allele", next_allele);
             for (auto& p : next_anchor_support)
             {
                 unsigned allele_support_size = p.second[0].size() + p.second[1].size();
@@ -147,8 +156,8 @@ void Read_Merger::extend_haploid_support(
                 {
                     for (auto re_cbptr : p.second[dir])
                     {
-                        ASSERT(allele_support[(dir + _c_direction) % 2].count(re_cbptr));
-                        allele_support[(dir + _c_direction) % 2].erase(re_cbptr);
+                        ASSERT(allele_support[(dir + init_c_direction) % 2].count(re_cbptr));
+                        allele_support[(dir + init_c_direction) % 2].erase(re_cbptr);
                         auto rp = split_read(
                             re_cbptr,
                             not crt_c_direction? crt_anchor : next_anchor,
@@ -158,7 +167,7 @@ void Read_Merger::extend_haploid_support(
                         (void)tmp;
                         //TODO: remove
                         ASSERT(tmp[dir].count(rp.first) > 0);
-                        allele_support[(dir + _c_direction) % 2].insert(rp.first);
+                        allele_support[(dir + init_c_direction) % 2].insert(rp.first);
                     }
                     p.second[dir].clear();
                 }
@@ -342,6 +351,8 @@ Read_Merger::split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor
 
 Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_Entry_BPtr m_re_bptr)
 {
+    LOG("Read_Merger", debug) << ptree("begin")
+        .put("rc_oset", rc_oset);
     ASSERT(not (rc_oset[0].empty() and rc_oset[1].empty()));
     auto ce_bptr = not rc_oset[0].empty()
         ? (*rc_oset[0].begin())->ce_bptr()
@@ -394,26 +405,12 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
         auto match_len = min_value_of(
             active_rc_set,
             [&] (Read_Chunk_CBPtr rc_cbptr) { return pos_map.at(rc_cbptr).get_match_len(); });
+        LOG("Read_Merger", debug) << ptree("before_increment")
 
-        /*
-        map< Read_Chunk_CBPtr, pair< Size_Type, bool > > x;
-        for (auto rc_cbptr : active_rc_set)
-        {
-            x[rc_cbptr] = make_pair(pos_map.at(rc_cbptr).get_match_len(),
-                                    pos_map.at(rc_cbptr).past_last_mut());
-        }
-        {
-            auto pt = range_to_ptree(
-                ba::values(x),
-                [] (const pair< Size_Type, bool >& p) {
-                    return ptree().put("first", p.first).put("second", p.second);
-                });
-            LOG("Read_Merger", debug) << ptree("match_len").put("x", pt);
-        }
-        ASSERT(all_of(
-                   active_rc_set,
-                   [&] (Read_Chunk_CBPtr rc_cbptr) { return pos_map.at(rc_cbptr).get_match_len() == match_len; }));
-        */
+            .put("c_pos", c_pos)
+            .put("pos_map", pos_map)
+            .put("active_rc_set", active_rc_set)
+            .put("match_len", match_len);
         // advance active set
         if (match_len > 0)
         {
@@ -461,16 +458,26 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
             r_pos += mut_bptr->seq_len();
             c_pos += mut_bptr->rf_len();
         }
+        LOG("Read_Merger", debug) << ptree("after_increment")
+            .put("c_pos", c_pos)
+            .put("pos_map", range_to_ptree(pos_map, [] (const decltype(pos_map)::value_type& p) {
+                        return ptree().put("rc_cbptr", p.first).put("pos", p.second);
+                    }));
         // remove chunks that reached their end position
         filter_cont(
             pos_map,
             [&] (const decltype(pos_map)::value_type& p) { return p.second != p.first->get_end_pos(); });
+        LOG("Read_Merger", debug) << ptree("after_filter")
+            .put("pos_map", range_to_ptree(pos_map, [] (const decltype(pos_map)::value_type& p) {
+                        return ptree().put("rc_cbptr", p.first).put("pos", p.second);
+                    }));
     } // while pos_map non-empty
     // fix r_len and c_len
     m_rc_bptr->r_len() = r_pos - m_rc_bptr->r_start();
     m_rc_bptr->c_len() = c_pos - m_rc_bptr->c_start();
     // add new chunk to the contig chunk cont
     ce_bptr->chunk_cont().insert(m_rc_bptr);
+    LOG("Read_Merger", debug) << ptree("end");
     return m_rc_bptr;
 }
 
