@@ -298,6 +298,7 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
         m_re_bptr->chunk_cont().insert(rc_bptr);
     }
     m_re_bptr->len() = pos;
+    _g.re_cont().insert(m_re_bptr);
     m_re_bptr->check();
 
     // finally, destroy the old reads
