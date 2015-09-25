@@ -762,6 +762,17 @@ void Read_Chunk::check() const
         ASSERT((&*(ce_bptr()->chunk_cont().begin())).raw() == this);
         ASSERT(ce_bptr()->mut_cont().empty());
     }
+    // check it is in its Contig Entry
+    if (ce_bptr())
+    {
+        auto rg = ce_bptr()->chunk_cont().iintersect(c_start(), c_start()) | referenced;
+        ASSERT(any_of(rg, [&] (Read_Chunk_CBPtr rc_cbptr) { return rc_cbptr.raw() == this; }));
+    }
+    if (re_bptr())
+    {
+        auto rc_cbptr = re_bptr()->chunk_cont().get_chunk_with_pos(r_start());
+        ASSERT(rc_cbptr and rc_cbptr.raw() == this);
+    }
 #endif
 }
 
