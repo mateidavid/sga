@@ -376,7 +376,7 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
     {
         for (auto rc_cbptr : rc_oset[d])
         {
-            pos_map.insert(make_pair(rc_cbptr, not c_direction? rc_cbptr->get_start_pos() : rc_cbptr->get_end_pos()));
+            pos_map.insert(make_pair(rc_cbptr, rc_cbptr->get_start_pos()));
         }
     }
     // set read start to be 0; will be fixed once we have all chunks
