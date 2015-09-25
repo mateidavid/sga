@@ -511,6 +511,7 @@ Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_OSet& unmappable_c
     auto m_rc_bptr = Read_Chunk_Fact::new_elem(0, m_ce_bptr->len(), 0, m_ce_bptr->len(), false);
     m_rc_bptr->re_bptr() = m_re_bptr;
     m_rc_bptr->ce_bptr() = m_ce_bptr;
+    m_rc_bptr->set_unbreakable(true);
     m_ce_bptr->chunk_cont().insert(m_rc_bptr);
     LOG("Read_Merger", debug) << ptree("end")
         .put("unmappable_chunks", seq_v)
