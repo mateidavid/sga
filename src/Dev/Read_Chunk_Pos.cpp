@@ -260,10 +260,16 @@ void Read_Chunk_Pos::advance_past_del(bool forward)
 
 ptree Read_Chunk_Pos::to_ptree() const
 {
-    return ptree().put("c_pos", c_pos)
-                  .put("r_pos", r_pos)
-                  .put("mut_offset", mut_offset)
-                  .put("mut", mut().to_ptree());
+    auto pt = ptree()
+        .put("c_pos", c_pos)
+        .put("r_pos", r_pos)
+        .put("mut_offset", mut_offset)
+        .put("past_last_mut", past_last_mut());
+    if (not past_last_mut())
+    {
+        pt.put("mut", mut());
+    }
+    return pt;
 }
 
 } // namespace MAC
