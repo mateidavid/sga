@@ -110,16 +110,22 @@ struct to_ptree_default
     ptree operator() (const T& e) const { return ptree("", e); }
 };
 
+template < typename U1, typename U2 >
+struct to_ptree_default< pair< U1, U2 > >
+{
+    ptree operator () (const pair< U1, U2 >& p) { return ptree().put("first", p.first).put("second", p.second); }
+};
+
 template < typename T >
-struct to_ptree_aux :
-        conditional_list< conditional_option< is_convertible< T, boost::property_tree::ptree >,
-                                              to_ptree_has_implicit_converter< T > >,
-                          conditional_option< has_mem_fun_to_ptree< const T, ptree >,
-                                              to_ptree_has_explicit_converter< T > >,
-                          conditional_option< is_range< T >,
-                                              to_ptree_is_range< T > >,
-                          conditional_option< to_ptree_default< T > >
-                          >::type {};
+struct to_ptree_aux : if_list<
+    if_option< is_convertible< T, boost::property_tree::ptree >,
+               to_ptree_has_implicit_converter< T > >,
+    if_option< has_mem_fun_to_ptree< const T, ptree >,
+               to_ptree_has_explicit_converter< T > >,
+    if_option< is_range< T >,
+               to_ptree_is_range< T > >,
+    if_option< to_ptree_default< T > >
+    >::type {};
 
 /**
  * Functor that converts an object of type T to a ptree

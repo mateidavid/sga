@@ -7,30 +7,30 @@ namespace std_extra
 {
 using namespace std;
 
-/**
- * Replacement for boost::mpl::eval_if_c
- */
+/** boost::mpl::if_c */
+template < bool c, typename T1, typename T2 >
+using if_c = conditional< c, T1, T2 >;
+
+/** boost::mpl::if_ */
+template < typename C, typename T1, typename T2 >
+struct if_ : if_c< C::value, T1, T2 > {};
+
+/** boost::mpl::eval_if_c */
 template < bool, typename T1, typename T2 >
 struct eval_if_c : common_type< typename T1::type > {};
 
 template < typename T1, typename T2 >
 struct eval_if_c< false, T1, T2 > : common_type< typename T2::type > {};
 
-/**
- * Replacement for boost::mpl::eval_if
- */
+/** boost::mpl::eval_if */
 template < typename C, typename T1, typename T2 >
 struct eval_if : eval_if_c< C::value, T1, T2 > {};
 
-/**
- * Replacement for boost::mpl::not_
- */
+/** boost::mpl::not_ */
 template < typename T >
 struct not_ : integral_constant< bool, not T::value > {};
 
-/**
- * Replacement for boost::mpl::and_
- */
+/** boost::mpl::and_ */
 template < typename ... >
 struct and_ : true_type {};
 
@@ -42,9 +42,7 @@ template < typename T, typename ...Args >
 struct and_< T, Args... >
     : conditional< T::type::value, and_< Args... >, false_type >::type {};
 
-/**
- * Replacement for boost::mpl::or_
- */
+/** boost::mpl::or_ */
 template < typename ... >
 struct or_ : false_type {};
 
@@ -57,42 +55,38 @@ struct or_< T, Args... >
     : conditional< T::type::value, true_type, or_< Args... > >::type {};
 
 /**
- * Conditional option.
+ * If option.
  *
- * Given 2 types C, T, conditional_option produces a struct R where
+ * Given 2 types C, T, if_option produces a struct R where
  * R::value := C::value, and R::type := T.
  * When a single type is given, C defaults to std::true_type.
- * See also: conditional_list.
+ * See also: if_list.
  */
 template < typename ... >
-struct conditional_option;
+struct if_option;
 
 template < typename T >
-struct conditional_option< T > : conditional_option< std::true_type, T > {};
-
-template < typename C, typename T >
-struct conditional_option< C, T >
-{
-    static const bool value = C::value;
-    typedef T type;
-};
+struct if_option< T > : if_option< std::true_type, T > {};
 
 template < bool c, typename T >
-struct conditional_option_c
+struct if_option_c
 {
     static const bool value = c;
     typedef T type;
 };
 
+template < typename C, typename T >
+struct if_option< C, T > : if_option_c< C::value, T > {};
+
 /**
- * Conditional list.
+ * If list.
  *
  * For each template argument type T in order, if T::value is true,
- * the result of conditional_list is a type R, where R::type := T::type.
+ * the result of if_list is a type R, where R::type := T::type.
  * Crucially, for argument types T2 following T, the inner type T2::type
  * is never instantiated.
  *
- * Together with conditional_option, this template allows for the definition
+ * Together with if_option, this template allows for the definition
  * of a target template type based on a set of conditions, using the following
  * syntax:
  *
@@ -104,19 +98,19 @@ struct conditional_option_c
  * struct option_default {...};
  * template < typename T >
  * struct target
- *   : conditional_list<
- *       conditional_option< condition_1< T >, option_1< T > >,
- *       conditional_option< condition_2< T >, option_2< T > >,
- *       conditional_option< option_default< T >
+ *   : if_list<
+ *       if_option< condition_1< T >, option_1< T > >,
+ *       if_option< condition_2< T >, option_2< T > >,
+ *       if_option< option_default< T >
  *     >::type {};
  *
  */
 template < typename ... >
-struct conditional_list {};
+struct if_list {};
 
 template < typename T, typename ...Args >
-struct conditional_list< T, Args... >
-    : eval_if_c< T::value, T, conditional_list< Args... > > {};
+struct if_list< T, Args... >
+    : eval_if_c< T::value, T, if_list< Args... > > {};
 
 } // namespace std_extra
 
