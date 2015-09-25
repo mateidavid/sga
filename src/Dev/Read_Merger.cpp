@@ -24,12 +24,15 @@ void Read_Merger::operator () ()
                 // found a mutation allele with copy number 1
                 // greb all reads supporting it
                 Allele_Specifier allele(al);
+                auto allele_support = get_allele_read_support(move(anchor_support), allele);
                 LOG("Read_Merger", debug) << ptree("haploid_mutation")
                     .put("anchor", anchor)
-                    .put("allele", allele);
-                auto allele_support = get_allele_read_support(move(anchor_support), allele);
+                    .put("allele", allele)
+                    .put("allele_support", allele_support);
                 extend_haploid_support(anchor, allele, false, allele_support);
                 extend_haploid_support(anchor, allele, true, allele_support);
+                LOG("Read_Merger", debug) << ptree("after_haploid_extension")
+                    .put("allele_support", allele_support);
                 merge_reads(ce_bptr, allele_support);
             }
         }
