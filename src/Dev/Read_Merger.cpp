@@ -407,7 +407,6 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
             active_rc_set,
             [&] (Read_Chunk_CBPtr rc_cbptr) { return pos_map.at(rc_cbptr).get_match_len(); });
         LOG("Read_Merger", debug) << ptree("before_increment")
-
             .put("c_pos", c_pos)
             .put("pos_map", pos_map)
             .put("active_rc_set", active_rc_set)
@@ -418,7 +417,7 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
             // match stretch follows
             br::for_each(
                 active_rc_set,
-                [&] (Read_Chunk_CBPtr rc_cbptr) { pos_map.at(rc_cbptr).increment(); });
+                [&] (Read_Chunk_CBPtr rc_cbptr) { pos_map.at(rc_cbptr).increment(c_pos + match_len, true); });
             Size_Type next_c_pos = min_value_of(
                 ba::values(pos_map),
                 [] (const Read_Chunk_Pos& pos) { return pos.c_pos; });
