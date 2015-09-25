@@ -87,7 +87,10 @@ Read_Entry::split(Read_Chunk_BPtr rc_bptr, Size_Type c_overlap_start, Size_Type 
     LOG("Read_Entry", debug) << ptree("pos")
         .put("re_end_pos", re_end_pos)
         .put("tail_re_start_pos", tail_re_start_pos);
-    // adjust names
+    // place chunks in the CE container
+    ce_bptr->chunk_cont().insert(rc_p.first);
+    ce_bptr->chunk_cont().insert(rc_p.second);
+    // adjust RE names
     tail_re_bptr->name() = re_bptr->name();
     auto append_coordinates = [] (string& dest, Size_Type first, Size_Type last) {
         ostringstream tmp;
