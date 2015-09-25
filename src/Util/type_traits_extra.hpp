@@ -182,7 +182,7 @@ struct conditional_list< T, Args... >
     struct has_mem_type_ ## name ## _aux \
     { \
     template < typename ... > \
-        static std::false_type test(...); \
+    static std::false_type test(...); \
     \
     template < typename T2 > \
     static auto test(std::nullptr_t) \
