@@ -357,10 +357,10 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
     ASSERT(not (rc_oset[0].empty() and rc_oset[1].empty()));
     auto ce_bptr = not rc_oset[0].empty()
         ? (*rc_oset[0].begin())->ce_bptr()
-        : (*rc_oset[0].begin())->ce_bptr();
+        : (*rc_oset[1].begin())->ce_bptr();
     auto c_direction = not rc_oset[0].empty()
         ? (*rc_oset[0].begin())->get_rc()
-        : (*rc_oset[1].begin())->get_rc();
+        : not (*rc_oset[1].begin())->get_rc();
     ASSERT(all_of(
                rc_oset[0],
                [&] (Read_Chunk_CBPtr rc_cbptr) {
