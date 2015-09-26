@@ -691,6 +691,14 @@ void Contig_Entry::check() const
             ASSERT(mut_cont().find(mca_cbptr->mut_cbptr(), true));
         }
     }
+    // check there are chunks mapped throughout the base sequence
+    Size_Type pos = 0;
+    for (auto rc_bptr : chunk_cont() | referenced)
+    {
+        ASSERT(rc_bptr->get_c_start() <= pos);
+        pos = max(pos, rc_bptr->get_c_end());
+    }
+    ASSERT(pos == len());
 #endif
 }
 

@@ -30,10 +30,9 @@ Anchor_Chunk_Support get_anchor_chunk_support(const Allele_Anchor& anchor)
         {
             // out-degree 0
             auto pos = anchor.c_right()? anchor.ce_cbptr()->len() : 0;
-            auto it_r = anchor.ce_cbptr()->chunk_cont().iintersect(pos, pos);
-            auto it_rr = make_ref_range(it_r);
-            res[Allele_Specifier(nullptr, true)].insert(it_rr.begin(), it_rr.end());
-            ASSERT(not res.at(Allele_Specifier(nullptr, true)).empty());
+            auto it_r = anchor.ce_cbptr()->chunk_cont().iintersect(pos, pos) | referenced;
+            ASSERT(it_r.begin() != it_r.end());
+            res[Allele_Specifier(nullptr, true)].insert(it_r.begin(), it_r.end());
         }
     }
     return res;
