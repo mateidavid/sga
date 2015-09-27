@@ -771,7 +771,12 @@ void Read_Chunk::check() const
     if (re_bptr())
     {
         auto rc_cbptr = re_bptr()->chunk_cont().get_chunk_with_pos(r_start());
-        ASSERT(rc_cbptr and rc_cbptr.raw() == this);
+        while (rc_cbptr and rc_cbptr.raw() != this)
+        {
+            ASSERT(rc_cbptr->get_r_len() == 0);
+            rc_cbptr = re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, true);
+        }
+        ASSERT(rc_cbptr);
     }
 #endif
 }
