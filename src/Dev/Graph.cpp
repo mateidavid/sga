@@ -1304,15 +1304,15 @@ void Graph::unmap_single_chunks()
             for (auto rc_bptr : re_bptr->chunk_cont() | referenced)
             {
                 Contig_Entry_BPtr ce_bptr = rc_bptr->ce_bptr();
-                LOG("graph", debug1) << ptree("unmap_single_chunks_loop")
+                LOG("graph", debug) << ptree("unmap_single_chunks_loop")
                     .put("ce_ptr", ce_bptr.to_int())
                     .put("is_unmappable", ce_bptr->is_unmappable())
                     .put("size_one", size_one(ce_bptr->chunk_cont()));
                 if (not ce_bptr->is_unmappable() and size_one(ce_bptr->chunk_cont()))
                 {
-                    LOG("graph", debug1) << ptree("unmap_single_chunks_unmap_start").put("re_ptr", re_bptr.to_int());
+                    LOG("graph", debug) << ptree("unmap_single_chunks_unmap_start").put("re_ptr", re_bptr.to_int());
                     unmap_chunk(rc_bptr);
-                    LOG("graph", debug1) << ptree("unmap_single_chunks_unmap_end").put("re_ptr", re_bptr.to_int());
+                    LOG("graph", debug) << ptree("unmap_single_chunks_unmap_end").put("re_ptr", re_bptr.to_int());
                     done = false;
                     break;
                 }

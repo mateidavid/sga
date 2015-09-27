@@ -195,9 +195,6 @@ int real_main()
         // load asqg graph
         LOG("mac", info) << ptree("load_asqg").put("file", opts::input_file.get());
         zstr::ifstream tmp_fs(opts::input_file);
-        g.unmap_trigger_len() = opts::unmap_trigger_len;
-        g.cat_at_step() = opts::cat_at_step;
-        g.trim_tuc_step() = opts::trim_tuc_step;
         load_asqg(tmp_fs, g);
     }
     else
@@ -207,6 +204,9 @@ int real_main()
         strict_fstream::fstream ifs(opts::load_file, ios_base::in | ios_base::binary);
         g.load(ifs);
     }
+    g.unmap_trigger_len() = opts::unmap_trigger_len;
+    g.cat_at_step() = opts::cat_at_step;
+    g.trim_tuc_step() = opts::trim_tuc_step;
     LOG("mac", info) << ptree("factory_stats", g.factory_stats());
     if (opts::cat_at_end)
     {
