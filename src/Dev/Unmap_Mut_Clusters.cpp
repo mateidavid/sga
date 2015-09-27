@@ -63,13 +63,8 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
                 //unmap_re_pos_v.emplace_back(unmap_rc_cbptr->re_bptr(), move(r_rg));
                 unmap_re_set[unmap_rc_cbptr->re_bptr()].insert(r_rg);
             }
-            /*
-            for (const auto& re_pos : unmap_re_pos_v)
-            {
-                g.unmap_re_region(get<0>(re_pos).unconst(), get<1>(re_pos));
-            }
-            */
             g.unmap_re_regions(move(unmap_re_set));
+            r_pos = max(r_pos, re_bptr->start());
         }
     }
     LOG("Unmap_Mut_Clusters", info) << ptree("end");
