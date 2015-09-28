@@ -207,7 +207,7 @@ int real_main()
     g.unmap_trigger_len() = opts::unmap_trigger_len;
     g.cat_at_step() = opts::cat_at_step;
     g.trim_tuc_step() = opts::trim_tuc_step;
-    LOG("mac", info) << ptree("factory_stats", g.factory_stats());
+    LOG("mac", info) << ptree().put("factory_stats", g.factory_stats());
     if (opts::cat_at_end)
     {
         g.cat_all_read_contigs();
@@ -333,7 +333,7 @@ int real_main()
         g.export_gfa(tmp_fs, opts::gfa_show_mutations);
     }
 
-    LOG("mac", info) << ptree("factory_stats", g.factory_stats());
+    LOG("mac", info) << ptree().put("factory_stats", g.factory_stats());
     g.clear_and_dispose();
     hm.clear_and_dispose();
     LOG("mac", info) << ptree("graph_cleared");
