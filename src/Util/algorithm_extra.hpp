@@ -444,4 +444,24 @@ any_of(Forward_Range&& rg,
     return any_of(rg.begin(), rg.end(), f);
 }
 
+/**
+ * Accumulate; iterator version.
+ */
+using std::accumulate;
+
+/**
+ * Accumulate; range version.
+ */
+template < class Forward_Range, typename T >
+T accumulate(Forward_Range&& rg, T init)
+{
+    return accumulate(rg.begin(), rg.end(), init);
+}
+
+template < class Forward_Range, typename T, class Binary_Operation >
+T accumulate(Forward_Range&& rg, T init, Binary_Operation&& op)
+{
+    return accumulate(rg.begin(), rg.end(), init, std::forward< Binary_Operation >(op));
+}
+
 #endif
