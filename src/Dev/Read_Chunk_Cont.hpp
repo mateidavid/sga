@@ -131,7 +131,7 @@ public:
      */
     Read_Chunk_CBPtr get_chunk_with_pos(Size_Type r_pos) const
     {
-        ASSERT(not empty());
+        if (empty()) return nullptr;
         ASSERT(begin()->re_bptr());
         auto cit = Base::lower_bound(r_pos, Base::value_compare());
         if (cit == end() or cit->get_r_start() != r_pos)
