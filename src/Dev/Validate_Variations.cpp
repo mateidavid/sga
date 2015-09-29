@@ -134,11 +134,11 @@ void Validate_Variations::operator () () const
                 if (r_direction) continue;
                 bool res = validate_edge(rc_cbptr);
                 LOG("Validate_Variations", debug) << ptree("validation")
-                    .ptree("ce_bptr", ce_bptr.to_int())
-                    .ptree("c_direction", c_direction)
-                    .ptree("next_ce_bptr", p.first.first.to_int())
-                    .ptree("same_orientation", p.first.second)
-                    .ptree("res", res);
+                    .put("ce_bptr", ce_bptr.to_int())
+                    .put("c_direction", c_direction)
+                    .put("next_ce_bptr", p.first.first.to_int())
+                    .put("same_orientation", p.first.second)
+                    .put("res", res);
                 if (not res)
                 {
                     _g.split_read(rc_cbptr);
