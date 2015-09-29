@@ -121,6 +121,7 @@ void Validate_Variations::operator () () const
     // search for inter-contig edges with low support
     for (auto ce_bptr : _g.ce_cont() | referenced)
     {
+        if (ce_bptr->is_unmappable()) continue;
         for (int c_direction = 0; c_direction < 2; ++c_direction)
         {
             auto oc = ce_bptr->out_chunks_dir(c_direction, 3);
