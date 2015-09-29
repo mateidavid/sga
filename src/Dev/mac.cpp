@@ -229,7 +229,7 @@ int real_main()
 
     if (opts::validate_variations)
     {
-        Validate_Variations(g)();
+        Validate_Variations{g}();
     }
     if (opts::unmap_read_ends)
     {
@@ -238,7 +238,7 @@ int real_main()
     }
     if (opts::unmap_mut_clusters)
     {
-        Unmap_Mut_Clusters(g)();
+        Unmap_Mut_Clusters{g}();
     }
     if (opts::resolve_unmappable_regions)
     {
@@ -262,7 +262,7 @@ int real_main()
     }
     if (opts::merge_reads)
     {
-        Read_Merger(g, 1, opts::merged_weight)();
+        Read_Merger{g, 1, opts::merged_weight}();
     }
     if (opts::test_1)
     {

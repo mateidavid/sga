@@ -980,11 +980,11 @@ void Graph::trim_tucs()
 }
 
 void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
-{ Unmapper(*this).unmap_chunk(rc_bptr); }
+{ Unmapper{*this}.unmap_chunk(rc_bptr); }
 void Graph::unmap_re_regions(Unmapper::re_set_type&& unmap_re_set)
-{ Unmapper(*this).unmap_re_regions(move(unmap_re_set)); }
+{ Unmapper{*this}.unmap_re_regions(move(unmap_re_set)); }
 void Graph::unmap_re_regions(Read_Entry_BPtr re_bptr, Range_Cont&& rg_cont)
-{ Unmapper(*this).unmap_re_regions(re_bptr, move(rg_cont)); }
+{ Unmapper{*this}.unmap_re_regions(re_bptr, move(rg_cont)); }
 
 /*
 void Graph::unmap_chunk(Read_Chunk_BPtr rc_bptr)
