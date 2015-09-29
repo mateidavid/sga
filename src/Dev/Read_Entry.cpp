@@ -110,7 +110,43 @@ Read_Entry::split(Read_Chunk_BPtr rc_bptr, Size_Type c_overlap_start, Size_Type 
     tail_re_bptr->check();
     LOG("Read_Entry", debug) << ptree("end");
     return make_pair(re_bptr, tail_re_bptr);
-}
+} // Read_Entry::split
+
+pair< Read_Entry_BPtr, Read_Entry_BPtr >
+Read_Entry::split(Read_Chunk_CBPtr rc_cbptr)
+{
+    LOG("Read_Entry", debug) << ptree("begin")
+        .put("re_bptr", rc_cbptr->re_bptr().to_int())
+        .put("rc_bptr", rc_cbptr.to_int());
+    Read_Entry_BPtr re_bptr = rc_cbptr->re_bptr().unconst();
+    ASSERT(re_bptr->is_unlinked());
+    Read_Chunk_CBPtr next_rc_cbptr = re_bptr->chunk_cont().get_sibling(rc_cbptr, true, true);
+    ASSERT(next_rc_cbptr);
+    // create tail re, copy chunks
+    Read_Entry_BPtr tail_re_bptr = Read_Entry_Fact::new_elem();
+    auto rc_it = re_bptr->chunk_cont().iterator_to(*rc_cbptr.unconst());
+    ASSERT(rc_it != re_bptr->chunk_cont().end());
+    tail_re_bptr->chunk_cont().splice(re_bptr->chunk_cont(), next(rc_it), tail_re_bptr);
+    // fix names and trim positions
+    Size_Type tail_re_start_pos = rc_cbptr->get_r_end();
+    auto append_coordinates = [] (string& dest, Size_Type first, Size_Type last) {
+        ostringstream tmp;
+        tmp << ":(" << first << "," << last << ")";
+        dest += tmp.str();
+    };
+    append_coordinates(re_bptr->name(), re_bptr->start(), tail_re_start_pos);
+    append_coordinates(tail_re_bptr->name(), tail_re_start_pos, re_bptr->end());
+    tail_re_bptr->chunk_cont().shift(-long(tail_re_start_pos));
+    tail_re_bptr->start() = 0;
+    tail_re_bptr->len() = re_bptr->end() - tail_re_start_pos;
+    re_bptr->chunk_cont().shift(-long(re_bptr->start()));
+    re_bptr->len() = tail_re_start_pos - re_bptr->start();
+    re_bptr->start() = 0;
+    re_bptr->check();
+    tail_re_bptr->check();
+    LOG("Read_Entry", debug) << ptree("end");
+    return make_pair(re_bptr, tail_re_bptr);
+} // Read_Entry::split
 
 void Read_Entry::check() const
 {

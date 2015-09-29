@@ -112,7 +112,7 @@ public:
     }
 
     /** Erase RE from container */
-    void erase(Read_Entry_BPtr re_bptr) { Base::erase(iterator_to(*re_bptr)); }
+    void erase(Read_Entry_CBPtr re_cbptr) { Base::erase(iterator_to(*re_cbptr)); }
 
     /** Search for Read_Entry.
      * @param name Name of read to look for.

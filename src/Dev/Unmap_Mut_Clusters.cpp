@@ -4,15 +4,15 @@
 namespace MAC
 {
 
-void Unmap_Mut_Clusters::operator () (Graph& g) const
+void Unmap_Mut_Clusters::operator () () const
 {
     LOG("Unmap_Mut_Clusters", info) << ptree("begin");
     static const uint64_t visit_mask = 4;
-    for (auto ce_bptr : g.ce_cont() | referenced)
+    for (auto ce_bptr : _g.ce_cont() | referenced)
     {
         bitmask::reset(ce_bptr->tag(), visit_mask);
     }
-    for (auto re_bptr : g.re_cont() | referenced)
+    for (auto re_bptr : _g.re_cont() | referenced)
     {
         Size_Type r_pos = re_bptr->start();
         while (r_pos < re_bptr->end())
@@ -63,10 +63,11 @@ void Unmap_Mut_Clusters::operator () (Graph& g) const
                 //unmap_re_pos_v.emplace_back(unmap_rc_cbptr->re_bptr(), move(r_rg));
                 unmap_re_set[unmap_rc_cbptr->re_bptr()].insert(r_rg);
             }
-            g.unmap_re_regions(move(unmap_re_set));
+            _g.unmap_re_regions(move(unmap_re_set));
             r_pos = max(r_pos, re_bptr->start());
         }
     }
+    _g.check_all();
     LOG("Unmap_Mut_Clusters", info) << ptree("end");
 }
 

@@ -2017,6 +2017,32 @@ void Graph::resolve_unmappable_regions()
     LOG("graph", info) << ptree("end");
 }
 
+void Graph::split_read(Read_Chunk_CBPtr rc_cbptr)
+{
+    Read_Entry_CBPtr re_cbptr = rc_cbptr->re_bptr();
+    re_cont().erase(re_cbptr);
+    auto p = Read_Entry::split(rc_cbptr);
+    ASSERT(not p.first->chunk_cont().empty());
+    ASSERT(not p.second->chunk_cont().empty());
+    ASSERT(&*p.first->chunk_cont().rbegin() == rc_cbptr);
+    if (trim_tuc_step())
+    {
+        if (rc_cbptr->ce_bptr()->is_unmappable())
+        {
+            unmap_chunk(rc_cbptr.unconst());
+        }
+        Read_Chunk_CBPtr next_rc_cbptr = &*p.second->chunk_cont().begin();
+        ASSERT(next_rc_cbptr);
+        if (next_rc_cbptr->ce_bptr()->is_unmappable())
+        {
+            unmap_chunk(next_rc_cbptr.unconst());
+        }
+    }
+    re_cont().insert(p.first);
+    re_cont().insert(p.second);
+    check(set< Read_Entry_CBPtr >{ p.first, p.second });
+} // Graph::split_read
+
 void Graph::clear_and_dispose()
 {
     ce_cont().clear_and_dispose();
@@ -2605,6 +2631,7 @@ void Graph::print_detailed_counts(ostream& os) const
         os << '\n';
     } //for (ce_cbptr : ce_cont()
     print_supercontig_stats(os);
+    print_mutations(os);
 }
 
 void Graph::print_supercontig_stats(ostream& os) const

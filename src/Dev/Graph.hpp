@@ -204,6 +204,11 @@ public:
     find_read_entries_with_seq_type
     find_read_entries_with_seq(const Seq_Proxy_Type& seq, unsigned max_count = 0) const;
 
+    /**
+     * Split Read_Entry after given Read_Chunk in the given read direction.
+     */
+    void split_read(Read_Chunk_CBPtr rc_cbptr);
+
     void compute_mutation_uniqueness(Size_Type flank_len);
     void compute_mutation_copy_num(Size_Type flank_len);
     void compute_aux_coverage(Size_Type flank_len);

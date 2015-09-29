@@ -97,6 +97,13 @@ public:
     static pair< Read_Entry_BPtr, Read_Entry_BPtr >
     split(Read_Chunk_BPtr rc_bptr, Size_Type overlap_start, Size_Type overlap_end);
 
+    /**
+     * Split RE after given RC.
+     * @return (Head, Tail) of old read.
+     */
+    static pair< Read_Entry_BPtr, Read_Entry_BPtr >
+    split(Read_Chunk_CBPtr rc_cbptr);
+
     /** Integrity check. */
     void check() const;
 

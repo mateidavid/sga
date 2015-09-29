@@ -49,7 +49,6 @@ namespace opts
     ValueArg< string > aux_bwt_file("", "aux-bwt-file", "BWT index of 2GS reads used to validate variations.", false, "", "file", cmd_parser);
     ValueArg< string > stats_file("", "stats-file", "Stats file.", false, "", "file", cmd_parser);
     ValueArg< string > supercontigs_stats_file("", "supercontigs-stats-file", "Supercontigs stats file.", false, "", "file", cmd_parser);
-    ValueArg< string > mutations_file("", "mutations-file", "Mutations file.", false, "", "file", cmd_parser);
     ValueArg< string > unmappable_contigs_file("", "unmappable-contigs-file", "Unmappable contigs file.", false, "", "file", cmd_parser);
     ValueArg< string > terminal_reads_file("", "terminal-reads-file", "Terminal reads file.", false, "", "file", cmd_parser);
     ValueArg< string > hapmap_stats_file("", "hapmap-stats-file", "Haplotype map stats file.", false, "", "file", cmd_parser);
@@ -74,7 +73,8 @@ namespace opts
     SwitchArg unmap_mut_clusters("", "unmap-mut-clusters", "Unmap mutation clusters.", cmd_parser, false);
     ValueArg< int > unmap_short_contigs("", "unmap-short-contigs", "Unmap contigs smaller than a given size.", false, 0, "int", cmd_parser);
     SwitchArg copy_num("", "copy-num", "Compute copy numbers.", cmd_parser, false);
-    SwitchArg build_hapmap("", "build-hapmap", "Build haplotype map.", cmd_parser, false);
+    SwitchArg merge_reads("", "merge-reads", "Merge reads.", cmd_parser, false);
+    ValueArg< unsigned > merged_weight("", "merged-weight", "Weight of merged reads.", false, 5, "int", cmd_parser);
     SwitchArg gfa_show_mutations("", "gfa-show-mutations", "Show mutations in GFA output.", cmd_parser, false);
     //
     // other
@@ -229,7 +229,7 @@ int real_main()
 
     if (opts::validate_variations)
     {
-        Validate_Variations()(g);
+        Validate_Variations(g)();
     }
     if (opts::unmap_read_ends)
     {
@@ -238,8 +238,7 @@ int real_main()
     }
     if (opts::unmap_mut_clusters)
     {
-        Unmap_Mut_Clusters()(g);
-        g.check_all();
+        Unmap_Mut_Clusters(g)();
     }
     if (opts::resolve_unmappable_regions)
     {
@@ -261,10 +260,9 @@ int real_main()
         g.compute_mutation_uniqueness(10);
         g.compute_mutation_copy_num(10);
     }
-    if (opts::build_hapmap)
+    if (opts::merge_reads)
     {
-        //hm.build(g);
-        Read_Merger(g, 1)();
+        Read_Merger(g, 1, opts::merged_weight)();
     }
     if (opts::test_1)
     {
@@ -289,12 +287,6 @@ int real_main()
         LOG("mac", info) << ptree("supercontigs_stats").put("file", opts::supercontigs_stats_file.get());
         strict_fstream::fstream tmp_fs(opts::supercontigs_stats_file, ios_base::out);
         g.print_supercontig_stats(tmp_fs);
-    }
-    if (not opts::mutations_file.get().empty())
-    {
-        LOG("mac", info) << ptree("print_mutations").put("file", opts::mutations_file.get());
-        strict_fstream::fstream tmp_fs(opts::mutations_file, ios_base::out);
-        g.print_mutations(tmp_fs);
     }
     if (not opts::terminal_reads_file.get().empty())
     {

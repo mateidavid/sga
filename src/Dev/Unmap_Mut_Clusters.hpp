@@ -10,10 +10,10 @@ namespace MAC
 class Unmap_Mut_Clusters
 {
 public:
-    Unmap_Mut_Clusters(size_t min_num_3mers = 8)
-        : _min_num_3mers(min_num_3mers) {}
+    Unmap_Mut_Clusters(Graph& g, size_t min_num_3mers = 8)
+        : _g(g), _min_num_3mers(min_num_3mers) {}
 
-    void operator() (Graph& g) const;
+    void operator() () const;
 
 private:
     /** Search for 2 Mutations separated by less than the minimum number of 3mers.
@@ -26,6 +26,7 @@ private:
     /** Check that the sequence given contains the minimum number of 3mers. */
     bool check_3mer_threshold(const Seq_Proxy_Type& seq) const;
 
+    Graph& _g;
     size_t _min_num_3mers;
 };
 

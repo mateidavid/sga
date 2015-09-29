@@ -8,9 +8,11 @@
 namespace MAC
 {
 
-void Read_Merger::operator () ()
+void Read_Merger::operator () () const
 {
-    LOG("Read_Merger", info) << ptree("begin");
+    LOG("Read_Merger", info) << ptree("begin")
+        .put("max_discordant_support", _max_discordant_support)
+        .put("merged_weight", _merged_weight);
     for (bool done = false; not done; )
     {
         done = true;
@@ -49,7 +51,7 @@ void Read_Merger::operator () ()
 
 void Read_Merger::extend_haploid_support(
     const Allele_Anchor& init_anchor, const Allele_Specifier& init_allele, bool init_c_direction,
-    RE_OSet& allele_support)
+    RE_OSet& allele_support) const
 {
     LOG("Read_Merger", debug) << ptree("begin")
         .put("init_anchor", init_anchor)
@@ -124,8 +126,8 @@ void Read_Merger::extend_haploid_support(
             set< Allele_Specifier > next_allele_v;
             for (const auto& p : next_anchor_support)
             {
-                auto support_accum = [] (unsigned s, Read_Entry_CBPtr re_cbptr) {
-                    return s + (re_cbptr->name().substr(0, 5) == "merge"? 5 : 1);
+                auto support_accum = [&] (unsigned s, Read_Entry_CBPtr re_cbptr) {
+                    return s + (re_cbptr->name().substr(0, 5) == "merge"? _merged_weight : 1);
                 };
                 // each previously merged read counts as 5 when computing discordance
                 unsigned allele_support_size = accumulate(p.second[0], 0, support_accum);
@@ -194,7 +196,7 @@ void Read_Merger::extend_haploid_support(
     }
 } // Read_Merger::extend_haploid_support
 
-void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
+void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset) const
 {
     ASSERT(re_oset[0].size() + re_oset[1].size() >= 2);
     LOG("Read_Merger", info) << ptree("begin")
@@ -330,7 +332,8 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
 }
 
 pair< Read_Entry_CBPtr, Read_Entry_CBPtr >
-Read_Merger::split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor, const Allele_Anchor& r_anchor)
+Read_Merger::split_read(Read_Entry_CBPtr re_cbptr,
+                        const Allele_Anchor& l_anchor, const Allele_Anchor& r_anchor) const
 {
     LOG("Read_Merger", debug) << ptree("begin")
         .put("re_bptr", re_cbptr.to_int())
@@ -366,7 +369,7 @@ Read_Merger::split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor
     return re_p;
 } // Read_Merger::split_read
 
-Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_Entry_BPtr m_re_bptr)
+Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_Entry_BPtr m_re_bptr) const
 {
     LOG("Read_Merger", debug) << ptree("begin")
         .put("rc_oset", rc_oset);
@@ -505,7 +508,7 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
     return m_rc_bptr;
 }
 
-Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_OSet& unmappable_chunks, Read_Entry_BPtr m_re_bptr)
+Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_OSet& unmappable_chunks, Read_Entry_BPtr m_re_bptr) const
 {
     seqan::FragmentStore<> store;
     seqan::ConsensusAlignmentOptions options;
@@ -540,7 +543,7 @@ Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_OSet& unmappable_c
 }
 
 pair< RC_OSet, RC_OSet >
-Read_Merger::advance_chunks(const RC_OSet& crt_rc_oset, bool direction)
+Read_Merger::advance_chunks(const RC_OSet& crt_rc_oset, bool direction) const
 {
     RC_OSet next_rc_oset;
     RC_OSet unmappable_rc_oset;
