@@ -132,7 +132,14 @@ void Validate_Variations::operator () () const
                 Read_Chunk_CBPtr rc_cbptr = *p.second.begin();
                 int r_direction = (c_direction + rc_cbptr->get_rc()) % 2;
                 if (r_direction) continue;
-                if (not validate_edge(rc_cbptr))
+                bool res = validate_edge(rc_cbptr);
+                LOG("Validate_Variations", debug) << ptree("validation")
+                    .ptree("ce_bptr", ce_bptr.to_int())
+                    .ptree("c_direction", c_direction)
+                    .ptree("next_ce_bptr", p.first.first.to_int())
+                    .ptree("same_orientation", p.first.second)
+                    .ptree("res", res);
+                if (not res)
                 {
                     _g.split_read(rc_cbptr);
                 }
