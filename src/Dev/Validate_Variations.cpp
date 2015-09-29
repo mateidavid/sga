@@ -124,7 +124,7 @@ void Validate_Variations::operator () () const
         if (ce_bptr->is_unmappable()) continue;
         for (int c_direction = 0; c_direction < 2; ++c_direction)
         {
-            auto oc = ce_bptr->out_chunks_dir(c_direction, 3);
+            auto oc = ce_bptr->out_chunks_dir(not c_direction, 3);
             for (const auto& p : oc)
             {
                 ASSERT(not p.second.empty());
