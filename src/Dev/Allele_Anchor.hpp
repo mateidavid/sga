@@ -4,13 +4,14 @@
 #include "Mutation.hpp"
 #include "Contig_Entry.hpp"
 #include "Allele_Specifier.hpp"
+#include "OSet.hpp"
 
 namespace MAC
 {
 
-typedef RC_Set Allele_Chunk_Support;
+typedef OSet< Read_Chunk_CBPtr > Allele_Chunk_Support;
 typedef map< Allele_Specifier, Allele_Chunk_Support > Anchor_Chunk_Support;
-typedef RE_OSet Allele_Read_Support;
+typedef OSet< Read_Entry_CBPtr > Allele_Read_Support;
 typedef map< Allele_Specifier, Allele_Read_Support > Anchor_Read_Support;
 
 /** An allele anchor is either a Mutation or a Contig_Entry edge */
@@ -50,116 +51,20 @@ public:
      * NOTE: Using same_st==false only makes sense when a1 & a2 are on different contigs.
      * @return A map with keys: are pairs of alleles, values: sets of Read_Entry objects.
      */
-    typedef map< pair< Allele_Specifier, Allele_Specifier >, set< Read_Entry_CBPtr > > anchor_connect_type;
+    typedef map< pair< Allele_Specifier, Allele_Specifier >, Allele_Read_Support > anchor_connect_type;
     static anchor_connect_type
-    connect(const Anchor_Chunk_Support& a1_support_m, const Anchor_Chunk_Support& a2_support_m, bool same_st = true)
-    {
-        anchor_connect_type res;
-        // for each anchor, construct a map of the form
-        //   [ Allele_Specifier ] -> set< [ Read_Entry, strand ] >
-        auto make_allele_spec_re_set_map = [] (const Anchor_Chunk_Support& m) {
-            map< Allele_Specifier, set< pair< Read_Entry_CBPtr, bool > > > r;
-            for (const auto& p : m)
-            {
-                Allele_Specifier allele_spec = p.first;
-                auto rg = ba::transform(p.second, [] (Read_Chunk_CBPtr rc_cbptr) {
-                        return make_pair(rc_cbptr->re_bptr(), rc_cbptr->get_rc());
-                    });
-                r.insert(make_pair(allele_spec, set< pair< Read_Entry_CBPtr, bool > >(rg.begin(), rg.end())));
-            }
-            return r;
-        };
-        auto a1_allele_spec_re_set_map = make_allele_spec_re_set_map(a1_support_m);
-        auto a2_allele_spec_re_set_map = make_allele_spec_re_set_map(a2_support_m);
-        // consider every pair of alleles
-        for (const auto& p1 : a1_allele_spec_re_set_map)
-        {
-            for (const auto& p2 : a2_allele_spec_re_set_map)
-            {
-                // iterate through Read_Entry objects supporting the allele at a1 (p1.first),
-                // find those supporting the allele at a2 (p2.first)
-                for (const auto& q : p1.second)
-                {
-                    Read_Entry_CBPtr re_cbptr = q.first;
-                    bool a1_neg_st = q.second;
-                    bool a2_neg_st = (a1_neg_st == same_st);
-                    if (p2.second.count(make_pair(re_cbptr, a2_neg_st)) > 0)
-                    {
-                        res[make_pair(p1.first, p2.first)].insert(re_cbptr);
-                    }
-                }
-            }
-        }
-        return res;
-    }
+    connect(const Anchor_Read_Support& a1_support_m,
+            const Anchor_Read_Support& a2_support_m,
+            bool same_st = true);
 
     /** Get sibling anchor.
      * PRE: Sibling anchor must exist in the given direction.
      * @param c_direction Bool; if false: get anchor to the right, else to the left
      * @return Sibling anchor.
      */
-    Allele_Anchor get_sibling(bool c_direction) const
-    {
-        if (is_endpoint())
-        {
-            // cannot go past left or right endpoints
-            ASSERT(c_right() == c_direction);
-            if (not c_right())
-            {
-                // anchor is left endpoint; next is first mutation (if one exists)
-                if (not ce_cbptr()->mut_cont().empty())
-                {
-                    return Allele_Anchor(&*ce_cbptr()->mut_cont().begin());
-                }
-                else
-                {
-                    return Allele_Anchor(ce_cbptr(), true);
-                }
-            }
-            else
-            {
-                // anchor is right endpoint; next is last mutation (if one exists)
-                if (not ce_cbptr()->mut_cont().empty())
-                {
-                    return Allele_Anchor(&*ce_cbptr()->mut_cont().rbegin());
-                }
-                else
-                {
-                    return Allele_Anchor(ce_cbptr(), false);
-                }
-            }
-        }
-        else // current anchor is a mutation
-        {
-            auto it = ce_cbptr()->mut_cont().iterator_to(*mut_cbptr());
-            if (c_direction)
-            {
-                // find previous mutation if one exists
-                if (it != ce_cbptr()->mut_cont().begin())
-                {
-                    --it;
-                    return Allele_Anchor(&*it);
-                }
-                else
-                {
-                    return Allele_Anchor(ce_cbptr(), false);
-                }
-            }
-            else
-            {
-                // find next mutation if one exists
-                ++it;
-                if (it != ce_cbptr()->mut_cont().end())
-                {
-                    return Allele_Anchor(&*it);
-                }
-                else
-                {
-                    return Allele_Anchor(ce_cbptr(), true);
-                }
-            }
-        }
-    }
+    Allele_Anchor get_sibling(bool c_direction) const;
+
+    Anchor_Chunk_Support chunk_support(unsigned min_edge_support = 0) const;
 
     /// Distance between consecutive allele anchors.
     static Size_Type dist(const Allele_Anchor& lhs, const Allele_Anchor& rhs)
@@ -229,39 +134,13 @@ public:
     friend bool operator >  (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return !(lhs <= rhs); }
     friend bool operator >= (const Allele_Anchor& lhs, const Allele_Anchor& rhs) { return !(lhs < rhs); }
 
-    ptree to_ptree() const
-    {
-        if (is_endpoint())
-        {
-            return ptree().put("is_endpoint", true)
-                .put("ce_cbptr", ce_cbptr().to_int())
-                .put("c_right", c_right());
-        }
-        else
-        {
-            return ptree().put("is_endpoint", false)
-                .put("ce_cbptr", ce_cbptr().to_int())
-                .put("mut_cbptr", mut_cbptr().to_int());
-        }
-    }
-    friend ostream& operator << (ostream& os, const Allele_Anchor& a)
-    {
-        if (a.is_endpoint())
-        {
-            os << "(" << a.ce_cbptr().to_int() << "," << a.c_right() << ")";
-        }
-        else
-        {
-            os << a.mut_cbptr().to_int();
-        }
-        return os;
-    }
+    ptree to_ptree() const;
+    friend ostream& operator << (ostream& os, const Allele_Anchor& a);
 
 private:
     Contig_Entry_CBPtr _ce_cbptr;
     Mutation_CBPtr _mut_cbptr;
     bool _c_right;
-
 }; // class Allele_Anchor
 
 } // namespace MAC

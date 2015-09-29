@@ -22,7 +22,7 @@ void Read_Merger::operator () () const
             for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
             {
                 Allele_Anchor anchor(mut_bptr);
-                auto anchor_support = get_anchor_read_support(anchor, false);
+                auto anchor_support = get_anchor_read_support(anchor, 1, false);
                 for (int al = 0; al < 2; ++al)
                 {
                     if (mut_bptr->copy_num(al) != 1) continue;
@@ -93,7 +93,7 @@ void Read_Merger::extend_haploid_support(
         next_anchor = crt_anchor.get_sibling(crt_c_direction);
         LOG("Read_Merger", debug) << ptree("loop").put("next_anchor", next_anchor);
         // compute support at next anchor
-        auto next_anchor_support = get_anchor_read_support(next_anchor, crt_c_direction);
+        auto next_anchor_support = get_anchor_read_support(next_anchor, 1, crt_c_direction);
         // remove all reads not currently being tracked
         for (auto& p : next_anchor_support)
         {
@@ -175,7 +175,7 @@ void Read_Merger::extend_haploid_support(
                             not crt_c_direction? next_anchor : crt_anchor);
                         Read_Entry_CBPtr new_re_cbptr = (not dir? rp.first : rp.second);
                         // we keep the side of the read that spans crt_anchor
-                        auto tmp = get_allele_read_support(crt_anchor, crt_allele, crt_c_direction);
+                        auto tmp = get_allele_read_support(crt_anchor, 1, crt_allele, crt_c_direction);
                         (void)tmp;
                         //TODO: remove
                         ASSERT(tmp[dir].count(new_re_cbptr) > 0);

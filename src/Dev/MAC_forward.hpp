@@ -73,8 +73,8 @@ class Mutation_Chunk_Adapter;
 class Read_Chunk;
 class Read_Entry;
 class Contig_Entry;
-class Hap_Hop;
-class Hap_Entry;
+//class Hap_Hop;
+//class Hap_Entry;
 class Graph;
 
 namespace detail
@@ -86,9 +86,9 @@ namespace detail
     struct Read_Chunk_Set_Node_Traits;
     struct Read_Entry_Set_Node_Traits;
     struct Contig_Entry_List_Node_Traits;
-    struct Hap_Entry_List_Node_Traits;
-    struct Hap_Hop_List_Node_Traits;
-    struct Hap_Hop_Set_Node_Traits;
+    //struct Hap_Entry_List_Node_Traits;
+    //struct Hap_Hop_List_Node_Traits;
+    //struct Hap_Hop_Set_Node_Traits;
 } // namespace detail
 
 typedef bounded::Factory< Mutation > Mutation_Fact;
@@ -121,6 +121,7 @@ typedef Contig_Entry_Fact::const_ptr_type Contig_Entry_CBPtr;
 typedef Contig_Entry_Fact::ref_type Contig_Entry_BRef;
 typedef Contig_Entry_Fact::const_ref_type Contig_Entry_CBRef;
 
+/*
 typedef bounded::Factory< Hap_Hop > Hap_Hop_Fact;
 typedef Hap_Hop_Fact::ptr_type Hap_Hop_BPtr;
 typedef Hap_Hop_Fact::const_ptr_type Hap_Hop_CBPtr;
@@ -132,6 +133,7 @@ typedef Hap_Entry_Fact::ptr_type Hap_Entry_BPtr;
 typedef Hap_Entry_Fact::const_ptr_type Hap_Entry_CBPtr;
 typedef Hap_Entry_Fact::ref_type Hap_Entry_BRef;
 typedef Hap_Entry_Fact::const_ref_type Hap_Entry_CBRef;
+*/
 
 // sets
 typedef set< Read_Chunk_CBPtr > RC_Set;
@@ -141,7 +143,7 @@ typedef array< RE_Set, 2 > RE_OSet;
 
 // algorithms
 class Unmap_Mut_Clusters;
-class Hap_Map;
+//class Hap_Map;
 
 } // namespace MAC
 

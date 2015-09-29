@@ -9,7 +9,7 @@
 #include "version.hpp"
 #include "zstr.hpp"
 #include "Graph.hpp"
-#include "Hap_Map.hpp"
+//#include "Hap_Map.hpp"
 #include "logger.hpp"
 #include "CLI.hpp"
 
@@ -51,7 +51,7 @@ namespace opts
     ValueArg< string > supercontigs_stats_file("", "supercontigs-stats-file", "Supercontigs stats file.", false, "", "file", cmd_parser);
     ValueArg< string > unmappable_contigs_file("", "unmappable-contigs-file", "Unmappable contigs file.", false, "", "file", cmd_parser);
     ValueArg< string > terminal_reads_file("", "terminal-reads-file", "Terminal reads file.", false, "", "file", cmd_parser);
-    ValueArg< string > hapmap_stats_file("", "hapmap-stats-file", "Haplotype map stats file.", false, "", "file", cmd_parser);
+    //ValueArg< string > hapmap_stats_file("", "hapmap-stats-file", "Haplotype map stats file.", false, "", "file", cmd_parser);
     //
     // asqg loading
     //
@@ -156,7 +156,7 @@ void load_asqg(std::istream& is, Graph& g)
 int real_main()
 {
     Graph g;
-    Hap_Map hm;
+    //Hap_Map hm;
     // option validation
     if (opts::input_file.get().empty() == opts::load_file.get().empty())
     {
@@ -270,7 +270,8 @@ int real_main()
     }
     if (opts::interactive)
     {
-        cli(std::cin, std::cout, g, hm);
+        //cli(std::cin, std::cout, g, hm);
+        cli(std::cin, std::cout, g);
     }
     if (not opts::stats_file.get().empty())
     {
@@ -304,12 +305,14 @@ int real_main()
         strict_fstream::fstream tmp_fs(opts::unmappable_contigs_file, ios_base::out);
         g.print_unmappable_contigs(tmp_fs);
     }
+    /*
     if (not opts::hapmap_stats_file.get().empty())
     {
         LOG("mac", info) << ptree("hapmap-stats").put("file", opts::hapmap_stats_file.get());
         strict_fstream::fstream tmp_fs(opts::hapmap_stats_file, ios_base::out);
         hm.dump_stats(tmp_fs, g);
     }
+    */
     LOG("mac", info) << ptree("done_output");
 
     if (not opts::save_file.get().empty())
@@ -327,7 +330,7 @@ int real_main()
 
     LOG("mac", info) << ptree().put("factory_stats", g.factory_stats());
     g.clear_and_dispose();
-    hm.clear_and_dispose();
+    //hm.clear_and_dispose();
     LOG("mac", info) << ptree("graph_cleared");
     return EXIT_SUCCESS;
 }

@@ -5,8 +5,8 @@
 #include "Read_Chunk.hpp"
 #include "Read_Entry.hpp"
 #include "Contig_Entry.hpp"
-#include "Hap_Hop.hpp"
-#include "Hap_Entry.hpp"
+//#include "Hap_Hop.hpp"
+//#include "Hap_Entry.hpp"
 
 #define BOUNDED_TYPE(I) MAC::BOUNDED_TYPE_##I
 #define BOUNDED_TYPE_0 Mutation
@@ -14,9 +14,9 @@
 #define BOUNDED_TYPE_2 Read_Chunk
 #define BOUNDED_TYPE_3 Read_Entry
 #define BOUNDED_TYPE_4 Contig_Entry
-#define BOUNDED_TYPE_5 Hap_Hop
-#define BOUNDED_TYPE_6 Hap_Entry
-#define BOUNDED_TYPE_NUM 7
+//#define BOUNDED_TYPE_5 Hap_Hop
+//#define BOUNDED_TYPE_6 Hap_Entry
+#define BOUNDED_TYPE_NUM 5
 
 #define INSTANTIATE_BOUNDED_TYPE(Z, I, _) \
     template union bounded::detail::Value_Wrapper< BOUNDED_TYPE(I) >; \

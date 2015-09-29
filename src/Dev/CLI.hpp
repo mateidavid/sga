@@ -2,13 +2,13 @@
 #define __CLI_HPP
 
 #include "Graph.hpp"
-#include "Hap_Map.hpp"
-
+//#include "Hap_Map.hpp"
 
 namespace MAC
 {
 
-void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm);
+//void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm);
+void cli(istream& is, ostream& os, const Graph& g);
 
 } // namespace MAC
 

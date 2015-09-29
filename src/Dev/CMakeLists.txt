@@ -15,13 +15,14 @@ add_library(mac STATIC
     Read_Chunk_Cont.cpp
     Read_Entry.cpp
     Contig_Entry.cpp
+    Allele_Anchor.cpp
     Graph.cpp
     Unmapper.cpp
     Unmap_Mut_Clusters.cpp
     Validate_Variations.cpp
-    Hap_Map.cpp
     Read_Merger.cpp
-    Hap_Tree.cpp
+#    Hap_Map.cpp
+#    Hap_Tree.cpp
     Anchor_Support.cpp
     CLI.cpp
     MAC_explicit_instantiations.cpp

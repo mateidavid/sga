@@ -3,14 +3,15 @@
 namespace MAC
 {
 
-void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
+//void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
+void cli(istream& is, ostream& os, const Graph& g)
 {
     set< Mutation_Fact::index_type > unused_mut_set = Mutation_Fact::unused_set();
     set< Read_Chunk_Fact::index_type > unused_rc_set = Read_Chunk_Fact::unused_set();
     set< Read_Entry_Fact::index_type > unused_re_set = Read_Entry_Fact::unused_set();
     set< Contig_Entry_Fact::index_type > unused_ce_set = Contig_Entry_Fact::unused_set();
-    set< Hap_Entry_Fact::index_type > unused_he_set = Contig_Entry_Fact::unused_set();
-    set< Hap_Hop_Fact::index_type > unused_hh_set = Contig_Entry_Fact::unused_set();
+    //set< Hap_Entry_Fact::index_type > unused_he_set = Contig_Entry_Fact::unused_set();
+    //set< Hap_Hop_Fact::index_type > unused_hh_set = Contig_Entry_Fact::unused_set();
 
     os << "Entering interactive mode. Type 'h' for help; 'q' or Ctrl-D to exit.\n";
     string line;
@@ -31,7 +32,8 @@ void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
                << "  print|p : print object\n"
                << "  seq|s : print sequence\n"
                << "  outchunks|oc : print chunks leaving contig\n"
-               << "  hops|hh : print haplotype hops\n"
+               //<< "  hops|hh : print haplotype hops\n"
+               << "  search : search read by name\n"
                 ;
         }
         else if (cmd == "quit" or cmd == "q")
@@ -93,7 +95,8 @@ void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
             size_t id;
             if (not (iss >> tmp >> id))
             {
-                os << "use: prettyprint [(read|re)|(contig|ce)|(chunk|rc)|(hap|he)|(hop|hh)] id\n";
+                //os << "use: prettyprint [(read|re)|(contig|ce)|(chunk|rc)|(hap|he)|(hop|hh)] id\n";
+                os << "use: prettyprint [(read|re)|(contig|ce)|(chunk|rc)] id\n";
             }
             else if (tmp == "read" or tmp == "re")
             {
@@ -149,6 +152,7 @@ void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
                     os << "  " << Read_Chunk::to_string(rc_cbptr) << "\n";
                 }
             }
+            /*
             else if (tmp == "hap" or tmp == "he")
             {
                 if (id >= Hap_Entry_Fact::size() or unused_he_set.count(id) > 0)
@@ -181,6 +185,7 @@ void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
                     os << endl;
                 }
             }
+            */
             else
             {
                 os << "invalid object to print: " << tmp << "\n";
@@ -278,6 +283,7 @@ void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
                 os << "\n";
             }
         }
+        /*
         else if (cmd == "hops" or cmd == "hh")
         {
             size_t id;
@@ -320,6 +326,7 @@ void cli(istream& is, ostream& os, const Graph& g, const Hap_Map& hm)
                 os << endl;
             }
         }
+        */
         else if (cmd == "search")
         {
             string name;

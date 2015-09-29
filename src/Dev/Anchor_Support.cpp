@@ -1,41 +1,13 @@
 #include "Anchor_Support.hpp"
-#include "Hap_Hop.hpp"
+//#include "Hap_Hop.hpp"
 #include "filter_cont.hpp"
 
 namespace MAC
 {
 
-Anchor_Chunk_Support get_anchor_chunk_support(const Allele_Anchor& anchor)
+Anchor_Chunk_Support get_anchor_chunk_support(const Allele_Anchor& anchor, unsigned min_edge_support)
 {
-    Anchor_Chunk_Support res;
-    if (anchor.is_mutation())
-    {
-        set< Read_Chunk_CBPtr > qr_set;
-        set< Read_Chunk_CBPtr > full_rf_set;
-        tie(qr_set, full_rf_set, ignore) = anchor.ce_cbptr()->mut_support(anchor.mut_cbptr());
-        res[Allele_Specifier(false)] = move(full_rf_set);
-        res[Allele_Specifier(true)] = move(qr_set);
-    }
-    else // is_endpoint
-    {
-        auto m = anchor.ce_cbptr()->out_chunks_dir(anchor.c_right(), 3, 1);
-        if (not m.empty())
-        {
-            for (auto p : m)
-            {
-                res[Allele_Specifier(p.first)] = move(p.second);
-            }
-        }
-        else
-        {
-            // out-degree 0
-            auto pos = anchor.c_right()? anchor.ce_cbptr()->len() : 0;
-            auto it_r = anchor.ce_cbptr()->chunk_cont().iintersect(pos, pos) | referenced;
-            ASSERT(it_r.begin() != it_r.end());
-            res[Allele_Specifier(nullptr, true)].insert(it_r.begin(), it_r.end());
-        }
-    }
-    return res;
+    return anchor.chunk_support(min_edge_support);
 }
 
 Anchor_Read_Support get_anchor_read_support(const Anchor_Chunk_Support& anchor_chunk_support, bool c_direction)
@@ -43,19 +15,23 @@ Anchor_Read_Support get_anchor_read_support(const Anchor_Chunk_Support& anchor_c
     Anchor_Read_Support res;
     for (const auto& p : anchor_chunk_support)
     {
-        for (const auto rc_cbptr : p.second)
+        for (int d = 0; d < 2; ++d)
         {
-            res[p.first][rc_cbptr->get_rc() != c_direction].insert(rc_cbptr->re_bptr());
+            for (auto rc_cbptr : p.second[d])
+            {
+                res[p.first][d != c_direction].insert(rc_cbptr->re_bptr());
+            }
         }
     }
     return res;
 }
 
-Anchor_Read_Support get_anchor_read_support(const Allele_Anchor& anchor, bool c_direction)
+Anchor_Read_Support get_anchor_read_support(const Allele_Anchor& anchor, unsigned min_edge_support, bool c_direction)
 {
-    return get_anchor_read_support(get_anchor_chunk_support(anchor), c_direction);
+    return get_anchor_read_support(anchor.chunk_support(min_edge_support), c_direction);
 }
 
+/*
 Anchor_Read_Support get_hop_read_support(const Hap_Hop_CBPtr& hh_cbptr, bool h_direction)
 {
     return get_anchor_read_support(hh_cbptr->allele_anchor(), hh_cbptr->c_direction() != h_direction);
@@ -65,6 +41,7 @@ Anchor_Read_Support get_hop_read_support(const pair< Hap_Hop_CBPtr, bool >& p)
 {
     return get_hop_read_support(p.first, p.second);
 }
+*/
 
 Allele_Chunk_Support get_allele_chunk_support(const Anchor_Chunk_Support& anchor_chunk_support,
                                               const Allele_Specifier& allele)
@@ -91,10 +68,11 @@ Allele_Read_Support get_allele_read_support(Anchor_Read_Support&& anchor_read_su
 }
 
 Allele_Read_Support get_allele_read_support(const Allele_Anchor& anchor,
+                                            unsigned min_edge_support,
                                             const Allele_Specifier& allele,
                                             bool c_direction)
 {
-    return get_allele_read_support(get_anchor_read_support(anchor, c_direction), allele);
+    return get_allele_read_support(get_anchor_read_support(anchor, min_edge_support, c_direction), allele);
 }
 
 Allele_Read_Support collapsed_support(const Anchor_Read_Support& anchor_read_support)
