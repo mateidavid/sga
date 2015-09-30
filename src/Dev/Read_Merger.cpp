@@ -170,10 +170,9 @@ void Read_Merger::extend_haploid_support(
                     {
                         ASSERT(allele_support[(dir + init_c_direction) % 2].count(re_cbptr));
                         allele_support[(dir + init_c_direction) % 2].erase(re_cbptr);
-                        auto rp = split_read(
+                        auto rp = _g.split_read(
                             re_cbptr,
-                            not crt_c_direction? crt_anchor : next_anchor,
-                            not crt_c_direction? next_anchor : crt_anchor);
+                            not crt_c_direction? crt_anchor : next_anchor);
                         Read_Entry_CBPtr new_re_cbptr = (not dir? rp.first : rp.second);
                         // we keep the side of the read that spans crt_anchor
                         auto tmp = crt_anchor.read_support().at(crt_allele);
@@ -332,44 +331,6 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_DSet& re_dset)
 
     LOG("Read_Merger", info) << ptree("end");
 }
-
-pair< Read_Entry_CBPtr, Read_Entry_CBPtr >
-Read_Merger::split_read(Read_Entry_CBPtr re_cbptr,
-                        const Allele_Anchor& l_anchor, const Allele_Anchor& r_anchor) const
-{
-    LOG("Read_Merger", debug) << ptree("begin")
-        .put("re_bptr", re_cbptr.to_int())
-        .put("re_name", re_cbptr->name())
-        .put("l_anchor", l_anchor)
-        .put("r_anchor", r_anchor);
-    ASSERT(re_cbptr);
-    auto re_bptr = re_cbptr.unconst();
-    ASSERT(l_anchor.ce_cbptr() == r_anchor.ce_cbptr());
-    ASSERT(l_anchor.get_sibling(false) == r_anchor);
-    auto ce_bptr = l_anchor.ce_cbptr().unconst();
-    auto l_out_pos = l_anchor.is_endpoint()? 0 : l_anchor.mut_cbptr()->rf_start();
-    (void)l_out_pos;
-    auto l_in_pos = l_anchor.is_endpoint()? 0 : l_anchor.mut_cbptr()->rf_end();
-    auto r_in_pos = r_anchor.is_endpoint()? ce_bptr->len() : r_anchor.mut_cbptr()->rf_start();
-    auto r_out_pos = r_anchor.is_endpoint()? ce_bptr->len() : r_anchor.mut_cbptr()->rf_end();
-    (void)r_out_pos;
-    ASSERT(l_in_pos < r_in_pos);
-    //auto match_len = r_in_pos - l_in_pos;
-    auto rc_bptr = ce_bptr->chunk_cont().search_read(re_bptr).unconst();
-    ASSERT(rc_bptr);
-    ASSERT(rc_bptr->get_c_start() <= l_out_pos);
-    ASSERT(r_out_pos <= rc_bptr->get_c_end());
-    // create new Read_Entry object that will hold the tail
-    _g.re_cont().erase(re_bptr);
-    auto re_p = Read_Entry::split(rc_bptr, l_in_pos, r_in_pos);
-    _g.re_cont().insert(re_p.first);
-    _g.re_cont().insert(re_p.second);
-    _g.check(set< Read_Entry_CBPtr >{ re_p.first, re_p.second });
-    LOG("Read_Merger", debug) << ptree("end")
-        .put("head_re", re_p.first.to_int())
-        .put("tail_re", re_p.second.to_int());
-    return re_p;
-} // Read_Merger::split_read
 
 Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_DSet& rc_dset, Read_Entry_BPtr m_re_bptr) const
 {

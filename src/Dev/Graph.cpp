@@ -2017,7 +2017,8 @@ void Graph::resolve_unmappable_regions()
     LOG("graph", info) << ptree("end");
 }
 
-void Graph::split_read(Read_Chunk_CBPtr rc_cbptr)
+pair< Read_Entry_CBPtr, Read_Entry_CBPtr >
+Graph::split_read(Read_Chunk_CBPtr rc_cbptr)
 {
     Read_Entry_CBPtr re_cbptr = rc_cbptr->re_bptr();
     re_cont().erase(re_cbptr);
@@ -2041,6 +2042,44 @@ void Graph::split_read(Read_Chunk_CBPtr rc_cbptr)
     re_cont().insert(p.first);
     re_cont().insert(p.second);
     check(set< Read_Entry_CBPtr >{ p.first, p.second });
+    return p;
+} // Graph::split_read
+
+pair< Read_Entry_CBPtr, Read_Entry_CBPtr >
+Graph::split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor)
+{
+    LOG("Graph", debug) << ptree("begin")
+        .put("re_bptr", re_cbptr.to_int())
+        .put("re_name", re_cbptr->name())
+        .put("l_anchor", l_anchor);
+    ASSERT(re_cbptr);
+    auto re_bptr = re_cbptr.unconst();
+    auto ce_bptr = l_anchor.ce_cbptr().unconst();
+    ASSERT(not (l_anchor.is_endpoint() and l_anchor.c_right()));
+    auto r_anchor = l_anchor.get_sibling(false);
+    ASSERT(l_anchor.ce_cbptr() == r_anchor.ce_cbptr());
+    auto l_out_pos = l_anchor.is_endpoint()? 0 : l_anchor.mut_cbptr()->rf_start();
+    (void)l_out_pos;
+    auto l_in_pos = l_anchor.is_endpoint()? 0 : l_anchor.mut_cbptr()->rf_end();
+    auto r_in_pos = r_anchor.is_endpoint()? ce_bptr->len() : r_anchor.mut_cbptr()->rf_start();
+    auto r_out_pos = r_anchor.is_endpoint()? ce_bptr->len() : r_anchor.mut_cbptr()->rf_end();
+    (void)r_out_pos;
+    ASSERT(l_in_pos < r_in_pos);
+    //auto match_len = r_in_pos - l_in_pos;
+    auto rc_bptr = ce_bptr->chunk_cont().search_read(re_bptr).unconst();
+    ASSERT(rc_bptr);
+    ASSERT(rc_bptr->get_c_start() <= l_out_pos);
+    ASSERT(r_out_pos <= rc_bptr->get_c_end());
+    // create new Read_Entry object that will hold the tail
+    re_cont().erase(re_bptr);
+    auto re_p = Read_Entry::split(rc_bptr, l_in_pos, r_in_pos);
+    re_cont().insert(re_p.first);
+    re_cont().insert(re_p.second);
+    check(set< Read_Entry_CBPtr >{ re_p.first, re_p.second });
+    LOG("Graph", debug) << ptree("end")
+        .put("head_re", re_p.first.to_int())
+        .put("tail_re", re_p.second.to_int());
+    return re_p;
 } // Graph::split_read
 
 void Graph::clear_and_dispose()

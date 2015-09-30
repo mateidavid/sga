@@ -204,10 +204,12 @@ public:
     find_read_entries_with_seq_type
     find_read_entries_with_seq(const Seq_Proxy_Type& seq, unsigned max_count = 0) const;
 
-    /**
-     * Split Read_Entry after given Read_Chunk in the given read direction.
-     */
-    void split_read(Read_Chunk_CBPtr rc_cbptr);
+    /** Split Read_Entry after given Read_Chunk in the given read direction. */
+    pair< Read_Entry_CBPtr, Read_Entry_CBPtr >
+    split_read(Read_Chunk_CBPtr rc_cbptr);
+    /** Split RE into 2 overlapping REs, duplicating the sequence between l_anchor and its right neighbour. */
+    pair< Read_Entry_CBPtr, Read_Entry_CBPtr >
+    split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor);
 
     void compute_mutation_uniqueness(Size_Type flank_len);
     void compute_mutation_copy_num(Size_Type flank_len);
