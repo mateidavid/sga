@@ -58,7 +58,7 @@ void Validate_Variations::operator () () const
             };
             validate_allele_pair();
 
-            LOG("Validate_Variations", debug) << ptree("validation_result")
+            LOG("Validate_Variations", info) << ptree("validation_result.mutation")
                 .put("ce_ptr", ce_bptr.to_int())
                 .put("mut_ptr", mut_cbptr.to_int())
                 .put("validated_qr", validated_qr)
@@ -133,12 +133,12 @@ void Validate_Variations::operator () () const
                 int r_direction = (c_direction + rc_cbptr->get_rc()) % 2;
                 if (r_direction) continue;
                 bool res = validate_edge(rc_cbptr);
-                LOG("Validate_Variations", debug) << ptree("validation")
+                LOG("Validate_Variations", info) << ptree("validation_result.edge")
                     .put("ce_bptr", ce_bptr.to_int())
                     .put("c_direction", c_direction)
                     .put("next_ce_bptr", p.first.first.to_int())
                     .put("same_orientation", p.first.second)
-                    .put("res", res);
+                    .put("validated", res);
                 if (not res)
                 {
                     _g.split_read(rc_cbptr);
