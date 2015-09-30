@@ -213,20 +213,20 @@ Validate_Variations::validate_edge(Read_Chunk_CBPtr rc_cbptr) const
     }
     Seq_Type seq = re_cbptr->get_seq();
     Size_Type s1_start = (rc_cbptr->get_r_end() >= re_cbptr->start() + _flank_size
-                          ? rc_cbptr->get_r_end() - re_cbptr->start() - _flank_size
-                          : 0);
+                          ? rc_cbptr->get_r_end() - _flank_size
+                          : re_cbptr->start());
     Size_Type s1_end = (rc_cbptr->get_r_end() + _flank_size <= re_cbptr->end()
-                        ? rc_cbptr->get_r_end() + _flank_size - re_cbptr->start()
+                        ? rc_cbptr->get_r_end() + _flank_size
                         : re_cbptr->end());
     Size_Type s2_start = (next_rc_cbptr->get_r_start() >= re_cbptr->start() + _flank_size
-                          ? next_rc_cbptr->get_r_start() - re_cbptr->start() - _flank_size
+                          ? next_rc_cbptr->get_r_start() - _flank_size
                           : 0);
     Size_Type s2_end = (next_rc_cbptr->get_r_start() + _flank_size <= re_cbptr->end()
-                        ? next_rc_cbptr->get_r_start() + _flank_size - re_cbptr->start()
+                        ? next_rc_cbptr->get_r_start() + _flank_size
                         : re_cbptr->end());
-    bool res = (check_sequence(seq.substr(s1_start, s1_end - s1_start))
+    bool res = (check_sequence(seq.substr(s1_start - re_cbptr->start(), s1_end - s1_start))
                 and (not have_unmappable_region
-                     or check_sequence(seq.substr(s2_start, s2_end - s2_start))));
+                     or check_sequence(seq.substr(s2_start - re_cbptr->start(), s2_end - s2_start))));
     LOG("Validate_Variations", debug) << ptree("end").put("res", res);
     return res;
 } // Validate_Variations::validate_edge
