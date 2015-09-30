@@ -2050,7 +2050,6 @@ Graph::split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor)
 {
     LOG("Graph", debug) << ptree("begin")
         .put("re_bptr", re_cbptr.to_int())
-        .put("re_name", re_cbptr->name())
         .put("l_anchor", l_anchor);
     ASSERT(re_cbptr);
     auto re_bptr = re_cbptr.unconst();
