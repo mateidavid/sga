@@ -4,14 +4,15 @@
 #include "Mutation.hpp"
 #include "Contig_Entry.hpp"
 #include "Allele_Specifier.hpp"
-#include "OSet.hpp"
+#include "RC_DSet.hpp"
+#include "RE_DSet.hpp"
 
 namespace MAC
 {
 
-typedef OSet< Read_Chunk_CBPtr > Allele_Chunk_Support;
+typedef RC_DSet Allele_Chunk_Support;
 typedef map< Allele_Specifier, Allele_Chunk_Support > Anchor_Chunk_Support;
-typedef OSet< Read_Entry_CBPtr > Allele_Read_Support;
+typedef RE_DSet Allele_Read_Support;
 typedef map< Allele_Specifier, Allele_Read_Support > Anchor_Read_Support;
 
 /** An allele anchor is either a Mutation or a Contig_Entry edge */
@@ -65,6 +66,7 @@ public:
     Allele_Anchor get_sibling(bool c_direction) const;
 
     Anchor_Chunk_Support chunk_support(unsigned min_edge_support = 0) const;
+    Anchor_Read_Support read_support(unsigned min_edge_support = 0) const;
 
     /// Distance between consecutive allele anchors.
     static Size_Type dist(const Allele_Anchor& lhs, const Allele_Anchor& rhs)

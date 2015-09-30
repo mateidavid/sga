@@ -22,15 +22,15 @@ void Read_Merger::operator () () const
             for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
             {
                 Allele_Anchor anchor(mut_bptr);
-                auto anchor_support = get_anchor_read_support(anchor, 1, false);
+                auto anchor_support = anchor.read_support();
                 for (int al = 0; al < 2; ++al)
                 {
                     if (mut_bptr->copy_num(al) != 1) continue;
                     // found a mutation allele with copy number 1
                     // greb all reads supporting it
                     Allele_Specifier allele(al);
-                    auto allele_support = get_allele_read_support(move(anchor_support), allele);
-                    if (allele_support[0].size() + allele_support[1].size() <= 1) continue;
+                    auto allele_support = move(anchor_support.at(allele));
+                    if (allele_support.size() <= 1) continue;
                     LOG("Read_Merger", debug) << ptree("haploid_mutation")
                         .put("anchor", anchor)
                         .put("allele", allele)
@@ -39,7 +39,7 @@ void Read_Merger::operator () () const
                     extend_haploid_support(anchor, allele, true, allele_support);
                     LOG("Read_Merger", debug) << ptree("after_haploid_extension")
                         .put("allele_support", allele_support);
-                    if (allele_support[0].size() + allele_support[1].size() <= 1) continue;
+                    if (allele_support.size() <= 1) continue;
                     merge_reads(ce_bptr, allele_support);
                     done = false;
                 }
@@ -51,7 +51,7 @@ void Read_Merger::operator () () const
 
 void Read_Merger::extend_haploid_support(
     const Allele_Anchor& init_anchor, const Allele_Specifier& init_allele, bool init_c_direction,
-    RE_OSet& allele_support) const
+    RE_DSet& allele_support) const
 {
     LOG("Read_Merger", debug) << ptree("begin")
         .put("init_anchor", init_anchor)
@@ -93,10 +93,11 @@ void Read_Merger::extend_haploid_support(
         next_anchor = crt_anchor.get_sibling(crt_c_direction);
         LOG("Read_Merger", debug) << ptree("loop").put("next_anchor", next_anchor);
         // compute support at next anchor
-        auto next_anchor_support = get_anchor_read_support(next_anchor, 1, crt_c_direction);
+        auto next_anchor_support = next_anchor.read_support(); //get_anchor_read_support(next_anchor, 1, crt_c_direction);
         // remove all reads not currently being tracked
         for (auto& p : next_anchor_support)
         {
+            p.second.reverse(crt_c_direction);
             for (int dir = 0; dir < 2; ++dir)
             {
                 filter_cont(
@@ -175,8 +176,8 @@ void Read_Merger::extend_haploid_support(
                             not crt_c_direction? next_anchor : crt_anchor);
                         Read_Entry_CBPtr new_re_cbptr = (not dir? rp.first : rp.second);
                         // we keep the side of the read that spans crt_anchor
-                        auto tmp = get_allele_read_support(crt_anchor, 1, crt_allele, crt_c_direction);
-                        (void)tmp;
+                        auto tmp = crt_anchor.read_support().at(crt_allele);
+                        tmp.reverse(crt_c_direction);
                         //TODO: remove
                         ASSERT(tmp[dir].count(new_re_cbptr) > 0);
                         allele_support[(dir + init_c_direction) % 2].insert(new_re_cbptr);
@@ -196,13 +197,13 @@ void Read_Merger::extend_haploid_support(
     }
 } // Read_Merger::extend_haploid_support
 
-void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset) const
+void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_DSet& re_dset) const
 {
-    ASSERT(re_oset[0].size() + re_oset[1].size() >= 2);
+    ASSERT(re_dset.size() >= 2);
     LOG("Read_Merger", info) << ptree("begin")
         .put("ce_bptr", ce_bptr.to_int())
-        .put("re_oset[0]", re_oset[0])
-        .put("re_oset[1]", re_oset[1]);
+        .put("re_dset[0]", re_dset[0])
+        .put("re_dset[1]", re_dset[1]);
 
     // create new name, new re
     static unsigned merge_id = 0;
@@ -217,9 +218,10 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
         auto m_chunk_inserter = [&] (Read_Chunk_BPtr rc_bptr) {
             not dir? m_chunk_cont.push_back(rc_bptr) : m_chunk_cont.push_front(rc_bptr);
         };
-        RC_OSet crt_chunks = get_oriented_chunks(ce_bptr, re_oset);
-        ASSERT(crt_chunks[0].size() == re_oset[0].size()
-               and crt_chunks[1].size() == re_oset[1].size());
+        //RC_DSet crt_chunks = get_oriented_chunks(ce_bptr, re_dset);
+        RC_DSet crt_chunks = move(*re_dset.chunks(ce_bptr));
+        ASSERT(crt_chunks[0].size() == re_dset[0].size()
+               and crt_chunks[1].size() == re_dset[1].size());
         if (dir == 0)
         {
             // merge chunks in start contig
@@ -233,7 +235,7 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
                 .put("dir", dir)
                 .put("crt_chunks", crt_chunks);
             // advance chunks but save unmappable chunks
-            RC_OSet unmappable_chunks;
+            RC_DSet unmappable_chunks;
             tie(crt_chunks, unmappable_chunks) = advance_chunks(crt_chunks, dir);
             LOG("Read_Merger", debug) << ptree("loop__after_advance")
                 .put("crt_chunks", crt_chunks)
@@ -259,33 +261,33 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
                         ? (*crt_chunks[0].begin())->ce_bptr()
                         : (*crt_chunks[1].begin())->ce_bptr();
                     // compute reads which have unmappable region
-                    RE_OSet unmappable_oset;
+                    RE_DSet unmappable_dset;
                     for (int d = 0; d < 2; ++d)
                     {
                         for (auto rc_bptr : unmappable_chunks[d])
                         {
-                            unmappable_oset[d].insert(rc_bptr->re_bptr());
+                            unmappable_dset[d].insert(rc_bptr->re_bptr());
                         }
                     }
                     // compute reads without unmappable region
-                    RE_OSet non_unmappable_oset;
+                    RE_DSet non_unmappable_dset;
                     for (int d = 0; d < 2; ++d)
                     {
                         for (auto rc_bptr : crt_chunks[d])
                         {
-                            if (unmappable_oset[d].count(rc_bptr->re_bptr()) == 0)
+                            if (unmappable_dset[d].count(rc_bptr->re_bptr()) == 0)
                             {
-                                non_unmappable_oset[d].insert(rc_bptr->re_bptr());
+                                non_unmappable_dset[d].insert(rc_bptr->re_bptr());
                             }
                         }
                     }
                     LOG("Read_Merger", warning) << ptree("unmappable_inconsistency")
                         .put("prev_ce_cbptr", prev_ce_cbptr.to_int())
                         .put("next_ce_cbptr", next_ce_cbptr.to_int())
-                        .put("unmappable_oset[0]", unmappable_oset[0])
-                        .put("unmappable_oset[1]", unmappable_oset[1])
-                        .put("non_unmappable_oset[0]", non_unmappable_oset[0])
-                        .put("non_unmappable_oset[1]", non_unmappable_oset[1]);
+                        .put("unmappable_dset[0]", unmappable_dset[0])
+                        .put("unmappable_dset[1]", unmappable_dset[1])
+                        .put("non_unmappable_dset[0]", non_unmappable_dset[0])
+                        .put("non_unmappable_dset[1]", non_unmappable_dset[1]);
                 }
                 m_rc_bptr = merge_unmappable_chunks(unmappable_chunks, m_re_bptr);
                 m_chunk_inserter(m_rc_bptr);
@@ -321,7 +323,7 @@ void Read_Merger::merge_reads(Contig_Entry_BPtr ce_bptr, const RE_OSet& re_oset)
     // finally, destroy the old reads
     for (int d = 0; d < 2; ++d)
     {
-        for (auto re_cbptr : re_oset[d])
+        for (auto re_cbptr : re_dset.at(d))
         {
             _g.remove_read(re_cbptr.unconst());
         }
@@ -369,24 +371,24 @@ Read_Merger::split_read(Read_Entry_CBPtr re_cbptr,
     return re_p;
 } // Read_Merger::split_read
 
-Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_Entry_BPtr m_re_bptr) const
+Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_DSet& rc_dset, Read_Entry_BPtr m_re_bptr) const
 {
     LOG("Read_Merger", debug) << ptree("begin")
-        .put("rc_oset", rc_oset);
-    ASSERT(not (rc_oset[0].empty() and rc_oset[1].empty()));
-    auto ce_bptr = not rc_oset[0].empty()
-        ? (*rc_oset[0].begin())->ce_bptr()
-        : (*rc_oset[1].begin())->ce_bptr();
-    auto c_direction = not rc_oset[0].empty()
-        ? (*rc_oset[0].begin())->get_rc()
-        : not (*rc_oset[1].begin())->get_rc();
+        .put("rc_dset", rc_dset);
+    ASSERT(not (rc_dset[0].empty() and rc_dset[1].empty()));
+    auto ce_bptr = not rc_dset[0].empty()
+        ? (*rc_dset[0].begin())->ce_bptr()
+        : (*rc_dset[1].begin())->ce_bptr();
+    auto c_direction = not rc_dset[0].empty()
+        ? (*rc_dset[0].begin())->get_rc()
+        : not (*rc_dset[1].begin())->get_rc();
     ASSERT(all_of(
-               rc_oset[0],
+               rc_dset[0],
                [&] (Read_Chunk_CBPtr rc_cbptr) {
                    return rc_cbptr->ce_bptr() == ce_bptr and rc_cbptr->get_rc() == (0 + c_direction) % 2;
                })
            and all_of(
-               rc_oset[1],
+               rc_dset[1],
                [&] (Read_Chunk_CBPtr rc_cbptr) {
                    return rc_cbptr->ce_bptr() == ce_bptr and rc_cbptr->get_rc() == (1 + c_direction) % 2;
                }));
@@ -394,7 +396,7 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
     map< Read_Chunk_CBPtr, Read_Chunk_Pos > pos_map;
     for (int d = 0; d < 2; ++d)
     {
-        for (auto rc_cbptr : rc_oset[d])
+        for (auto rc_cbptr : rc_dset[d])
         {
             pos_map.insert(make_pair(rc_cbptr, rc_cbptr->get_start_pos()));
         }
@@ -416,7 +418,7 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
                    pos_map,
                    [] (const decltype(pos_map)::value_type& p) { return p.second.c_pos; }));
         // find active chunks: the ones whose position is at c_pos
-        RC_Set active_rc_set;
+        set< Read_Chunk_CBPtr > active_rc_set;
         for (const auto& p : pos_map)
         {
             if (p.second.c_pos == c_pos)
@@ -508,7 +510,7 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_OSet& rc_oset, Read_En
     return m_rc_bptr;
 }
 
-Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_OSet& unmappable_chunks, Read_Entry_BPtr m_re_bptr) const
+Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_DSet& unmappable_chunks, Read_Entry_BPtr m_re_bptr) const
 {
     seqan::FragmentStore<> store;
     seqan::ConsensusAlignmentOptions options;
@@ -542,14 +544,14 @@ Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_OSet& unmappable_c
     return m_rc_bptr;
 }
 
-pair< RC_OSet, RC_OSet >
-Read_Merger::advance_chunks(const RC_OSet& crt_rc_oset, bool direction) const
+pair< RC_DSet, RC_DSet >
+Read_Merger::advance_chunks(const RC_DSet& crt_rc_dset, bool direction) const
 {
-    RC_OSet next_rc_oset;
-    RC_OSet unmappable_rc_oset;
+    RC_DSet next_rc_dset;
+    RC_DSet unmappable_rc_dset;
     for (int d = 0; d < 2; ++d)
     {
-        for (auto rc_cbptr : crt_rc_oset[d])
+        for (auto rc_cbptr : crt_rc_dset[d])
         {
             ASSERT(rc_cbptr);
             auto next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(
@@ -558,7 +560,7 @@ Read_Merger::advance_chunks(const RC_OSet& crt_rc_oset, bool direction) const
             if (next_rc_cbptr->ce_bptr()->is_unmappable())
             {
                 // skip one unmappable chunk if necessary
-                unmappable_rc_oset[d].insert(next_rc_cbptr);
+                unmappable_rc_dset[d].insert(next_rc_cbptr);
                 auto next_next_rc_cbptr = next_rc_cbptr->re_bptr()->chunk_cont().get_sibling(
                     next_rc_cbptr, true, not ( (d + direction) % 2 ));
                 if (not next_next_rc_cbptr)
@@ -569,10 +571,10 @@ Read_Merger::advance_chunks(const RC_OSet& crt_rc_oset, bool direction) const
                 }
                 next_rc_cbptr = next_next_rc_cbptr;
             }
-            next_rc_oset[d].insert(next_rc_cbptr);
+            next_rc_dset[d].insert(next_rc_cbptr);
         }
     }
-    return make_pair(next_rc_oset, unmappable_rc_oset);
+    return make_pair(next_rc_dset, unmappable_rc_dset);
 }
 
 } // namespace MAC

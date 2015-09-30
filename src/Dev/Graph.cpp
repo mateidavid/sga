@@ -7,7 +7,7 @@
 
 #include "Unmapper.hpp"
 #include "overlapper.h"
-#include "Anchor_Support.hpp"
+//#include "Anchor_Support.hpp"
 #include "zstr.hpp"
 
 
@@ -2610,8 +2610,8 @@ void Graph::print_detailed_counts(ostream& os) const
             os << '\t';
             print_neighbours_cont_stats(os, ce_cbptr, true, true, ce_cbptr->out_chunks_dir(true, 3, 1));
             auto ac = Allele_Anchor::connect(
-                get_anchor_read_support(Allele_Anchor(ce_cbptr, false), 2, false),
-                get_anchor_read_support(Allele_Anchor(ce_cbptr, true), 2, false));
+                Allele_Anchor(ce_cbptr, false).read_support(2),
+                Allele_Anchor(ce_cbptr, true).read_support(2));
             os << '\t';
             bool first = true;
             for (const auto& p : ac)

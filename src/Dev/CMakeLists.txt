@@ -16,6 +16,8 @@ add_library(mac STATIC
     Read_Entry.cpp
     Contig_Entry.cpp
     Allele_Anchor.cpp
+    RC_DSet.cpp
+    RE_DSet.cpp
     Graph.cpp
     Unmapper.cpp
     Unmap_Mut_Clusters.cpp
@@ -23,7 +25,7 @@ add_library(mac STATIC
     Read_Merger.cpp
 #    Hap_Map.cpp
 #    Hap_Tree.cpp
-    Anchor_Support.cpp
+#    Anchor_Support.cpp
     CLI.cpp
     MAC_explicit_instantiations.cpp
     )

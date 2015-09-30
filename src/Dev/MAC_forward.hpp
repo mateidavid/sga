@@ -75,6 +75,8 @@ class Read_Entry;
 class Contig_Entry;
 //class Hap_Hop;
 //class Hap_Entry;
+class RC_DSet;
+class RE_DSet;
 class Graph;
 
 namespace detail
@@ -136,10 +138,10 @@ typedef Hap_Entry_Fact::const_ref_type Hap_Entry_CBRef;
 */
 
 // sets
-typedef set< Read_Chunk_CBPtr > RC_Set;
-typedef array< RC_Set, 2 > RC_OSet;
-typedef set< Read_Entry_CBPtr > RE_Set;
-typedef array< RE_Set, 2 > RE_OSet;
+//typedef set< Read_Chunk_CBPtr > RC_Set;
+//typedef array< RC_Set, 2 > RC_OSet;
+//typedef set< Read_Entry_CBPtr > RE_Set;
+//typedef array< RE_Set, 2 > RE_OSet;
 
 // algorithms
 class Unmap_Mut_Clusters;

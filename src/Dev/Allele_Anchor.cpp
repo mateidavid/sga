@@ -130,6 +130,17 @@ Anchor_Chunk_Support Allele_Anchor::chunk_support(unsigned min_edge_support) con
     return res;
 } // Allele_Anchor::chunk_support
 
+Anchor_Read_Support Allele_Anchor::read_support(unsigned min_edge_support) const
+{
+    Anchor_Read_Support res;
+    auto cs = chunk_support(min_edge_support);
+    for (auto& p : cs)
+    {
+        res[p.first] = move(*p.second.reads());
+    }
+    return res;
+}
+
 ptree Allele_Anchor::to_ptree() const
 {
     if (is_endpoint())

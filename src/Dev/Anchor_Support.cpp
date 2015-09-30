@@ -5,6 +5,7 @@
 namespace MAC
 {
 
+/*
 Anchor_Chunk_Support get_anchor_chunk_support(const Allele_Anchor& anchor, unsigned min_edge_support)
 {
     return anchor.chunk_support(min_edge_support);
@@ -31,7 +32,6 @@ Anchor_Read_Support get_anchor_read_support(const Allele_Anchor& anchor, unsigne
     return get_anchor_read_support(anchor.chunk_support(min_edge_support), c_direction);
 }
 
-/*
 Anchor_Read_Support get_hop_read_support(const Hap_Hop_CBPtr& hh_cbptr, bool h_direction)
 {
     return get_anchor_read_support(hh_cbptr->allele_anchor(), hh_cbptr->c_direction() != h_direction);
@@ -41,7 +41,6 @@ Anchor_Read_Support get_hop_read_support(const pair< Hap_Hop_CBPtr, bool >& p)
 {
     return get_hop_read_support(p.first, p.second);
 }
-*/
 
 Allele_Chunk_Support get_allele_chunk_support(const Anchor_Chunk_Support& anchor_chunk_support,
                                               const Allele_Specifier& allele)
@@ -72,7 +71,12 @@ Allele_Read_Support get_allele_read_support(const Allele_Anchor& anchor,
                                             const Allele_Specifier& allele,
                                             bool c_direction)
 {
-    return get_allele_read_support(get_anchor_read_support(anchor, min_edge_support, c_direction), allele);
+    auto anchor_rs = anchor.read_support(min_edge_support);
+    if (not anchor_rs.count(allele)) return Allele_Read_Support();
+    auto allele_rs = move(anchor_rs.at(allele));
+    allele_rs.reverse(c_direction);
+    return allele_rs;
+    //return get_allele_read_support(get_anchor_read_support(anchor, min_edge_support, c_direction), allele);
 }
 
 Allele_Read_Support collapsed_support(const Anchor_Read_Support& anchor_read_support)
@@ -87,6 +91,7 @@ Allele_Read_Support collapsed_support(const Anchor_Read_Support& anchor_read_sup
     }
     return res;
 }
+*/
 
 void subset_support(Anchor_Read_Support& anchor_read_support,
                     const Allele_Read_Support& common_support,
@@ -113,6 +118,7 @@ void subset_support(Anchor_Read_Support& anchor_read_support,
     }
 }
 
+/*
 Allele_Read_Support common_allele_support(const Allele_Read_Support& al1_read_support,
                                           const Allele_Read_Support& al2_read_support,
                                           bool direction)
@@ -147,5 +153,6 @@ RC_OSet get_oriented_chunks(Contig_Entry_CBPtr ce_cbptr, const RE_OSet& re_oset)
     }
     return res;
 }
+*/
 
 } // namespace MAC
