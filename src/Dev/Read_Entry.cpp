@@ -91,7 +91,6 @@ Read_Entry::split(Read_Chunk_BPtr rc_bptr, Size_Type c_overlap_start, Size_Type 
     ce_bptr->chunk_cont().insert(rc_p.first);
     ce_bptr->chunk_cont().insert(rc_p.second);
     // adjust RE names
-    tail_re_bptr->name() = re_bptr->name();
     LOG("Read_Entry", info) << ptree("overlapping_read_break")
         .put("re_name", re_bptr->name())
         .put("brk_start", tail_re_start_pos)
@@ -101,6 +100,7 @@ Read_Entry::split(Read_Chunk_BPtr rc_bptr, Size_Type c_overlap_start, Size_Type 
         tmp << ":(" << first << "," << last << ")";
         dest += tmp.str();
     };
+    tail_re_bptr->name() = re_bptr->name();
     append_coordinates(re_bptr->name(), re_bptr->start(), re_end_pos);
     append_coordinates(tail_re_bptr->name(), tail_re_start_pos, re_bptr->end());
     // adjust start, len
@@ -141,6 +141,7 @@ Read_Entry::split(Read_Chunk_CBPtr rc_cbptr)
         tmp << ":(" << first << "," << last << ")";
         dest += tmp.str();
     };
+    tail_re_bptr->name() = re_bptr->name();
     append_coordinates(re_bptr->name(), re_bptr->start(), tail_re_start_pos);
     append_coordinates(tail_re_bptr->name(), tail_re_start_pos, re_bptr->end());
     tail_re_bptr->chunk_cont().shift(-long(tail_re_start_pos));
