@@ -378,14 +378,26 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_DSet& rc_dset, Read_En
         ASSERT(c_pos <= min_value_of(
                    pos_map,
                    [] (const decltype(pos_map)::value_type& p) { return p.second.c_pos; }));
+        // check if there is any chunk with position at c_pos, that has a mutation next
+        bool is_ins_next = any_of(
+            ba::values(pos_map),
+            [&] (const Read_Chunk_Pos& pos) {
+                return (pos.c_pos == c_pos and pos.get_match_len() == 0 and not pos.past_last_mut() and pos.mut().is_ins());
+            });
         // find active chunks: the ones whose position is at c_pos
         set< Read_Chunk_CBPtr > active_rc_set;
         for (const auto& p : pos_map)
         {
-            if (p.second.c_pos == c_pos)
+            if (p.second.c_pos != c_pos) continue;
+            // exception: allow terminal chunks at their start position to not have an insertion
+            if (is_ins_next
+                and p.second == p.first->get_start_pos()
+                and p.second.get_match_len() > 0
+                and not p.first->re_bptr()->chunk_cont().get_sibling(p.first, false, false))
             {
-                active_rc_set.insert(p.first);
+                continue;
             }
+            active_rc_set.insert(p.first);
         }
         ASSERT(not active_rc_set.empty());
         // compute next breakpoint
