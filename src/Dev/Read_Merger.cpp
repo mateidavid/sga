@@ -61,6 +61,7 @@ void Read_Merger::extend_haploid_support(
     auto crt_anchor = init_anchor;
     auto crt_allele = init_allele;
     auto crt_c_direction = init_c_direction;
+    RE_DSet inactive_allele_support;
     while (true)
     {
         LOG("Read_Merger", debug) << ptree("loop_start")
@@ -103,7 +104,8 @@ void Read_Merger::extend_haploid_support(
                 filter_cont(
                     p.second[dir],
                     [&] (Read_Entry_CBPtr re_cbptr) {
-                        return allele_support[(dir + init_c_direction) % 2].count(re_cbptr) > 0;
+                        return (allele_support[(dir + init_c_direction) % 2].count(re_cbptr)
+                                and not inactive_allele_support[(dir + init_c_direction) % 2].count(re_cbptr));
                     });
             }
         }
@@ -168,7 +170,8 @@ void Read_Merger::extend_haploid_support(
                 {
                     for (auto re_cbptr : p.second[dir])
                     {
-                        ASSERT(allele_support[(dir + init_c_direction) % 2].count(re_cbptr));
+                        ASSERT(allele_support[(dir + init_c_direction) % 2].count(re_cbptr)
+                               and not inactive_allele_support[(dir + init_c_direction) % 2].count(re_cbptr));
                         allele_support[(dir + init_c_direction) % 2].erase(re_cbptr);
                         auto rp = _g.split_read(
                             re_cbptr,
@@ -187,10 +190,16 @@ void Read_Merger::extend_haploid_support(
             filter_cont(
                 next_anchor_support,
                 [] (Anchor_Read_Support::const_iterator cit) {
-                    return not (cit->second[0].empty() and cit->second[1].empty());
+                    return not cit->second.empty();
                 });
         } // if (next_anchor_support.size() > 1)
         ASSERT(next_anchor_support.size() == 1);
+        // reads which do not support next anchor become inactive
+        auto active_allele_support = allele_support.subtract(allele_support, inactive_allele_support, false);
+        active_allele_support.subtract(next_anchor_support.begin()->second, init_c_direction);
+        LOG("Read_Merger", debug) << ptree("loop_filter")
+            .put("new_inactive_allele_support", active_allele_support);
+        inactive_allele_support.add(active_allele_support, false);
         crt_anchor = next_anchor;
         crt_allele = next_anchor_support.begin()->first;
     }
@@ -410,6 +419,7 @@ Read_Chunk_BPtr Read_Merger::merge_contig_chunks(const RC_DSet& rc_dset, Read_En
             });
         LOG("Read_Merger", debug) << ptree("before_increment")
             .put("c_pos", c_pos)
+            .put("is_ins_next", is_ins_next)
             .put("pos_map", pos_map)
             .put("active_rc_set", active_rc_set)
             .put("match_len", match_len);

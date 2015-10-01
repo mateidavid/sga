@@ -46,6 +46,19 @@ public:
         filter([&] (const T& v, bool d) { return other.at((d + rel_direction) % 2).count(v) > 0; });
     }
 
+    void subtract(const Directed_Set& other, bool rel_direction)
+    {
+        filter([&] (const T& v, bool d) { return not other.at((d + rel_direction) % 2).count(v); });
+    }
+
+    void add(const Directed_Set& other, bool rel_direction)
+    {
+        for (int d = 0; d < 2; ++d)
+        {
+            at(d).insert(other.at((d + rel_direction) % 2).begin(), other.at((d + rel_direction) % 2).end());
+        }
+    }
+
     static std::pair< Directed_Set, Directed_Set >
     separate(const Directed_Set& s1, const Directed_Set& s2, bool rel_direction)
     {

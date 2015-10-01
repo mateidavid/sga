@@ -267,6 +267,7 @@ ptree Read_Chunk_Pos::to_ptree() const
         .put("past_last_mut", past_last_mut());
     if (not past_last_mut())
     {
+        pt.put("mut_bptr", mca_cit->mut_cbptr().to_int());
         pt.put("mut", mut());
     }
     return pt;
