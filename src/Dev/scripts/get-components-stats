@@ -7,7 +7,7 @@ get_files () {
     zc $1
 }
 get_re () {
-    get_files $1 | grep "^RE" | grep -v "len" | cut -f 2-
+    get_files $1 | grep "^RE" | grep -v "len" | cut -f 3-
 }
 get_ce () {
     get_files $1 | grep "^CE" | grep -v "len" | cut -f 2-

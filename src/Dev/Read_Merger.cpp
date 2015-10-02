@@ -64,10 +64,12 @@ void Read_Merger::extend_haploid_support(
     RE_DSet inactive_allele_support;
     while (true)
     {
+        auto active_allele_support = allele_support.subtract(allele_support, inactive_allele_support, false);
         LOG("Read_Merger", debug) << ptree("loop_start")
             .put("crt_anchor", crt_anchor)
             .put("crt_allele", crt_allele)
-            .put("crt_c_direction", crt_c_direction);
+            .put("crt_c_direction", crt_c_direction)
+            .put("active_allele_support", active_allele_support);
         // compute next anchor
         Allele_Anchor next_anchor;
         Allele_Specifier next_allele;
@@ -104,8 +106,7 @@ void Read_Merger::extend_haploid_support(
                 filter_cont(
                     p.second[dir],
                     [&] (Read_Entry_CBPtr re_cbptr) {
-                        return (allele_support[(dir + init_c_direction) % 2].count(re_cbptr)
-                                and not inactive_allele_support[(dir + init_c_direction) % 2].count(re_cbptr));
+                        return active_allele_support[(dir + init_c_direction) % 2].count(re_cbptr) > 0;
                     });
             }
         }
@@ -171,8 +172,10 @@ void Read_Merger::extend_haploid_support(
                     for (auto re_cbptr : p.second[dir])
                     {
                         ASSERT(allele_support[(dir + init_c_direction) % 2].count(re_cbptr)
+                               and active_allele_support[(dir + init_c_direction) % 2].count(re_cbptr));
                                and not inactive_allele_support[(dir + init_c_direction) % 2].count(re_cbptr));
                         allele_support[(dir + init_c_direction) % 2].erase(re_cbptr);
+                        active_allele_support[(dir + init_c_direction) % 2].erase(re_cbptr);
                         auto rp = _g.split_read(
                             re_cbptr,
                             not crt_c_direction? crt_anchor : next_anchor);
@@ -183,6 +186,7 @@ void Read_Merger::extend_haploid_support(
                         //TODO: remove
                         ASSERT(tmp[dir].count(new_re_cbptr) > 0);
                         allele_support[(dir + init_c_direction) % 2].insert(new_re_cbptr);
+                        active_allele_support[(dir + init_c_direction) % 2].insert(new_re_cbptr);
                     }
                     p.second[dir].clear();
                 }
@@ -195,7 +199,6 @@ void Read_Merger::extend_haploid_support(
         } // if (next_anchor_support.size() > 1)
         ASSERT(next_anchor_support.size() == 1);
         // reads which do not support next anchor become inactive
-        auto active_allele_support = allele_support.subtract(allele_support, inactive_allele_support, false);
         active_allele_support.subtract(next_anchor_support.begin()->second, init_c_direction);
         LOG("Read_Merger", debug) << ptree("loop_filter")
             .put("new_inactive_allele_support", active_allele_support);

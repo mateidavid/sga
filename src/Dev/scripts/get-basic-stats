@@ -7,7 +7,7 @@ get_files () {
     zc "${stats_files[@]}"
 }
 get_re () {
-    get_files | grep "^RE" | grep -v "len" | cut -f 2-
+    get_files | grep "^RE" | grep -v "len" | cut -f 3-
 }
 get_ce () {
     get_files | grep "^CE" | grep -v "len" | cut -f 2-

@@ -2498,10 +2498,11 @@ void Graph::print_detailed_counts(ostream& os) const
     print_basic_stats(os);
     LOG("graph", info) << ptree("begin");
     // First read stats
-    os << "RE\tname\tlen\tnum.chunks\tchunk.lens\tcontigs\n";
+    os << "RE\tid\tname\tlen\tnum.chunks\tchunk.lens\tcontigs\n";
     for (const auto re_cbptr : re_cont() | referenced)
     {
         os << "RE\t"
+           << re_cbptr.to_int() << '\t'
            << re_cbptr->name() << '\t'
            << re_cbptr->end() - re_cbptr->start() << '\t'
            << re_cbptr->chunk_cont().size() << '\t';
