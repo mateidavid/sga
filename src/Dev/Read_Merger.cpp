@@ -172,7 +172,7 @@ void Read_Merger::extend_haploid_support(
                     for (auto re_cbptr : p.second[dir])
                     {
                         ASSERT(allele_support[(dir + init_c_direction) % 2].count(re_cbptr)
-                               and active_allele_support[(dir + init_c_direction) % 2].count(re_cbptr));
+                               and active_allele_support[(dir + init_c_direction) % 2].count(re_cbptr)
                                and not inactive_allele_support[(dir + init_c_direction) % 2].count(re_cbptr));
                         allele_support[(dir + init_c_direction) % 2].erase(re_cbptr);
                         active_allele_support[(dir + init_c_direction) % 2].erase(re_cbptr);
