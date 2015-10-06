@@ -13,6 +13,14 @@ void Read_Merger::operator () () const
     LOG("Read_Merger", info) << ptree("begin")
         .put("max_discordant_support", _max_discordant_support)
         .put("merged_weight", _merged_weight);
+    //
+    // Look for mutation alleles with copy number 1. When one is found:
+    // - extract the reads that support it
+    // - extend the reads past successive anchors as long as they are consistent
+    //   (ie. support the same alleles)
+    // - merge the corresponding reads
+    // Restart the loop after each merge.
+    //
     for (bool done = false; not done; )
     {
         done = true;
@@ -21,6 +29,7 @@ void Read_Merger::operator () () const
             if (not ce_bptr->is_normal()) continue;
             for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
             {
+                if (mut_bptr->copy_num(0) != 1 and mut_bptr->copy_num(1) != 1) continue;
                 Allele_Anchor anchor(mut_bptr);
                 auto anchor_support = anchor.read_support();
                 for (int al = 0; al < 2; ++al)
