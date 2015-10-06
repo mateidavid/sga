@@ -152,11 +152,6 @@ Contig_Entry_BPtr Contig_Entry::cut(Size_Type c_brk, Mutation_CBPtr mut_left_cbp
     mut_cont().drop_unused();
     ce_new_bptr->mut_cont().drop_unused();
     check();
-    //TODO: remove
-    for (auto rc_bptr : chunk_cont() | referenced)
-    {
-        rc_bptr->re_bptr()->check();
-    }
     if (ce_new_bptr->chunk_cont().empty())
     {
         Contig_Entry_Fact::del_elem(ce_new_bptr);

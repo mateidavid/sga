@@ -54,9 +54,11 @@ void Graph::remove_read(Read_Entry_BPtr re_bptr)
 bool Graph::cut_contig_entry(Contig_Entry_BPtr ce_bptr, Size_Type c_brk, Mutation_CBPtr mut_left_cbptr)
 {
     auto ce_new_bptr = ce_bptr->cut(c_brk, mut_left_cbptr);
+    check(set< Contig_Entry_CBPtr >{ ce_bptr });
     if (ce_new_bptr)
     {
         ce_cont().insert(ce_new_bptr);
+        check(set< Contig_Entry_CBPtr >{ ce_new_bptr });
     }
     return ce_new_bptr;
 } // cut_contig_entry

@@ -180,11 +180,11 @@ void Read_Merger::extend_haploid_support(
                             re_cbptr,
                             not crt_c_direction? crt_anchor : next_anchor);
                         Read_Entry_CBPtr new_re_cbptr = (not dir? rp.first : rp.second);
-                        // we keep the side of the read that spans crt_anchor
+                        //TODO: remove
                         auto tmp = crt_anchor.read_support().at(crt_allele);
                         tmp.reverse(crt_c_direction);
-                        //TODO: remove
                         ASSERT(tmp[dir].count(new_re_cbptr) > 0);
+                        // we keep the side of the read that spans crt_anchor
                         allele_support[(dir + init_c_direction) % 2].insert(new_re_cbptr);
                         active_allele_support[(dir + init_c_direction) % 2].insert(new_re_cbptr);
                     }
