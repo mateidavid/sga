@@ -111,7 +111,7 @@ Anchor_Chunk_Support Allele_Anchor::chunk_support(unsigned min_edge_support) con
         auto m = ce_cbptr()->out_chunks_dir(c_right(), 3, min_edge_support - 1);
         if (not m.empty())
         {
-            for (auto p : m)
+            for (auto& p : m)
             {
                 res.insert(make_pair(Allele_Specifier(p.first),
                                      Allele_Chunk_Support(p.second, orient_by_strand)));
