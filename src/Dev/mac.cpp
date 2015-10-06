@@ -66,12 +66,11 @@ namespace opts
     SwitchArg cat_at_end("", "cat-at-end", "Catenate contigs after loading graph.", cmd_parser, false);
     SwitchArg trim_tuc_end("", "trim-tuc-end", "Trim terminal unmappable chunks at the end.", cmd_parser, false);
     SwitchArg print_at_end("", "print-at-end", "Print graph after loading graph.", cmd_parser, false);
-    SwitchArg unmap_read_ends("", "unmap-read-ends", "Unmap read ends.", cmd_parser, false);
-    SwitchArg resolve_unmappable_regions("", "resolve-unmappable-regions", "Resolve unmappable regions.", cmd_parser, false);
     SwitchArg validate_variations("", "validate-variations", "Validate variations with auxiliary 2GS data.", cmd_parser, false);
-    SwitchArg unmap_single_chunks("", "unmap-single-chunks", "Unmap single chunks.", cmd_parser, false);
-    SwitchArg unmap_mut_clusters("", "unmap-mut-clusters", "Unmap mutation clusters.", cmd_parser, false);
+    SwitchArg unmap_single_chunks("", "unmap-single-chunks", "Unmap read chunks not supported by other reads.", cmd_parser, false);
+    SwitchArg unmap_single_terminal_regions("", "unmap-single-terminal-regions", "Unmap terminal read regions not supported by other reads.", cmd_parser, false);
     ValueArg< int > unmap_short_contigs("", "unmap-short-contigs", "Unmap contigs smaller than a given size.", false, 0, "int", cmd_parser);
+    SwitchArg unmap_mut_clusters("", "unmap-mut-clusters", "Unmap mutation clusters.", cmd_parser, false);
     SwitchArg copy_num("", "copy-num", "Compute copy numbers.", cmd_parser, false);
     SwitchArg merge_reads("", "merge-reads", "Merge reads.", cmd_parser, false);
     ValueArg< unsigned > merged_weight("", "merged-weight", "Weight of merged reads.", false, 5, "int", cmd_parser);
@@ -231,29 +230,21 @@ int real_main()
     {
         Validate_Variations{g}();
     }
-    if (opts::unmap_read_ends)
+    if (opts::unmap_single_terminal_regions)
     {
-        g.unmap_read_ends();
-        g.check_all();
+        g.unmapper().unmap_single_terminal_regions();
     }
     if (opts::unmap_mut_clusters)
     {
         Unmap_Mut_Clusters{g}();
     }
-    if (opts::resolve_unmappable_regions)
-    {
-        g.resolve_unmappable_regions();
-        g.check_all();
-    }
     if (opts::unmap_single_chunks)
     {
-        g.unmap_single_chunks();
-        g.check_all();
+        g.unmapper().unmap_single_chunks();
     }
     if (opts::unmap_short_contigs > 0)
     {
-        g.unmap_short_contigs(opts::unmap_short_contigs, 1);
-        g.check_all();
+        g.unmapper().unmap_short_contigs(opts::unmap_short_contigs, 1);
     }
     if (opts::copy_num)
     {

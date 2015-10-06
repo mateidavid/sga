@@ -78,6 +78,7 @@ class Contig_Entry;
 class RC_DSet;
 class RE_DSet;
 class Graph;
+class Unmapper;
 
 namespace detail
 {

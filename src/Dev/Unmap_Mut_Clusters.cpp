@@ -63,7 +63,7 @@ void Unmap_Mut_Clusters::operator () () const
                 //unmap_re_pos_v.emplace_back(unmap_rc_cbptr->re_bptr(), move(r_rg));
                 unmap_re_set[unmap_rc_cbptr->re_bptr()].insert(r_rg);
             }
-            _g.unmap_re_regions(move(unmap_re_set));
+            _g.unmapper().unmap(move(unmap_re_set));
             r_pos = max(r_pos, re_bptr->start());
         }
     }

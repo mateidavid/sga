@@ -3,6 +3,7 @@
 
 #include <array>
 #include <set>
+#include "filter_cont.hpp"
 
 template < typename T, typename ...Args >
 class Directed_Set

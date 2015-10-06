@@ -19,6 +19,7 @@
 #include "Contig_Entry.hpp"
 #include "Contig_Entry_Cont.hpp"
 #include "Allele_Anchor.hpp"
+#include "Unmapper.hpp"
 
 #include "BWT.h"
 #include "BWTAlgorithms.h"
@@ -30,7 +31,12 @@ class Graph
 {
 public:
     /** Default constructor. */
-    Graph() : _unmap_trigger_len(9), _aux_coverage(-1), _cat_at_step(false), _trim_tuc_step(false) {}
+    Graph()
+        : _u{this},
+        _unmap_trigger_len(9),
+        _aux_coverage(-1),
+        _cat_at_step(false),
+        _trim_tuc_step(false) {}
 
     // disallow copy or move
     DELETE_COPY_CTOR(Graph);
@@ -51,6 +57,7 @@ public:
     Read_Entry_Cont& re_cont() { return _re_cont; }
     const Contig_Entry_Cont& ce_cont() const { return _ce_cont; }
     Contig_Entry_Cont& ce_cont() { return _ce_cont; }
+    const Unmapper& unmapper() const { return _u; }
     const Size_Type& unmap_trigger_len() const { return _unmap_trigger_len; }
     Size_Type& unmap_trigger_len() { return _unmap_trigger_len; }
     GETTER(bool, cat_at_step, _cat_at_step)
@@ -124,15 +131,6 @@ public:
     supercontig_list get_supercontigs(int unmappable_policy, size_t ignore_threshold = 1) const;
     Size_Type skip_supercontig_bulges(supercontig_list & l) const;
 
-    /** Unmap read chunks not mapped to lone contigs. */
-    void unmap_single_chunks();
-
-    /** Repeatedly unmap short contigs with length < min_len and out-degree > max_deg */
-    void unmap_short_contigs(unsigned min_len, unsigned max_deg);
-
-    /** Unmap read ends not mapped to anything else. */
-    void unmap_read_ends();
-
     /** Clear CE and RE containers and deallocate all objects. */
     void clear_and_dispose();
 
@@ -154,34 +152,6 @@ public:
 
     /** Print unmappable contigs between each pair of mappable ones. */
     void print_unmappable_contigs(ostream& os) const;
-
-    /** Resolve unmappable contigs. */
-    void resolve_unmappable_regions();
-    void resolve_unmappable_inner_region(Contig_Entry_CBPtr ce_cbptr, bool c_right,
-                                         Contig_Entry_CBPtr ce_next_cbptr, bool same_orientation);
-    void resolve_unmappable_terminal_region(Contig_Entry_CBPtr ce_cbptr, bool c_right);
-
-    /** Assign unmappable read sequences to a set of base sequences.
-     * Base sequences are picked from the set of read sequences, the rest of read sequences
-     * are mapped to these base sequences.
-     * @param seq_cnt_map Read sequences, with count of appearances.
-     * @param bseq_v Vector of base sequences.
-     * @param seq_bseq_map Mapping (read sequence) -> (index of bseq, cigar_string).
-     */
-    void resolve_unmappable_fully_mapped(
-        const map< Seq_Type, size_t >& seq_cnt_map,
-        vector< Seq_Type >& bseq_v,
-        map< Seq_Type, tuple< size_t, string > >& seq_bseq_map);
-    /** Remap set of unmappable seq ends to a set of base sequences.
-     * @param seq_set Set of pairs (sequence, side):
-     * the mapping of sequence to abse sequences should be anchored on side.
-     * @param bseq_v Vector of base sequences to choose from
-     * @param seq_bseq_map Mapping (seq, side) -> (index of bseq, cigar_string).
-     */
-    void resolve_unmappable_partially_mapped(
-        const set< tuple< string, bool > >& seq_set,
-        const vector< string >& bseq_v,
-        map< tuple< string, bool >, tuple< size_t, string > >& seq_bseq_map);
 
     void test_mutation_allele_swapping();
 
@@ -228,26 +198,6 @@ private:
     friend class Read_Merger;
 
     /**
-     * Search for a Read_Chunk of the given Read_Entry, by position.
-     * @param re_cbptr Read_Entry whose chunk to look for.
-     * @param pos Position where to look.
-     * @param on_contig If true: position is on contig; if false: position is on read.
-     */
-    static Read_Chunk_CBPtr search_read_chunk(
-        Contig_Entry_CBPtr ce_cbptr, Read_Entry_CBPtr re_cbptr,
-        Size_Type pos, bool on_contig);
-    /**
-     * Search for a Read_Chunk of the given Read_Entry, by start&stop positions.
-     * @param re_cbptr Read_Entry whose chunk to look for.
-     * @param start_pos Start position.
-     * @param stop_pos End position.
-     * @param on_contig If true: positions are on contig; if false: positions are on read.
-     */
-    static Read_Chunk_CBPtr search_read_chunk_exact(
-        Contig_Entry_CBPtr ce_cbptr, Read_Entry_CBPtr re_cbptr,
-        Size_Type start_pos, Size_Type stop_pos, bool on_contig);
-
-    /**
      * Cut Read_Entry at given read coordinate.
      * NOTE: A cut must be forced iff it is at the edge of a read.
      * @param re_bptr Read_Entry to cut.
@@ -292,35 +242,6 @@ private:
      */
     void trim_tuc(Read_Chunk_BPtr rc_bptr);
 
-    /** Make chunk unmappable.
-     * The contig containing the chunk is first trimmed to the extent of the chunk.
-     * After potential contig trimming, all other chunks in the contig now fully spanned
-     * by this chunk are also made unmappable.
-     */
-    void unmap_chunk(Read_Chunk_BPtr rc_bptr);
-    void unmap_re_regions(map< Read_Entry_BPtr, Range_Cont >&& unmap_re_set);
-    void unmap_re_regions(Read_Entry_BPtr re_bptr, Range_Cont&& rg_cont);
-
-    /** Unmap read region.
-     * The read is cut at region endpoints, and all chunks spanning the given regions
-     * are made unmappable.
-     */
-    //void unmap_re_region(Read_Entry_BPtr re_bptr, const Range_Type& rg);
-
-    /** Try to extend an unmappable read region in both directions.
-     * @param re_bptr Read_Entry object.
-     * @param rc_start Extend left of this position on read.
-     * @param rc_end Extend right of this position on read.
-     */
-    //void extend_unmapped_chunk(Read_Entry_BPtr re_bptr, Size_Type rc_start, Size_Type rc_end);
-
-    /** Extend an unmappable read region in the given direction.
-     * @param re_bptr Read_Entry object.
-     * @param pos Read position where to extend from.
-     * @param r_right Bool; true: extend right on read; false: extend left on read.
-     */
-    //void extend_unmapped_chunk_dir(Read_Entry_BPtr re_bptr, Size_Type pos, bool r_right);
-
     /** Attempt to catenate contig with neighbour in given direction.
      * @param ce_bptr Contig_Entry to consider.
      * @param c_right Bool; true: merge past contig end; false: merge past contig start.
@@ -342,30 +263,25 @@ private:
      */
     void merge_chunk_contigs(Read_Chunk_BPtr c1rc1_chunk_bptr, Read_Chunk_BPtr c2rc2_chunk_bptr, Cigar& rc1rc2_cigar);
 
-    /** Find unmappable regions in a read entry.
-     * @param re_cbptr Read to scan.
-     * @param r_start Read position to scan from.
-     * @param r_end Read position to scan to.
-     * @return A set of disjoint ranges which should be made unmappable in this read.
+    /** Find overlapping mappings in a read entry.
+     * @param re_cbptr RE to scan.
+     * @param r_start Read position start.
+     * @param r_end Read position end.
+     * @return A set of disjoint ranges which contain overlapping mappings (of this or other reads).
      */
     Range_Cont
-    find_unmappable_regions(Read_Entry_CBPtr re_cbptr, Size_Type r_start, Size_Type r_end) const;
+    find_overlapping_regions(Read_Entry_CBPtr re_cbptr, Size_Type r_start, Size_Type r_end) const;
 
-    /** Find unmappable regions in a read chunk.
-     * @param rc_cbptr Read chunk to scan.
-     * @param region_cont Set of ranges of the chunk's read which should be made unmappable.
+    /** Find overlapping mappings in a read chunk.
+     * @param ce_cbptr RC to scan.
+     * @param region_cont Set of ranges of the chunk's read which contain overlapping mappings.
      */
-    void find_unmappable_regions(Read_Chunk_CBPtr rc_cbptr, Range_Cont& region_cont) const;
+    void find_overlapping_regions(Read_Chunk_CBPtr rc_cbptr, Range_Cont& region_cont) const;
 
     void cat_read_contigs(Read_Entry_BPtr re_bptr);
 
-    /** Unmap terminal read chunk if it is mapped to contig end with no other supporting chunk.
-     * @param rc_bptr Chunk to check.
-     * @param r_start Bool; true: unmap in the direction of read start; false: unmap in the direction of read end.
-     */
-    void unmap_single_terminal_chunk(Read_Chunk_BPtr rc_bptr, bool r_start);
-
     /** Data members */
+    Unmapper _u;
     Mutation_Fact _mut_fact;
     Mutation_Chunk_Adapter_Fact _mca_fact;
     Read_Chunk_Fact _rc_fact;
