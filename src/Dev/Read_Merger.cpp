@@ -517,7 +517,7 @@ Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_DSet& unmappable_c
         {
             ASSERT(rc_bptr->ce_bptr()->is_unmappable());
             Seq_Type seq = rc_bptr->ce_bptr()->seq().revcomp(dir);
-            auto id = seqan::appendRead(store, string(seq));
+            auto id = seqan::appendRead(store, string('NNNNNNNNNN') + seq + 'NNNNNNNNNN');
             seqan::appendAlignedRead(store, id, 0, 0, int(seq.size()));
             seq_v.emplace_back(move(seq));
         }
@@ -525,7 +525,13 @@ Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_DSet& unmappable_c
     seqan::consensusAlignment(store, options);
     ostringstream os;
     os << store.contigStore[0].seq;
-    auto m_ce_bptr = Contig_Entry_Fact::new_elem(Seq_Type(os.str()));
+    string res = os.str();
+    auto prefix_end = res.find_first_not_of('N');
+    ASSERT(prefix_end != string::npos);
+    auto suffix_start = res.find_first_of('N', prefix_end);
+    ASSERT(suffix_start != string::npos);
+    ASSERT(res.find_first_not_of('N', suffix_start) == string::npos);
+    auto m_ce_bptr = Contig_Entry_Fact::new_elem(Seq_Type(res.substr(prefix_end, suffix_start)));
     m_ce_bptr->set_unmappable();
     _g.ce_cont().insert(m_ce_bptr);
     auto m_rc_bptr = Read_Chunk_Fact::new_elem(0, m_ce_bptr->len(), 0, m_ce_bptr->len(), false);
