@@ -279,8 +279,8 @@ void Unmapper::unmap_short_contigs(unsigned min_len, unsigned max_deg) const
     {
         if (not ce_bptr->is_normal()) continue;
         if (ce_bptr->len() >= min_len) continue;
-        auto oc_left = ce_bptr->out_chunks_dir(false, 3, 1);
-        auto oc_right = ce_bptr->out_chunks_dir(true, 3, 1);
+        auto oc_left = ce_bptr->out_chunks(true, true, 2);
+        auto oc_right = ce_bptr->out_chunks(false, true, 2);
         if (oc_left.size() <= max_deg and oc_right.size() <= max_deg) continue;
         // unmap contig entry
         ce_set.insert(ce_bptr);

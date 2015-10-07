@@ -12,6 +12,7 @@
 #include "Mutation_Cont.hpp"
 #include "Read_Chunk.hpp"
 #include "Read_Chunk_Cont.hpp"
+#include "MAC_sets.hpp"
 
 
 namespace MAC
@@ -149,6 +150,8 @@ public:
      * strand of their respective contigs.
      */
     out_chunks_dir_type out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_threshold = 0) const;
+
+    Anchor_Chunk_Support out_chunks(bool c_direction, bool skip_unmappable, unsigned min_support = 1) const;
 
     /**
      * Compute the min and max unmappable regions neighbouring this contig.

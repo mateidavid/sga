@@ -124,20 +124,21 @@ void Validate_Variations::operator () () const
         if (ce_bptr->is_unmappable()) continue;
         for (int c_direction = 0; c_direction < 2; ++c_direction)
         {
-            auto oc = ce_bptr->out_chunks_dir(not c_direction, 3);
+            //auto oc = ce_bptr->out_chunks_dir(not c_direction, 3);
+            auto oc = ce_bptr->out_chunks(c_direction, true);
             for (const auto& p : oc)
             {
                 ASSERT(not p.second.empty());
                 if (p.second.size() > 1) continue;
-                Read_Chunk_CBPtr rc_cbptr = *p.second.begin();
+                Read_Chunk_CBPtr rc_cbptr = (not p.second[0].empty()? *p.second[0].begin() : *p.second[1].begin());
                 int r_direction = (c_direction + rc_cbptr->get_rc()) % 2;
                 if (r_direction) continue;
                 bool res = validate_edge(rc_cbptr);
                 LOG("Validate_Variations", info) << ptree("validation_result.edge")
                     .put("ce_bptr", ce_bptr.to_int())
                     .put("c_direction", c_direction)
-                    .put("next_ce_bptr", p.first.first.to_int())
-                    .put("same_orientation", p.first.second)
+                    .put("next_ce_bptr", p.first.ce_next_cbptr().to_int())
+                    .put("same_orientation", p.first.same_orientation())
                     .put("validated", res);
                 if (not res)
                 {

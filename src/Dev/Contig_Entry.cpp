@@ -226,7 +226,17 @@ void Contig_Entry::reverse()
 map< pair< Contig_Entry_CBPtr, bool >, set< Read_Chunk_CBPtr > >
 Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_threshold) const
 {
+    ASSERT(unmappable_policy == 1 or unmappable_policy == 3);
     map< pair< Contig_Entry_CBPtr, bool >, set< Read_Chunk_CBPtr > > res;
+    auto res2 = out_chunks(not c_right, unmappable_policy == 3, ignore_threshold + 1);
+    for (auto& p : res2)
+    {
+        auto key = make_pair(p.first.ce_next_cbptr(), p.first.same_orientation());
+        res.insert(make_pair(key, move(p.second[0])));
+        res[key].insert(p.second[1].begin(), p.second[1].end());
+    }
+
+    /*
     bool c_left = not c_right;
     Size_Type endpoint = (c_left? 0 : len());
     for (auto rc_cbptr : chunk_cont().iintersect(endpoint, endpoint) | referenced)
@@ -296,8 +306,67 @@ Contig_Entry::out_chunks_dir(bool c_right, int unmappable_policy, size_t ignore_
             ++it;
         }
     }
+    */
+
     return res;
-}
+} // Contig_Entry::out_chunks_dir
+
+Anchor_Chunk_Support
+Contig_Entry::out_chunks(bool c_direction, bool skip_unmappable, unsigned min_support) const
+{
+    Anchor_Chunk_Support res;
+    Size_Type c_endpoint = (not c_direction? len() : 0);
+    for (auto rc_cbptr : chunk_cont().iintersect(c_endpoint, c_endpoint) | referenced)
+    {
+        Read_Entry_BPtr re_cbptr = rc_cbptr->re_bptr();
+        // we might be skipping chunks mapped in different ways; we need read direction to be consistent
+        bool r_direction = (c_direction != rc_cbptr->get_rc());
+        Read_Chunk_CBPtr rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, not r_direction);
+        if (not rc_next_cbptr)
+        {
+            // rc is terminal, nothing to do
+            continue;
+        }
+        if (skip_unmappable)
+        {
+            // skip unmappable chunks
+            while (rc_next_cbptr and rc_next_cbptr->ce_bptr()->is_unmappable())
+            {
+                rc_next_cbptr = re_cbptr->chunk_cont().get_sibling(rc_next_cbptr, true, not r_direction);
+            }
+            if (not rc_next_cbptr)
+            {
+                continue;
+            }
+        }
+        ASSERT(rc_next_cbptr);
+        Contig_Entry_CBPtr ce_next_cbptr = rc_next_cbptr->ce_bptr();
+        bool same_orientation = (rc_cbptr->get_rc() == rc_next_cbptr->get_rc());
+        res[Allele_Specifier(ce_next_cbptr, same_orientation)][rc_cbptr->get_rc()].insert(rc_cbptr);
+    }
+    // remove (contig,orientation) out-edges with low support
+    filter_cont(res, [&] (Anchor_Chunk_Support::const_iterator cit) { return cit->second.size() >= min_support; });
+
+    // TODO: remove
+    /*
+    {
+        auto res2 = out_chunks_dir(not c_direction, skip_unmappable? 3 : 1, min_support - 1);
+        ASSERT(res.size() == res2.size());
+        for (auto& p : res2)
+        {
+            auto allele = Allele_Specifier(p.first.first, p.first.second);
+            ASSERT(res.count(allele));
+            ASSERT(res.at(allele).size() == p.second.size());
+            for (auto rc_cbptr : p.second)
+            {
+                ASSERT(res.at(allele)[rc_cbptr->get_rc()].count(rc_cbptr));
+            }
+        }
+    }
+    */
+
+    return res;
+} // Contig_Entry::out_chunks
 
 pair< Size_Type, Size_Type >
 Contig_Entry::unmappable_neighbour_range(bool c_right, const set< MAC::Read_Chunk_CBPtr >& chunk_cont) const
@@ -399,17 +468,20 @@ Contig_Entry::can_cat_dir(bool c_right) const
         .put("ce_ptr", ce_cbptr.to_int())
         .put("c_right", c_right);
 
-    auto res = out_chunks_dir(c_right, 1);
+    //auto res = out_chunks_dir(c_right, 1);
+    auto res = out_chunks(not c_right, false);
     LOG("Contig_Entry", debug1) << ptree("oc_dir")
         .put("res_size", res.size());
     if (res.size() != 1)
     {
         return make_tuple(Contig_Entry_CBPtr(nullptr), false, set< Read_Chunk_CBPtr >());
     }
-    Contig_Entry_CBPtr ce_next_cbptr;
-    bool same_orientation;
-    tie(ce_next_cbptr, same_orientation) = res.begin()->first;
-    set< Read_Chunk_CBPtr > rc_cbptr_cont = move(res.begin()->second);
+    auto& p = *res.begin();
+    Contig_Entry_CBPtr ce_next_cbptr = p.first.ce_next_cbptr();
+    bool same_orientation = p.first.same_orientation();
+    //tie(ce_next_cbptr, same_orientation) = res.begin()->first;
+    set< Read_Chunk_CBPtr > rc_cbptr_cont = move(p.second[0]);
+    rc_cbptr_cont.insert(p.second[1].begin(), p.second[1].end());
     ASSERT(not rc_cbptr_cont.empty());
     LOG("Contig_Entry", debug1) << ptree("mid")
         .put("ce_next_ptr", ce_next_cbptr.to_int())
@@ -422,14 +494,15 @@ Contig_Entry::can_cat_dir(bool c_right) const
         return std::make_tuple(Contig_Entry_CBPtr(nullptr), false, vector< Read_Chunk_CBPtr >());
     }
     */
-    auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, 1);
+    //auto tmp = ce_next_cbptr->out_chunks_dir(c_right != same_orientation, 1);
+    auto tmp = ce_next_cbptr->out_chunks(c_right == same_orientation, false);
     LOG("Contig_Entry", debug1) << ptree("tmp")
         .put("tmp_size", tmp.size());
     if (tmp.size() != 1)
     {
         return make_tuple(Contig_Entry_CBPtr(nullptr), false, set< Read_Chunk_CBPtr >());
     }
-    ASSERT(tmp.begin()->first == make_pair(ce_cbptr, same_orientation));
+    ASSERT(tmp.begin()->first == Allele_Specifier(ce_cbptr, same_orientation));
     ASSERT(tmp.begin()->second.size() == rc_cbptr_cont.size());
     return make_tuple(ce_next_cbptr, same_orientation, move(rc_cbptr_cont));
 }

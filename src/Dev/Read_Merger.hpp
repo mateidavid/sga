@@ -2,7 +2,6 @@
 #define __READ_MERGER_HPP
 
 #include "Graph.hpp"
-//#include "Anchor_Support.hpp"
 
 namespace MAC
 {

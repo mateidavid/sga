@@ -250,29 +250,32 @@ void cli(istream& is, ostream& os, const Graph& g)
         {
             size_t id;
             int c_right;
-            int unmappable_policy = 1;
-            int ignore_threshold = 0;
+            //int unmappable_policy = 1;
+            //int ignore_threshold = 0;
+            int skip_unmappable = 0;
+            unsigned min_support = 1;
             iss >> id >> c_right;
             if (iss.eof())
             {
-                os << "use: outchunks ce c_right [unmappable_policy [ignore_thres]]\n";
+                os << "use: outchunks ce c_right [skip_unmappable [min_support]]\n";
                 continue;
             }
-            iss >> unmappable_policy >> ignore_threshold; // might be absent
+            iss >> skip_unmappable >> min_support; // might be absent
             if (id >= Contig_Entry_Fact::size() or unused_ce_set.count(id) > 0)
             {
                 os << "Contig_Entry:" << id << ": not allocated\n";
                 continue;
             }
             Contig_Entry_CBPtr ce_cbptr = Contig_Entry_CBPtr::from_index(id);
-            auto cks = ce_cbptr->out_chunks_dir(c_right, unmappable_policy, ignore_threshold);
-            for (auto t : cks)
+            //auto cks = ce_cbptr->out_chunks_dir(c_right, unmappable_policy, ignore_threshold);
+            auto cks = ce_cbptr->out_chunks(not c_right, skip_unmappable, min_support);
+            for (auto& p : cks)
             {
-                Contig_Entry_CBPtr ce_next_cbptr;
-                bool same_orientation;
-                set< Read_Chunk_CBPtr > rc_cbptr_cont;
-                tie(ce_next_cbptr, same_orientation) = move(t.first);
-                rc_cbptr_cont = move(t.second);
+                Contig_Entry_CBPtr ce_next_cbptr = p.first.ce_next_cbptr();
+                bool same_orientation = p.first.same_orientation();
+                //tie(ce_next_cbptr, same_orientation) = move(t.first);
+                set< Read_Chunk_CBPtr > rc_cbptr_cont = move(p.second[0]);
+                rc_cbptr_cont.insert(p.second[1].begin(), p.second[1].end());
                 os << "  ce " << setw(9) << left << ce_next_cbptr.to_int()
                    << " same_orientation " << same_orientation
                    << " rc";
