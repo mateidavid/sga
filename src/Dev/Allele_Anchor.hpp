@@ -50,7 +50,7 @@ public:
     Allele_Anchor get_sibling(bool c_direction) const;
 
     Anchor_Chunk_Support chunk_support(unsigned min_edge_support = 0) const;
-     Anchor_Read_Support read_support(unsigned min_edge_support = 0) const;
+    Anchor_Read_Support read_support(unsigned min_edge_support = 0) const;
 
     /// Distance between consecutive allele anchors.
     static Size_Type dist(const Allele_Anchor& lhs, const Allele_Anchor& rhs);
