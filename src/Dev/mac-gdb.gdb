@@ -21,6 +21,9 @@ def identity(v):
     return v
 
 boost.add_trivial_printer('rc_sequence::Sequence', get_first_subclass)
+boost.add_trivial_printer('Directed_Set', get_first_subclass)
+boost.add_trivial_printer('MAC::RC_DSet', get_first_subclass)
+boost.add_trivial_printer('MAC::RE_DSet', get_first_subclass)
 
 boost.static_method[("MAC::detail::Mutation_ITree_Value_Traits", "to_value_ptr")] = identity
 boost.static_method[("MAC::detail::Mutation_ITree_Node_Traits", "get_left")] = lambda v: v['_l_child']
