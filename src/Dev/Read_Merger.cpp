@@ -51,7 +51,18 @@ void Read_Merger::operator () () const
                     auto merge_start_it = l.begin();
                     merge_start_it->chunk_support.insert(make_pair(allele, move(anchor_support.at(allele))));
                     // remove any chunk belonging to REs that visit allele more than once
-                    filter_duplicate_reads(merge_start_it->chunk_support.at(allele));
+                    auto size_before = merge_start_it->chunk_support.at(allele).size();
+                    set< Read_Entry_CBPtr > duplicate_re_set;
+                    filter_duplicate_reads(merge_start_it->chunk_support.at(allele), duplicate_re_set);
+                    auto size_after = merge_start_it->chunk_support.at(allele).size();
+                    ASSERT(size_after <= size_before);
+                    if (size_after < size_before)
+                    {
+                        LOG("Read_Merger", warning) << ptree("duplicate_reads_at_haploid_allele")
+                            .put("anchor", anchor)
+                            .put("allele", allele)
+                            .put("duplicate_re_set", duplicate_re_set);
+                    }
                     // extend layout
                     bool res = extend_haploid_layout(l, merge_start_it);
                     LOG("Read_Merger", debug) << ptree("haploid_extension").put("res", res);
@@ -675,7 +686,7 @@ Read_Merger::advance_chunks(const RC_DSet& crt_rc_dset, bool c_direction) const
     return make_pair(next_rc_dset, unmappable_rc_dset);
 } // Read_Merger::advance_chunks
 
-void Read_Merger::filter_duplicate_reads(RC_DSet& rc_dset) const
+void Read_Merger::filter_duplicate_reads(RC_DSet& rc_dset, set< Read_Entry_CBPtr >& duplicate_re_set) const
 {
     map< Read_Entry_CBPtr, unsigned > re_count;
     for (int d = 0; d < 2; ++d)
@@ -689,6 +700,11 @@ void Read_Merger::filter_duplicate_reads(RC_DSet& rc_dset) const
             }
             ++re_count.at(re_cbptr);
         }
+    }
+    for (auto& p : re_count)
+    {
+        if (p.second == 1) continue;
+        duplicate_re_set.insert(p.first);
     }
     rc_dset.filter([&] (Read_Chunk_CBPtr rc_cbptr, bool) { return re_count.at(rc_cbptr->re_bptr()) == 1; });
 } // Read_Merger::filter_duplicate_reads

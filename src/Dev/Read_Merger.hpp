@@ -38,7 +38,7 @@ private:
     Read_Chunk_BPtr merge_contig_chunks(const RC_DSet& crt_chunks, Read_Entry_BPtr m_re_bptr, bool c_direction) const;
     Read_Chunk_BPtr merge_unmappable_chunks(const RC_DSet& crt_chunks, Read_Entry_BPtr m_re_bptr) const;
     pair< RC_DSet, RC_DSet > advance_chunks(const RC_DSet& crt_rc_dset, bool direction) const;
-    void filter_duplicate_reads(RC_DSet& rc_dset) const;
+    void filter_duplicate_reads(RC_DSet& rc_dset, set< Read_Entry_CBPtr >& duplicate_re_set) const;
 }; // class Read_Merger
 
 } // namespace MAC
