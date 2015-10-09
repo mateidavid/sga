@@ -719,7 +719,8 @@ Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_DSet& unmappable_c
     {
         LOG("Read_Merger", warning) << ptree("consensus_alignment_failed")
             .put("unmappable_chunks", seq_v)
-            .put("result", vector< string >{res});
+            .put("raw_result", vector< string >{res})
+            .put("result", vector< string >{res.substr(prefix_end, suffix_start - prefix_end)});
     }
     auto m_ce_bptr = Contig_Entry_Fact::new_elem(Seq_Type(res.substr(prefix_end, suffix_start - prefix_end)));
     m_ce_bptr->set_unmappable();
