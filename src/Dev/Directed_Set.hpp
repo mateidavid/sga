@@ -32,6 +32,13 @@ public:
     bool empty() const { return at(0).empty() and at(1).empty(); }
     size_t size() const { return at(0).size() + at(1).size(); }
     void reverse(bool do_reverse = true) { if (do_reverse) swap(at(0), at(1)); }
+    Set collapse() const
+    {
+        Set s;
+        s.insert(at(0).begin(), at(0).end());
+        s.insert(at(1).begin(), at(1).end());
+        return s;
+    }
 
     template < typename Filter_Function >
     void filter(Filter_Function&& f)
