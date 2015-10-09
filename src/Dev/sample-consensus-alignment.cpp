@@ -50,6 +50,7 @@ void do_alignment(const vector< string >& v)
     //printAlignment(cout, layout, store, /*contigID=*/ 0, /*beginPos=*/ 0, /*endPos=*/ 100, 0, 30);
 
     options.useContigID = true;
+    options.usePositions = true;
     seqan::consensusAlignment(store, options);
 
     cout << endl << "Consensus alignment:" << endl;
@@ -57,6 +58,14 @@ void do_alignment(const vector< string >& v)
     seqan::printAlignment(cout, layout, store, /*contigID=*/ 0, /*beginPos=*/ 0, /*endPos=*/ 100, 0, 30);
 
     cout << endl << "Contig:" << endl << store.contigStore[0].seq << endl;
+
+    seqan::reAlignment(store, 0, 1, 10, false);
+    cout << endl << "Consensus after realignment:" << endl;
+    seqan::layoutAlignment(layout, store);
+    seqan::printAlignment(cout, layout, store, /*contigID=*/ 0, /*beginPos=*/ 0, /*endPos=*/ 100, 0, 30);
+
+    cout << endl << "Contig:" << endl << store.contigStore[0].seq << endl;
+
 }
 
 int main()
