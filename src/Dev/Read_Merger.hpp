@@ -30,6 +30,9 @@ private:
     unsigned _max_discordant_support;
     unsigned _merged_weight;
 
+    void merge_haploid_alleles() const;
+    void remove_contained() const;
+
     bool extend_haploid_layout(Traversal_List& l, Traversal_List::iterator it) const;
     bool extend_haploid_layout_dir(Traversal_List& l, Traversal_List::iterator it, bool e_direction) const;
     void split_diverging_reads(Traversal_List& l, Traversal_List::iterator it) const;

@@ -247,6 +247,9 @@ public:
      */
     static void make_unmappable(Read_Chunk_BPtr rc_bptr);
 
+    /** Check if rc_cbptr is contained in other_rc_cbptr. */
+    static bool is_contained_in(Read_Chunk_CBPtr rc_cbptr, Read_Chunk_CBPtr other_rc_cbptr);
+
     /** Deallocate chunk */
     static void dispose(Read_Chunk_BPtr rc_bptr);
 

@@ -95,7 +95,78 @@ pair< RC_DSet, RC_DSet > advance_chunks(const RC_DSet& crt_rc_dset, bool c_direc
     return make_pair(next_rc_dset, unmappable_rc_dset);
 } // advance_chunks
 
+bool read_is_contained(Read_Entry_CBPtr re_cbptr)
+{
+    // get first chunk from this RE
+    auto rc_cbptr = &*re_cbptr->chunk_cont().begin();
+    auto ce_cbptr = rc_cbptr->ce_bptr();
+    bool c_direction = rc_cbptr->get_rc();
+    // get all chunks intersecting it
+    auto rg = ce_cbptr->chunk_cont().iintersect(
+        rc_cbptr->get_c_start(), rc_cbptr->get_c_end()) | referenced;
+    RC_DSet rc_dset(rg, [] (Read_Chunk_CBPtr other_rc_cbptr) { return other_rc_cbptr->get_rc(); });
+    while (true)
+    {
+        // filter rc_set, keeping only those chunks that extend rc_cbptr
+        rc_dset.filter([&] (Read_Chunk_CBPtr other_rc_cbptr, bool) {
+                return Read_Chunk::is_contained_in(rc_cbptr, other_rc_cbptr);
+            });
+        if (rc_dset.empty())
+        {
+            // no chunks fully contain rc_cbptr
+            return false;
+        }
+        // find (contig,orientation) that follows rc_cbptr
+        auto oc = ce_cbptr->out_chunks(c_direction, true);
+        Allele_Specifier allele(nullptr, true);
+        for (auto& p : oc)
+        {
+            if (p.second[rc_cbptr->get_rc()].count(rc_cbptr))
+            {
+                allele = p.first;
+                break;
+            }
+        }
+        if (not allele.ce_next_cbptr())
+        {
+            // rc_cbptr is the last chunk in the read
+            ASSERT(rc_cbptr == &*re_cbptr->chunk_cont().rbegin());
+            return true;
+        }
+        // keep only chunks in rc_set that follow the same edge
+        rc_dset.filter([&] (Read_Chunk_CBPtr other_rc_cbptr, bool) {
+                return oc.at(allele)[other_rc_cbptr->get_rc()].count(other_rc_cbptr) > 0;
+            });
+        if (rc_dset.empty())
+        {
+            // no chunks continue to the same contig
+            return false;
+        }
+        // advance rc_cbptr
+        rc_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, true);
+        ASSERT(rc_cbptr);
+        if (rc_cbptr->ce_bptr()->is_unmappable())
+        {
+            rc_cbptr = re_cbptr->chunk_cont().get_sibling(rc_cbptr, true, true);
+            ASSERT(rc_cbptr);
+        }
+        // advance rc_dset
+        rc_dset = advance_chunks(rc_dset, c_direction).first;
+        rc_dset.reverse(not allele.same_orientation());
+        // update vars
+        ce_cbptr = rc_cbptr->ce_bptr();
+        ASSERT(ce_cbptr == allele.ce_next_cbptr());
+        c_direction = (c_direction + 1 + allele.same_orientation()) % 2;
+    }
+} // read_is_contained
+
 void Read_Merger::operator () () const
+{
+    merge_haploid_alleles();
+    remove_contained();
+}
+
+void Read_Merger::merge_haploid_alleles () const
 {
     LOG("Read_Merger", info) << ptree("begin")
         .put("max_discordant_support", _max_discordant_support)
@@ -172,7 +243,21 @@ void Read_Merger::operator () () const
         }
     }
     LOG("Read_Merger", info) << ptree("end");
-} // operator ()
+} // Read_Merger::merge_haploid_alleles
+
+void Read_Merger::remove_contained() const
+{
+    for_each_it_advance(
+        _g.re_cont(),
+        [&] (Read_Entry_Cont::iterator re_it)
+        {
+            auto re_cbptr = &*re_it;
+            if (read_is_contained(re_cbptr))
+            {
+                _g.remove_read(re_cbptr.unconst());
+            }
+        });
+} // Read_Merger::remove_contained
 
 bool Read_Merger::extend_haploid_layout(Traversal_List& l, Traversal_List::iterator it) const
 {

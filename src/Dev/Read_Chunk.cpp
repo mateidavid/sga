@@ -706,6 +706,59 @@ Seq_Type Read_Chunk::get_seq() const
     return res;
 }
 
+bool Read_Chunk::is_contained_in(Read_Chunk_CBPtr rc_cbptr, Read_Chunk_CBPtr other_rc_cbptr)
+{
+    if (not (rc_cbptr->ce_bptr() == other_rc_cbptr->ce_bptr()
+             and other_rc_cbptr->get_c_start() <= rc_cbptr->get_c_start()
+             and rc_cbptr->get_c_end() <= other_rc_cbptr->get_c_end()))
+    {
+        return false;
+    }
+    Read_Chunk_Pos pos = rc_cbptr->get_start_pos();
+    Read_Chunk_Pos other_pos = other_rc_cbptr->get_start_pos();
+    if (pos.c_pos > 0)
+    {
+        other_pos.increment(pos.c_pos);
+    }
+    if (other_pos == other_rc_cbptr->get_end_pos()
+        or other_pos.c_pos != pos.c_pos
+        or other_pos.mut_offset > 0)
+    {
+        return false;
+    }
+    // allow rc to miss an insertion at the beginning only if it is terminal
+    if (not other_pos.past_last_mut()
+        and other_pos.get_match_len() == 0
+        and other_pos.mut().is_ins()
+        and not rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, false, false))
+    {
+        other_pos.increment();
+    }
+    while (pos != rc_cbptr->get_end_pos()
+           and other_pos != other_rc_cbptr->get_end_pos()
+           and pos.c_pos == other_pos.c_pos
+           and (pos.past_last_mut() or (not other_pos.past_last_mut()
+                                        and pos.mca_cit->mut_cbptr() == other_pos.mca_cit->mut_cbptr())))
+    {
+        pos.increment();
+        other_pos.increment();
+    }
+    if (pos != rc_cbptr->get_end_pos())
+    {
+        return false;
+    }
+    if (other_pos == other_rc_cbptr->get_end_pos())
+    {
+        return true;
+    }
+    // allow rc to end early only if it is terminal
+    if (not rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, false, true))
+    {
+        return true;
+    }
+    return false;    
+} // Read_Chunk::is_contained_in
+
 void Read_Chunk::dispose(Read_Chunk_BPtr rc_bptr)
 {
     rc_bptr->mut_ptr_cont().clear_and_dispose();
