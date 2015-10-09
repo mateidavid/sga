@@ -8,6 +8,93 @@
 namespace MAC
 {
 
+void replace_chunk(Read_Merger::Traversal_List& l, Read_Merger::Traversal_List::iterator it, bool e_direction,
+                   Read_Chunk_CBPtr rc_cbptr, Read_Chunk_CBPtr new_rc_cbptr, bool d)
+{
+    LOG("Read_Merger", debug1) << ptree("begin")
+        .put("l", l)
+        .put("rc_bptr", rc_cbptr.to_int())
+        .put("new_rc_bptr", new_rc_cbptr.to_int());
+    while (it->chunk_support.at(it->allele)[d].count(rc_cbptr))
+    {
+        it->chunk_support.at(it->allele)[d].erase(rc_cbptr);
+        it->chunk_support.at(it->allele)[d].insert(new_rc_cbptr);
+        if (not e_direction? it == prev(l.end()) : it == l.begin())
+        {
+            break;
+        }
+        it = not e_direction? next(it) : prev(it);
+    }
+    LOG("Read_Merger", debug1) << ptree("end")
+        .put("l", l);
+} // replace_chunk
+
+void filter_duplicate_reads(RC_DSet& rc_dset, set< Read_Entry_CBPtr >& duplicate_re_set)
+{
+    map< Read_Entry_CBPtr, unsigned > re_count;
+    for (int d = 0; d < 2; ++d)
+    {
+        for (auto rc_cbptr : rc_dset[d])
+        {
+            auto re_cbptr = rc_cbptr->re_bptr();
+            if (not re_count.count(re_cbptr))
+            {
+                re_count[re_cbptr] = 0;
+            }
+            ++re_count.at(re_cbptr);
+        }
+    }
+    for (auto& p : re_count)
+    {
+        if (p.second == 1) continue;
+        duplicate_re_set.insert(p.first);
+    }
+    rc_dset.filter([&] (Read_Chunk_CBPtr rc_cbptr, bool) { return re_count.at(rc_cbptr->re_bptr()) == 1; });
+} // filter_duplicate_reads
+
+pair< RC_DSet, RC_DSet > advance_chunks(const RC_DSet& crt_rc_dset, bool c_direction)
+{
+    RC_DSet next_rc_dset;
+    RC_DSet unmappable_rc_dset;
+    for (int d = 0; d < 2; ++d)
+    {
+        for (auto rc_cbptr : crt_rc_dset[d])
+        {
+            ASSERT(rc_cbptr);
+            bool r_direction = (c_direction + rc_cbptr->get_rc()) % 2;
+            auto next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(
+                rc_cbptr, true, not r_direction);
+            if (not next_rc_cbptr) continue;
+            if (next_rc_cbptr->ce_bptr()->is_unmappable())
+            {
+                // skip one unmappable chunk if necessary
+                unmappable_rc_dset[d].insert(next_rc_cbptr);
+                auto next_next_rc_cbptr = next_rc_cbptr->re_bptr()->chunk_cont().get_sibling(
+                    next_rc_cbptr, true, not r_direction);
+                LOG("Read_Merger", debug1) << ptree()
+                    .put("rc_bptr", rc_cbptr)
+                    .put("next_rc_bptr", next_rc_cbptr)
+                    .put("next_next_rc_bptr", next_next_rc_cbptr);
+                if (not next_next_rc_cbptr)
+                {
+                    LOG("Read_Merger", warning) << ptree("terminal_unmappable_chunk")
+                        .put("re_name", rc_cbptr->re_bptr()->name());
+                    continue;
+                }
+                next_rc_cbptr = next_next_rc_cbptr;
+            }
+            else
+            {
+                LOG("Read_Merger", debug1) << ptree()
+                    .put("rc_bptr", rc_cbptr)
+                    .put("next_rc_bptr", next_rc_cbptr);
+            }
+            next_rc_dset[d].insert(next_rc_cbptr);
+        }
+    }
+    return make_pair(next_rc_dset, unmappable_rc_dset);
+} // advance_chunks
+
 void Read_Merger::operator () () const
 {
     LOG("Read_Merger", info) << ptree("begin")
@@ -18,6 +105,7 @@ void Read_Merger::operator () () const
     // - extract the reads that support it
     // - extend the reads past successive anchors as long as they are consistent
     //   (ie. support the same alleles)
+    // - perform read splitting if necessary
     // - merge the corresponding reads
     // Restart the loop after each merge.
     //
@@ -51,6 +139,7 @@ void Read_Merger::operator () () const
                     auto merge_start_it = l.begin();
                     merge_start_it->chunk_support.insert(make_pair(allele, move(anchor_support.at(allele))));
                     // remove any chunk belonging to REs that visit allele more than once
+                    LOG("Read_Merger", debug) << ptree("before_filter_duplicate_reads").put("l", l);
                     auto size_before = merge_start_it->chunk_support.at(allele).size();
                     set< Read_Entry_CBPtr > duplicate_re_set;
                     filter_duplicate_reads(merge_start_it->chunk_support.at(allele), duplicate_re_set);
@@ -62,6 +151,11 @@ void Read_Merger::operator () () const
                             .put("anchor", anchor)
                             .put("allele", allele)
                             .put("duplicate_re_set", duplicate_re_set);
+                    }
+                    if (size_after <= 1)
+                    {
+                        LOG("Read_Merger", debug) << ptree("nothing_to_extend_after_filter").put("l", l);
+                        continue;
                     }
                     // extend layout
                     bool res = extend_haploid_layout(l, merge_start_it);
@@ -88,11 +182,12 @@ bool Read_Merger::extend_haploid_layout(Traversal_List& l, Traversal_List::itera
 
 bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::iterator it, bool e_direction) const
 {
+    LOG("Read_Merger", debug) << ptree("begin").put("e_direction", e_direction);
     while (true)
     {
         // direction crt_anchor -> next_anchor
         bool rel_c_direction = (it->c_direction + e_direction) % 2;
-        LOG("Read_Merger", debug) << ptree("loop_start")
+        LOG("Read_Merger", debug) << ptree("loop.start")
             .put("it", *it)
             .put("rel_c_direction", rel_c_direction);
         // compute next anchor, allele, c_direction, and chunk_support
@@ -104,7 +199,7 @@ bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::i
         RC_DSet next_unmappable_chunks;
         if (it->anchor.is_endpoint() and it->anchor.c_right() != rel_c_direction)
         {
-            LOG("Read_Merger", debug) << ptree("contig_endpoint");
+            LOG("Read_Merger", debug) << ptree("loop.contig_endpoint");
             //
             // this is the last anchor in the current contig direction
             // we jump to the associated anchor at the end of the contig edge
@@ -113,7 +208,7 @@ bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::i
             {
                 // out-degree 0
                 ASSERT(it->allele.same_orientation());
-                LOG("Read_Merger", debug) << ptree("loop_end__0_degree");
+                LOG("Read_Merger", debug) << ptree("end.0_degree");
                 return true;
             }
             next_rel_c_direction = (rel_c_direction == it->allele.same_orientation());
@@ -127,7 +222,7 @@ bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::i
         }
         else
         {
-            LOG("Read_Merger", debug) << ptree("no_contig_endpoint");
+            LOG("Read_Merger", debug) << ptree("loop.not_contig_endpoint");
             //
             // next anchor is one the same contig
             //
@@ -153,12 +248,12 @@ bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::i
                 .put("next_chunk_support", next_chunk_support);
             if (next_chunk_support.empty())
             {
-                LOG("Read_Merger", debug) << ptree("loop_end__support_end");
+                LOG("Read_Merger", debug) << ptree("end.support_end");
                 return true;
             }
             else if (next_chunk_support.size() > 1)
             {
-                LOG("Read_Merger", debug) << ptree("loop__multiple_next_allele_support")
+                LOG("Read_Merger", debug) << ptree("loop.multiple_next_allele_support")
                     .put("next_alleles", ba::keys(next_chunk_support));
                 // check if there is a unique allele with support larger than the discordant threshold
                 set< Allele_Specifier > next_alleles_strong_support;
@@ -179,12 +274,12 @@ bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::i
                 }
                 if (next_alleles_strong_support.empty())
                 {
-                    LOG("Read_Merger", info) << ptree("loop_end__no_allele_with_strong_support");
+                    LOG("Read_Merger", debug) << ptree("end.no_allele_with_strong_support");
                     return false;
                 }
                 else if (next_alleles_strong_support.size() > 1)
                 {
-                    LOG("Read_Merger", info) << ptree("loop_end__multiple_alleles_with_strong_support")
+                    LOG("Read_Merger", debug) << ptree("end.multiple_alleles_with_strong_support")
                         .put("next_anchor", next_anchor)
                         .put("next_alleles_strong_support", next_alleles_strong_support);
                     return false;
@@ -192,7 +287,7 @@ bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::i
                 else // next_alleles_strong_support.size() == 1
                 {
                     next_allele = *next_alleles_strong_support.begin();
-                    LOG("Read_Merger", info) << ptree("single_alleles_with_strong_support")
+                    LOG("Read_Merger", debug) << ptree("loop.single_allele_with_strong_support")
                         .put("next_allele", next_allele);
                 }
             }
@@ -205,17 +300,20 @@ bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::i
         Traversal_Struct ts{next_anchor, next_allele, next_c_direction,
                 move(next_chunk_support), move(next_unmappable_chunks)};
 
-        //TODO:remove
-        for (auto& p : ts.chunk_support)
-        {
-            for (int d = 0; d < 2; ++d)
-            {
-                for (auto rc_cbptr : p.second[d])
-                {
-                    ASSERT(rc_cbptr->get_rc() == (d + ts.c_direction) % 2);
-                }
-            }
-        }
+        ASSERT(all_of(
+                   ts.chunk_support,
+                   [&] (const Anchor_Chunk_Support::value_type& p) {
+                       return (all_of(
+                                   p.second.at(0),
+                                   [&] (Read_Chunk_CBPtr rc_cbptr) {
+                                       return rc_cbptr->get_rc() == (0 + ts.c_direction) % 2;
+                                   }) and
+                               all_of(
+                                   p.second.at(1),
+                                   [&] (Read_Chunk_CBPtr rc_cbptr) {
+                                       return rc_cbptr->get_rc() == (1 + ts.c_direction) % 2;
+                                   }));
+                   }));
 
         if (not e_direction)
         {
@@ -234,23 +332,10 @@ bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::i
 
 void Read_Merger::split_diverging_reads(Traversal_List& l, Traversal_List::iterator it) const
 {
-    auto replace_chunk = [] (Traversal_List& l, Traversal_List::iterator it, bool e_direction,
-                             Read_Chunk_CBPtr rc_cbptr, Read_Chunk_CBPtr new_rc_cbptr, bool d) {
-        while (it->chunk_support.at(it->allele)[d].count(rc_cbptr))
-        {
-            it->chunk_support.at(it->allele)[d].erase(rc_cbptr);
-            it->chunk_support.at(it->allele)[d].insert(new_rc_cbptr);
-            if (not e_direction? it == prev(l.end()) : it == l.begin())
-            {
-                break;
-            }
-            it = not e_direction? next(it) : prev(it);
-        }
-    }; // replace_chunk()
-
     ASSERT(it != l.end());
     for (int e_direction = 0; e_direction < 2; ++e_direction)
     {
+        LOG("Read_Merger", debug) << ptree("begin").put("e_direction", e_direction);
         while (not e_direction? it != prev(l.end()) : it != l.begin())
         {
             auto prev_it = it;
@@ -262,6 +347,9 @@ void Read_Merger::split_diverging_reads(Traversal_List& l, Traversal_List::itera
             {
                 // layout may only diverge between consecutive anchors in the same contig
                 ASSERT(it->anchor.ce_cbptr() == prev_it->anchor.ce_cbptr());
+                LOG("Read_Merger", debug) << ptree("loop.divergence")
+                    .put("prev_it", *prev_it)
+                    .put("it", *it);
                 // cut reads which observe an allele other than it->allele
                 for (auto& p : it->chunk_support)
                 {
@@ -274,11 +362,15 @@ void Read_Merger::split_diverging_reads(Traversal_List& l, Traversal_List::itera
                             bool r_direction = rc_cbptr->get_rc();
                             auto re_cbptr = rc_cbptr->re_bptr();
                             // we make an overlapping cut of re_bptr between prev_anchor and crt_anchor
+                            LOG("Read_Merger", debug) << ptree("loop.split_read")
+                                .put("re_name", re_cbptr->name())
+                                .put("re_bptr", re_cbptr.to_int())
+                                .put("l_anchor", not rel_c_direction? prev_it->anchor : it->anchor)
+                                .put("r_anchor", not rel_c_direction? it->anchor : prev_it->anchor);
                             auto rp = _g.split_read(re_cbptr, not rel_c_direction? prev_it->anchor : it->anchor);
-                            auto new_re_cbptr = (r_direction == rel_c_direction? rp.first : rp.second);
                             auto new_rc_cbptr = (r_direction == rel_c_direction
-                                                 ? &*new_re_cbptr->chunk_cont().rbegin()
-                                                 : &*new_re_cbptr->chunk_cont().begin());
+                                                 ? &*rp.first->chunk_cont().rbegin()
+                                                 : &*rp.second->chunk_cont().begin());
                             if (new_rc_cbptr != rc_cbptr)
                             {
                                 replace_chunk(l, prev_it, not e_direction, rc_cbptr, new_rc_cbptr, d);
@@ -293,6 +385,7 @@ void Read_Merger::split_diverging_reads(Traversal_List& l, Traversal_List::itera
                     });
             } // if chunk_support.size > 1
         } // while
+        LOG("Read_Merger", debug) << ptree("end").put("e_direction", e_direction);
     } // for e_direction
     ASSERT(all_of(
                l,
@@ -368,7 +461,7 @@ void Read_Merger::merge_reads(Traversal_List& l, Traversal_List::iterator merge_
             rel_c_direction = (e_direction + it->c_direction) % 2;
             ASSERT(it->anchor.is_endpoint() and it->anchor.c_right() == rel_c_direction);
             ASSERT(it->chunk_support.at(it->allele).size() == prev_it->chunk_support.at(prev_it->allele).size());
-            LOG("Read_Merger", debug) << ptree("loop__start")
+            LOG("Read_Merger", debug) << ptree("loop.begin")
                 .put("e_direction", e_direction)
                 .put("it", *it);
             if (not it->unmappable_chunks.empty())
@@ -521,7 +614,7 @@ Read_Merger::merge_contig_chunks(const RC_DSet& rc_dset, Read_Entry_BPtr m_re_bp
                         ? pos.get_match_len()
                         : pos.c_pos - c_pos);
             });
-        LOG("Read_Merger", debug) << ptree("before_increment")
+        LOG("Read_Merger", debug) << ptree("loop.before_increment")
             .put("c_pos", c_pos)
             .put("is_ins_next", is_ins_next)
             .put("pos_map", pos_map)
@@ -574,7 +667,7 @@ Read_Merger::merge_contig_chunks(const RC_DSet& rc_dset, Read_Entry_BPtr m_re_bp
             r_pos += mut_bptr->seq_len();
             c_pos += mut_bptr->rf_len();
         }
-        LOG("Read_Merger", debug) << ptree("after_increment")
+        LOG("Read_Merger", debug) << ptree("loop.after_increment")
             .put("c_pos", c_pos)
             .put("pos_map", range_to_ptree(pos_map, [] (const decltype(pos_map)::value_type& p) {
                         return ptree().put("rc_cbptr", p.first).put("pos", p.second);
@@ -583,7 +676,7 @@ Read_Merger::merge_contig_chunks(const RC_DSet& rc_dset, Read_Entry_BPtr m_re_bp
         filter_cont(
             pos_map,
             [&] (const decltype(pos_map)::value_type& p) { return p.second != p.first->get_end_pos(); });
-        LOG("Read_Merger", debug) << ptree("after_filter")
+        LOG("Read_Merger", debug) << ptree("loop.after_filter")
             .put("pos_map", range_to_ptree(pos_map, [] (const decltype(pos_map)::value_type& p) {
                         return ptree().put("rc_cbptr", p.first).put("pos", p.second);
                     }));
@@ -641,73 +734,6 @@ Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_DSet& unmappable_c
         .put("result", vector< string >{m_ce_bptr->seq()});
     return m_rc_bptr;
 }
-
-pair< RC_DSet, RC_DSet >
-Read_Merger::advance_chunks(const RC_DSet& crt_rc_dset, bool c_direction) const
-{
-    RC_DSet next_rc_dset;
-    RC_DSet unmappable_rc_dset;
-    for (int d = 0; d < 2; ++d)
-    {
-        for (auto rc_cbptr : crt_rc_dset[d])
-        {
-            ASSERT(rc_cbptr);
-            bool r_direction = (c_direction + rc_cbptr->get_rc()) % 2;
-            auto next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(
-                rc_cbptr, true, not r_direction);
-            if (not next_rc_cbptr) continue;
-            if (next_rc_cbptr->ce_bptr()->is_unmappable())
-            {
-                // skip one unmappable chunk if necessary
-                unmappable_rc_dset[d].insert(next_rc_cbptr);
-                auto next_next_rc_cbptr = next_rc_cbptr->re_bptr()->chunk_cont().get_sibling(
-                    next_rc_cbptr, true, not r_direction);
-                LOG("Read_Merger", debug1) << ptree()
-                    .put("rc_bptr", rc_cbptr)
-                    .put("next_rc_bptr", next_rc_cbptr)
-                    .put("next_next_rc_bptr", next_next_rc_cbptr);
-                if (not next_next_rc_cbptr)
-                {
-                    LOG("Read_Merger", warning) << ptree("terminal_unmappable_chunk")
-                        .put("re_name", rc_cbptr->re_bptr()->name());
-                    continue;
-                }
-                next_rc_cbptr = next_next_rc_cbptr;
-            }
-            else
-            {
-                LOG("Read_Merger", debug1) << ptree()
-                    .put("rc_bptr", rc_cbptr)
-                    .put("next_rc_bptr", next_rc_cbptr);
-            }
-            next_rc_dset[d].insert(next_rc_cbptr);
-        }
-    }
-    return make_pair(next_rc_dset, unmappable_rc_dset);
-} // Read_Merger::advance_chunks
-
-void Read_Merger::filter_duplicate_reads(RC_DSet& rc_dset, set< Read_Entry_CBPtr >& duplicate_re_set) const
-{
-    map< Read_Entry_CBPtr, unsigned > re_count;
-    for (int d = 0; d < 2; ++d)
-    {
-        for (auto rc_cbptr : rc_dset[d])
-        {
-            auto re_cbptr = rc_cbptr->re_bptr();
-            if (not re_count.count(re_cbptr))
-            {
-                re_count[re_cbptr] = 0;
-            }
-            ++re_count.at(re_cbptr);
-        }
-    }
-    for (auto& p : re_count)
-    {
-        if (p.second == 1) continue;
-        duplicate_re_set.insert(p.first);
-    }
-    rc_dset.filter([&] (Read_Chunk_CBPtr rc_cbptr, bool) { return re_count.at(rc_cbptr->re_bptr()) == 1; });
-} // Read_Merger::filter_duplicate_reads
 
 ptree Read_Merger::Traversal_Struct::to_ptree() const
 {
