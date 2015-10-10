@@ -13,6 +13,8 @@ public:
         : _g(g), _max_discordant_support(max_discordant_support), _merged_weight(merged_weight) {}
 
     void operator () () const;
+    void merge_haploid_alleles() const;
+    void remove_contained() const;
 
     struct Traversal_Struct
     {
@@ -29,9 +31,6 @@ private:
     Graph& _g;
     unsigned _max_discordant_support;
     unsigned _merged_weight;
-
-    void merge_haploid_alleles() const;
-    void remove_contained() const;
 
     bool extend_haploid_layout(Traversal_List& l, Traversal_List::iterator it) const;
     bool extend_haploid_layout_dir(Traversal_List& l, Traversal_List::iterator it, bool e_direction) const;

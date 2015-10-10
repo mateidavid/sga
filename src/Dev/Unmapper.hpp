@@ -54,6 +54,9 @@ public:
      */
     void unmap_short_contigs(unsigned min_len, unsigned max_deg) const;
 
+    /** Unmap indels adjacent to homopolymers. */
+    void unmap_homopolymer_indels(unsigned min_len = 6) const;
+
 private:
     Graph* _g_p;
 

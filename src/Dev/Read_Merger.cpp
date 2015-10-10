@@ -97,6 +97,9 @@ pair< RC_DSet, RC_DSet > advance_chunks(const RC_DSet& crt_rc_dset, bool c_direc
 
 bool read_is_contained(Read_Entry_CBPtr re_cbptr)
 {
+    LOG("Read_Merger", debug) << ptree("begin")
+        .put("re_bptr", re_cbptr.to_int())
+        .put("re_name", re_cbptr->name());
     // get first chunk from this RE
     auto rc_cbptr = &*re_cbptr->chunk_cont().begin();
     auto ce_cbptr = rc_cbptr->ce_bptr();
@@ -105,8 +108,14 @@ bool read_is_contained(Read_Entry_CBPtr re_cbptr)
     auto rg = ce_cbptr->chunk_cont().iintersect(
         rc_cbptr->get_c_start(), rc_cbptr->get_c_end()) | referenced;
     RC_DSet rc_dset(rg, [] (Read_Chunk_CBPtr other_rc_cbptr) { return other_rc_cbptr->get_rc(); });
+    ASSERT(rc_dset[rc_cbptr->get_rc()].count(rc_cbptr));
+    rc_dset[rc_cbptr->get_rc()].erase(rc_cbptr);
     while (true)
     {
+        LOG("Read_Merger", debug) << ptree("loop")
+            .put("rc_bptr", rc_cbptr.to_int())
+            .put("ce_bptr", ce_cbptr.to_int())
+            .put("c_direction", c_direction);
         // filter rc_set, keeping only those chunks that extend rc_cbptr
         rc_dset.filter([&] (Read_Chunk_CBPtr other_rc_cbptr, bool) {
                 return Read_Chunk::is_contained_in(rc_cbptr, other_rc_cbptr);
@@ -114,6 +123,7 @@ bool read_is_contained(Read_Entry_CBPtr re_cbptr)
         if (rc_dset.empty())
         {
             // no chunks fully contain rc_cbptr
+            LOG("Read_Merger", debug) << ptree("end.no.no_chunks_contain_current_chunk");
             return false;
         }
         // find (contig,orientation) that follows rc_cbptr
@@ -131,6 +141,9 @@ bool read_is_contained(Read_Entry_CBPtr re_cbptr)
         {
             // rc_cbptr is the last chunk in the read
             ASSERT(rc_cbptr == &*re_cbptr->chunk_cont().rbegin());
+            LOG("Read_Merger", debug) << ptree("end.yes.read_end")
+                .put("other_re_bptr", (*rc_dset[rc_dset[0].empty()].begin())->re_bptr().to_int())
+                .put("other_re_name", (*rc_dset[rc_dset[0].empty()].begin())->re_bptr()->name());
             return true;
         }
         // keep only chunks in rc_set that follow the same edge
@@ -140,6 +153,7 @@ bool read_is_contained(Read_Entry_CBPtr re_cbptr)
         if (rc_dset.empty())
         {
             // no chunks continue to the same contig
+            LOG("Read_Merger", debug) << ptree("end.no.no_chunks_to_next_contig");
             return false;
         }
         // advance rc_cbptr
@@ -247,6 +261,7 @@ void Read_Merger::merge_haploid_alleles () const
 
 void Read_Merger::remove_contained() const
 {
+    LOG("Read_Merger", info) << ptree("begin");
     for_each_it_advance(
         _g.re_cont(),
         [&] (Read_Entry_Cont::iterator re_it)
@@ -254,9 +269,13 @@ void Read_Merger::remove_contained() const
             auto re_cbptr = &*re_it;
             if (read_is_contained(re_cbptr))
             {
+                LOG("Read_Merger", debug) << ptree("loop.contained_read")
+                    .put("re_bptr", re_cbptr.to_int())
+                    .put("re_name", re_cbptr->name());
                 _g.remove_read(re_cbptr.unconst());
             }
         });
+    LOG("Read_Merger", info) << ptree("end");
 } // Read_Merger::remove_contained
 
 bool Read_Merger::extend_haploid_layout(Traversal_List& l, Traversal_List::iterator it) const

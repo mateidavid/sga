@@ -290,4 +290,67 @@ void Unmapper::unmap_short_contigs(unsigned min_len, unsigned max_deg) const
     LOG("Unmapper", info) << ptree("end");
 } // Unmapper::unmap_short_contigs
 
+bool is_homopolymer(const Seq_Type& seq)
+{
+    return (not seq.empty() and seq.find_first_not_of(seq[0]) == string::npos);
+}
+
+void Unmapper::unmap_homopolymer_indels(unsigned min_len) const
+{
+    LOG("Unmapper", info) << ptree("begin").put("min_len", min_len);
+    re_set_type re_set;
+    for (auto ce_cbptr : _g_p->ce_cont() | referenced)
+    {
+        if (not ce_cbptr->is_normal()) continue;
+        for (auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
+        {
+            if (not (mut_cbptr->is_ins() or mut_cbptr->is_del())) continue;
+            if (mut_cbptr->rf_start() < min_len or ce_cbptr->len() < mut_cbptr->rf_end() + min_len) continue;
+            Seq_Type flank_left = ce_cbptr->substr(mut_cbptr->rf_start() - min_len, min_len);
+            Seq_Type flank_right = ce_cbptr->substr(mut_cbptr->rf_end(), min_len);
+            Seq_Type ref_allele = ce_cbptr->substr(mut_cbptr->rf_start(), mut_cbptr->rf_len());
+            Seq_Type alt_allele = mut_cbptr->seq();
+            bool is_homopolymer_left = is_homopolymer(flank_left + (mut_cbptr->is_ins()? alt_allele : ref_allele));
+            bool is_homopolymer_right = is_homopolymer(flank_right + (mut_cbptr->is_ins()? alt_allele : ref_allele));
+            if (is_homopolymer_left or is_homopolymer_right)
+            {
+                LOG("Unmapper", info) << ptree("loop.homopolymer")
+                    .put("flank_left", flank_left)
+                    .put("flank_right", flank_right)
+                    .put("mut_bptr", mut_cbptr.to_int())
+                    .put("ce_bptr", ce_cbptr.to_int())
+                    .put("mut", mut_cbptr);
+                auto c_rg = (is_homopolymer_left
+                             ? Range_Type(mut_cbptr->rf_start() - min_len, mut_cbptr->rf_end())
+                             : Range_Type(mut_cbptr->rf_start(), mut_cbptr->rf_end() + min_len));
+                // find a chunk fully spanning c_rg
+                auto rc_rg = ce_cbptr->chunk_cont().iintersect(c_rg.begin(), c_rg.begin()) | referenced;
+                Read_Chunk_CBPtr rc_cbptr = nullptr;
+                for (auto other_rc_cbptr : rc_rg)
+                {
+                    if (other_rc_cbptr->get_c_start() <= c_rg.begin() and c_rg.end() <= other_rc_cbptr->get_c_end())
+                    {
+                        rc_cbptr = other_rc_cbptr;
+                        break;
+                    }
+                }
+                if (not rc_cbptr)
+                {
+                    LOG("Unmapper", info) << ptree("loop.homopolymer.no_fully_spanning_chunk");
+                    continue;
+                }
+                auto r_rg = rc_cbptr->mapped_range(c_rg, true, true, true);
+                LOG("Unmapper", info) << ptree("loop.homopolymer")
+                    .put("rc_bptr", rc_cbptr.to_int())
+                    .put("re_bptr", rc_cbptr->re_bptr().to_int())
+                    .put("r_rg", r_rg);
+                re_set[rc_cbptr->re_bptr()].insert(r_rg);
+            } // if is_homopolymer_left/right
+        } // for mut
+    } // for ce
+    _unmap_loop(ce_set_type(), move(re_set));
+    _g_p->check_all();
+    LOG("Unmapper", info) << ptree("end");
+} // Unmapper::unmap_homopolymer_indels
+
 } // namespace MAC

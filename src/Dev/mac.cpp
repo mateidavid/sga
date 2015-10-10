@@ -71,8 +71,10 @@ namespace opts
     SwitchArg unmap_single_terminal_regions("", "unmap-single-terminal-regions", "Unmap terminal read regions not supported by other reads.", cmd_parser, false);
     ValueArg< int > unmap_short_contigs("", "unmap-short-contigs", "Unmap contigs smaller than a given size.", false, 0, "int", cmd_parser);
     SwitchArg unmap_mut_clusters("", "unmap-mut-clusters", "Unmap mutation clusters.", cmd_parser, false);
+    SwitchArg unmap_homopolymer_indels("", "unmap-homopolymer-indels", "Unmap indels around homopolymers.", cmd_parser, false);
     SwitchArg copy_num("", "copy-num", "Compute copy numbers.", cmd_parser, false);
-    SwitchArg merge_reads("", "merge-reads", "Merge reads.", cmd_parser, false);
+    SwitchArg merge_reads_1("", "merge-reads-1", "Merge reads.", cmd_parser, false);
+    SwitchArg merge_reads_2("", "merge-reads-2", "Merge reads.", cmd_parser, false);
     ValueArg< unsigned > merged_weight("", "merged-weight", "Weight of merged reads.", false, 5, "int", cmd_parser);
     SwitchArg gfa_show_mutations("", "gfa-show-mutations", "Show mutations in GFA output.", cmd_parser, false);
     //
@@ -246,14 +248,22 @@ int real_main()
     {
         g.unmapper().unmap_short_contigs(opts::unmap_short_contigs, 1);
     }
+    if (opts::unmap_homopolymer_indels)
+    {
+        g.unmapper().unmap_homopolymer_indels();
+    }
     if (opts::copy_num)
     {
         g.compute_mutation_uniqueness(10);
         g.compute_mutation_copy_num(10);
     }
-    if (opts::merge_reads)
+    if (opts::merge_reads_1)
     {
-        Read_Merger{g, 1, opts::merged_weight}();
+        Read_Merger{g, 1, opts::merged_weight}.merge_haploid_alleles();
+    }
+    if (opts::merge_reads_2)
+    {
+        Read_Merger{g, 1, opts::merged_weight}.remove_contained();
     }
     if (opts::test_1)
     {
