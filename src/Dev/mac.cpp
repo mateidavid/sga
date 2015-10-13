@@ -341,6 +341,7 @@ int main(int argc, char * argv[])
     opts::cmd_parser.parse(argc, argv);
     global_assert::prog_name() = opts::cmd_parser.getProgramName();
     // set log levels
+    Logger::set_default_level(Logger::level::info);
     Logger::set_levels_from_options(opts::log_level, &clog);
     // print options
     LOG("main", info) << "program: " << opts::cmd_parser.getProgramName() << endl
