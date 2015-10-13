@@ -254,8 +254,8 @@ int real_main()
     }
     if (opts::copy_num)
     {
-        g.compute_mutation_uniqueness(10);
-        g.compute_mutation_copy_num(10);
+        g.compute_unique_flank_lens(10, 100);
+        g.compute_mutation_copy_num();
     }
     if (opts::merge_reads_1)
     {

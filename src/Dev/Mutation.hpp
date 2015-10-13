@@ -52,7 +52,7 @@ private:
     Mutation(Size_Type start, Size_Type len, Size_Type seq_len = 0)
         : _start(start), _len(len), _seq_len(seq_len)
     {
-        _uniq = {{0, 0}};
+        _uniq_flank = {{0, 0}};
         _copy_num = {{-1, -1}};
     }
 
@@ -82,17 +82,18 @@ public:
     /// @}
 
     /**
-     * Set allele uniqueness.
+     * Flank length for which alleles are unique.
      * @param allele Integer: 0 = base, 1 = alt
      * @param value Uniqueness value as follows:
      *  0 : unknown (default)
-     *  1 : all BWT hits are in graph, and mapped to the same contig region
-     *  2 : all BWT hits are in graph, but not all mapped to the same contig region
-     *  3 : some BWT hits not in graph
-     *  4 : too many BWT hits
+     *  >0 : for this flank value, all BWT hits are in graph, and mapped to the same contig region
+     *  -1 : for largest possible flank value (= min(max_flank_value, flank available in current contig)),
+     *       all BWT hits are in graph, but not all mapped to the same contig region
+     *  -2 : some BWT hits not in graph
+     *  -3 : too many BWT hits
      */
-    const int8_t& uniq(int allele) const { return _uniq.at(allele); }
-    int8_t& uniq(int allele) { return _uniq.at(allele); }
+    const int8_t& uniq_flank(int allele) const { return _uniq_flank.at(allele); }
+    int8_t& uniq_flank(int allele) { return _uniq_flank.at(allele); }
 
     /**
      * Set allele copy number.
@@ -104,7 +105,6 @@ public:
      */
     const int8_t& copy_num(int allele) const { return _copy_num.at(allele); }
     int8_t& copy_num(int allele) { return _copy_num.at(allele); }
-
 
     /**
      * Extend Mutation given sequence.
@@ -247,7 +247,7 @@ private:
     Mutation_BPtr _r_child;
     uint32_t _len;
     uint32_t _seq_len;
-    array< int8_t, 2 > _uniq;
+    array< int8_t, 2 > _uniq_flank;
     array< int8_t, 2 > _copy_num;
 }; // class Mutation
 

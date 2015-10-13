@@ -161,7 +161,7 @@ public:
     /// Load BWT of Illumina data.
     void load_aux_bwt(const string& aux_bwt_file);
 
-    typedef array< vector< pair< string, unsigned > >, 2 > find_reads_with_seq_type;
+    typedef array< vector< pair< string, Size_Type > >, 2 > find_reads_with_seq_type;
     /// Find reads containing a given sequence
     find_reads_with_seq_type find_reads_with_seq(const Seq_Proxy_Type& seq, unsigned max_count = 0) const;
 
@@ -181,9 +181,11 @@ public:
     pair< Read_Entry_CBPtr, Read_Entry_CBPtr >
     split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor);
 
-    void compute_mutation_uniqueness(Size_Type flank_len);
-    void compute_mutation_copy_num(Size_Type flank_len);
-    void compute_aux_coverage(Size_Type flank_len);
+    void compute_unique_flank_len(Contig_Entry_BPtr ce_bptr, Mutation_BPtr mut_bptr, bool allele,
+                                  Size_Type min_flank_len, Size_Type max_flank_len);
+    void compute_unique_flank_lens(Size_Type min_flank_len, Size_Type max_flank_len);
+    void compute_mutation_copy_num();
+    void compute_aux_coverage();
 
     ptree to_ptree() const;
     ptree factory_stats() const;

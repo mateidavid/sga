@@ -2025,113 +2025,146 @@ Graph::find_read_entries_with_seq(const Seq_Proxy_Type& seq, unsigned max_count)
     return res;
 } // Graph::find_read_entries_with_seq
 
-void Graph::compute_mutation_uniqueness(Size_Type flank_len)
+void Graph::compute_unique_flank_len(Contig_Entry_BPtr ce_bptr, Mutation_BPtr mut_bptr, bool allele,
+                                     Size_Type min_flank_len, Size_Type max_flank_len)
 {
-    LOG("graph", info) << ptree("begin");
+    // result of the last validation (with largest flank)
+    int8_t res = 0;
+    // compute max_flank_len for this mutation
+    auto mut_it = ce_bptr->mut_cont().iterator_to(*mut_bptr);
+    ASSERT(mut_it != ce_bptr->mut_cont().end());
+    auto max_flank_len_left = (mut_it == ce_bptr->mut_cont().begin()
+                               ? mut_bptr->rf_start()
+                               : (prev(mut_it)->rf_end() <= mut_bptr->rf_start()
+                                  ? mut_bptr->rf_start() - prev(mut_it)->rf_end()
+                                  : 0));
+    auto max_flank_len_right = (mut_it == prev(ce_bptr->mut_cont().end())
+                                ? ce_bptr->len() - mut_bptr->rf_end()
+                                : (mut_bptr->rf_end() <= next(mut_it)->rf_start()
+                                   ? next(mut_it)->rf_start() - mut_bptr->rf_end()
+                                   : 0));
+    max_flank_len = min(max_flank_len, max_flank_len_left);
+    max_flank_len = min(max_flank_len, max_flank_len_right);
+    for (Size_Type flank_len = min_flank_len; res <= 0 and flank_len <= max_flank_len; flank_len += 2)
+    {
+        Seq_Type flank_left = ce_bptr->substr(mut_bptr->rf_start() - flank_len, flank_len);
+        Seq_Type flank_right = ce_bptr->substr(mut_bptr->rf_end(), flank_len);
+        Seq_Type s = flank_left;
+        s += (allele == 0
+              ? Seq_Type(ce_bptr->substr(mut_bptr->rf_start(), mut_bptr->rf_len()))
+              : mut_bptr->seq());
+        s += flank_right;
+        auto r = find_read_entries_with_seq(s, 1000);
+        if (r.second)
+        {
+            res = -2;
+        }
+        else if (r.first[0].empty() and r.first[1].empty())
+        {
+            res = -3;
+        }
+        else
+        {
+            bool unique = true;
+            for (int st = 0; st < 2; ++st)
+            {
+                for (const auto& p : r.first[st])
+                {
+                    auto rc_cbptr = p.first->chunk_cont().get_chunk_with_pos(p.second + flank_len);
+                    if (not rc_cbptr
+                        or rc_cbptr->ce_bptr() != ce_bptr
+                        or rc_cbptr->get_c_start() >= mut_bptr->rf_end() + flank_len
+                        or rc_cbptr->get_c_end() + flank_len <= mut_bptr->rf_start())
+                    {
+                        unique = false;
+                        break;
+                    }
+                }
+                if (not unique) break;
+            }
+            res = (unique? static_cast< int8_t >(flank_len) : -1);
+        }
+    }
+    mut_bptr->uniq_flank(allele) = res;
+} // Graph::compute_unique_flank_len
+
+void Graph::compute_unique_flank_lens(Size_Type min_flank_len, Size_Type max_flank_len)
+{
+    LOG("Graph", info) << ptree("begin");
+    map< int8_t, size_t > cnt_flank_len;
+    size_t cnt_not_unique = 0;
+    size_t cnt_hits_not_in_graph = 0;
+    size_t cnt_too_many_hits = 0;
     if (not (_index_set.pBWT and _index_set.pSSA))
     {
-        LOG("graph", error) << "compute_mutation_uniqueness: BWT index is required" << endl;
+        LOG("Graph", error) << "compute_unique_flank_len: BWT index is required" << endl;
         exit(EXIT_FAILURE);
     }
     for (auto ce_bptr : ce_cont() | referenced)
     {
         if (not ce_bptr->is_normal()) continue;
-        if (not ce_bptr->separated_mutations(flank_len, true))
-        {
-            static bool warned = false;
-            if (not warned)
-            {
-                warned = true;
-                LOG("graph", warning) << ptree("non_separated_mutations")
-                    .put("flank_len", flank_len)
-                    .put("ce_ptr", ce_bptr.to_int());
-            }
-            continue;
-        }
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
-            Seq_Type flank_left = ce_bptr->substr(mut_bptr->rf_start() - flank_len, flank_len);
-            Seq_Type flank_right = ce_bptr->substr(mut_bptr->rf_end(), flank_len);
             for (int al = 0; al < 2; ++al)
             {
-                Seq_Type s = flank_left;
-                s += (al == 0
-                      ? Seq_Type(ce_bptr->substr(mut_bptr->rf_start(), mut_bptr->rf_len()))
-                      : mut_bptr->seq());
-                s += flank_right;
-                auto r = find_read_entries_with_seq(s, 1000);
-                if (r.second)
+                compute_unique_flank_len(ce_bptr, mut_bptr, al, min_flank_len, max_flank_len);
+                auto res = mut_bptr->uniq_flank(al);
+                if (res == -1)
                 {
-                    // hits not in graph
-                    mut_bptr->uniq(al) = 3;
-                    continue;
+                    ++cnt_not_unique;
                 }
-                if (r.first.empty())
+                else if (res == -2)
                 {
-                    // too many hits
-                    mut_bptr->uniq(al) = 4;
-                    continue;
+                    ++cnt_hits_not_in_graph;
                 }
-                bool unique = true;
-                for (int st = 0; st < 2; ++st)
+                else if (res == -3)
                 {
-                    for (const auto& p : r.first[st])
+                    ++cnt_too_many_hits;
+                }
+                else
+                {
+                    if (not cnt_flank_len.count(res))
                     {
-                        auto rc_cbptr = p.first->chunk_cont().get_chunk_with_pos(p.second + flank_len);
-                        if (not rc_cbptr
-                            or rc_cbptr->ce_bptr() != ce_bptr
-                            or rc_cbptr->get_c_start() >= mut_bptr->rf_end() + flank_len
-                            or rc_cbptr->get_c_end() + flank_len <= mut_bptr->rf_start())
-                        {
-                            unique = false;
-                            break;
-                        }
+                        cnt_flank_len.insert(make_pair(res, 0));
                     }
-                    if (not unique) break;
+                    ++cnt_flank_len.at(res);
                 }
-                mut_bptr->uniq(al) = (unique? 1 : 2);
             } // for al
         } // for mut_bptr
     } // for ce_bptr
-    LOG("graph", info) << ptree("begin");
-} // Graph::compute_mutation_uniqueness
+    LOG("Graph", info) << ptree("end")
+        .put("cnt_flank_len", cnt_flank_len)
+        .put("cnt_not_unique", cnt_not_unique)
+        .put("cnt_hits_not_in_graph", cnt_hits_not_in_graph)
+        .put("cnt_too_many_hits", cnt_too_many_hits);
+} // Graph::compute_unique_flank_lens
 
-void Graph::compute_mutation_copy_num(Size_Type flank_len)
+void Graph::compute_mutation_copy_num()
 {
-    LOG("graph", info) << ptree("begin");
+    LOG("Graph", info) << ptree("begin");
+    size_t cnt_cn[4] = { 0, 0, 0, 0 };
     if (not aux_index_set().pBWT)
     {
-        LOG("graph", error) << "compute_mutation_copy_num: auxiliary BWT index is required" << endl;
+        LOG("Graph", error) << "compute_mutation_copy_num: auxiliary BWT index is required" << endl;
         exit(EXIT_FAILURE);
     }
     if (get_aux_coverage() < 0)
     {
-        compute_aux_coverage(flank_len);
+        compute_aux_coverage();
     }
     for (auto ce_bptr : ce_cont() | referenced)
     {
         if (not ce_bptr->is_normal()) continue;
-        if (not ce_bptr->separated_mutations(flank_len, true))
-        {
-            static bool warned = false;
-            if (not warned)
-            {
-                warned = true;
-                LOG("graph", warning) << ptree("non_separated_mutations")
-                    .put("flank_len", flank_len)
-                    .put("ce_ptr", ce_bptr.to_int());
-            }
-            continue;
-        }
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
-            if (mut_bptr->uniq(0) != 1 or mut_bptr->uniq(1) != 1)
+            if (mut_bptr->uniq_flank(0) <= 0 or mut_bptr->uniq_flank(1) <= 0)
             {
-                LOG("graph", debug) << ptree("non_unique_mutation")
+                LOG("Graph", debug) << ptree("non_unique_mutation")
                     .put("mut_bptr", mut_bptr.to_int())
                     .put("mut_ptr", mut_bptr.raw());
                 continue;
             }
+            auto flank_len = max(mut_bptr->uniq_flank(0), mut_bptr->uniq_flank(1));
             Seq_Type flank_left = ce_bptr->substr(mut_bptr->rf_start() - flank_len, flank_len);
             Seq_Type flank_right = ce_bptr->substr(mut_bptr->rf_end(), flank_len);
             for (int al = 0; al < 2; ++al)
@@ -2141,56 +2174,47 @@ void Graph::compute_mutation_copy_num(Size_Type flank_len)
                       ? Seq_Type(ce_bptr->substr(mut_bptr->rf_start(), mut_bptr->rf_len()))
                       : mut_bptr->seq());
                 s += flank_right;
-
                 auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set());
                 int cn = round((double)cnt / get_aux_coverage());
                 if (0 <= cn and cn <= 2)
                 {
                     mut_bptr->copy_num(al) = cn;
+                    ++cnt_cn[cn];
                 }
                 else if (cn > 2)
                 {
                     mut_bptr->copy_num(al) = -2;
+                    ++cnt_cn[3];
                 }
             } // for al
         } // for mut_bptr
     } // for ce_bptr
-    LOG("graph", info) << ptree("end");
+    LOG("Graph", info) << ptree("end")
+        .put("cnt_cn", cnt_cn);
 } // Graph::compute_mutation_copy_num
 
-void Graph::compute_aux_coverage(Size_Type flank_len)
+void Graph::compute_aux_coverage()
 {
-    LOG("graph", info) << ptree("begin");
+    LOG("Graph", info) << ptree("begin");
     if (not aux_index_set().pBWT)
     {
-        LOG("graph", error) << "compute_aux_coverage: auxiliary BWT index is required" << endl;
+        LOG("Graph", error) << "compute_aux_coverage: auxiliary BWT index is required" << endl;
         exit(EXIT_FAILURE);
     }
     multiset< size_t > cov_s;
     for (auto ce_bptr : ce_cont() | referenced)
     {
         if (not ce_bptr->is_normal()) continue;
-        if (not ce_bptr->separated_mutations(flank_len, true))
-        {
-            static bool warned = false;
-            if (not warned)
-            {
-                warned = true;
-                LOG("graph", warning) << ptree("non_separated_mutations")
-                    .put("flank_len", flank_len)
-                    .put("ce_ptr", ce_bptr.to_int());
-            }
-            continue;
-        }
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
-            if (mut_bptr->uniq(0) != 1 or mut_bptr->uniq(1) != 1)
+            if (mut_bptr->uniq_flank(0) <= 0 or mut_bptr->uniq_flank(1) <= 0)
             {
-                LOG("graph", debug) << ptree("non_unique_mutation")
+                LOG("Graph", debug) << ptree("non_unique_mutation")
                     .put("mut_bptr", mut_bptr.to_int())
                     .put("mut_ptr", mut_bptr.raw());
                 continue;
             }
+            auto flank_len = max(mut_bptr->uniq_flank(0), mut_bptr->uniq_flank(1));
             Seq_Type flank_left = ce_bptr->substr(mut_bptr->rf_start() - flank_len, flank_len);
             Seq_Type flank_right = ce_bptr->substr(mut_bptr->rf_end(), flank_len);
             for (int al = 0; al < 2; ++al)
@@ -2201,7 +2225,7 @@ void Graph::compute_aux_coverage(Size_Type flank_len)
                       : mut_bptr->seq());
                 s += flank_right;
                 auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set());
-                LOG("graph", debug) << ptree("allele_coverage")
+                LOG("Graph", debug) << ptree("allele_coverage")
                     .put("mut_bptr", mut_bptr.to_int())
                     .put("mut_ptr", mut_bptr.raw())
                     .put("al", al)
