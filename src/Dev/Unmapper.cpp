@@ -320,7 +320,7 @@ void Unmapper::unmap_homopolymer_indels(unsigned min_len) const
                                      : ce_cbptr->len() - mut_cbptr->rf_end());
             ASSERT(is_homopolymer(Seq_Type(ce_cbptr->substr(mut_cbptr->rf_start() - flank_left, flank_left))
                                   + seq
-                                  + Seq_Type(ce_cbptr->substr(mut_cbptr->rf_end() + flank_right, flank_right))));
+                                  + Seq_Type(ce_cbptr->substr(mut_cbptr->rf_end(), flank_right))));
             if (flank_left + flank_right + seq.size() >= min_len)
             {
                 LOG("Unmapper", info) << ptree("loop.homopolymer")
