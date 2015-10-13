@@ -305,14 +305,23 @@ void Unmapper::unmap_homopolymer_indels(unsigned min_len) const
         for (auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
         {
             if (not (mut_cbptr->is_ins() or mut_cbptr->is_del())) continue;
-            if (mut_cbptr->rf_start() < min_len or ce_cbptr->len() < mut_cbptr->rf_end() + min_len) continue;
-            Seq_Type flank_left = ce_cbptr->substr(mut_cbptr->rf_start() - min_len, min_len);
-            Seq_Type flank_right = ce_cbptr->substr(mut_cbptr->rf_end(), min_len);
             Seq_Type ref_allele = ce_cbptr->substr(mut_cbptr->rf_start(), mut_cbptr->rf_len());
             Seq_Type alt_allele = mut_cbptr->seq();
-            bool is_homopolymer_left = is_homopolymer(flank_left + (mut_cbptr->is_ins()? alt_allele : ref_allele));
-            bool is_homopolymer_right = is_homopolymer(flank_right + (mut_cbptr->is_ins()? alt_allele : ref_allele));
-            if (is_homopolymer_left or is_homopolymer_right)
+            auto seq = (mut_cbptr->is_ins()? alt_allele : ref_allele);
+            if (not is_homopolymer(seq)) continue;
+            auto base = seq[0];
+            auto h_start = ce_cbptr->seq().find_last_not_of(base, mut_cbptr->rf_start() - 1);
+            Size_Type flank_left = (h_start != string::npos
+                                    ? mut_cbptr->rf_start() - 1 - h_start
+                                    : mut_cbptr->rf_start());
+            auto h_end = ce_cbptr->seq().find_first_not_of(base, mut_cbptr->rf_end());
+            Size_Type flank_right = (h_end != string::npos
+                                     ? h_end - mut_cbptr->rf_end()
+                                     : ce_cbptr->len() - mut_cbptr->rf_end());
+            ASSERT(is_homopolymer(Seq_Type(ce_cbptr->substr(mut_cbptr->rf_start() - flank_left, flank_left))
+                                  + seq
+                                  + Seq_Type(ce_cbptr->substr(mut_cbptr->rf_end() + flank_right, flank_right))));
+            if (flank_left + flank_right + seq.size() >= min_len)
             {
                 LOG("Unmapper", info) << ptree("loop.homopolymer")
                     .put("flank_left", flank_left)
@@ -320,13 +329,12 @@ void Unmapper::unmap_homopolymer_indels(unsigned min_len) const
                     .put("mut_bptr", mut_cbptr.to_int())
                     .put("ce_bptr", ce_cbptr.to_int())
                     .put("mut", mut_cbptr);
-                auto c_rg = (is_homopolymer_left
-                             ? Range_Type(mut_cbptr->rf_start() - min_len, mut_cbptr->rf_end())
-                             : Range_Type(mut_cbptr->rf_start(), mut_cbptr->rf_end() + min_len));
+                auto c_rg = Range_Type(mut_cbptr->rf_start() - flank_left, mut_cbptr->rf_end() + flank_right);
                 // find a chunk fully spanning c_rg
-                auto rc_rg = ce_cbptr->chunk_cont().iintersect(c_rg.begin(), c_rg.begin()) | referenced;
+                auto mut_support = ce_cbptr->mut_support(mut_cbptr);
+                auto rc_set = move(mut_cbptr->is_ins()? get<0>(mut_support) : get<1>(mut_support));
                 Read_Chunk_CBPtr rc_cbptr = nullptr;
-                for (auto other_rc_cbptr : rc_rg)
+                for (auto other_rc_cbptr : rc_set)
                 {
                     if (other_rc_cbptr->get_c_start() <= c_rg.begin() and c_rg.end() <= other_rc_cbptr->get_c_end())
                     {
@@ -336,7 +344,7 @@ void Unmapper::unmap_homopolymer_indels(unsigned min_len) const
                 }
                 if (not rc_cbptr)
                 {
-                    LOG("Unmapper", info) << ptree("loop.homopolymer.no_fully_spanning_chunk");
+                    LOG("Unmapper", warning) << ptree("loop.homopolymer.no_fully_spanning_chunk");
                     continue;
                 }
                 auto r_rg = rc_cbptr->mapped_range(c_rg, true, true, true);
