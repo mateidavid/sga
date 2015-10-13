@@ -251,6 +251,10 @@ int real_main()
     if (opts::unmap_homopolymer_indels)
     {
         g.unmapper().unmap_homopolymer_indels();
+        if (opts::unmap_mut_clusters)
+        {
+            Unmap_Mut_Clusters{g}();
+        }
     }
     if (opts::copy_num)
     {
