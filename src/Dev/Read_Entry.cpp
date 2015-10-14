@@ -92,6 +92,7 @@ Read_Entry::split(Read_Chunk_BPtr rc_bptr, Size_Type c_overlap_start, Size_Type 
     ce_bptr->chunk_cont().insert(rc_p.second);
     // adjust RE names
     LOG("Read_Entry", info) << ptree("overlapping_read_break")
+        .put("re_bptr", re_bptr.to_int())
         .put("re_name", re_bptr->name())
         .put("brk_start", tail_re_start_pos)
         .put("brk_end", re_end_pos);
@@ -135,6 +136,7 @@ Read_Entry::split(Read_Chunk_CBPtr rc_cbptr)
     Size_Type tail_re_start_pos = rc_cbptr->get_r_end();
     LOG("Read_Entry", info) << ptree("non_overlapping_read_break")
         .put("re_name", re_bptr->name())
+        .put("re_bptr", re_bptr.to_int())
         .put("brk", tail_re_start_pos);
     auto append_coordinates = [] (string& dest, Size_Type first, Size_Type last) {
         ostringstream tmp;

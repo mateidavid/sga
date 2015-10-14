@@ -510,6 +510,10 @@ void Read_Merger::merge_reads(Traversal_List& l, Traversal_List::iterator merge_
     ostringstream os;
     os << "merge-" << setfill('0') << setw(9) << merge_id++;
     auto m_re_bptr = Read_Entry_Fact::new_elem(string(os.str()), 0);
+    LOG("Read_Merger", info) << ptree("begin")
+        .put("new_re_bptr", m_re_bptr.to_int())
+        .put("new_re_name", m_re_bptr->name())
+        .put("old_re_dset", merge_start_it->chunk_support.at(merge_start_it->allele).reads());
     deque< Read_Chunk_BPtr > m_chunk_cont;
     Read_Chunk_BPtr m_rc_bptr;
     set< Contig_Entry_BPtr > m_ce_set;
@@ -643,7 +647,7 @@ void Read_Merger::merge_reads(Traversal_List& l, Traversal_List::iterator merge_
     }
     _g.check(set< Read_Entry_CBPtr >{ m_re_bptr });
 
-    LOG("Read_Merger", info) << ptree("end");
+    LOG("Read_Merger", debug) << ptree("end");
 } // Read_Merger::merge_reads
 
 Read_Chunk_BPtr
