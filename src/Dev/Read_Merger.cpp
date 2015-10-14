@@ -100,6 +100,7 @@ bool read_is_contained(Read_Entry_CBPtr re_cbptr)
     LOG("Read_Merger", debug) << ptree("begin")
         .put("re_bptr", re_cbptr.to_int())
         .put("re_name", re_cbptr->name());
+    if (re_cbptr->len() == 0) return true;
     // get first chunk from this RE
     auto rc_cbptr = &*re_cbptr->chunk_cont().begin();
     auto ce_cbptr = rc_cbptr->ce_bptr();
