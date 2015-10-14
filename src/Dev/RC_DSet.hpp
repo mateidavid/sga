@@ -3,6 +3,7 @@
 
 #include "MAC_forward.hpp"
 #include "Directed_Set.hpp"
+#include "RE_DSet.hpp"
 
 namespace MAC
 {
@@ -16,7 +17,7 @@ public:
     typedef Directed_Set< Read_Chunk_CBPtr > Base;
     using Base::Base;
 
-    unique_ptr< RE_DSet > reads() const;
+    RE_DSet reads() const;
 }; // class RC_DSet
 
 } // namespace MAC

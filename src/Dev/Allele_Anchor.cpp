@@ -141,7 +141,7 @@ Allele_Anchor::read_support(unsigned min_edge_support) const
     auto cs = chunk_support(min_edge_support);
     for (auto& p : cs)
     {
-        res.insert(make_pair(p.first, move(*p.second.reads())));
+        res.insert(make_pair(p.first, move(p.second.reads())));
     }
     return res;
 } // Allele_Anchor::read_support

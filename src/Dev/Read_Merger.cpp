@@ -469,9 +469,10 @@ void Read_Merger::split_diverging_reads(Traversal_List& l, Traversal_List::itera
                             LOG("Read_Merger", debug) << ptree("loop.split_read")
                                 .put("re_name", re_cbptr->name())
                                 .put("re_bptr", re_cbptr.to_int())
+                                .put("rc_bptr", rc_cbptr.to_int())
                                 .put("l_anchor", not rel_c_direction? prev_it->anchor : it->anchor)
                                 .put("r_anchor", not rel_c_direction? it->anchor : prev_it->anchor);
-                            auto rp = _g.split_read(re_cbptr, not rel_c_direction? prev_it->anchor : it->anchor);
+                            auto rp = _g.split_read(rc_cbptr, not rel_c_direction? prev_it->anchor : it->anchor);
                             auto new_rc_cbptr = (r_direction == rel_c_direction
                                                  ? &*rp.first->chunk_cont().rbegin()
                                                  : &*rp.second->chunk_cont().begin());

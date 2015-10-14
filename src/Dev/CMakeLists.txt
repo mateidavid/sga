@@ -17,7 +17,6 @@ add_library(mac STATIC
     Contig_Entry.cpp
     Allele_Anchor.cpp
     RC_DSet.cpp
-    RE_DSet.cpp
     Graph.cpp
     Unmapper.cpp
     Unmap_Mut_Clusters.cpp

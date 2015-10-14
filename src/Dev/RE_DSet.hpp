@@ -16,7 +16,6 @@ public:
     typedef Directed_Set< Read_Entry_CBPtr > Base;
     using Base::Base;
 
-    std::unique_ptr< RC_DSet > chunks(Contig_Entry_CBPtr ce_cbptr) const;
 }; // class RE_DSet
 
 } // namespace MAC

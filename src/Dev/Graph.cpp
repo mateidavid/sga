@@ -1041,13 +1041,13 @@ Graph::split_read(Read_Chunk_CBPtr rc_cbptr)
 } // Graph::split_read
 
 pair< Read_Entry_CBPtr, Read_Entry_CBPtr >
-Graph::split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor)
+Graph::split_read(Read_Chunk_CBPtr rc_cbptr, const Allele_Anchor& l_anchor)
 {
     LOG("Graph", debug) << ptree("begin")
-        .put("re_bptr", re_cbptr.to_int())
+        .put("rc_bptr", rc_cbptr.to_int())
         .put("l_anchor", l_anchor);
-    ASSERT(re_cbptr);
-    auto re_bptr = re_cbptr.unconst();
+    auto rc_bptr = rc_cbptr.unconst();
+    auto re_bptr = rc_bptr->re_bptr().unconst();
     auto ce_bptr = l_anchor.ce_cbptr().unconst();
     ASSERT(not (l_anchor.is_endpoint() and l_anchor.c_right()));
     auto r_anchor = l_anchor.get_sibling(false);
@@ -1060,7 +1060,6 @@ Graph::split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor)
     (void)r_out_pos;
     ASSERT(l_in_pos < r_in_pos);
     //auto match_len = r_in_pos - l_in_pos;
-    auto rc_bptr = ce_bptr->chunk_cont().search_read(re_bptr).unconst();
     ASSERT(rc_bptr);
     ASSERT(rc_bptr->get_c_start() <= l_out_pos);
     ASSERT(r_out_pos <= rc_bptr->get_c_end());

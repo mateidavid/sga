@@ -412,20 +412,6 @@ public:
         });
         *this = std::move(new_cont);
     }
-
-    /// Search chunk from given read.
-    Read_Chunk_CBPtr search_read(Read_Entry_CBPtr re_cbptr) const
-    {
-        for (auto it = begin(); it != end(); ++it)
-        {
-            if (it->re_bptr() == re_cbptr)
-            {
-                return &*it;
-            }
-        }
-        return nullptr;
-    }
-
 }; // class Read_Chunk_CE_Cont
 
 } // namespace MAC

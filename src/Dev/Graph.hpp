@@ -179,7 +179,7 @@ public:
     split_read(Read_Chunk_CBPtr rc_cbptr);
     /** Split RE into 2 overlapping REs, duplicating the sequence between l_anchor and its right neighbour. */
     pair< Read_Entry_CBPtr, Read_Entry_CBPtr >
-    split_read(Read_Entry_CBPtr re_cbptr, const Allele_Anchor& l_anchor);
+    split_read(Read_Chunk_CBPtr rc_cbptr, const Allele_Anchor& l_anchor);
 
     void compute_unique_flank_len(Contig_Entry_BPtr ce_bptr, Mutation_BPtr mut_bptr, bool allele,
                                   Size_Type min_flank_len, Size_Type max_flank_len);
