@@ -931,11 +931,10 @@ Graph::find_overlapping_regions(Read_Chunk_CBPtr orig_rc_cbptr, Range_Cont& regi
 
 void Graph::print_mutations(ostream& os, size_t min_support, Size_Type flank_len) const
 {
-    os << "MUT\tid.ce\tlen.ce\tpos.rf\tlen.rf\tlen.alt\tseq.rf\tseq.alt\t"
+    os << "MUT\tid.mut\tid.ce\tlen.ce\tpos.rf\tlen.rf\tlen.alt\tseq.rf\tseq.alt\t"
         "flank.left\tflank.right\tnum.cks.rf\tnum.cks.alt\t"
         "uniq.rf\tuniq.alt\tcn.rf\tcn.alt\n";
-    for (auto ce_bptr : ce_cont() | referenced |
-             ba::filtered([] (Contig_Entry_CBPtr ce_cbptr) { return ce_cbptr->is_normal(); }))
+    for (auto ce_bptr : ce_cont() | referenced) if (ce_cbptr->is_normal())
     {
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
@@ -947,7 +946,7 @@ void Graph::print_mutations(ostream& os, size_t min_support, Size_Type flank_len
             {
                 continue;
             }
-            os << "MUT\t" << ce_bptr.to_int() << "\t" << ce_bptr->len() << "\t"
+            os << "MUT\t" << mut_bptr.to_int() << "\t" << ce_bptr.to_int() << "\t" << ce_bptr->len() << "\t"
                << mut_bptr->rf_start() << "\t" << mut_bptr->rf_len() << "\t" << mut_bptr->seq_len() << "\t"
                << ce_bptr->seq().substr(mut_bptr->rf_start(), mut_bptr->rf_len()) << "\t"
                << mut_bptr->seq() << "\t"

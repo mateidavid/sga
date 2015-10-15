@@ -914,8 +914,71 @@ string Read_Chunk::to_string(Read_Chunk_CBPtr rc_cbptr, bool r_dir, bool forward
         << (rc_cbptr->ce_bptr()->is_unmappable()? "unmap" : (not rc_cbptr->get_rc()? "fwd" : "rev"))
         << " ce " << setw(ce_pad) << left << rc_cbptr->ce_bptr().to_int() << " ";
     print_subinterval(oss, rc_cbptr->get_c_start(), rc_cbptr->get_c_end(), 0, ce_len, c_forward);
+
+    if (not rc_cbptr->ce_bptr()->is_unmappable())
+    {
+        oss << "   ";
+        // left endpoint allele
+        {
+            auto left_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(
+                rc_cbptr, true, rc_cbptr->get_rc());
+            if (left_rc_cbptr and left_rc_cbptr->ce_bptr()->is_unmappable())
+            {
+                left_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(
+                    left_rc_cbptr, true, rc_cbptr->get_rc());
+            }
+            if (left_rc_cbptr)
+            {
+                oss << "(" << setw(5) << right << left_rc_cbptr->ce_bptr().to_int()
+                    << "," << (int)(left_rc_cbptr->get_rc() == rc_cbptr->get_rc()) << ")";
+            }
+            else
+            {
+                oss << "    -    ";
+            }
+        }
+        // mutation alleles
+        for (auto mut_cbptr : rc_cbptr->ce_bptr()->mut_cont() | referenced)
+        {
+            oss << " ";
+            if (not (rc_cbptr->get_c_start() <= mut_cbptr->rf_start()
+                     and mut_cbptr->rf_end() <= rc_cbptr->get_c_end()))
+            {
+                oss << "-";
+            }
+            else
+            {
+                auto mca_cit = rc_cbptr->mut_ptr_cont().begin();
+                while (mca_cit != rc_cbptr->mut_ptr_cont().end()
+                       and mca_cit->mut_cbptr() != mut_cbptr)
+                {
+                    ++mca_cit;
+                }
+                oss << (mca_cit != rc_cbptr->mut_ptr_cont().end()? "1" : "0");
+            }
+        }
+        oss << " ";
+        // right endpoint allele
+        {
+            auto right_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(
+                rc_cbptr, true, not rc_cbptr->get_rc());
+            if (right_rc_cbptr and right_rc_cbptr->ce_bptr()->is_unmappable())
+            {
+                right_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(
+                    right_rc_cbptr, true, not rc_cbptr->get_rc());
+            }
+            if (right_rc_cbptr)
+            {
+                oss << "(" << setw(5) << right << right_rc_cbptr->ce_bptr().to_int()
+                    << "," << (int)(right_rc_cbptr->get_rc() == rc_cbptr->get_rc()) << ")";
+            }
+            else
+            {
+                oss << "    -    ";
+            }
+        }
+    }
     return oss.str();
 }
-
 
 } // namespace MAC

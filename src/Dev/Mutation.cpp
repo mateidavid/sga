@@ -79,8 +79,37 @@ void Mutation::to_stream(ostream& os, Mutation_CBPtr mut_cbptr, Contig_Entry_CBP
        << setw(5) << right << mut_cbptr->rf_start()
        << setw(5) << right << mut_cbptr->rf_len()
        << setw(5) << right << mut_cbptr->seq_len()
-       << setw(5) << right << full_rf_set.size()
+       << setw(5) << right << (int)mut_cbptr->uniq_flank(0)
+       << setw(5) << right << (int)mut_cbptr->uniq_flank(1)
+       << setw(5) << right << (int)mut_cbptr->copy_num(0)
+       << setw(5) << right << (int)mut_cbptr->copy_num(1);
+    Seq_Type flank_left(".");
+    Seq_Type flank_right(".");
+    if (mut_cbptr->uniq_flank(0) > 0 or mut_cbptr->uniq_flank(1) > 0)
+    {
+        auto flank_len = max(mut_cbptr->uniq_flank(0), mut_cbptr->uniq_flank(1));
+        flank_left = ce_cbptr->substr(mut_cbptr->rf_start() - flank_len, flank_len);
+        flank_right = ce_cbptr->substr(mut_cbptr->rf_end(), flank_len);
+    }
+    os << " " << flank_left << " (" << ce_cbptr->substr(mut_cbptr->rf_start(), mut_cbptr->rf_len())
+       << "|" << mut_cbptr->seq() << ") " << flank_right << " ";
+
+    os << setw(5) << right << full_rf_set.size()
        << setw(5) << right << qr_set.size();
+    os << "   ";
+    bool first = true;
+    for (auto rc_cbptr : full_rf_set)
+    {
+        os << (not first? "," : "") << rc_cbptr.to_int();
+        first = false;
+    }
+    os << "   ";
+    first = true;
+    for (auto rc_cbptr : qr_set)
+    {
+        os << (not first? "," : "") << rc_cbptr.to_int();
+        first = false;
+    }
 }
 
 void Mutation::save_strings(ostream& os, size_t& n_strings, size_t& n_bytes) const
