@@ -2140,7 +2140,7 @@ void Graph::compute_unique_flank_lens(Size_Type min_flank_len, Size_Type max_fla
 void Graph::compute_mutation_copy_num()
 {
     LOG("Graph", info) << ptree("begin");
-    size_t cnt_cn[4] = { 0, 0, 0, 0 };
+    array< size_t, 4 > cnt_cn = {{ 0, 0, 0, 0 }};
     if (not aux_index_set().pBWT)
     {
         LOG("Graph", error) << "compute_mutation_copy_num: auxiliary BWT index is required" << endl;
