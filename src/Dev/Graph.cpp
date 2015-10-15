@@ -934,7 +934,7 @@ void Graph::print_mutations(ostream& os, size_t min_support, Size_Type flank_len
     os << "MUT\tid.mut\tid.ce\tlen.ce\tpos.rf\tlen.rf\tlen.alt\tseq.rf\tseq.alt\t"
         "flank.left\tflank.right\tnum.cks.rf\tnum.cks.alt\t"
         "uniq.rf\tuniq.alt\tcn.rf\tcn.alt\n";
-    for (auto ce_bptr : ce_cont() | referenced) if (ce_cbptr->is_normal())
+    for (auto ce_bptr : ce_cont() | referenced) if (ce_bptr->is_normal())
     {
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
