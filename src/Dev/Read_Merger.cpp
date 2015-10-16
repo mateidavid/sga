@@ -800,22 +800,15 @@ Read_Merger::merge_contig_chunks(const RC_DSet& rc_dset, Read_Entry_BPtr m_re_bp
     return m_rc_bptr;
 } // Read_Merger::merge_contig_chunks
 
-Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_DSet& unmappable_chunks, Read_Entry_BPtr m_re_bptr) const
+Seq_Type consensus_alignment_seqan(const vector< Seq_Type >& seq_v)
 {
     seqan::FragmentStore<> store;
     seqan::ConsensusAlignmentOptions options;
     options.useContigID = true;
-    vector< Seq_Type > seq_v;
-    for (int dir = 0; dir < 2; ++dir)
+    for (unsigned i = 0; i < seq_v.size(); ++i)
     {
-        for (auto rc_bptr : unmappable_chunks[dir])
-        {
-            ASSERT(rc_bptr->ce_bptr()->is_unmappable());
-            Seq_Type seq = rc_bptr->ce_bptr()->seq().revcomp(dir);
-            auto id = seqan::appendRead(store, string("NNNNNNNNNNNNNNNNNNNN") + seq);
-            seqan::appendAlignedRead(store, id, 0, 0, int(seq.size()));
-            seq_v.emplace_back(move(seq));
-        }
+        auto id = seqan::appendRead(store, string("NNNNNNNNNNNNNNNNNNNN") + seq_v[i]);
+        seqan::appendAlignedRead(store, id, 0, 0, int(seq_v[i].size()));
     }
     seqan::consensusAlignment(store, options);
     seqan::reAlignment(store, 0, 1, 10, false);
@@ -827,12 +820,53 @@ Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_DSet& unmappable_c
     auto suffix_start = res.find_first_of('N', prefix_end);
     if (suffix_start != string::npos)
     {
-        LOG("Read_Merger", warning) << ptree("consensus_alignment_failed")
-            .put("unmappable_chunks", seq_v)
+        LOG("Read_Merger", warning) << ptree("failure")
+            .put("seq_v", seq_v)
             .put("raw_result", vector< string >{res})
             .put("result", vector< string >{res.substr(prefix_end, suffix_start - prefix_end)});
     }
-    auto m_ce_bptr = Contig_Entry_Fact::new_elem(Seq_Type(res.substr(prefix_end, suffix_start - prefix_end)));
+    return res.substr(prefix_end, suffix_start - prefix_end);
+}
+
+Seq_Type consensus_alignment(const vector< Seq_Type >& seq_v)
+{
+    // trivial case
+    if (seq_v.size() == 1)
+    {
+        return *seq_v.begin();
+    }
+    // hack: if a single sequence accounts for more than half of all inputs, return that
+    map< Seq_Type, unsigned > seq_cnt;
+    for (auto& seq : seq_v)
+    {
+        if (not seq_cnt.count(seq))
+        {
+            seq_cnt.insert(make_pair(seq, 0));
+        }
+        ++seq_cnt.at(seq);
+    }
+    for (auto& p : seq_cnt) if (p.second > seq_v.size() / 2)
+    {
+        return p.first;
+    }
+    // hack didn't apply; fall back to seqan
+    return consensus_alignment_seqan(seq_v);
+}
+
+Read_Chunk_BPtr Read_Merger::merge_unmappable_chunks(const RC_DSet& unmappable_chunks, Read_Entry_BPtr m_re_bptr) const
+{
+    vector< Seq_Type > seq_v;
+    for (int dir = 0; dir < 2; ++dir)
+    {
+        for (auto rc_bptr : unmappable_chunks[dir])
+        {
+            ASSERT(rc_bptr->ce_bptr()->is_unmappable());
+            Seq_Type seq = rc_bptr->ce_bptr()->seq().revcomp(dir);
+            seq_v.emplace_back(move(seq));
+        }
+    }
+    auto res = consensus_alignment(seq_v);
+    auto m_ce_bptr = Contig_Entry_Fact::new_elem(move(res));
     m_ce_bptr->set_unmappable();
     _g.ce_cont().insert(m_ce_bptr);
     auto m_rc_bptr = Read_Chunk_Fact::new_elem(0, m_ce_bptr->len(), 0, m_ce_bptr->len(), false);

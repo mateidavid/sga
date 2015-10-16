@@ -4,6 +4,8 @@
 
 #include <seqan/store.h>
 #include <seqan/consensus.h>
+#include <seqan/align.h>
+#include <seqan/graph_msa.h>
 
 using namespace std;
 
@@ -35,12 +37,14 @@ void do_alignment(const vector< string >& v)
 
     // The position used in the following are only approximate and would
     // not lead to the read layout above.
+    size_t max_read_len = 0;
     cout << "Reads:" << endl;
     for (unsigned i = 0; i < v.size(); ++i)
     {
         cout << v[i] << endl;
         seqan::appendRead(store, v[i].data());
         seqan::appendAlignedRead(store, i, 0, 0, 0 + (int)length(store.readSeqStore[i]));
+        max_read_len = max(max_read_len, v[i].size());
     }
     //convertMatchesToGlobalAlignment(store, score, true);
 
@@ -59,13 +63,25 @@ void do_alignment(const vector< string >& v)
 
     cout << endl << "Contig:" << endl << store.contigStore[0].seq << endl;
 
-    seqan::reAlignment(store, 0, 1, 10, false);
+    seqan::reAlignment(store, 0, 1, 2*max_read_len, false);
     cout << endl << "Consensus after realignment:" << endl;
     seqan::layoutAlignment(layout, store);
     seqan::printAlignment(cout, layout, store, /*contigID=*/ 0, /*beginPos=*/ 0, /*endPos=*/ 100, 0, 30);
 
     cout << endl << "Contig:" << endl << store.contigStore[0].seq << endl;
 
+}
+
+void do_msa(const vector< string >& v)
+{
+    seqan::Align< seqan::DnaString > align;
+    resize(rows(align), v.size());
+    for (unsigned i = 0; i < v.size(); ++i)
+    {
+        seqan::assignSource(row(align, i), v[i]);
+    }
+    seqan::globalMsaAlignment(align, seqan::SimpleScore(5, -3, -1, -3));
+    cout << "Align:" << endl << align << endl;
 }
 
 int main()
@@ -85,4 +101,5 @@ int main()
               "AGAGCTTTGATGCTAATTTAGTGAAAT" };
     }
     do_alignment(v);
+    do_msa(v);
 }
