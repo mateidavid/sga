@@ -32,8 +32,10 @@ private:
     unsigned _max_discordant_support;
     unsigned _merged_weight;
 
-    bool extend_haploid_layout(Traversal_List& l, Traversal_List::iterator it) const;
-    bool extend_haploid_layout_dir(Traversal_List& l, Traversal_List::iterator it, bool e_direction) const;
+    bool extend_haploid_layout(Traversal_List& l, Traversal_List::iterator it,
+                               list< RC_DSet >& sub_rc_dsets) const;
+    bool extend_haploid_layout_dir(Traversal_List& l, Traversal_List::iterator it, bool e_direction,
+                                   list< RC_DSet >& sub_rc_dsets) const;
     void split_diverging_reads(Traversal_List& l, Traversal_List::iterator it) const;
     void merge_reads(Traversal_List& l, Traversal_List::iterator it) const;
 

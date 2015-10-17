@@ -219,17 +219,14 @@ void Read_Merger::merge_haploid_alleles () const
                         .put("allele", allele)
                         .put("allele_support", anchor_support.at(allele));
                     // initialize layout structs
-                    Traversal_List l;
-                    l.emplace_back(Traversal_Struct{anchor, allele, false,
-                                Anchor_Chunk_Support(), RC_DSet()});
-                    auto merge_start_it = l.begin();
-                    merge_start_it->chunk_support.insert(make_pair(allele, move(anchor_support.at(allele))));
+                    auto start_allele_support = move(anchor_support.at(allele));
                     // remove any chunk belonging to REs that visit allele more than once
-                    LOG("Read_Merger", debug) << ptree("before_filter_duplicate_reads").put("l", l);
-                    auto size_before = merge_start_it->chunk_support.at(allele).size();
+                    LOG("Read_Merger", debug) << ptree("before_filter_duplicate_reads")
+                        .put("start_allele_support", start_allele_support);
+                    auto size_before = start_allele_support.size();
                     set< Read_Entry_CBPtr > duplicate_re_set;
-                    filter_duplicate_reads(merge_start_it->chunk_support.at(allele), duplicate_re_set);
-                    auto size_after = merge_start_it->chunk_support.at(allele).size();
+                    filter_duplicate_reads(start_allele_support, duplicate_re_set);
+                    auto size_after = start_allele_support.size();
                     ASSERT(size_after <= size_before);
                     if (size_after < size_before)
                     {
@@ -240,12 +237,34 @@ void Read_Merger::merge_haploid_alleles () const
                     }
                     if (size_after <= 1)
                     {
-                        LOG("Read_Merger", debug) << ptree("nothing_to_extend_after_filter").put("l", l);
+                        LOG("Read_Merger", debug) << ptree("nothing_to_extend_after_filter")
+                            .put("start_allele_support", start_allele_support);
                         continue;
                     }
                     // extend layout
-                    bool res = extend_haploid_layout(l, merge_start_it);
-                    LOG("Read_Merger", debug) << ptree("haploid_extension").put("res", res);
+                    list< RC_DSet > sub_rc_dsets;
+                    sub_rc_dsets.emplace_back(move(start_allele_support));
+                    bool res = false;
+                    Traversal_List l;
+                    Traversal_List::iterator merge_start_it;
+                    while (not res and not sub_rc_dsets.empty())
+                    {
+                        if (sub_rc_dsets.front().size() <= 1)
+                        {
+                            sub_rc_dsets.pop_front();
+                            continue;
+                        }
+                        LOG("Read_Merger", debug) << ptree("haploid_extension")
+                            .put("start_allele_support", sub_rc_dsets.front());
+                        l.clear();
+                        l.emplace_back(Traversal_Struct{anchor, allele, false,
+                                Anchor_Chunk_Support(), RC_DSet()});
+                        merge_start_it = l.begin();
+                        merge_start_it->chunk_support[allele] = move(sub_rc_dsets.front());
+                        sub_rc_dsets.pop_front();
+                        res = extend_haploid_layout(l, merge_start_it, sub_rc_dsets);
+                        LOG("Read_Merger", debug) << ptree("haploid_extension").put("res", res);
+                    }
                     if (not res) continue;
                     // extension was successful: split diverging reads
                     LOG("Read_Merger", debug) << ptree("before_split").put("l", l);
@@ -253,6 +272,7 @@ void Read_Merger::merge_haploid_alleles () const
                     // finally, merge reads
                     LOG("Read_Merger", debug) << ptree("before_merge").put("l", l);
                     merge_reads(l, merge_start_it);
+                    done = false;
                 }
             }
         }
@@ -279,15 +299,62 @@ void Read_Merger::remove_contained() const
     LOG("Read_Merger", info) << ptree("end");
 } // Read_Merger::remove_contained
 
-bool Read_Merger::extend_haploid_layout(Traversal_List& l, Traversal_List::iterator it) const
+Read_Chunk_CBPtr find_earlier_chunk(const set< Read_Chunk_CBPtr >& rc_set,
+                                    Read_Chunk_CBPtr rc_cbptr,
+                                    bool r_direction)
 {
-    return (extend_haploid_layout_dir(l, it, false)
-            and extend_haploid_layout_dir(l, it, true));
+    ASSERT(rc_cbptr);
+    while (not rc_set.count(rc_cbptr))
+    {
+        rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, not r_direction);
+        ASSERT(rc_cbptr);
+    }
+    return rc_cbptr;
+} // find_earlier_chunk
+
+pair< Anchor_Chunk_Support, Allele_Chunk_Support >
+split_start_chunks(Read_Merger::Traversal_List::iterator merge_start_it,
+                   const Anchor_Chunk_Support& next_chunk_support,
+                   bool rel_c_direction)
+{
+    Allele_Chunk_Support rc_start_dset = merge_start_it->chunk_support.at(merge_start_it->allele);
+    Anchor_Chunk_Support rc_reaching_anchor_dset;
+    for (auto& p : next_chunk_support)
+    {
+        for (int d = 0; d < 2; ++d)
+        {
+            for (auto rc_cbptr : p.second[d])
+            {
+                rc_reaching_anchor_dset[p.first][d].insert(
+                    find_earlier_chunk(
+                        rc_start_dset[d], rc_cbptr, not rel_c_direction != rc_cbptr->get_rc()));
+            }
+        }
+        rc_start_dset.subtract(rc_reaching_anchor_dset.at(p.first), false);
+    }
+    ASSERT(merge_start_it->chunk_support.at(merge_start_it->allele).size()
+           == accumulate(
+               rc_reaching_anchor_dset, 0,
+               [&] (unsigned s, const Anchor_Chunk_Support::value_type& p) {
+                   return s + p.second.size();
+               }) + rc_start_dset.size());
+    return make_pair(move(rc_reaching_anchor_dset), move(rc_start_dset));
+} // split_start_chunks
+
+bool Read_Merger::extend_haploid_layout(
+    Traversal_List& l, Traversal_List::iterator it,
+    list< RC_DSet >& sub_rc_dsets) const
+{
+    return (extend_haploid_layout_dir(l, it, false, sub_rc_dsets)
+            and extend_haploid_layout_dir(l, it, true, sub_rc_dsets));
 }
 
-bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::iterator it, bool e_direction) const
+bool Read_Merger::extend_haploid_layout_dir(
+    Traversal_List& l, Traversal_List::iterator it, bool e_direction,
+    list< RC_DSet >& sub_rc_dsets) const
 {
     LOG("Read_Merger", debug) << ptree("begin").put("e_direction", e_direction);
+    auto merge_start_it = it;
     while (true)
     {
         // direction crt_anchor -> next_anchor
@@ -358,13 +425,17 @@ bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::i
             }
             else if (next_chunk_support.size() > 1)
             {
+                //
+                // Divergent support
+                //
                 LOG("Read_Merger", debug) << ptree("loop.multiple_next_allele_support")
                     .put("next_alleles", ba::keys(next_chunk_support));
-                // check if there is a unique allele with support larger than the discordant threshold
+                // compute support for each allele, with previously merged reads weighted separately
+                map< Allele_Specifier, unsigned > next_alleles_cnt;
                 set< Allele_Specifier > next_alleles_strong_support;
                 for (const auto& p : next_chunk_support)
                 {
-                    // each previously merged read counts as 5 when computing discordance
+                    // each previously merged read counts as _merged_weight
                     auto support_accum = [&] (unsigned s, Read_Chunk_CBPtr rc_cbptr) {
                         return s + (rc_cbptr->re_bptr()->name().substr(0, 5) == "merge"? _merged_weight : 1);
                     };
@@ -372,6 +443,7 @@ bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::i
                     allele_support_size = accumulate(p.second[0], allele_support_size, support_accum);
                     allele_support_size = accumulate(p.second[1], allele_support_size, support_accum);
                     ASSERT(allele_support_size > 0);
+                    next_alleles_cnt.insert(make_pair(p.first, allele_support_size));
                     if (allele_support_size > _max_discordant_support)
                     {
                         next_alleles_strong_support.insert(p.first);
@@ -380,20 +452,41 @@ bool Read_Merger::extend_haploid_layout_dir(Traversal_List& l, Traversal_List::i
                 if (next_alleles_strong_support.empty())
                 {
                     LOG("Read_Merger", debug) << ptree("end.no_allele_with_strong_support");
+                    //
+                    // retry the merge using only those chunks that do not reach next_anchor
+                    //
+                    auto sp = split_start_chunks(merge_start_it, next_chunk_support, rel_c_direction);
+                    sub_rc_dsets.emplace_back(move(sp.second));
                     return false;
                 }
-                else if (next_alleles_strong_support.size() > 1)
+                else if (next_alleles_strong_support.size() == 1)
+                {
+                    //
+                    // Unique next_allele with strong support
+                    //
+                    // Discordant chunks alone are considered errors; they will be removed by
+                    // a subsequent call to split_diverging_reads()
+                    //
+                    next_allele = *next_alleles_strong_support.begin();
+                    LOG("Read_Merger", debug) << ptree("loop.single_allele_with_strong_support")
+                        .put("next_allele", next_allele);
+                }
+                else // next_alleles_strong_support.size() > 1
                 {
                     LOG("Read_Merger", debug) << ptree("end.multiple_alleles_with_strong_support")
                         .put("next_anchor", next_anchor)
                         .put("next_alleles_strong_support", next_alleles_strong_support);
+                    //
+                    // Retry the merge restricting to chunks reaching each well-supported next allele,
+                    // and also those not reaching next anchor at all.
+                    //
+                    auto sp = split_start_chunks(merge_start_it, next_chunk_support, rel_c_direction);
+                    for (auto& p : sp.first)
+                    {
+                        sub_rc_dsets.emplace_back(move(p.second));
+                    }
+                    sub_rc_dsets.emplace_back(move(sp.second));
                     return false;
-                }
-                else // next_alleles_strong_support.size() == 1
-                {
-                    next_allele = *next_alleles_strong_support.begin();
-                    LOG("Read_Merger", debug) << ptree("loop.single_allele_with_strong_support")
-                        .put("next_allele", next_allele);
                 }
             }
             else // next_chunk_support.size() == 1
