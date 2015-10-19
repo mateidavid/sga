@@ -138,7 +138,7 @@ class Mutation_Printer:
         self.l.append(('start', v['_start']))
         self.l.append(('len', v['_len']))
         self.l.append(('seq', v['_seq']))
-        self.l.append(('uniq', '(%d,%d)' % (int(v['_uniq']['_M_elems'][0]), int(v['_uniq']['_M_elems'][1]))))
+        self.l.append(('uniq_flank', '(%d,%d)' % (int(v['_uniq_flank']['_M_elems'][0]), int(v['_uniq_flank']['_M_elems'][1]))))
         self.l.append(('cn', '(%d,%d)' % (int(v['_copy_num']['_M_elems'][0]), int(v['_copy_num']['_M_elems'][1]))))
         self.l.append(('chunk_ptr_cont', str(v['_chunk_ptr_cont'])))
     def to_string(self):
