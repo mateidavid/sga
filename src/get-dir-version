@@ -15,7 +15,7 @@ already contains the correct definition, do not update it.
 
 The defaults are:
 <dir>: .
-<ver_cmd>: git describe --always --dirty
+<ver_cmd>: git describe --always --dirty --tags
 <ver_file>: VERSION
 <out_file>: stdout
 <tag>: VERSION
@@ -27,7 +27,7 @@ EOF
 }
 
 dir=
-version_command="git describe --always --dirty"
+version_command="git describe --always --dirty --tags"
 version_file="VERSION"
 output_file=
 define_tag="VERSION"
