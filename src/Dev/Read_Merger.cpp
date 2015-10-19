@@ -247,7 +247,7 @@ void Read_Merger::merge_haploid_alleles () const
                     bool res = false;
                     Traversal_List l;
                     Traversal_List::iterator merge_start_it;
-                    while (not res and not sub_rc_dsets.empty())
+                    while (not sub_rc_dsets.empty())
                     {
                         if (sub_rc_dsets.front().size() <= 1)
                         {
@@ -264,15 +264,15 @@ void Read_Merger::merge_haploid_alleles () const
                         sub_rc_dsets.pop_front();
                         res = extend_haploid_layout(l, merge_start_it, sub_rc_dsets);
                         LOG("Read_Merger", debug) << ptree("haploid_extension").put("res", res);
+                        if (not res) continue;
+                        // extension was successful: split diverging reads
+                        LOG("Read_Merger", debug) << ptree("before_split").put("l", l);
+                        split_diverging_reads(l, merge_start_it);
+                        // finally, merge reads
+                        LOG("Read_Merger", debug) << ptree("before_merge").put("l", l);
+                        merge_reads(l, merge_start_it);
+                        done = false;
                     }
-                    if (not res) continue;
-                    // extension was successful: split diverging reads
-                    LOG("Read_Merger", debug) << ptree("before_split").put("l", l);
-                    split_diverging_reads(l, merge_start_it);
-                    // finally, merge reads
-                    LOG("Read_Merger", debug) << ptree("before_merge").put("l", l);
-                    merge_reads(l, merge_start_it);
-                    done = false;
                 }
             }
         }
