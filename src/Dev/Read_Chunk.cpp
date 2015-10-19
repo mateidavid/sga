@@ -716,12 +716,9 @@ bool Read_Chunk::is_contained_in(Read_Chunk_CBPtr rc_cbptr, Read_Chunk_CBPtr oth
     }
     Read_Chunk_Pos pos = rc_cbptr->get_start_pos();
     Read_Chunk_Pos other_pos = other_rc_cbptr->get_start_pos();
-    if (other_pos.c_pos < pos.c_pos)
-    {
-        other_pos.increment(pos.c_pos);
-    }
+    other_pos.jump_to_brk(pos.c_pos, true);
+    ASSERT(other_pos.c_pos == pos.c_pos);
     if (other_pos == other_rc_cbptr->get_end_pos()
-        or other_pos.c_pos != pos.c_pos
         or other_pos.mut_offset > 0)
     {
         return false;
