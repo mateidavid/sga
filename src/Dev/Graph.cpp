@@ -2253,10 +2253,29 @@ void Graph::compute_aux_coverage()
 void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direction,
                          map< Read_Chunk_CBPtr, unsigned >& rc_grid_pos) const
 {
-    ASSERT(not ce_cbptr->is_unmappable());
+    //
+    // print contig header
+    //
+    os << "===== contig start ce " << setw(5) << right << ce_cbptr.to_int()
+       << " dir " << (int)c_direction
+       << " len " << setw(6) << right << ce_cbptr->len() << endl;
+    if (ce_cbptr->is_unmappable())
+    {
+        auto rc_cbptr = &*ce_cbptr->chunk_cont().begin();
+        os << " re " << setw(5) << right << rc_cbptr->re_bptr().to_int()
+           << " rc " << setw(5) << right << rc_cbptr.to_int()
+           << Seq_Type(ce_cbptr->seq().revcomp(c_direction)) << endl
+           << "===== contig end" << endl;
+        return;
+    }
     //
     // compute the grid position of each chunk
     //
+    ASSERT(all_of(
+               rc_grid_pos,
+               [&] (const pair< Read_Chunk_CBPtr, unsigned >& p) {
+                   return p.first->ce_bptr() == ce_cbptr;
+               }));
     set< unsigned > used_grid_pos(ba::values(rc_grid_pos).begin(), ba::values(rc_grid_pos).end());
     auto get_next_unused_pos = [] (const set<unsigned>& pos_set, unsigned& pos) {
         while (pos_set.count(pos)) ++pos;
@@ -2281,12 +2300,6 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
         pos_set.insert(make_pair(p.second, p.first));
     }
     ASSERT(rc_grid_pos.size() == pos_set.size());
-    //
-    // print contig header
-    //
-    os << "===== ce " << setw(5) << right << ce_cbptr.to_int()
-       << " dir " << (int)c_direction
-       << " len " << setw(6) << right << ce_cbptr->len() << endl;
     // print re, rc
     for (auto& p : pos_set)
     {
@@ -2301,9 +2314,10 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     //
     // print out edges in not c_direction
     //
+    array< Anchor_Chunk_Support, 2 > oc = {{ ce_cbptr->out_chunks(false, true, 2),
+                                             ce_cbptr->out_chunks(true, true, 2) }};
     auto print_out_edges = [&] (bool direction) {
-        auto oc = ce_cbptr->out_chunks(direction, true);
-        for (auto& p : oc)
+        for (auto& p : oc.at(direction))
         {
             ostringstream oss;
             string s(max_pos + 1, ' ');
@@ -2464,7 +2478,57 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     //
     // print contig footer
     //
-    os << "=====" << endl;
+    os << "===== contig end" << endl;
+    //
+    // update grid positions, but only if out-degree is 1
+    //
+    if (oc.at(c_direction).size() == 1)
+    {
+        Allele_Chunk_Support& allele_support = oc.at(c_direction).begin()->second;
+        map< Read_Chunk_CBPtr, unsigned > new_rc_grid_pos;
+        for (auto& p : rc_grid_pos)
+        {
+            auto rc_cbptr = p.first;
+            if (not allele_support.at(0).count(rc_cbptr) or allele_support.at(1).count(rc_cbptr))
+            {
+                continue;
+            }
+            bool r_direction = (c_direction != rc_cbptr->get_rc());
+            auto next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, not r_direction);
+            while (next_rc_cbptr and next_rc_cbptr->ce_bptr()->is_unmappable())
+            {
+                next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(next_rc_cbptr, true, not r_direction);
+            }
+            if (next_rc_cbptr)
+            {
+                new_rc_grid_pos[next_rc_cbptr] = p.second;
+            }
+        }
+        swap(rc_grid_pos, new_rc_grid_pos);
+    }
 } // Graph::print_contig
+
+void Graph::print_supercontig(ostream& os, const supercontig_type& sc) const
+{
+    map< Read_Chunk_CBPtr, unsigned > rc_grid_pos;
+    for (auto it = sc.begin(); it != sc.end(); ++it)
+    {
+        if (it != sc.begin())
+        {
+        }
+        print_contig(os, it->first, not it->second, rc_grid_pos);
+    }
+} // Graph::print_supercontig
+
+void Graph::print_supercontigs(ostream& os) const
+{
+    auto sc_list = get_supercontigs(3);
+    for (auto& sc : sc_list)
+    {
+        os << "========== supercontig start" << endl;
+        print_supercontig(os, sc);
+        os << "========== supercontig end" << endl;
+    }
+}
 
 } // namespace MAC

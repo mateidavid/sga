@@ -189,6 +189,8 @@ public:
 
     void print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direction,
                       map< Read_Chunk_CBPtr, unsigned >& rc_grid_pos) const;
+    void print_supercontig(ostream& os, const supercontig_type& sc) const;
+    void print_supercontigs(ostream& os) const;
 
     ptree to_ptree() const;
     ptree factory_stats() const;

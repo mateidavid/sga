@@ -49,6 +49,7 @@ namespace opts
     ValueArg< string > aux_bwt_file("", "aux-bwt-file", "BWT index of 2GS reads used to validate variations.", false, "", "file", cmd_parser);
     ValueArg< string > stats_file("", "stats-file", "Stats file.", false, "", "file", cmd_parser);
     ValueArg< string > supercontigs_stats_file("", "supercontigs-stats-file", "Supercontigs stats file.", false, "", "file", cmd_parser);
+    ValueArg< string > supercontigs_file("", "supercontigs-file", "Supercontigs file.", false, "", "file", cmd_parser);
     ValueArg< string > unmappable_contigs_file("", "unmappable-contigs-file", "Unmappable contigs file.", false, "", "file", cmd_parser);
     ValueArg< string > terminal_reads_file("", "terminal-reads-file", "Terminal reads file.", false, "", "file", cmd_parser);
     //ValueArg< string > hapmap_stats_file("", "hapmap-stats-file", "Haplotype map stats file.", false, "", "file", cmd_parser);
@@ -293,6 +294,12 @@ int real_main()
         LOG("mac", info) << ptree("supercontigs_stats").put("file", opts::supercontigs_stats_file.get());
         strict_fstream::fstream tmp_fs(opts::supercontigs_stats_file, ios_base::out);
         g.print_supercontig_stats(tmp_fs);
+    }
+    if (not opts::supercontigs_file.get().empty())
+    {
+        LOG("mac", info) << ptree("supercontigs").put("file", opts::supercontigs_file.get());
+        strict_fstream::fstream tmp_fs(opts::supercontigs_file, ios_base::out);
+        g.print_supercontigs(tmp_fs);
     }
     if (not opts::terminal_reads_file.get().empty())
     {
