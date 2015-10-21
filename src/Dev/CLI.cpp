@@ -152,7 +152,10 @@ void cli(istream& is, ostream& os, const Graph& g)
                 {
                     Contig_Entry_CBPtr ce_cbptr = Contig_Entry_CBPtr::from_index(id);
                     map< Read_Chunk_CBPtr, unsigned > rc_grid_pos;
-                    g.print_contig(os, ce_cbptr, c_direction, rc_grid_pos);
+                    g.print_contig(os, ce_cbptr, c_direction,
+                                   array< Allele_Specifier, 2 >{{ Allele_Specifier(nullptr, true),
+                                               Allele_Specifier(nullptr, true), }},
+                                   rc_grid_pos);
                 }
             }
             else if (tmp == "chunk" or tmp == "rc")

@@ -188,6 +188,7 @@ public:
     void compute_aux_coverage();
 
     void print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direction,
+                      const array< Allele_Specifier, 2 >& out_allele,
                       map< Read_Chunk_CBPtr, unsigned >& rc_grid_pos) const;
     void print_supercontig(ostream& os, const supercontig_type& sc) const;
     void print_supercontigs(ostream& os) const;

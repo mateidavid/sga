@@ -2251,14 +2251,16 @@ void Graph::compute_aux_coverage()
 } // Graph::compute_aux_coverage
 
 void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direction,
+                         const array< Allele_Specifier, 2 >& out_allele,
                          map< Read_Chunk_CBPtr, unsigned >& rc_grid_pos) const
 {
     //
     // print contig header
     //
-    os << "===== contig start ce " << setw(5) << right << ce_cbptr.to_int()
+    os << "===== contig start" << endl
+       << " ce " << setw(5) << right << ce_cbptr.to_int()
        << " dir " << (int)c_direction
-       << " len " << setw(6) << right << ce_cbptr->len() << endl;
+       << " len " << setw(5) << right << ce_cbptr->len() << endl;
     if (ce_cbptr->is_unmappable())
     {
         auto rc_cbptr = &*ce_cbptr->chunk_cont().begin();
@@ -2304,30 +2306,35 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     for (auto& p : pos_set)
     {
         ostringstream oss;
-        string s(max_pos + 1, ' ');
+        string s(2 * (max_pos + 1), ' ');
         oss << " re " << setw(5) << right << p.second->re_bptr().to_int()
             << " dir " << (int)(p.second->get_rc() != c_direction)
             << " rc " << setw(5) << right << p.second.to_int();
-        s[p.first] = '*';
-        os << setw(30) << left << oss.str() << s << endl;
+        s[2 * p.first] = '*';
+        os << setw(30) << left << oss.str() << s << "   name " << p.second->re_bptr()->name() << endl;
     }
     //
     // print out edges in not c_direction
     //
-    array< Anchor_Chunk_Support, 2 > oc = {{ ce_cbptr->out_chunks(false, true, 2),
-                                             ce_cbptr->out_chunks(true, true, 2) }};
+    array< Anchor_Chunk_Support, 2 > oc = {{ ce_cbptr->out_chunks(false, true),
+                                             ce_cbptr->out_chunks(true, true) }};
     auto print_out_edges = [&] (bool direction) {
         for (auto& p : oc.at(direction))
         {
             ostringstream oss;
-            string s(max_pos + 1, ' ');
+            string s(2 * (max_pos + 1), ' ');
             oss << " edge ( " << setw(5) << right << p.first.ce_next_cbptr().to_int()
                 << " , " << p.first.same_orientation() << " )";
             for (int d = 0; d < 2; ++d)
             {
                 for (auto rc_cbptr : p.second[d])
                 {
-                    s[rc_grid_pos.at(rc_cbptr)] = '|';
+                    s[2 * rc_grid_pos.at(rc_cbptr)] =
+                        (out_allele.at(direction).ce_next_cbptr()
+                         ? (out_allele.at(direction) == p.first
+                            ? '|'
+                            : (direction == c_direction? '\\' : '/'))
+                         : 'S');
                 }
             }
             os << setw(30) << left << oss.str() << s << endl;
@@ -2340,6 +2347,9 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     set< pair< unsigned, unsigned > > line_set;
     map< pair< unsigned, unsigned >, Mutation_CBPtr > mut_map;
     map< pair< unsigned, unsigned >, set< Read_Chunk_CBPtr > > rc_set_map;
+    // always print endpoints
+    line_set.insert(make_pair(0, 0));
+    line_set.insert(make_pair(ce_cbptr->len(), 2));
     for (auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
     {
         auto p = make_pair(mut_cbptr->rf_start(), 1);
@@ -2402,13 +2412,13 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
         ostringstream oss;
         ostringstream oss_tail;
         oss << " pos " << setw(5) << right << p.first;
-        string s(max_pos + 1, ' ');
+        string s(2 * (max_pos + 1), ' ');
         for (auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
         {
             if (rc_cbptr->get_c_start() <= p.first
-                and p.first < rc_cbptr->get_c_end())
+                and p.first <= rc_cbptr->get_c_end())
             {
-                s[rc_grid_pos.at(rc_cbptr)] = '|';
+                s[2 * rc_grid_pos.at(rc_cbptr)] = '|';
             }
         }
         if (p.second == 0)
@@ -2418,9 +2428,9 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
             {
                 oss << " end";
             }
-            for (auto rc_cbptr : rc_set_map.at(p))
+            for (auto rc_cbptr : rc_set_map[p])
             {
-                s[rc_grid_pos.at(rc_cbptr)] = (not c_direction? 'v' : '^');
+                s[2 * rc_grid_pos.at(rc_cbptr)] = (not c_direction? 'v' : '^');
             }
         }
         else if (p.second == 2)
@@ -2430,9 +2440,9 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
             {
                 oss << " end";
             }
-            for (auto rc_cbptr : rc_set_map.at(p))
+            for (auto rc_cbptr : rc_set_map[p])
             {
-                s[rc_grid_pos.at(rc_cbptr)] = (not c_direction? '^' : 'v');
+                s[2 * rc_grid_pos.at(rc_cbptr)] = (not c_direction? '^' : 'v');
             }
         }
         else if (p.second == 1)
@@ -2459,14 +2469,14 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
             tie(qr_set, full_rf_set, ignore) = ce_cbptr->mut_support(mut_cbptr);
             for (auto rc_cbptr : full_rf_set)
             {
-                s[rc_grid_pos.at(rc_cbptr)] = '0';
+                s[2 * rc_grid_pos.at(rc_cbptr)] = '0';
             }
             for (auto rc_cbptr : qr_set)
             {
-                s[rc_grid_pos.at(rc_cbptr)] = '1';
+                s[2 * rc_grid_pos.at(rc_cbptr)] = '1';
             }
         }
-        os << setw(30) << left << oss.str() << s << " " << oss_tail.str() << endl;
+        os << setw(30) << left << oss.str() << s << "   " << oss_tail.str() << endl;
 
         not c_direction? (void)++it : (void)++rit;
     }
@@ -2480,32 +2490,24 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     //
     os << "===== contig end" << endl;
     //
-    // update grid positions, but only if out-degree is 1
+    // update grid positions
     //
-    if (oc.at(c_direction).size() == 1)
+    map< Read_Chunk_CBPtr, unsigned > new_rc_grid_pos;
+    for (auto& p : rc_grid_pos)
     {
-        Allele_Chunk_Support& allele_support = oc.at(c_direction).begin()->second;
-        map< Read_Chunk_CBPtr, unsigned > new_rc_grid_pos;
-        for (auto& p : rc_grid_pos)
+        auto rc_cbptr = p.first;
+        bool r_direction = (c_direction != rc_cbptr->get_rc());
+        auto next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, not r_direction);
+        while (next_rc_cbptr and next_rc_cbptr->ce_bptr()->is_unmappable())
         {
-            auto rc_cbptr = p.first;
-            if (not allele_support.at(0).count(rc_cbptr) or allele_support.at(1).count(rc_cbptr))
-            {
-                continue;
-            }
-            bool r_direction = (c_direction != rc_cbptr->get_rc());
-            auto next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, not r_direction);
-            while (next_rc_cbptr and next_rc_cbptr->ce_bptr()->is_unmappable())
-            {
-                next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(next_rc_cbptr, true, not r_direction);
-            }
-            if (next_rc_cbptr)
-            {
-                new_rc_grid_pos[next_rc_cbptr] = p.second;
-            }
+            next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(next_rc_cbptr, true, not r_direction);
         }
-        swap(rc_grid_pos, new_rc_grid_pos);
+        if (next_rc_cbptr)
+        {
+            new_rc_grid_pos[next_rc_cbptr] = p.second;
+        }
     }
+    swap(rc_grid_pos, new_rc_grid_pos);
 } // Graph::print_contig
 
 void Graph::print_supercontig(ostream& os, const supercontig_type& sc) const
@@ -2516,7 +2518,18 @@ void Graph::print_supercontig(ostream& os, const supercontig_type& sc) const
         if (it != sc.begin())
         {
         }
-        print_contig(os, it->first, not it->second, rc_grid_pos);
+        array< Allele_Specifier, 2 > out_allele;
+        out_allele[it->second] = (it != sc.begin()
+                                  ? Allele_Specifier(prev(it)->first, it->second == prev(it)->second)
+                                  : Allele_Specifier(nullptr, true));
+        out_allele[not it->second] = (it != prev(sc.end())
+                                      ? Allele_Specifier(next(it)->first, it->second == next(it)->second)
+                                      : Allele_Specifier(nullptr, true));
+        filter_cont(rc_grid_pos,
+                    [&] (decltype(rc_grid_pos)::const_iterator it2) {
+                        return it2->first->ce_bptr() == it->first;
+                    });
+        print_contig(os, it->first, not it->second, out_allele, rc_grid_pos);
     }
 } // Graph::print_supercontig
 
@@ -2529,6 +2542,6 @@ void Graph::print_supercontigs(ostream& os) const
         print_supercontig(os, sc);
         os << "========== supercontig end" << endl;
     }
-}
+} // Graph::print_supercontigs
 
 } // namespace MAC
