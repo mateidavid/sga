@@ -2291,7 +2291,7 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     for (auto& p : pos_set)
     {
         ostringstream oss;
-        string s(max_pos, ' ');
+        string s(max_pos + 1, ' ');
         oss << " re " << setw(5) << right << p.second->re_bptr().to_int()
             << " dir " << (int)(p.second->get_rc() != c_direction)
             << " rc " << setw(5) << right << p.second.to_int();
@@ -2306,7 +2306,7 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
         for (auto& p : oc)
         {
             ostringstream oss;
-            string s(max_pos, ' ');
+            string s(max_pos + 1, ' ');
             oss << " edge ( " << setw(5) << right << p.first.ce_next_cbptr().to_int()
                 << " , " << p.first.same_orientation() << " )";
             for (int d = 0; d < 2; ++d)
@@ -2323,16 +2323,22 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     //
     // compute display lines
     //
-    set< tuple< unsigned, unsigned, Read_Chunk_CBPtr, Mutation_CBPtr > > line_set;
+    set< pair< unsigned, unsigned > > line_set;
+    map< pair< unsigned, unsigned >, Mutation_CBPtr > mut_map;
+    map< pair< unsigned, unsigned >, set< Read_Chunk_CBPtr > > rc_set_map;
     for (auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
     {
-        line_set.insert(make_tuple(mut_cbptr->rf_start(), 1, Read_Chunk_CBPtr(nullptr), mut_cbptr));
+        auto p = make_pair(mut_cbptr->rf_start(), 1);
+        line_set.insert(p);
+        mut_map[p] = mut_cbptr;
     }
     for (auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
     {
         if (rc_cbptr->get_c_start() > 0)
         {
-            line_set.insert(make_tuple(rc_cbptr->get_c_start(), 0, rc_cbptr, Mutation_CBPtr(nullptr)));
+            auto p = make_pair(rc_cbptr->get_c_start(), 0);
+            line_set.insert(p);
+            rc_set_map[p].insert(rc_cbptr);
         }
         else
         {
@@ -2344,12 +2350,16 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
             }
             if (not next_rc_cbptr)
             {
-                line_set.insert(make_tuple(0, 0, rc_cbptr, Mutation_CBPtr(nullptr)));
+                auto p = make_pair(0, 0);
+                line_set.insert(p);
+                rc_set_map[p].insert(rc_cbptr);
             }
         }
         if (rc_cbptr->get_c_end() < ce_cbptr->len())
         {
-            line_set.insert(make_tuple(rc_cbptr->get_c_end(), 2, rc_cbptr, Mutation_CBPtr(nullptr)));
+            auto p = make_pair(rc_cbptr->get_c_end(), 2);
+            line_set.insert(p);
+            rc_set_map[p].insert(rc_cbptr);
         }
         else
         {
@@ -2361,7 +2371,9 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
             }
             if (not next_rc_cbptr)
             {
-                line_set.insert(make_tuple(ce_cbptr->len(), 2, rc_cbptr, Mutation_CBPtr(nullptr)));
+                auto p = make_pair(ce_cbptr->len(), 2);
+                line_set.insert(p);
+                rc_set_map[p].insert(rc_cbptr);
             }
         }
     }
@@ -2371,29 +2383,66 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     auto rit_end = line_set.rend();
     while (not c_direction? it != it_end : rit != rit_end)
     {
-        auto& e = (not c_direction? *it : *rit);
+        auto& p = (not c_direction? *it : *rit);
 
         ostringstream oss;
-        oss << " pos " << setw(5) << right << get<0>(e);
-        string s(max_pos, ' ');
-        if (get<1>(e) == 0)
+        ostringstream oss_tail;
+        oss << " pos " << setw(5) << right << p.first;
+        string s(max_pos + 1, ' ');
+        for (auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
+        {
+            if (rc_cbptr->get_c_start() <= p.first
+                and p.first < rc_cbptr->get_c_end())
+            {
+                s[rc_grid_pos.at(rc_cbptr)] = '|';
+            }
+        }
+        if (p.second == 0)
         {
             // rc start
-            oss << " rc " << setw(5) << right << get<2>(e).to_int();
-            s[rc_grid_pos.at(get<2>(e))] = (not c_direction? 'v' : '^');
+            if (p.first == 0 or p.first == ce_cbptr->len())
+            {
+                oss << " end";
+            }
+            for (auto rc_cbptr : rc_set_map.at(p))
+            {
+                s[rc_grid_pos.at(rc_cbptr)] = (not c_direction? 'v' : '^');
+            }
         }
-        else if (get<1>(e) == 2)
+        else if (p.second == 2)
         {
             // rc end
-            oss << " rc " << setw(5) << right << get<2>(e).to_int();
-            s[rc_grid_pos.at(get<2>(e))] = (not c_direction? '^' : 'v');
+            if (p.first == 0 or p.first == ce_cbptr->len())
+            {
+                oss << " end";
+            }
+            for (auto rc_cbptr : rc_set_map.at(p))
+            {
+                s[rc_grid_pos.at(rc_cbptr)] = (not c_direction? '^' : 'v');
+            }
         }
-        else if (get<1>(e) == 1)
+        else if (p.second == 1)
         {
-            oss << " mut " << setw(5) << right << get<3>(e).to_int();
+            auto mut_cbptr = mut_map.at(p);
+            oss << " mut " << setw(5) << right << mut_cbptr.to_int();
+            oss_tail << " " << setw(3) << right << (int)mut_cbptr->uniq_flank(0)
+                     << " " << setw(3) << right << (int)mut_cbptr->uniq_flank(1)
+                     << " " << setw(2) << right << (int)mut_cbptr->copy_num(0)
+                     << " " << setw(2) << right << (int)mut_cbptr->copy_num(1);
+            Seq_Type flank_left(".");
+            Seq_Type flank_right(".");
+            if (mut_cbptr->uniq_flank(0) > 0 or mut_cbptr->uniq_flank(1) > 0)
+            {
+                auto flank_len = max(mut_cbptr->uniq_flank(0), mut_cbptr->uniq_flank(1));
+                flank_len = min((int)flank_len, 20);
+                flank_left = ce_cbptr->substr(mut_cbptr->rf_start() - flank_len, flank_len);
+                flank_right = ce_cbptr->substr(mut_cbptr->rf_end(), flank_len);
+            }
+            oss_tail << " " << flank_left << " (" << ce_cbptr->substr(mut_cbptr->rf_start(), mut_cbptr->rf_len())
+                     << "|" << mut_cbptr->seq() << ") " << flank_right;
             set< Read_Chunk_CBPtr > qr_set;
             set< Read_Chunk_CBPtr > full_rf_set;
-            tie(qr_set, full_rf_set, ignore) = ce_cbptr->mut_support(get<3>(e));
+            tie(qr_set, full_rf_set, ignore) = ce_cbptr->mut_support(mut_cbptr);
             for (auto rc_cbptr : full_rf_set)
             {
                 s[rc_grid_pos.at(rc_cbptr)] = '0';
@@ -2403,7 +2452,7 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
                 s[rc_grid_pos.at(rc_cbptr)] = '1';
             }
         }
-        os << setw(30) << left << oss.str() << s << endl;
+        os << setw(30) << left << oss.str() << s << " " << oss_tail.str() << endl;
 
         not c_direction? (void)++it : (void)++rit;
     }

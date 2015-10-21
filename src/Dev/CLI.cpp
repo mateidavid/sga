@@ -142,6 +142,8 @@ void cli(istream& is, ostream& os, const Graph& g)
             }
             else if (tmp == "ce_new")
             {
+                int c_direction = 0;
+                iss >> c_direction;
                 if (id >= Contig_Entry_Fact::size() or unused_ce_set.count(id) > 0)
                 {
                     os << "Contig_Entry:" << id << ": not allocated\n";
@@ -150,7 +152,7 @@ void cli(istream& is, ostream& os, const Graph& g)
                 {
                     Contig_Entry_CBPtr ce_cbptr = Contig_Entry_CBPtr::from_index(id);
                     map< Read_Chunk_CBPtr, unsigned > rc_grid_pos;
-                    g.print_contig(os, ce_cbptr, false, rc_grid_pos);
+                    g.print_contig(os, ce_cbptr, c_direction, rc_grid_pos);
                 }
             }
             else if (tmp == "chunk" or tmp == "rc")
