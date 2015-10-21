@@ -187,6 +187,9 @@ public:
     void compute_mutation_copy_num();
     void compute_aux_coverage();
 
+    void print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direction,
+                      map< Read_Chunk_CBPtr, unsigned >& rc_grid_pos) const;
+
     ptree to_ptree() const;
     ptree factory_stats() const;
 

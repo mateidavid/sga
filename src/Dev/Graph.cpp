@@ -2250,4 +2250,172 @@ void Graph::compute_aux_coverage()
         .put("res", _aux_coverage);
 } // Graph::compute_aux_coverage
 
+void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direction,
+                         map< Read_Chunk_CBPtr, unsigned >& rc_grid_pos) const
+{
+    ASSERT(not ce_cbptr->is_unmappable());
+    //
+    // compute the grid position of each chunk
+    //
+    set< unsigned > used_grid_pos(ba::values(rc_grid_pos).begin(), ba::values(rc_grid_pos).end());
+    auto get_next_unused_pos = [] (const set<unsigned>& pos_set, unsigned& pos) {
+        while (pos_set.count(pos)) ++pos;
+    };
+    ASSERT(rc_grid_pos.size() == used_grid_pos.size());
+    unsigned pos = 0;
+    get_next_unused_pos(used_grid_pos, pos);
+    while (used_grid_pos.count(pos)) ++pos;
+    for (auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
+    {
+        if (rc_grid_pos.count(rc_cbptr)) continue;
+        rc_grid_pos.insert(make_pair(rc_cbptr, pos));
+        used_grid_pos.insert(pos);
+        get_next_unused_pos(used_grid_pos, ++pos);
+    }
+    ASSERT(rc_grid_pos.size() == ce_cbptr->chunk_cont().nonconst_size());
+    ASSERT(rc_grid_pos.size() == used_grid_pos.size());
+    unsigned max_pos = max_value_of(used_grid_pos, [] (unsigned v) { return v; });
+    set< pair< unsigned, Read_Chunk_CBPtr > > pos_set;
+    for (auto& p : rc_grid_pos)
+    {
+        pos_set.insert(make_pair(p.second, p.first));
+    }
+    ASSERT(rc_grid_pos.size() == pos_set.size());
+    //
+    // print contig header
+    //
+    os << "===== ce " << setw(5) << right << ce_cbptr.to_int()
+       << " dir " << (int)c_direction
+       << " len " << setw(6) << right << ce_cbptr->len() << endl;
+    // print re, rc
+    for (auto& p : pos_set)
+    {
+        ostringstream oss;
+        string s(max_pos, ' ');
+        oss << " re " << setw(5) << right << p.second->re_bptr().to_int()
+            << " dir " << (int)(p.second->get_rc() != c_direction)
+            << " rc " << setw(5) << right << p.second.to_int();
+        s[p.first] = '*';
+        os << setw(30) << left << oss.str() << s << endl;
+    }
+    //
+    // print out edges in not c_direction
+    //
+    auto print_out_edges = [&] (bool direction) {
+        auto oc = ce_cbptr->out_chunks(direction, true);
+        for (auto& p : oc)
+        {
+            ostringstream oss;
+            string s(max_pos, ' ');
+            oss << " edge ( " << setw(5) << right << p.first.ce_next_cbptr().to_int()
+                << " , " << p.first.same_orientation() << " )";
+            for (int d = 0; d < 2; ++d)
+            {
+                for (auto rc_cbptr : p.second[d])
+                {
+                    s[rc_grid_pos.at(rc_cbptr)] = '|';
+                }
+            }
+            os << setw(30) << left << oss.str() << s << endl;
+        }
+    };
+    print_out_edges(not c_direction);
+    //
+    // compute display lines
+    //
+    set< tuple< unsigned, unsigned, Read_Chunk_CBPtr, Mutation_CBPtr > > line_set;
+    for (auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
+    {
+        line_set.insert(make_tuple(mut_cbptr->rf_start(), 1, Read_Chunk_CBPtr(nullptr), mut_cbptr));
+    }
+    for (auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
+    {
+        if (rc_cbptr->get_c_start() > 0)
+        {
+            line_set.insert(make_tuple(rc_cbptr->get_c_start(), 0, rc_cbptr, Mutation_CBPtr(nullptr)));
+        }
+        else
+        {
+            bool r_direction = not rc_cbptr->get_rc();
+            auto next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, not r_direction);
+            while (next_rc_cbptr and next_rc_cbptr->ce_bptr()->is_unmappable())
+            {
+                next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(next_rc_cbptr, true, not r_direction);
+            }
+            if (not next_rc_cbptr)
+            {
+                line_set.insert(make_tuple(0, 0, rc_cbptr, Mutation_CBPtr(nullptr)));
+            }
+        }
+        if (rc_cbptr->get_c_end() < ce_cbptr->len())
+        {
+            line_set.insert(make_tuple(rc_cbptr->get_c_end(), 2, rc_cbptr, Mutation_CBPtr(nullptr)));
+        }
+        else
+        {
+            bool r_direction = rc_cbptr->get_rc();
+            auto next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, not r_direction);
+            while (next_rc_cbptr and next_rc_cbptr->ce_bptr()->is_unmappable())
+            {
+                next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(next_rc_cbptr, true, not r_direction);
+            }
+            if (not next_rc_cbptr)
+            {
+                line_set.insert(make_tuple(ce_cbptr->len(), 2, rc_cbptr, Mutation_CBPtr(nullptr)));
+            }
+        }
+    }
+    auto it = line_set.begin();
+    auto it_end = line_set.end();
+    auto rit = line_set.rbegin();
+    auto rit_end = line_set.rend();
+    while (not c_direction? it != it_end : rit != rit_end)
+    {
+        auto& e = (not c_direction? *it : *rit);
+
+        ostringstream oss;
+        oss << " pos " << setw(5) << right << get<0>(e);
+        string s(max_pos, ' ');
+        if (get<1>(e) == 0)
+        {
+            // rc start
+            oss << " rc " << setw(5) << right << get<2>(e).to_int();
+            s[rc_grid_pos.at(get<2>(e))] = (not c_direction? 'v' : '^');
+        }
+        else if (get<1>(e) == 2)
+        {
+            // rc end
+            oss << " rc " << setw(5) << right << get<2>(e).to_int();
+            s[rc_grid_pos.at(get<2>(e))] = (not c_direction? '^' : 'v');
+        }
+        else if (get<1>(e) == 1)
+        {
+            oss << " mut " << setw(5) << right << get<3>(e).to_int();
+            set< Read_Chunk_CBPtr > qr_set;
+            set< Read_Chunk_CBPtr > full_rf_set;
+            tie(qr_set, full_rf_set, ignore) = ce_cbptr->mut_support(get<3>(e));
+            for (auto rc_cbptr : full_rf_set)
+            {
+                s[rc_grid_pos.at(rc_cbptr)] = '0';
+            }
+            for (auto rc_cbptr : qr_set)
+            {
+                s[rc_grid_pos.at(rc_cbptr)] = '1';
+            }
+        }
+        os << setw(30) << left << oss.str() << s << endl;
+
+        not c_direction? (void)++it : (void)++rit;
+    }
+
+    //
+    // print out edges in c_direction
+    //
+    print_out_edges(c_direction);
+    //
+    // print contig footer
+    //
+    os << "=====" << endl;
+} // Graph::print_contig
+
 } // namespace MAC
