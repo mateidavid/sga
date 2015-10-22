@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+import Bio.SeqIO
+
+def process_record(out_f, r):
+    s_id = r.id
+    s = str(r.seq)
+    for i in range(len(s)):
+        for c in 'ACGT':
+            if s[i] == c:
+                continue
+            l = list(s)
+            l[i] = c
+            s_out = ''.join(l)
+            s_id_out = s_id + '_[' + str(i) + ':' + s[i] + ':' + c + ']'
+            r_out = Bio.SeqRecord.SeqRecord(Bio.Seq.Seq(s_out), s_id_out, description='')
+            Bio.SeqIO.write(r_out, out_f, 'fasta')
+
+if __name__ == '__main__':
+    description = '''
+For each input DNA sequence, print all DNA sequences at mismatch distance 1.
+    '''
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('--log-level', help='log level', default='info')
+    parser.add_argument('-o', '--output-file', help='Output file')
+    parser.add_argument('input_file', help='Input file', nargs='?')
+    args = parser.parse_args()
+
+    if args.input_file:
+        in_f = open(args.input_file)
+    else:
+        in_f = sys.stdin
+    if args.output_file:
+        out_f = open(args.output_file, 'w')
+    else:
+        out_f = sys.stdout
+
+    gen = Bio.SeqIO.parse(in_f, 'fasta')
+    for r in gen:
+        process_record(out_f, r)
