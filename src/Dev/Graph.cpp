@@ -2295,7 +2295,7 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     }
     ASSERT(rc_grid_pos.size() == ce_cbptr->chunk_cont().nonconst_size());
     ASSERT(rc_grid_pos.size() == used_grid_pos.size());
-    unsigned max_pos = max_value_of(used_grid_pos, [] (unsigned v) { return v; });
+    unsigned max_pos = max_value_of(used_grid_pos);
     set< pair< unsigned, Read_Chunk_CBPtr > > pos_set;
     for (auto& p : rc_grid_pos)
     {
@@ -2348,8 +2348,8 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     map< pair< unsigned, unsigned >, Mutation_CBPtr > mut_map;
     map< pair< unsigned, unsigned >, set< Read_Chunk_CBPtr > > rc_set_map;
     // always print endpoints
-    line_set.insert(make_pair(0, 0));
-    line_set.insert(make_pair(ce_cbptr->len(), 2));
+    line_set.insert(make_pair(0, 2));
+    line_set.insert(make_pair(ce_cbptr->len(), 0));
     for (auto mut_cbptr : ce_cbptr->mut_cont() | referenced)
     {
         auto p = make_pair(mut_cbptr->rf_start(), 1);
@@ -2360,7 +2360,7 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     {
         if (rc_cbptr->get_c_start() > 0)
         {
-            auto p = make_pair(rc_cbptr->get_c_start(), 0);
+            auto p = make_pair(rc_cbptr->get_c_start(), 2);
             line_set.insert(p);
             rc_set_map[p].insert(rc_cbptr);
         }
@@ -2374,14 +2374,14 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
             }
             if (not next_rc_cbptr)
             {
-                auto p = make_pair(0, 0);
+                auto p = make_pair(0, 2);
                 line_set.insert(p);
                 rc_set_map[p].insert(rc_cbptr);
             }
         }
         if (rc_cbptr->get_c_end() < ce_cbptr->len())
         {
-            auto p = make_pair(rc_cbptr->get_c_end(), 2);
+            auto p = make_pair(rc_cbptr->get_c_end(), 0);
             line_set.insert(p);
             rc_set_map[p].insert(rc_cbptr);
         }
@@ -2395,7 +2395,7 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
             }
             if (not next_rc_cbptr)
             {
-                auto p = make_pair(ce_cbptr->len(), 2);
+                auto p = make_pair(ce_cbptr->len(), 0);
                 line_set.insert(p);
                 rc_set_map[p].insert(rc_cbptr);
             }
@@ -2413,15 +2413,20 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
         ostringstream oss_tail;
         oss << " pos " << setw(5) << right << p.first;
         string s(2 * (max_pos + 1), ' ');
-        for (auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
+        if (p.second != 1)
         {
-            if (rc_cbptr->get_c_start() <= p.first
-                and p.first <= rc_cbptr->get_c_end())
+            for (auto rc_cbptr : ce_cbptr->chunk_cont() | referenced)
             {
-                s[2 * rc_grid_pos.at(rc_cbptr)] = '|';
+                if (rc_cbptr->get_c_start() <= p.first
+                    and (p.first < rc_cbptr->get_c_end()
+                         or (p.first == rc_cbptr->get_c_end()
+                             and p.first == ce_cbptr->len())))
+                {
+                    s[2 * rc_grid_pos.at(rc_cbptr)] = '|';
+                }
             }
         }
-        if (p.second == 0)
+        if (p.second == 2)
         {
             // rc start
             if (p.first == 0 or p.first == ce_cbptr->len())
@@ -2433,7 +2438,7 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
                 s[2 * rc_grid_pos.at(rc_cbptr)] = (not c_direction? 'v' : '^');
             }
         }
-        else if (p.second == 2)
+        else if (p.second == 0)
         {
             // rc end
             if (p.first == 0 or p.first == ce_cbptr->len())
@@ -2510,6 +2515,33 @@ void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direct
     swap(rc_grid_pos, new_rc_grid_pos);
 } // Graph::print_contig
 
+void Graph::print_unmappable_region(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direction,
+                                    Allele_Specifier out_allele) const
+{
+    auto oc = ce_cbptr->out_chunks(c_direction, true);
+    if (not oc.count(out_allele))
+    {
+        return;
+    }
+    for (int d = 0; d < 2; ++d)
+    {
+        for (auto rc_cbptr : oc.at(out_allele).at(d))
+        {
+            bool r_direction = (c_direction != rc_cbptr->get_rc());
+            auto next_rc_cbptr = rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, true, not r_direction);
+            ASSERT(next_rc_cbptr);
+            if (not next_rc_cbptr->ce_bptr()->is_unmappable())
+            {
+                continue;
+            }
+            os << " re " << setw(5) << right << next_rc_cbptr->re_bptr().to_int()
+               << " dir " << (int)(not r_direction)
+               << " rc " << setw(5) << right << next_rc_cbptr.to_int()
+               << " seq " << next_rc_cbptr->ce_bptr()->seq().revcomp(not r_direction) << endl;
+        }
+    }
+} // print_unmappable_region
+
 void Graph::print_supercontig(ostream& os, const supercontig_type& sc) const
 {
     map< Read_Chunk_CBPtr, unsigned > rc_grid_pos;
@@ -2529,13 +2561,17 @@ void Graph::print_supercontig(ostream& os, const supercontig_type& sc) const
                     [&] (decltype(rc_grid_pos)::const_iterator it2) {
                         return it2->first->ce_bptr() == it->first;
                     });
+        if (it != sc.begin())
+        {
+            print_unmappable_region(os, it->first, it->second, out_allele[it->second]);
+        }
         print_contig(os, it->first, not it->second, out_allele, rc_grid_pos);
     }
 } // Graph::print_supercontig
 
-void Graph::print_supercontigs(ostream& os) const
+void Graph::print_supercontigs(ostream& os, bool skip_unmappable, unsigned min_support) const
 {
-    auto sc_list = get_supercontigs(3);
+    auto sc_list = get_supercontigs(skip_unmappable? 3 : 1, min_support > 0? min_support - 1 : min_support);
     for (auto& sc : sc_list)
     {
         os << "========== supercontig start" << endl;

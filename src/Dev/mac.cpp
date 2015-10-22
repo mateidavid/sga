@@ -299,7 +299,7 @@ int real_main()
     {
         LOG("mac", info) << ptree("supercontigs").put("file", opts::supercontigs_file.get());
         strict_fstream::fstream tmp_fs(opts::supercontigs_file, ios_base::out);
-        g.print_supercontigs(tmp_fs);
+        g.print_supercontigs(tmp_fs, true, 1);
     }
     if (not opts::terminal_reads_file.get().empty())
     {

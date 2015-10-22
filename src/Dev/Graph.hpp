@@ -190,8 +190,10 @@ public:
     void print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direction,
                       const array< Allele_Specifier, 2 >& out_allele,
                       map< Read_Chunk_CBPtr, unsigned >& rc_grid_pos) const;
+    void print_unmappable_region(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direction,
+                                 Allele_Specifier out_allele) const;
     void print_supercontig(ostream& os, const supercontig_type& sc) const;
-    void print_supercontigs(ostream& os) const;
+    void print_supercontigs(ostream& os, bool skip_unmappable, unsigned min_support) const;
 
     ptree to_ptree() const;
     ptree factory_stats() const;
