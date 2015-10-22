@@ -34,7 +34,7 @@ public:
     Graph()
         : _u{this},
         _unmap_trigger_len(9),
-        _aux_coverage(-1),
+        _aux_coverage(0),
         _cat_at_step(false),
         _trim_tuc_step(false) {}
 
@@ -159,7 +159,7 @@ public:
     void load_bwt(const string& bwt_prefix);
 
     /// Load BWT of Illumina data.
-    void load_aux_bwt(const string& aux_bwt_file);
+    void load_aux_bwt(const string& aux_bwt_file, unsigned read_len = 1000, unsigned coverage = 0);
 
     typedef array< vector< pair< string, Size_Type > >, 2 > find_reads_with_seq_type;
     /// Find reads containing a given sequence
@@ -302,7 +302,8 @@ private:
     Contig_Entry_Cont _ce_cont;
 
     Size_Type _unmap_trigger_len;
-    int _aux_coverage;
+    unsigned _aux_coverage;
+    unsigned _aux_read_len;
     bool _cat_at_step;
     bool _trim_tuc_step;
 

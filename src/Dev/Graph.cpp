@@ -1970,11 +1970,13 @@ void Graph::load_bwt(const string& bwt_prefix)
     LOG("Graph", info) << ptree("end");
 } // Graph::load_bwt
 
-void Graph::load_aux_bwt(const string& aux_bwt_file)
+void Graph::load_aux_bwt(const string& aux_bwt_file, unsigned coverage, unsigned read_len)
 {
     // load BWT of Illumina reads
     LOG("Graph", info) << ptree("bwt").put("file", aux_bwt_file);
     _aux_index_set.pBWT = new BWT(aux_bwt_file);
+    _aux_coverage = coverage;
+    _aux_read_len = read_len;
     LOG("Graph", info) << ptree("end");
 } // Graph::load_aux_bwt
 
@@ -2146,7 +2148,7 @@ void Graph::compute_mutation_copy_num()
         LOG("Graph", error) << "compute_mutation_copy_num: auxiliary BWT index is required" << endl;
         exit(EXIT_FAILURE);
     }
-    if (get_aux_coverage() < 0)
+    if (get_aux_coverage() == 0)
     {
         compute_aux_coverage();
     }
@@ -2199,24 +2201,18 @@ void Graph::compute_aux_coverage()
         LOG("Graph", error) << "compute_aux_coverage: auxiliary BWT index is required" << endl;
         exit(EXIT_FAILURE);
     }
-    multiset< size_t > cov_s;
+    map< unsigned, multiset< size_t > > cov_s_m;
     for (auto ce_bptr : ce_cont() | referenced)
     {
         if (not ce_bptr->is_normal()) continue;
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
-            if (mut_bptr->uniq_flank(0) <= 0 or mut_bptr->uniq_flank(1) <= 0)
-            {
-                LOG("Graph", debug) << ptree("non_unique_mutation")
-                    .put("mut_bptr", mut_bptr.to_int())
-                    .put("mut_ptr", mut_bptr.raw());
-                continue;
-            }
-            auto flank_len = max(mut_bptr->uniq_flank(0), mut_bptr->uniq_flank(1));
-            Seq_Type flank_left = ce_bptr->substr(mut_bptr->rf_start() - flank_len, flank_len);
-            Seq_Type flank_right = ce_bptr->substr(mut_bptr->rf_end(), flank_len);
             for (int al = 0; al < 2; ++al)
             {
+                auto flank_len = mut_bptr->uniq_flank(al);
+                if (flank_len <= 0) continue;
+                Seq_Type flank_left = ce_bptr->substr(mut_bptr->rf_start() - flank_len, flank_len);
+                Seq_Type flank_right = ce_bptr->substr(mut_bptr->rf_end(), flank_len);
                 Seq_Type s = flank_left;
                 s += (al == 0
                       ? Seq_Type(ce_bptr->substr(mut_bptr->rf_start(), mut_bptr->rf_len()))
@@ -2228,11 +2224,37 @@ void Graph::compute_aux_coverage()
                     .put("mut_ptr", mut_bptr.raw())
                     .put("al", al)
                     .put("cnt", cnt);
-                cov_s.insert(cnt);
+                cov_s_m[flank_len].insert(cnt);
             } // for al
         } // for mut_bptr
     } // for ce_bptr
+
+    // compute flank_len for which we have most data
+    unsigned flank_len = max_value_of(
+        cov_s_m,
+        [] (const decltype(cov_s_m)::value_type& p) {
+            return p.second.size();
+        });
+    LOG("Graph", debug) << ptree("most_used_flank_len")
+        .put("flank_len", flank_len)
+        .put("data_points", cov_s_m.at(flank_len).size());
+    if (cov_s_m.at(flank_len).size() < 10000)
+    {
+        LOG("Graph", warning)
+            << "not enough data points to accurately determine base coverage by aux data; "
+            << "consider providing coverage value as part of the input parameters; "
+            << "flank_len=" << flank_len << " data_points=" << cov_s_m.at(flank_len).size() << endl;
+    }
+    if (flank_len > _aux_read_len / 2)
+    {
+        LOG("Graph", warning)
+            << "optimal flank_len[=" << flank_len << "] is large compared to read_len=[" << _aux_read_len << "]; "
+            << "consider providing correct values as part of the input parameters" << endl;
+        _aux_read_len = max(_aux_read_len, flank_len + 1);
+    }
+
     // ignore 10% lowest and highest values
+    auto& cov_s = cov_s_m.at(flank_len);
     size_t cov_cnt = 0;
     size_t cov_sum = 0;
     size_t i = 0;
@@ -2245,9 +2267,17 @@ void Graph::compute_aux_coverage()
         }
         ++i;
     }
-    _aux_coverage = cov_cnt > 0? cov_sum / cov_cnt : 0;
+
+    double c_k = (cov_cnt > 0? (double)cov_sum / cov_cnt : 0);
+    double c = (c_k * _aux_read_len) / (_aux_read_len - flank_len);
+    _aux_coverage = max((unsigned)(c + .5), 1u);
+
     LOG("Graph", info) << ptree("end")
-        .put("res", _aux_coverage);
+        .put("flank_len", flank_len)
+        .put("read_len", _aux_read_len)
+        .put("kmer_coverage", c_k)
+        .put("base_coverage", c)
+        .put("rounded_base_coverage", _aux_coverage);
 } // Graph::compute_aux_coverage
 
 void Graph::print_contig(ostream& os, Contig_Entry_CBPtr ce_cbptr, bool c_direction,
