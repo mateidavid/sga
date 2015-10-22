@@ -748,6 +748,10 @@ bool Read_Chunk::is_contained_in(Read_Chunk_CBPtr rc_cbptr, Read_Chunk_CBPtr oth
     {
         return true;
     }
+    if (other_pos.c_pos < pos.c_pos)
+    {
+        return false;
+    }
     // allow rc to end early only if it is terminal
     if (not rc_cbptr->re_bptr()->chunk_cont().get_sibling(rc_cbptr, false, true))
     {
