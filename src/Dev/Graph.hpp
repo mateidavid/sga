@@ -34,7 +34,7 @@ public:
     Graph()
         : _u{this},
         _unmap_trigger_len(9),
-        _aux_coverage(0),
+        _aux_coverage(-1),
         _cat_at_step(false),
         _trim_tuc_step(false) {}
 
@@ -64,7 +64,10 @@ public:
     GETTER(bool, trim_tuc_step, _trim_tuc_step)
     GETTER(BWTIndexSet, index_set, _index_set)
     GETTER(BWTIndexSet, aux_index_set, _aux_index_set)
-    int get_aux_coverage() const { return _aux_coverage; }
+    double get_aux_coverage(unsigned kmer_len = 0) const
+    {
+        return (kmer_len < _aux_read_len? (_aux_coverage * (_aux_read_len - kmer_len)) / _aux_read_len : 0);
+    }
 
     /** Add a read.
      * Create basic Read_Entry, Read_Chunk, and Contig_Entry objects,
@@ -159,7 +162,7 @@ public:
     void load_bwt(const string& bwt_prefix);
 
     /// Load BWT of Illumina data.
-    void load_aux_bwt(const string& aux_bwt_file, unsigned read_len = 1000, unsigned coverage = 0);
+    void load_aux_bwt(const string& aux_bwt_file, unsigned read_len = 1000, double coverage = -1);
 
     typedef array< vector< pair< string, Size_Type > >, 2 > find_reads_with_seq_type;
     /// Find reads containing a given sequence
@@ -302,7 +305,7 @@ private:
     Contig_Entry_Cont _ce_cont;
 
     Size_Type _unmap_trigger_len;
-    unsigned _aux_coverage;
+    double _aux_coverage;
     unsigned _aux_read_len;
     bool _cat_at_step;
     bool _trim_tuc_step;

@@ -47,6 +47,8 @@ namespace opts
     ValueArg< string > gfa_file("", "export-gfa", "Export graph to GFA file.", false, "", "file", cmd_parser);
     ValueArg< string > bwt_prefix("", "bwt-prefix", "Prefix of {.bwt,.ssa,.id.gz} files representing BWT index, sampled suffix array, and id list of the reads.", false, "", "file", cmd_parser);
     ValueArg< string > aux_bwt_file("", "aux-bwt-file", "BWT index of 2GS reads used to validate variations.", false, "", "file", cmd_parser);
+    ValueArg< double > aux_coverage("", "aux-coverage", "Base coverage by 2GS reads.", false, -1, "float", cmd_parser);
+    ValueArg< unsigned > aux_read_len("", "aux-read-len", "Read length of 2GS reads.", false, 1000, "int", cmd_parser);
     ValueArg< string > stats_file("", "stats-file", "Stats file.", false, "", "file", cmd_parser);
     ValueArg< string > supercontigs_stats_file("", "supercontigs-stats-file", "Supercontigs stats file.", false, "", "file", cmd_parser);
     ValueArg< string > supercontigs_file("", "supercontigs-file", "Supercontigs file.", false, "", "file", cmd_parser);
@@ -226,7 +228,7 @@ int real_main()
     }
     if (not opts::aux_bwt_file.get().empty())
     {
-        g.load_aux_bwt(opts::aux_bwt_file);
+        g.load_aux_bwt(opts::aux_bwt_file, opts::aux_read_len, opts::aux_coverage);
     }
 
     if (opts::validate_variations)
