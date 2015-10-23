@@ -206,7 +206,7 @@ public:
     void export_gfa(ostream&, bool) const;
 
 private:
-    friend class Unmap_Mut_Clusters;
+    friend class Variation_Cleaner;
     friend class Unmapper;
     friend class Read_Merger;
 

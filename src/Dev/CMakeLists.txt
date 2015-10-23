@@ -19,7 +19,7 @@ add_library(mac STATIC
     RC_DSet.cpp
     Graph.cpp
     Unmapper.cpp
-    Unmap_Mut_Clusters.cpp
+    Variation_Cleaner.cpp
     Validate_Variations.cpp
     Read_Merger.cpp
 #    Hap_Map.cpp

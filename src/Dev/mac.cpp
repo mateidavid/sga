@@ -13,7 +13,7 @@
 #include "logger.hpp"
 #include "CLI.hpp"
 
-#include "Unmap_Mut_Clusters.hpp"
+#include "Variation_Cleaner.hpp"
 #include "Validate_Variations.hpp"
 #include "Read_Merger.hpp"
 
@@ -73,7 +73,7 @@ namespace opts
     SwitchArg unmap_single_chunks("", "unmap-single-chunks", "Unmap read chunks not supported by other reads.", cmd_parser, false);
     SwitchArg unmap_single_terminal_regions("", "unmap-single-terminal-regions", "Unmap terminal read regions not supported by other reads.", cmd_parser, false);
     ValueArg< int > unmap_short_contigs("", "unmap-short-contigs", "Unmap contigs smaller than a given size.", false, 0, "int", cmd_parser);
-    SwitchArg unmap_mut_clusters("", "unmap-mut-clusters", "Unmap mutation clusters.", cmd_parser, false);
+    SwitchArg clean_variations("", "clean-variations", "Cleanup variations.", cmd_parser, false);
     SwitchArg unmap_homopolymer_indels("", "unmap-homopolymer-indels", "Unmap indels around homopolymers.", cmd_parser, false);
     SwitchArg copy_num("", "copy-num", "Compute copy numbers.", cmd_parser, false);
     SwitchArg merge_reads_1("", "merge-reads-1", "Merge reads.", cmd_parser, false);
@@ -239,9 +239,9 @@ int real_main()
     {
         g.unmapper().unmap_single_terminal_regions();
     }
-    if (opts::unmap_mut_clusters)
+    if (opts::clean_variations)
     {
-        Unmap_Mut_Clusters{g}();
+        Variation_Cleaner{g}();
     }
     if (opts::unmap_single_chunks)
     {
@@ -254,9 +254,9 @@ int real_main()
     if (opts::unmap_homopolymer_indels)
     {
         g.unmapper().unmap_homopolymer_indels();
-        if (opts::unmap_mut_clusters)
+        if (opts::clean_variations)
         {
-            Unmap_Mut_Clusters{g}();
+            Variation_Cleaner{g}();
         }
     }
     if (opts::copy_num)

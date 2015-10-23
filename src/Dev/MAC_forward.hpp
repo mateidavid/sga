@@ -139,7 +139,7 @@ typedef Hap_Entry_Fact::const_ref_type Hap_Entry_CBRef;
 */
 
 // algorithms
-class Unmap_Mut_Clusters;
+class Variation_Cleaner;
 //class Hap_Map;
 
 } // namespace MAC
