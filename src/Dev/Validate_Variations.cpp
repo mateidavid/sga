@@ -15,13 +15,16 @@ void Validate_Variations::operator () () const
     // search for well-separated mutations with low support
     for (auto ce_bptr : _g.ce_cont() | referenced)
     {
+        /*
         size_t min_mut_start = 0;
+        */
         LOG("Validate_Variations", debug1) << ptree("loop").put("ce_bptr", ce_bptr.to_int());
         auto mut_cit = ce_bptr->mut_cont().cbegin();
         while (mut_cit != ce_bptr->mut_cont().cend())
         {
             auto mut_cbptr = &*mut_cit;
             ++mut_cit;
+            /*
             // check no previous mutation overlaps current one
             if (mut_cbptr->rf_start() < min_mut_start)
             {
@@ -39,6 +42,7 @@ void Validate_Variations::operator () () const
                 min_mut_start = max(min_mut_start, mut_cit->rf_end());
                 continue;
             }
+            */
             // found a separated mutation
             // place chunks into bins:
             //   qr_set: observe mutation allele
