@@ -9,7 +9,7 @@
 #include "overlapper.h"
 //#include "Anchor_Support.hpp"
 #include "zstr.hpp"
-
+#include "kmer_gen.hpp"
 
 namespace MAC
 {
@@ -2209,10 +2209,26 @@ void Graph::compute_aux_coverage()
         LOG("Graph", error) << "compute_aux_coverage: auxiliary BWT index is required" << endl;
         exit(EXIT_FAILURE);
     }
-    map< unsigned, multiset< size_t > > cov_s_m;
-    for (auto ce_bptr : ce_cont() | referenced)
+    //map< unsigned, multiset< size_t > > cov_s_m;
+    multiset< size_t > cov_s;
+    unsigned seq_len = 21;
+    for (auto ce_cbptr : ce_cont() | referenced)
     {
-        if (not ce_bptr->is_normal()) continue;
+        if (not ce_cbptr->is_normal()) continue;
+        // function that checks position is not part of a mutation
+        auto pos_validator = [&] (size_t i) {
+            auto rg = ce_cbptr->mut_cont().iintersect(i, i) | referenced;
+            return rg.begin() == rg.end();
+        };
+        auto kg = kmer_gen(ce_cbptr->len(), seq_len, pos_validator);
+        for (auto pos : kg)
+        {
+            Seq_Type s = ce_cbptr->substr(pos, seq_len);
+            auto cnt = BWTAlgorithms::countSequenceOccurrences(s, aux_index_set());
+            if (cnt > 1000) continue;
+            cov_s.insert(cnt);
+        }
+        /*
         for (auto mut_bptr : ce_bptr->mut_cont() | referenced)
         {
             for (int al = 0; al < 2; ++al)
@@ -2236,9 +2252,11 @@ void Graph::compute_aux_coverage()
                 cov_s_m[s.size()].insert(cnt);
             } // for al
         } // for mut_bptr
+        */
     } // for ce_bptr
 
     // compute seq_len for which we have most data
+    /*
     unsigned seq_len = max_value_of(
         cov_s_m,
         [] (const decltype(cov_s_m)::value_type& p) {
@@ -2247,13 +2265,15 @@ void Graph::compute_aux_coverage()
     LOG("Graph", debug) << ptree("most_used_seq_len")
         .put("seq_len", seq_len)
         .put("data_points", cov_s_m.at(seq_len).size());
-    if (cov_s_m.at(seq_len).size() < 10000)
+    */
+    if (cov_s.size() < 10000)
     {
         LOG("Graph", warning)
             << "not enough data points to accurately determine base coverage by aux data; "
             << "consider providing coverage value as part of the input parameters; "
-            << "seq_len=" << seq_len << " data_points=" << cov_s_m.at(seq_len).size() << endl;
+            << "seq_len=" << seq_len << " data_points=" << cov_s.size() << endl;
     }
+    /*
     if (seq_len > _aux_read_len / 2)
     {
         LOG("Graph", warning)
@@ -2261,9 +2281,10 @@ void Graph::compute_aux_coverage()
             << "consider providing correct values as part of the input parameters" << endl;
         _aux_read_len = max(_aux_read_len, seq_len + 1);
     }
+    */
 
     // ignore 10% lowest and highest values
-    auto& cov_s = cov_s_m.at(seq_len);
+    //auto& cov_s = cov_s_m.at(seq_len);
     size_t cov_cnt = 0;
     size_t cov_sum = 0;
     size_t i = 0;
@@ -2277,7 +2298,8 @@ void Graph::compute_aux_coverage()
         ++i;
     }
 
-    double c_k = (cov_cnt > 0? (double)cov_sum / cov_cnt : 0);
+    //double c_k = (cov_cnt > 0? (double)cov_sum / cov_cnt : 0);
+    double c_k = (cov_cnt > 0? (double)cov_sum / cov_cnt : 0) / 2;
     _aux_coverage = (c_k * _aux_read_len) / (_aux_read_len - seq_len);
 
     LOG("Graph", info) << ptree("end")
