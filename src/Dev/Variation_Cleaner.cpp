@@ -86,7 +86,45 @@ void Variation_Cleaner::unmap_clusters() const
     }
     _g.check_all();
     LOG("Variation_Cleaner", info) << ptree("end");
-} // Variation_Cleaner::operator ()
+} // Variation_Cleaner::unmap_clusters
+
+void Variation_Cleaner::sync_clusters() const
+{
+    LOG("Variation_Cleaner", info) << ptree("begin");
+    for (auto ce_bptr : _g.ce_cont() | referenced) if (not ce_bptr->is_unmappable())
+    {
+        Size_Type start_pos = 0;
+        while (true)
+        {
+            auto p = find_mutation_cluster(ce_bptr, start_pos);
+            if (p.first.empty())
+            {
+                // cluster might have been left-right endpoint, but we don't care about those now
+                break;
+            }
+            else if (p.first.size() == 1)
+            {
+                // cluster must involve at least one endpoint
+                ASSERT(p.second[0] or p.second[1]);
+                if (p.second[1])
+                {
+                    break;
+                }
+                else
+                {
+                    start_pos = p.first.begin()->rf_end();
+                    continue;
+                }
+            }
+            ASSERT(p.first.size() > 1);
+            start_pos = max_value_of(
+                p.first,
+                [] (Mutation_CBPtr mut_cbptr) { return mut_cbptr->rf_end(); });
+            sync_cluster(ce_cpbtr, p.first);
+        } // while true
+    } // for ce_bptr
+    LOG("Variation_Cleaner", info) << ptree("end");
+} // Variation_Cleaner::sync_clusters
 
 pair< set< Mutation_CBPtr >, array< bool, 2 > >
 Variation_Cleaner::find_mutation_cluster(Contig_Entry_CBPtr ce_cbptr, Size_Type start_pos) const

@@ -16,6 +16,7 @@ public:
     void operator() () const;
 
     void unmap_clusters() const;
+    void sync_clusters() const;
 
 private:
     /**
@@ -36,9 +37,8 @@ private:
 
     Graph& _g;
     size_t _min_num_3mers;
-};
+}; // class Variation_Cleaner
 
 } // namespace MAC
-
 
 #endif
